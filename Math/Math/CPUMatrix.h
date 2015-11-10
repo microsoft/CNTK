@@ -53,6 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        void CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
+
         CPUMatrix<ElemType> Diagonal() const;
 
         ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
@@ -88,6 +90,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal);
+
+        void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
         void SetColumn(const ElemType val, size_t j);
@@ -301,11 +306,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //static BLAS functions
         static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 
-        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, 
-                                           ElemType beta, CPUMatrix<ElemType>& c);
+        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
         static void MultiplyAndAdd(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
         static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
         static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
+        static void Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType beta, CPUMatrix<ElemType>& c);
 
         static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
         static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
@@ -327,6 +332,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ElementWisePower (ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
 
         static bool AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
+
+        static void TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
 
         static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
         static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);

@@ -92,7 +92,7 @@ struct GradientUpdateInfo
 struct SGDParams
 {
     template<class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ConfigParameters& configSGD, ElemType exampleElemType/*for type deduction*/);
+    SGDParams(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/);
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
@@ -101,6 +101,8 @@ struct SGDParams
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
               bool truncated,
+              const size_t fullEpochsOffset,
+              const size_t fullTotalMaxEpochs,
               const size_t epochSize,
               const size_t maxEpochs,
               const wstring& modelPath,
@@ -120,6 +122,7 @@ struct SGDParams
               const size_t numPrevLearnRates,
               const size_t numBestSearchEpoch,
               const int traceLevel,
+              const bool progressTracing,
               const size_t numMBsToShowResult,
               const size_t numMBsToCUDAProfile,
               const size_t maxTempMemSizeInSamplesForCNN,
@@ -194,6 +197,10 @@ protected:
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
 
+    // This includes the total epochs across all training commands
+    size_t m_fullTotalMaxEpochs;
+    size_t m_fullEpochsOffset;
+
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
     size_t m_maxComputedEpochSize;
@@ -203,6 +210,7 @@ protected:
 
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
+    double m_lastFinishedEpochEvalErr;
 
     wstring m_modelPath;
     wstring m_trainCriterionNodeName;
@@ -216,6 +224,8 @@ protected:
     AdaptationRegType m_adaptationRegType;
     double m_adaptationRegWeight;
     bool m_needAdaptRegularization;
+    bool m_progressTracing;
+    Timer m_progressTracingTimer;
 
     bool m_loadBestModel;
     double m_reduceLearnRateIfImproveLessThan;
@@ -299,8 +309,8 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    SGD(const ConfigParameters& configSGD);
-    SGD(SGDParams && sgdParams);
+    SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
+    SGD(SGDParams&& sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
@@ -310,9 +320,9 @@ public:
                        IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
                        const DEVICEID_TYPE deviceID, const bool makeMode = true);
     void Train(IComputationNetBuilder<ElemType>* netBuilder,
-        IDataReader<ElemType>* trainSetDataReader,
-        IDataReader<ElemType>* validationSetDataReader,
-        const bool makeMode = true);
+               IDataReader<ElemType>* trainSetDataReader,
+               IDataReader<ElemType>* validationSetDataReader,
+               const bool makeMode = true);
 
 protected:
     std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetwork& net);
@@ -335,7 +345,7 @@ protected:
     // return a reasonable initial learning rate based on the initial mbsize
     double SearchForBestLearnRate(ComputationNetwork& net,
                                   ComputationNetwork& refNet,
-                                  const ComputationNodeBasePtr refNode, const int epochNumber,
+                                  const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
                                   IDataReader<ElemType>* trainSetDataReader,
                                   const std::vector<ComputationNodeBasePtr> & featureNodes,
@@ -350,7 +360,7 @@ protected:
 
     void TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
                                          ComputationNetwork& refNet,
-                                         const ComputationNodeBasePtr refNode, const int epochNumber,
+                                         const ComputationNodeBasePtr& refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
@@ -368,7 +378,7 @@ protected:
 
     size_t AdaptiveMinibatchSizing(ComputationNetwork& net,
                                    ComputationNetwork& refNet,
-                                   const ComputationNodeBasePtr refNode,
+                                   const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
                                    IDataReader<ElemType>* trainSetDataReader,
@@ -387,7 +397,7 @@ protected:
     // speculatively train with various MB sizes; then picks the best
     size_t SearchForBestMinibatchSize(ComputationNetwork& net,
                                       ComputationNetwork& refNet,
-                                      const ComputationNodeBasePtr refNode,
+                                      const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
@@ -413,7 +423,7 @@ protected:
 
     size_t TrainOneEpoch(ComputationNetwork& net,
                          ComputationNetwork& refNet,
-                         const ComputationNodeBasePtr refNode,
+                         const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
                          IDataReader<ElemType>* trainSetDataReader,
@@ -431,7 +441,7 @@ protected:
                          /*out*/ size_t& totalSamplesSeen,
                          std::string prefixMsg = "");
 
-    void LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int traceLevel);
 
     bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames, 
                                   float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync);
@@ -452,7 +462,7 @@ public:
 
 protected:
     // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr node,
+    void UpdateWeights(const ComputationNodeBasePtr& node,
                        Matrix<ElemType>& smoothedGradient,
                        const double learnRatePerSample,
                        const double momentumPerSample,
@@ -497,6 +507,9 @@ protected:
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
+
+private:
+    int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
 };
 
 }}}

@@ -1,5 +1,5 @@
 //
-// <copyright file="HTKMLFReader.h" company="Microsoft">
+// <copyright file="HTKMLFWriter.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

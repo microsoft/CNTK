@@ -1420,6 +1420,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(id < m_minibatchBuffer[index].features.size());
                 data.SetValue(dim, 
                     m_minibatchBuffer[index].features[id].size() / dim,
+                    data.GetDeviceId(),
                     m_minibatchBuffer[index].features[id].data(),
                     matrixFlagNormal);
             }
@@ -1430,6 +1431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(id < m_minibatchBuffer[index].labels.size());
                 data.SetValue(dim,
                     m_minibatchBuffer[index].labels[id].size() / dim,
+                    data.GetDeviceId(),
                     m_minibatchBuffer[index].labels[id].data(),
                     matrixFlagNormal);
             }
@@ -1496,14 +1498,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t id = m_featureNameToIdMap.at(iter->first);
                 size_t dim = m_featureNameToDimMap.at(iter->first);
                 assert(id < featureBuffer.size());
-                data.SetValue(dim, size, featureBuffer[id] , matrixFlagNormal);
+                data.SetValue(dim, size, data.GetDeviceId(), featureBuffer[id] , matrixFlagNormal);
             }
             else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::category)
             {
                 size_t id = m_labelNameToIdMap.at(iter->first);
                 size_t dim = m_labelNameToDimMap.at(iter->first);
                 assert(id < labelBuffer.size());
-                data.SetValue(dim, size, labelBuffer[id], matrixFlagNormal);
+                data.SetValue(dim, size, data.GetDeviceId(), labelBuffer[id], matrixFlagNormal);
             }
             else if (m_doMinibatchBuffering)
             {
@@ -1682,7 +1684,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                         }
                     }
-                    data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
+                    data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                 }
                 else
                 {   // Resizes other inputs so they won't affect actual minibatch size.

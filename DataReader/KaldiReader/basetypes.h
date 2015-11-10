@@ -67,15 +67,15 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #endif
 
 #include "Platform.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>     // include here because we redefine some names later
-#include <errno.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>     // include here because we redefine some names later
+#include <cerrno>
 #include <string>
 #include <vector>
-#include <math.h>        // for HUGE_VAL // potential double isnan definition
-#include <assert.h>
-#include <stdarg.h>
+#include <cmath>        // for HUGE_VAL // potential double isnan definition
+#include <cassert>
+#include <cstdarg>
 #include <map>
 #include <stdexcept>
 #include <locale>       // std::wstring_convert
@@ -1192,7 +1192,8 @@ public:
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
 /**
-These macros are used for sentence segmentation information. 
+These macros are used for sentence segmentation information.
+TODO: get rid of this, no need
 */
 #define SEQUENCE_START ((int) MinibatchPackingFlags::SequenceStart)
 #define SEQUENCE_MIDDLE ((int) MinibatchPackingFlags::None)

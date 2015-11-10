@@ -1,6 +1,6 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 //
-// <copyright file="ComputationNode.cpp" company="Microsoft">
+// <copyright file="ComputationNetworkBuilder.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -16,7 +16,8 @@
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-#include "DecoderNode.h"
+#include "ReshapingNodes.h"
+#include "EsotericNodes.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
@@ -41,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(CosineNode))	            return New<CosineNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(CrossEntropyNode))	    return New<CrossEntropyNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))	return New<CrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name);
-		else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))	return New<SequenceWithSoftmaxNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))	return New<SequenceWithSoftmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DiagTimesNode))	    return New<DiagTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DropoutNode))	            return New<DropoutNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DummyCriterionNode))	    return New<DummyCriterionNode<ElemType>>(deviceId, name);
@@ -68,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode) || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode) || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PlusNode))	            return New<PlusNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RectifiedLinearNode))	    return New<RectifiedLinearNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(ReshapeNode))	            return New<ReshapeNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowElementTimesNode))	    return New<RowElementTimesNode<ElemType>>(deviceId, name);
@@ -80,6 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(SigmoidNode))	            return New<SigmoidNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SoftmaxNode))	            return New<SoftmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SquareErrorNode))	    return New<SquareErrorNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(LogisticNode))	    return New<LogisticNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(StrideTimesNode))	    return New<StrideTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumColumnElementsNode))   return New<SumColumnElementsNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumElementsNode))	    return New<SumElementsNode<ElemType>>(deviceId, name);
@@ -291,6 +294,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b, c);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
+    {
+        vector<ComputationNodeBasePtr> inputs(pinputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+            inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), inputs);
+    }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName)
     {
@@ -298,37 +318,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
-
     {
         return net.AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction);
     }
 
-	template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
-
-	{
-		return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction,loglikelihood);
-	}
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction, loglikelihood);
+    }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction,
-        const ComputationNodePtr input_weight,
-        const ComputationNodePtr input_bias, const std::wstring nodeName,
-        NCEEvalMode mode)
+                                                                                                                                   const ComputationNodePtr input_weight,
+                                                                                                                                   const ComputationNodePtr input_bias, const std::wstring nodeName,
+                                                                                                                                   NCEEvalMode mode)
     {
         return net.AddNodeToNetAndAttachInputs(New<NoiseContrastiveEstimationNode<ElemType>>(net.GetDeviceId(), nodeName, mode), label, prediction, input_weight, input_bias);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction,
-        const ComputationNodePtr input_weight,
-        const ComputationNodePtr cls_log_post_prob,
-        const std::wstring nodeName)
+                                                                                                                                     const ComputationNodePtr input_weight,
+                                                                                                                                     const ComputationNodePtr cls_log_post_prob,
+                                                                                                                                     const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction, input_weight, cls_log_post_prob);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CRF(const ComputationNodePtr label,
-        const ComputationNodePtr postDepScore,
-        const ComputationNodePtr transition_score,
-        const std::wstring nodeName)
+                                                                                                            const ComputationNodePtr postDepScore,
+                                                                                                            const ComputationNodePtr transition_score,
+                                                                                                            const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<CRFNode<ElemType>>(net.GetDeviceId(), nodeName), label, postDepScore, transition_score);
     }
@@ -339,11 +357,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LSTM(const ComputationNodePtr obs,
-        const ComputationNodePtr inputGate,
-        const ComputationNodePtr forgetGate,
-        const ComputationNodePtr outputGate,
-        const ComputationNodePtr memoryCellWgt,
-        const std::wstring nodeName)
+                                                                                                             const ComputationNodePtr inputGate,
+                                                                                                             const ComputationNodePtr forgetGate,
+                                                                                                             const ComputationNodePtr outputGate,
+                                                                                                             const ComputationNodePtr memoryCellWgt,
+                                                                                                             const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<LSTMNode<ElemType>>(net.GetDeviceId(), nodeName), obs, inputGate, forgetGate, outputGate, memoryCellWgt);
     }
@@ -483,9 +501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<PlusNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Minus(const ComputationNodePtr a,
-        const ComputationNodePtr b,
-        const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Minus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<MinusNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
@@ -496,11 +512,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reshape(const ComputationNodePtr a,
-                                                                                                                const size_t num_rows,
+                                                                                                                const size_t numRows,
                                                                                                                 const ImageLayout & imageLayout,
                                                                                                                 const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, num_rows, imageLayout), a);
+        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName)
@@ -513,14 +529,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, size_t timeStep, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size), a);
+        return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size, timeStep), a);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, size_t timeStep, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size), a);
+        return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size, timeStep), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
@@ -542,10 +558,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GMMLogLikelihood(const ComputationNodePtr unnormedPrior,
-        const ComputationNodePtr mean,
-        const ComputationNodePtr logStddev,
-        const ComputationNodePtr feature,
-        const std::wstring nodeName)
+                                                                                                                         const ComputationNodePtr mean,
+                                                                                                                         const ComputationNodePtr logStddev,
+                                                                                                                         const ComputationNodePtr feature,
+                                                                                                                         const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<GMMLogLikelihoodNode<ElemType>>(net.GetDeviceId(), nodeName), unnormedPrior, mean, logStddev, feature);
     }

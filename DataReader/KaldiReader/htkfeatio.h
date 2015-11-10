@@ -15,9 +15,9 @@
 #include <regex>
 #include <set>
 #include <unordered_map>
-#include <stdint.h>
-#include <limits.h>
-#include <wchar.h>
+#include <cstdint>
+#include <climits>
+#include <cwchar>
 #include <fstream>
 #include "util/common-utils.h"
 #include "base/kaldi-common.h"

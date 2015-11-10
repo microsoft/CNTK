@@ -262,6 +262,10 @@ class Test:
         if args.verbose:
           print self.fullName + ": " + line
 
+        if args.dry_run:
+          print line
+          continue
+
         print >>output, line
         allLines.append(line)
         output.flush()
@@ -271,12 +275,16 @@ class Test:
     exitCode = process.wait()
     success = True
 
-    # checking exit code
-    if exitCode != 0:
-      return TestRunResult.fatalError("Exit code must be 0", "==> got exit code {0} when running: {1}".format(exitCode, " ".join(cmdLine)), logFile = logFile)
-
     # saving log file path, so it can be reported later
     result.logFile = logFile
+
+    # checking exit code
+    if exitCode != 0:
+      if args.dry_run:
+        print "[SKIPPED]"
+        return result
+      else:
+        return TestRunResult.fatalError("Exit code must be 0", "==> got exit code {0} when running: {1}".format(exitCode, " ".join(cmdLine)), logFile = logFile)
 
     # finalizing verification - need to check whether we have any unmatched lines
     for testCaseRunResult in result.testCaseRunResults:
@@ -546,6 +554,8 @@ def runCommand(args):
   devices = args.devices
   flavors = args.flavors
 
+  os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
+
   print "CNTK Test Driver is started"
   print "Running tests:  ", " ".join([y.fullName for y in testsToRun])
   print "Build location: ", args.build_location
@@ -555,6 +565,8 @@ def runCommand(args):
   if (args.update_baseline):
     print "*** Running in automatic baseline update mode ***"
   print ""
+  if args.dry_run:
+    os.environ["DRY_RUN"] = "1"
   succeededCount, totalCount = 0, 0
   for test in testsToRun:
     for flavor in flavors:
@@ -569,7 +581,6 @@ def runCommand(args):
         sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
         if args.dry_run:
            print "[SKIPPED] (dry-run)"
-           continue
         # in verbose mode, terminate the line, since there will be a lot of output
         if args.verbose:
           sys.stdout.write("\n");
@@ -629,7 +640,7 @@ defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
 runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
 runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
-runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and condfigurations to be run")
+runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and configurations to be run along with full command lines")
 
 runSubparser.set_defaults(func=runCommand)
 

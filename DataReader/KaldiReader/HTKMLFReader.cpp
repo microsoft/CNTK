@@ -7,6 +7,9 @@
 //
 
 #include "stdafx.h"
+#ifdef _WIN32
+#include <objbase.h>
+#endif
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
@@ -794,20 +797,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             dim = m_featureNameToDimMap[iter->first];
                             const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
                             const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
-                            if (first)
+                            if (first)  // initialize MBLayout
                             {
-                                m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                                m_minibatchPackingFlags.resize(feat.cols());
-                                m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
-                                m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
-                                m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
-                                
-                                std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-                                m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
-                                m_minibatchPackingFlags[(size_t)feat.cols()-1] = MinibatchPackingFlags::SequenceEnd;
+                                // entire minibatch is one utterance
+                                m_pMBLayout->Init(1, actualmbsize, !m_framemode);
+                                m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                                m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                                 first = false;
                             }
-
+                            else
+                                if (m_pMBLayout->GetNumTimeSteps() != actualmbsize)
+                                    RuntimeError("GetMinibatch: Multiple feature streams with inconsistent minibatch size detected, e.g. %d vs. %d.", (int)m_pMBLayout->GetNumTimeSteps(), (int)actualmbsize);
 
 
                             assert (actualmbsize == m_mbiter->currentmbframes());
@@ -851,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         }
                                     }
                                 }
-                                data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
+                                data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                             }
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
@@ -919,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 }
 
 
-                                data.SetValue(dim,uids.size(),m_labelsBufferMultiIO[id],matrixFlagNormal);
+                                data.SetValue(dim,uids.size(),data.GetDeviceId(), m_labelsBufferMultiIO[id],matrixFlagNormal);
                             }
 
                         }
@@ -951,25 +951,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
-                    /**
-mtSentenceBegin : a matrix with [Ns x T]
-the first row is 0/1 bit for wether corresponding frame has sentence beginining/no_label for any of streams
-0 : no such case
-1 : case exists
-*/
-                    m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
-                    m_minibatchPackingFlags.resize(m_mbSize);
 
-                    //mtSentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
-                    for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
-                    {
-                        for (size_t j = 0; j < m_mbSize; j++)
-                        {
-                            m_sentenceBegin.SetValue(i,j,(ElemType) SEQUENCE_MIDDLE);
-                        }
-                    }
-                    std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-
+                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
 
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
@@ -984,17 +967,13 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
                                 if (m_processedFrame[i] == 1)
-                                {
-                                    m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
-                                    m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceEnd;
-                                }
+                                    m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
                             }
                             else
                             {
-                                m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
-                                m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
+                                m_switchFrame[i] = 0;
+                                m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceStart);
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1147,16 +1126,9 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             m_switchFrame[i] = actualmbsize[i];
                             
                             if (actualmbsize[i] < m_mbSize)
-                            {
-                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
-                                m_minibatchPackingFlags[actualmbsize[i]] = m_minibatchPackingFlags[actualmbsize[i]] | MinibatchPackingFlags::SequenceStart;
-                            } 
+                                m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             if (actualmbsize[i] == m_mbSize)
-                            {
-                                m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
-                                m_minibatchPackingFlags[actualmbsize[i]-1] = m_minibatchPackingFlags[actualmbsize[i]] | MinibatchPackingFlags::SequenceEnd;
-                            }
-
+                                m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1218,13 +1190,13 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         {
                             id = m_featureNameToIdMap[iter->first];
                             dim = m_featureNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id],matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                         {
                             id = m_labelNameToIdMap[iter->first];
                             dim = m_labelNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id],matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id],matrixFlagNormal);
                         }
                     }
                     skip=false;
@@ -1303,21 +1275,11 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                            m_minibatchPackingFlags.resize((size_t)feat.cols());
-
-                            m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-                            m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
-                            m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
-                                
-                            std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-                            m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
-                            m_minibatchPackingFlags[(size_t)feat.cols()-1] = MinibatchPackingFlags::SequenceEnd;
- 
+                            m_pMBLayout->Init(1, feat.cols(), true/*sequential*/);
+                            m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                            m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
                         }
-
-
 
                         // copy the features over to our array type
                         //
@@ -1355,7 +1317,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 }
                             }
                         }
-                        data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
+                        data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                     }
                 }
                 return true;
@@ -1632,12 +1594,10 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
         }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlag)
-    {
-        sentenceBegin.SetValue(m_sentenceBegin);
-        minibatchPackingFlag = m_minibatchPackingFlags;
-    }
-
+        void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+        {
+            pMBLayout->CopyFrom(m_pMBLayout);
+        }
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
     // features - [in,out] a vector of feature name strings

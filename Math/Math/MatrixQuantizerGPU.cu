@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void cudafail(const char * msg)
     {
         // TODO: get from an env variable
-        bool dieoncudafailure = true;       
+        bool dieoncudafailure = false;       
         if (!dieoncudafailure)
         {
             RuntimeError(msg);
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempGPUQuantizedMatrix = nullptr;
         }
         
-        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(), nBits, (short)this->GetDeviceId());
+        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_residual->GetNumRows(), this->m_residual->GetNumCols(), nBits, (short)this->GetDeviceId());
         newlyAllocated = true;
 
         return *m_tempGPUQuantizedMatrix;
@@ -177,10 +177,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///cpubuffer should be page-locked memory allocated, otherwise CUDA will not be efficient (hence we don't use STL)
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(const Matrix<ElemType>& inMatrix, bool forceSync /*= false*/) 
-    : MatrixQuantizer<ElemType>(inMatrix), m_quantizeCompleteEvent(NULL), m_fetchCompleteEvent(NULL),
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync /*= false*/)
+    : MatrixQuantizer<ElemType>(numRows, numCols, deviceId), m_quantizeCompleteEvent(NULL), m_fetchCompleteEvent(NULL),
     m_assignCompleteEvent(NULL), m_forceSync(forceSync), m_tempGPUQuantizedMatrix(nullptr), m_quantizeOpIncludedFetch(false)
     {
+        PrepareDevice(this->GetDeviceId());
+
         // events
         // Note: Do NOT use cudaEventBlockingSync (which supposedly yields the process)--it will totally break cudaEventSynchronize(), causing it to take 50 or 100 ms randomly.
         cudaEventCreateWithFlags(&m_quantizeCompleteEvent, cudaEventDisableTiming) || "cudaEventCreateWithFlags failed";
@@ -211,11 +213,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
         // Verify various input matrix parameter's dimensions
-        assert((this->m_inMatrix.GetNumRows() == outQMatrix.GetNumRows()) && (this->m_inMatrix.GetNumCols() == outQMatrix.GetNumCols()));
-        
+        assert((inMatrix.GetNumRows() == outQMatrix.GetNumRows()) && (inMatrix.GetNumCols() == outQMatrix.GetNumCols()));
+        assert((inMatrix.GetNumRows() == this->m_residual->GetNumRows()) && (inMatrix.GetNumCols() == this->m_residual->GetNumCols()));
+
         size_t nBits = outQMatrix.GetNumBits();
 
         PrepareDevice(this->GetDeviceId());
@@ -228,8 +231,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         QuantizedMatrix<ElemType>& outQMatrixGPU = (outQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits, GPUMatrixNewlyAllocated) : outQMatrix;
 
         // Do the quantization on compute sstream and insert event into stream
-        _QuantizeMatrix<ElemType>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(),
-                                  this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(),
+        _QuantizeMatrix<ElemType>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(),
+                                  inMatrix.GetNumRows(), inMatrix.GetNumCols(),
                                   outQMatrixGPU.GetArray(), nBits, GetComputeStream(),
                                   this->m_residual->BufferPointer(), zeroThresholdFor1Bit);
         

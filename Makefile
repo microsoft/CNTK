@@ -54,7 +54,7 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/SequenceTraining BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -111,7 +111,7 @@ endif
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml -lm -lpthread
+  LIBS += -lacml_mp -liomp5 -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 
@@ -151,7 +151,7 @@ ifeq ("$(BUILDTYPE)","debug")
 
   CXXFLAGS += -g
   CPPFLAGS += -D_DEBUG
-  CUFLAGS += -O0 -G -lineinfo  $(GENCODE_FLAGS)
+  CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
@@ -163,6 +163,10 @@ ifeq ("$(BUILDTYPE)","release")
 
   CXXFLAGS += -O4
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
+endif
+
+ifdef CNTK_CUDA_DEVICE_DEBUGINFO
+  CUFLAGS += -G
 endif
 
 #######
@@ -410,16 +414,20 @@ CNTK_SRC =\
 	MachineLearning/CNTK/tests.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNode.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetwork.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEvaluation.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/SequenceTraining/latticeforwardbackward.cpp \
-	MachineLearning/SequenceTraining/parallelforwardbackward.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
+	Common/MPIWrapper.cpp \
 
 
 ifdef CUDA_PATH
@@ -430,7 +438,7 @@ CNTK_SRC +=\
 
 else
 CNTK_SRC +=\
-	MachineLearning/SequenceTraining/NoGPU.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/latticeNoGPU.cpp \
 
 endif
 

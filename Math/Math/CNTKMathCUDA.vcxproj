@@ -85,6 +85,9 @@
       <GenerateLineInfo>true</GenerateLineInfo>
       <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
       <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
+      <FastMath>true</FastMath>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
     </CudaCompile>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)</Command>
@@ -114,8 +117,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <CudaCompile>
-      <FastMath>true</FastMath>
-      <GPUDebugInfo>false</GPUDebugInfo>
       <HostDebugInfo>false</HostDebugInfo>
     </CudaCompile>
   </ItemDefinitionGroup>

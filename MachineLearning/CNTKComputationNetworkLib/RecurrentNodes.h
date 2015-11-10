@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // -----------------------------------------------------------------------
 
+    // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -39,6 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
+            CreateMatrixIfNull(m_functionValues);
             Resize(row_size, col_size);
             //m_delayedActivation.Resize(row_size, col_size);     // TODO: relevance of col_size? Why not timeStep?
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
@@ -51,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Init(1, 1);
         }
-        DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+        DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
@@ -59,11 +61,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_timeStep = (int)timeStep;
 
-            m_functionValues.SetValue(m_initialActivationValue);
+            m_functionValues->SetValue(m_initialActivationValue);
             //m_delayedActivation.SetValue(m_initialActivationValue);
 
-            //m_gradientValues.Resize(row_size, col_size);
-            //m_gradientValues.SetValue(0.0f);
+            //m_gradientValues->Resize(row_size, col_size);
+            //m_gradientValues->SetValue(0.0f);
         }
     public:
         void SaveToFile(File& fstream) const
@@ -155,18 +157,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                FrameRangeIteration range(m_pMBLayout, dir);
+                FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iterator
                     ComputeInputPartial(inputIndex, t);
-                //if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
-                //    ComputeInputPartial(inputIndex, FrameRange(t));
-                //else for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                //    ComputeInputPartial(inputIndex, FrameRange(t));
                 return;
             }
 
             size_t t = frameRange.t();
-            //MaskMissingGradientColumnsToZero(t);
 
             // if delayed input is within valid time range then add its gradient
             int t_delayed = (int)t + direction * m_timeStep;
@@ -181,15 +178,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
                             Matrix<ElemType> frm = GradientSlice(frameRange.Sequence(id));
-                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
                             to += frm;
                         }
                     }
                 }
                 else    // operate on entire time step in one go (over all parallel sequences)
                 {
-                    Matrix<ElemType> frm = GradientSlice(t);
-                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed));
+                    Matrix<ElemType> frm = GradientSlice(frameRange);
+                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed)); // TODO: we need to be able to create a FrameRange with a delta, not like this
                     to += frm;
                 }
             }
@@ -234,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                FrameRangeIteration range(m_pMBLayout, dir);
+                FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.begin(); t != range.end(); t++)
                     EvaluateThisNode(t);
                 return;
@@ -268,11 +265,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         // inside the sequence: access delayed value
                         if (t_delayed < 0)
-                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else if (t_delayed >= T)
-                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Inputs(0)->ValueSlice(FrameRange(t_delayed).Sequence(id));
+                            inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -283,11 +280,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> out = ValueSlice(frameRange);
 
                 if (t_delayed < 0)
-                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+                    inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
                 else if (t_delayed >= T)
-                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T), m_delayedActivationMBLayout);
+                    inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Inputs(0)->ValueSlice(FrameRange(t_delayed));
+                    inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
@@ -331,21 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences(), true/*sequential*/);
         }
 
-        // this function is only used from old NDL  --TODO: delete once no longer used
-        void SetTimeStep(const int val)
-        {
-            if (val <= 0)
-                LogicError("m_timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
-            m_timeStep = val;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_delayedActivation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -391,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
     };
@@ -414,7 +397,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
     };
@@ -479,7 +462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_DefaultState;
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -505,7 +488,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 4)
                 InvalidArgument("LSTM operation only takes five inputs.");
@@ -545,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq);
+                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
@@ -936,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq);
+                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
@@ -1227,12 +1210,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
 
+#if 0
             // TODO: use dynamic_pointer_cast instead
             if (Inputs(1)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(2)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(3)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(4)->OperationName() != OperationNameOf(LearnableParameter))
                 LogicError("LSTM validation: need to have learnable parameters ");
+#endif
 
             //if (Inputs(0)->GetNumRows() == 0)
             //    LogicError("LSTM validation: input size is zero!");
@@ -1321,7 +1306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Resize(nOutput, nT);
 
                 m_DefaultState = 0.0;
-                EvaluateThisNode(FrameRange());
+                EvaluateThisNode(FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
@@ -1341,7 +1326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)
-                    ComputeInputPartial(i);
+                    ComputeInputPartial(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi
@@ -1394,34 +1379,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    m_children[3] = outputGate;
         //    m_children[4] = memoryCellWgt;
         //}
-
-        virtual void MoveMatricesToDevice(const short deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
-            m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
-            grdToObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdToInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdToForgetGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdToOutputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdToCellWgt.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_State.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_PastState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_PastOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_Gi.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_Gf.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_Go.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            tanhState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            tanhObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            mSlicePrevState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            mSlicePrevOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdBeforeInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdBeforeForget.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdBeforeGo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdToCell.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            grdBeforeTanhInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {

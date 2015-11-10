@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{EAD17188-072C-4726-B840-A769C36DAD1B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>SequenceTraining</RootNamespace>
+    <RootNamespace>CNTKSequenceTrainingLib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -67,6 +67,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\latticearchive.h" />
+    <ClInclude Include="..\..\Common\Include\latticestorage.h" />
     <ClInclude Include="..\..\Common\Include\simplesenonehmm.h" />
     <ClInclude Include="..\..\Common\Include\simple_checked_arrays.h" />
     <ClInclude Include="..\..\Common\Include\ssefloat4.h" />
@@ -75,7 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="latticeforwardbackward.cpp" />
-    <ClCompile Include="NoGPU.cpp" />
+    <ClCompile Include="latticeNoGPU.cpp" />
     <ClCompile Include="parallelforwardbackward.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

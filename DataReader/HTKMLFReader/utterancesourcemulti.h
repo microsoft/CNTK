@@ -48,7 +48,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         msra::asr::htkfeatreader::parsedpath parsedpath;    // archive filename and frame range in that file
         size_t classidsbegin;       // index into allclassids[] array (first frame)
 
-        utterancedesc (msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath (ppath), classidsbegin (classidsbegin) {}
+        utterancedesc (msra::asr::htkfeatreader::parsedpath&& ppath, size_t classidsbegin) : parsedpath (std::move(ppath)), classidsbegin (classidsbegin) {}
 
         const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
         size_t numframes() const { return parsedpath.numframes(); }
@@ -60,10 +60,14 @@ class minibatchutterancesourcemulti : public minibatchsource
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
 #endif
 #ifdef __unix__
-            return removeExtension(basename(logicalpath()));
+            return removeExtension(logicalpath());
 #endif
         }
     };
+
+    // Make sure type 'utterancedesc' has a move constructor
+    static_assert(std::is_move_constructible<utterancedesc>::value, "Type 'utterancedesc' should be move constructible!");
+
     struct utterancechunkdata       // data for a chunk of utterances
     {
         std::vector<utterancedesc> utteranceset;    // utterances in this set
@@ -82,7 +86,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 LogicError("utterancechunkdata: frames already paged into RAM--too late to add data");
             firstframes.push_back (totalframes);
             totalframes += utt.numframes();
-            utteranceset.push_back (utt);
+            utteranceset.push_back (std::move(utt));
         }
 
         // accessors to an utterance's data
@@ -370,11 +374,12 @@ public:
                     RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                            fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
-                else{
+                else
+                {
                     if (m == 0){
                         uttduration[i] = uttframes;
                         uttisvalid[i] = true;
@@ -1110,20 +1115,9 @@ public:
             const size_t spos = positer->second;
 
             // determine how many utterances will fit into the requested minibatch size
-            // In case of MPI we need to choose enough number of frames such that current MPI subset
-            // gets at least one utterance even if 'mbframes' execeeds 'framesrequested'
-            size_t epos = spos;
-            bool currentSubsetCovered = false;
-            do
-            {
-                mbframes += randomizedutterancerefs[epos].numframes;
-                currentSubsetCovered = ((randomizedutterancerefs[epos].chunkindex % numsubsets) == subsetnum);
-                epos++;
-
-            } while (!currentSubsetCovered && (epos < numutterances));
-
-            // add more utterances as long as they fit within requested minibatch size
-            for (; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)  
+            mbframes = randomizedutterancerefs[spos].numframes;   // at least one utterance, even if too long
+            size_t epos;
+            for (epos = spos + 1; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)  // add more utterances as long as they fit within requested minibatch size
                 mbframes += randomizedutterancerefs[epos].numframes;
 
             // do some paging housekeeping
