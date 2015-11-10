@@ -80,14 +80,15 @@ namespace CNTKMathTest
                 float b[] = { 1.0f, 2.0f };
                 SingleMatrix bias(cmapOut, 1, b, matrixFlagNormal, deviceId);
 
-                eng->AddBias(*biasT, bias, *outT, out);
+                SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+                eng->AddBias(*outT, out, *biasT, bias, plusB);
 
                 // Bias is per-channel.
                 seed = 0;
                 std::transform(expBuf.begin(), expBuf.end(), expBuf.begin(), 
                     [=, &seed, &b](const float& a) { return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)]; });
                 SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
-                Assert::IsTrue(out.IsEqualTo(expPlusB), L"Unexpected (convolution + bias) output.");
+                Assert::IsTrue(plusB.IsEqualTo(expPlusB), L"Unexpected (convolution + bias) output.");
             }
         }
 

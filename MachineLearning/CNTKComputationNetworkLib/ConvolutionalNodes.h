@@ -286,13 +286,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        void AddBias(Matrix<ElemType>& output, const Matrix<ElemType>& bias)
+        void AddBias(const Matrix<ElemType>& output, const Matrix<ElemType>& bias, Matrix<ElemType>& dst)
         {
             assert(m_convEng != nullptr);
-            m_convEng->AddBias(*m_biasT, bias, *m_outT, output);
+            m_convEng->AddBias(*m_outT, output, *m_biasT, bias, dst);
         }
 
-        void BackwardBias(Matrix<ElemType>& biasGrad, const Matrix<ElemType>& srcGrad)
+        void BackwardBias(const Matrix<ElemType>& srcGrad, Matrix<ElemType>& biasGrad)
         {
             assert(m_convEng != nullptr);
             m_convEng->BackwardBias(*m_outT, srcGrad, *m_biasT, biasGrad);
@@ -591,22 +591,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            ComputeGradient(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_poolEng != nullptr);
+            assert(m_poolDesc != nullptr);
+            m_poolEng->Backward(*m_outT, sliceOutputValue, sliceOutputGrad, *m_poolDesc, *m_inT, sliceInput0Value, sliceInput0Grad);
         }
-
-        // this function must be overriden by Max or AveragePoolingNode
-        virtual void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
 
         virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Evaluate(sliceOutputValue, sliceInput0Value);
-        }
 
-        // this function must be overriden by Max or AveragePoolingNode
-        virtual void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_poolEng != nullptr);
+            assert(m_poolDesc != nullptr);
+            m_poolEng->Forward(*m_inT, sliceInput0Value, *m_poolDesc, *m_outT, sliceOutputValue);
+        }
 
         virtual void Validate(bool isFinalValidationPass) override
         {
@@ -705,11 +710,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-<<<<<<< HEAD
-        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
-=======
         void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
->>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             //m_poolEng->Backward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
             inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.channels,
@@ -718,9 +719,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                       m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
-<<<<<<< HEAD
-        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-=======
         void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
         {
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
@@ -731,7 +729,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void InferImageDimsFromInputs() override
->>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             functionValues.AssignMaxPoolingResult(input0, m_inputImageLayout.GetNumChannels(),
                                                   m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -761,11 +758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-<<<<<<< HEAD
-        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
-=======
         void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
->>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.GetNumChannels(),
                                                           m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -773,16 +766,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                           m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
-<<<<<<< HEAD
-        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-=======
-        void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
->>>>>>> cudnn: added pooling engine, unit tests and refactoring.
+        void InferImageDimsFromInputs() override
         {
-            functionValues.AssignAveragePoolingResult(input0, m_inputImageLayout.GetNumChannels(),
-                                                      m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+            Base::InferImageDimsFromInputs();
+            if (m_poolDesc == nullptr)
+                m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
     };
 
