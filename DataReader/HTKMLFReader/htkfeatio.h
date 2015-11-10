@@ -312,12 +312,11 @@ public:
     {
     protected:
         friend class htkfeatreader;
-        bool isarchive;         // true if archive (range specified)
-        bool isidxformat;        // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
-        wstring xpath;          // original full path specification as passed to constructor (for error messages)
         wstring logicalpath;    // virtual path that this file should be understood to belong to
         wstring archivepath;    // physical path of archive file
         size_t s, e;            // first and last frame inside the archive file; (0, INT_MAX) if not given
+        bool isarchive;         // true if archive (range specified)
+        bool isidxformat;       // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
         void malformed(const wstring& path) const { RuntimeError(msra::strfun::strprintf("parsedpath: malformed path '%S'", path.c_str())); }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
@@ -332,8 +331,10 @@ public:
     public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
-        parsedpath(const wstring& pathParam) : xpath(pathParam)
+        parsedpath(const wstring& pathParam)
         {
+            wstring xpath(pathParam);
+
             // parse out logical path
             logicalpath = consume (xpath, L"=");
             isidxformat = false;
@@ -499,9 +500,9 @@ public:
         if (ppath.isarchive)    // reading a sub-range from an archive
         {
             if (ppath.s > ppath.e)
-                RuntimeError(msra::strfun::strprintf ("open: start frame > end frame in '%S'", ppath.e, physicalframes, ppath.xpath.c_str()));
+                RuntimeError(msra::strfun::strprintf("open: start frame > end frame in '%S'", ppath.e, physicalframes, ppath.logicalpath.c_str()));
             if (ppath.e >= physicalframes)
-                RuntimeError(msra::strfun::strprintf ("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.xpath.c_str()));
+                RuntimeError(msra::strfun::strprintf("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.logicalpath.c_str()));
 
             int64_t dataoffset = physicaldatastart + ppath.s * vecbytesize;
             fsetpos (f, dataoffset);    // we assume fsetpos(), which is our own, is smart to not flush the read buffer
