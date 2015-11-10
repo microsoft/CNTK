@@ -2239,6 +2239,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //[this]=hardmax([this]) 
+    //the max element is 1 else is 0
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            LogicError("AssignHardmaxOf: Matrix a is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+
+        if (isColWise)
+        {
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                //we need to extract max
+                ElemType maxV = a(0, j);
+                long maxI = 0;
+                foreach_row(i, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxI = i;
+                    }
+                }
+
+                foreach_row(i, us)
+                    us(i, j) = (i == maxI) ? 1.0f : 0.0f;
+            }
+
+        }
+        else
+        {
+#pragma omp parallel for
+            foreach_row(i, a)
+            {
+                //we need to extract max 
+                ElemType maxV = a(i, 0);
+                long maxJ = 0;
+                foreach_column(j, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxJ = j;
+                    }
+                }
+
+                foreach_column(j, us)
+                    us(i, j) = (j == maxJ)? 1.0f : 0.0f;
+            }
+
+        }
+
+        return *this;
+    }
+
     //[this]=sqrt([this]) element wise
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSqrt ()

@@ -696,31 +696,31 @@ __global__ void _logSoftMaxColWise(
     const CUDA_LONG m_numRows) //ld
 {
     int col_id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (col_id>=m_numCols)
+    if (col_id >= m_numCols)
         return;
 
     __shared__ ElemType maxV[threadsPerBlock];
     __shared__ ElemType Sum[threadsPerBlock];
-    maxV[threadIdx.x]=a[IDX2C(0,col_id,m_numRows)];
-    Sum[threadIdx.x]=0;
+    maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
+    Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        if (a[IDX2C(i,col_id,m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(i, col_id, m_numRows)]>maxV[threadIdx.x])
         {
-            maxV[threadIdx.x]=a[IDX2C(i,col_id,m_numRows)];
+            maxV[threadIdx.x] = a[IDX2C(i, col_id, m_numRows)];
         }
     }
 
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        ElemType tmp = a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x];
-        Sum[threadIdx.x] += (sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp));
+        ElemType tmp = a[IDX2C(i, col_id, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += (sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp));
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        a[IDX2C(i,col_id,m_numRows)] -= Sum[threadIdx.x] ;
+        a[IDX2C(i, col_id, m_numRows)] -= Sum[threadIdx.x];
     }
 }
 
@@ -773,7 +773,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     const ElemType *a,
     ElemType* us,
     const CUDA_LONG m_numCols,
-    const CUDA_LONG m_numRows) 
+    const CUDA_LONG m_numRows)
 {
     // We first find max per column
     __shared__ ElemType colMax[1];
@@ -909,31 +909,174 @@ __global__ void _logSoftMaxRowWise(
     const CUDA_LONG m_numRows) //ld
 {
     int row_id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (row_id>=m_numRows)
+    if (row_id >= m_numRows)
         return;
 
     __shared__ ElemType maxV[threadsPerBlock];
     __shared__ ElemType Sum[threadsPerBlock];
-    maxV[threadIdx.x]=a[IDX2C(row_id,0,m_numRows)];
-    Sum[threadIdx.x]=0;
+    maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
+    Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        if (a[IDX2C(row_id,j,m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(row_id, j, m_numRows)]>maxV[threadIdx.x])
         {
-            maxV[threadIdx.x]=a[IDX2C(row_id,j,m_numRows)];
+            maxV[threadIdx.x] = a[IDX2C(row_id, j, m_numRows)];
         }
     }
 
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        ElemType tmp = a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x];
-        Sum[threadIdx.x] += sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp);
+        ElemType tmp = a[IDX2C(row_id, j, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp);
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x]+(sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        a[IDX2C(row_id,j,m_numRows)] -= Sum[threadIdx.x] ;
+        a[IDX2C(row_id, j, m_numRows)] -= Sum[threadIdx.x];
+    }
+}
+
+// each block processes one column. There must be 512 threads in a block
+template<class ElemType>
+__global__ void _assignColumnwiseHardmaxOf(
+    const ElemType *a,
+    ElemType* us,
+    const CUDA_LONG m_numCols,
+    const CUDA_LONG m_numRows) 
+{
+    // We first find max per column
+    __shared__ ElemType partials[512];
+    __shared__ int colMaxI[512];
+    int row = threadIdx.x % m_numRows;
+    colMaxI[threadIdx.x] = row;
+    partials[threadIdx.x] = a[IDX2C(row, blockIdx.x, m_numRows)];
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        if (partials[threadIdx.x] < a[IDX2C(i, blockIdx.x, m_numRows)])
+        {
+            partials[threadIdx.x] = a[IDX2C(i, blockIdx.x, m_numRows)];
+            colMaxI[threadIdx.x] = i;
+        }
+    }
+    __syncthreads();
+
+    if (m_numRows > 256)
+    {
+        if (threadIdx.x < 256)
+        {
+            int other = threadIdx.x + 256;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 128)
+    {
+        if (threadIdx.x < 128)
+        {
+            int other = threadIdx.x + 128;
+
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 64)
+    {
+        if (threadIdx.x < 64)
+        {
+            int other = threadIdx.x + 64;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 32)
+    {
+        if (threadIdx.x < 32)
+        {
+            int other = threadIdx.x + 32;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 16)
+    {
+        if (threadIdx.x < 16)
+        {
+            int other = threadIdx.x + 16;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 8)
+    {
+        if (threadIdx.x < 8)
+        {
+            int other = threadIdx.x + 8;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 4)
+    {
+        if (threadIdx.x < 4)
+        {
+            int other = threadIdx.x + 4;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+        for (int i = 1; i < 4 && i < m_numRows; i++)
+        {
+            if (partials[0] < partials[i])
+            {
+                partials[0] = partials[i];
+                colMaxI[0] = colMaxI[i];
+            }
+        }
+    }
+    __syncthreads();
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        us[IDX2C(i, blockIdx.x, m_numRows)] = (i == colMaxI[0]) ? 1 : 0;
     }
 }
 
