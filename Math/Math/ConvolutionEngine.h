@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
             const Filter& filterT, Mat& filter, bool allowReuse) = 0;
 
-        virtual void AddBias(const Tensor4D& biasT, const Mat& bias, const Tensor4D& dstT, Mat& dst) = 0;
+        virtual void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) = 0;
         virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;
 
     public:
