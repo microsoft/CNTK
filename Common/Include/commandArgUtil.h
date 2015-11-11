@@ -1278,7 +1278,7 @@ private:
             char buf[10];
 
             // TODO: left-over of Linux compat, can be done nicer
-            sprintf(buf, "%d", (int) size());
+            sprintf_s(buf, "%d", (int) size());
 
             std::string name = m_configName + '[' + buf + ']';
             push_back(ConfigValue(value, name));
