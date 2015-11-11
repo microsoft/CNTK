@@ -920,42 +920,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numTimesMatrixTypeChanged++;
      
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-        {            
-            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);         
-        }      
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
+
         if (GetDeviceId()<0) //CPU
         {
             if (newMatrixType==MatrixType::SPARSE)
             {
                 if (m_baseMatrix == nullptr)
-                {
                     m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat);
-                }
                 else
-                {
                     m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat, GetNumRows(), GetNumCols(), 1);
-                }
 
                 if (keepValues)
-                {
                     CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
 
-                    delete m_CPUMatrix;
-                    m_CPUMatrix = nullptr;
-                }
+                delete m_CPUMatrix;
+                m_CPUMatrix = nullptr;
 
                 SetDataLocation(CPU, SPARSE);
             }
             else if (newMatrixType==MatrixType::DENSE)
             {
                 if (m_baseMatrix == nullptr)
-                {
                     m_CPUMatrix = new CPUMatrix<ElemType>();
-                }
                 else
-                {
                     m_CPUMatrix = new CPUMatrix<ElemType>(GetNumRows(), GetNumCols());
-                }
 
                 if (keepValues)
                     m_CPUMatrix->SetValue(m_CPUSparseMatrix->CopyColumnSliceToDense(0, GetNumCols()));
@@ -973,13 +962,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (newMatrixType==MatrixType::SPARSE)
             {
                 if (m_baseMatrix == nullptr)
-                {
                     m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
-                }
                 else
-                {
                     m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(GetNumRows(), GetNumCols(), 0, newMatrixFormat, GetDeviceId());
-                }
 
                 if (keepValues)
                     m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
@@ -992,13 +977,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (newMatrixType==MatrixType::DENSE)
             {
                 if (m_baseMatrix == nullptr)
-                {
                     m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
-                }
                 else
-                {
                     m_GPUMatrix = new GPUMatrix<ElemType>(GetNumRows(), GetNumCols(), GetDeviceId());
-                }
 
                 if (keepValues)
                     m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);

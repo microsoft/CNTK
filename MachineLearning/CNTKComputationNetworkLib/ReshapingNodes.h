@@ -234,9 +234,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if ((m_numRows > rows && m_numRows % rows != 0) ||  // grouping columns
                     (m_numRows < rows && rows % m_numRows != 0))    // splitting columns
-                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", (int)m_numRows, (int)rows);
+                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int)m_numRows, (int)rows);
                 if (!m_pMBLayout && rows * cols != m_numRows * newCols)    // sadly, cannot verify here if we have a layout, since current #cols may be bogus
-                    LogicError("%ls %ls operation: unexpected dimension mismatch");
+                    LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
             }
 
             Resize(m_numRows, newCols);

@@ -125,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  // first summand is a matrix with number of columns that is a multiple of the column number of the second matrix
             {
                 if (m_pMBLayout)
-                    InvalidArgument("%ls %ls operation applied to mismatching number of columns when columns are samples of a minibatch");
+                    InvalidArgument("%ls %ls operation applied to mismatching number of columns when columns are samples of a minibatch", NodeName().c_str(), OperationName().c_str());
                 // the children matrix is [a b] and the parent considers it as [a a a b b b]
                 // This can be useful for dealing with images.
                 Matrix<ElemType> tmpMat(inputFunctionValues1.GetDeviceId());
