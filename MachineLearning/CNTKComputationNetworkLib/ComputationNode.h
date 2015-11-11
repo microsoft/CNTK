@@ -350,7 +350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return childCols;
             size_t cols = m_pMBLayout->GetNumCols();    // layout: get it from there, but validate against child
             if (childCols != cols)
-                RuntimeError("%ls %ls operation: ");
+                RuntimeError("%ls %ls operation: Mismatch in number of columns", OperationName().c_str(), NodeName().c_str());
             return cols;
         }
     protected:
@@ -1306,7 +1306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ComputeGradientForChildren(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames() && HasLoop())
-                LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
+                LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
 
             for (size_t i = 0; i < m_children.size(); i++)
             {
@@ -1348,7 +1348,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void LazyZeroGradient()
         {
             if (!m_needsGradient)
-                LogicError("%ls %ls operation: LazyZeroGradient() called although this node needs no gradient.");
+                LogicError("%ls %ls operation: LazyZeroGradient() called although this node needs no gradient.", NodeName().c_str(), OperationName().c_str());
 
             if (m_gradientInitialized)
                 return;

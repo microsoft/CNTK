@@ -249,7 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch;
-                inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize)); // Get a copy of the slice because it will need to be resized.
+                inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat()); // Get a copy of the slice because it will need to be resized.
                 inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
                                                         m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
