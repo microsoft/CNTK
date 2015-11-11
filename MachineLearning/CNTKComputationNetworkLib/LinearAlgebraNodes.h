@@ -32,6 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        using Base::ValueSliceToDense;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
