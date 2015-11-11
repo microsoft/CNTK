@@ -2565,6 +2565,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //[this]=softmax([this]) element wise
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->InplaceHardmax(isColWise),
+            this->m_GPUMatrix->InplaceHardmax(isColWise),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignHardmaxOf(const Matrix<ElemType>& a, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            LogicError("AssignHardmaxOf: Matrix a is empty.");
+        DecideAndMoveToRightDevice(a, *this);
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            this,
+            this->m_CPUMatrix->AssignHardmaxOf(*a.m_CPUMatrix, isColWise),
+            this->m_GPUMatrix->AssignHardmaxOf(*a.m_GPUMatrix, isColWise),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::InplaceSqrt ()
     {

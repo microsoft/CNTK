@@ -19,7 +19,7 @@ namespace Microsoft
                 typedef CPUDoubleMatrix DMatrix;
                 typedef CPUSingleMatrix SMatrix;
 
-                BOOST_AUTO_TEST_SUITE(CpuMatrixSuite)
+                BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
                 BOOST_AUTO_TEST_CASE(CPUMatrixConstructorNoFlags)
                 {
