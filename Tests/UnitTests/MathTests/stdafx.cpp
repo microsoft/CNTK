@@ -3,6 +3,5 @@
 // </copyright>
 //
 // stdafx.cpp : source file that includes just the standard includes
-
 #define BOOST_TEST_MODULE MathTests
 #include "stdafx.h"
