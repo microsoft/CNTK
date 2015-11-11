@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <wchar.h>
 #include "simplesenonehmm.h"   
+#include <array>
 
 namespace msra { namespace asr {
 
@@ -740,40 +741,22 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         return lines;
     }
 
-    // determine mlf entry lines range
-    // lines range: [s,e)
-    size_t getnextmlfstart (vector<char*> & lines, size_t s)
-    {
-        // determine lines range
-        size_t e;
-        for (e = s ; ; e++)
-        {
-            if (e >= lines.size()) malformed ("unexpected end in mid-utterance");
-            char * ll = lines[e];
-            if (ll[0] == '.' && ll[1] == 0) // end delimiter: a single dot on a line
-                break;
-        }
-        return (e + 1);
-        // lines range: [s,e)
-    }
-
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
-    void parseentry (vector<char*> & lines, size_t & line, const set<wstring> & restricttokeys,
-                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo> & alignseqbuffer,
+    void parseentry (const vector<std::string> & lines, size_t line, const set<wstring> & restricttokeys,
+                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap,
+                     vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo> & alignseqbuffer,
                      const double htkTimeToFrame)
     {
-        assert (line < lines.size());
-        string filename = lines[line++];
+        size_t idx = 0;
+        string filename = lines[idx++];
         while (filename == "#!MLF!#")   // skip embedded duplicate MLF headers (so user can 'cat' MLFs)
-            filename = lines[line++];
+            filename = lines[idx++];
 
         // some mlf file have write errors, so skip malformed entry
         if (filename.length() < 3 || filename[0] != '"' || filename[filename.length()-1] != '"')
         {
             fprintf (stderr, "warning: filename entry (%s)\n", filename.c_str());
-            size_t s = line;
-            line = getnextmlfstart (lines, s);
-            fprintf (stderr, "skip current mlf entry form line (%lu) until line (%lu).\n", s, line);
+            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", line + idx, line + lines.size());
             return;
         }
 
@@ -787,9 +770,8 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 #endif
 
         // determine lines range
-        size_t s = line;
-        line = getnextmlfstart (lines, line);
-        size_t e = line - 1;
+        size_t s = idx;
+        size_t e = lines.size() - 1;
         // lines range: [s,e)
 
         // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
@@ -804,7 +786,8 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
-            strtok (lines[i], " \t", toks);
+            // We can destroy the original string as it is no longer needed after tokenization
+            strtok(const_cast<char*>(lines[i].c_str()), " \t", toks);
             if (statelistmap.size() == 0)
                 entries[i-s].parse (toks, htkTimeToFrame);
             else
@@ -930,17 +913,80 @@ public:
         fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
         curpath = path;         // for error messages only
 
-        vector<char> buffer;    // buffer owns the characters--don't release until done
-        vector<char*> lines = readlines (path, buffer);
+        auto_file_ptr f(fopenOrDie(path, L"rb"));
+        std::string headerLine = fgetline(f);
+        if (strcmp(headerLine.c_str(), "#!MLF!#"))
+            malformed("header missing");
+
+        // Read the file in blocks and parse MLF entries
         vector<typename WORDSEQUENCE::word> wordsequencebuffer;
         vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        size_t readBlockSize = 1000000;
+        vector<char> currBlockBuf(readBlockSize + 1);
+        size_t currLineNum = 1;
+        std::vector<string> currMLFLines;
+        bool reachedEOF = (feof(f) != 0);
+        char* nextReadPtr = currBlockBuf.data();
+        size_t nextReadSize = readBlockSize;
+        while (!reachedEOF)
+        {
+            size_t numBytesRead = fread(nextReadPtr, sizeof(char), nextReadSize, f);
+            reachedEOF = (numBytesRead != nextReadSize);
+            if (ferror(f))
+                RuntimeError("error reading from file: %s", strerror(errno));
 
-        if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
+            // Add 0 at the end to make it a proper C string
+            nextReadPtr[numBytesRead] = 0;
 
-        // parse entries
-        size_t line = 1;
-        while (line < lines.size() && (restricttokeys.empty() || this->size() < restricttokeys.size()))
-            parseentry (lines, line, restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+            // Now extract lines from the currBlockBuf and parse MLF entries
+            char* context = nullptr;
+            const char* delim = "\r\n";
+
+            auto consumeMLFLine = [&](const char* mlfLine) {
+                currLineNum++;
+                currMLFLines.push_back(mlfLine);
+                if ((mlfLine[0] == '.') && (mlfLine[1] == 0)) // end delimiter: a single dot on a line
+                {
+                    if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
+                    {
+                        parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+                    }
+
+                    currMLFLines.clear();
+                }
+            };
+
+            char* prevLine = strtok_s(currBlockBuf.data(), delim, &context);
+            for (char* currLine = strtok_s(NULL, delim, &context); currLine; currLine = strtok_s(NULL, delim, &context))
+            {
+                consumeMLFLine(prevLine);
+                prevLine = currLine;
+            }
+
+            // The last line read from the block may be a full line or part of a line
+            // We can tell by whether the terminating NULL for this line is the NULL
+            // we inserted after reading from the file
+            size_t prevLineLen = strlen(prevLine);
+            if ((prevLine + prevLineLen) == (nextReadPtr + numBytesRead))
+            {
+                // This is not a full line, but just a truncated part of a line.
+                // Lets copy this to the start of the currBlockBuf and read new data
+                // from there on
+                strcpy_s(currBlockBuf.data(), currBlockBuf.size(), prevLine);
+                nextReadPtr = currBlockBuf.data() + prevLineLen;
+                nextReadSize = readBlockSize - prevLineLen;
+            }
+            else
+            {
+                // A full line
+                consumeMLFLine(prevLine);
+                nextReadPtr = currBlockBuf.data();
+                nextReadSize = readBlockSize;
+            }
+        }
+
+        if (!currMLFLines.empty())
+            malformed("unexpected end in mid-utterance");
 
         curpath.clear();
         fprintf (stderr, " total %lu entries\n", this->size());
