@@ -323,7 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
-            LogicError("Mean operation should not be involved in the gradient calculation.");
+            //LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
