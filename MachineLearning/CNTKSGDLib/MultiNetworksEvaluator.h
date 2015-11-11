@@ -1,6 +1,6 @@
 // MultiNetworksEvaluator/SGD -- This represents earlier efforts to use CNTK for sequence-to-sequence modeling. This is no longer the intended design.
 //
-// <copyright file="SimpleEvaluator.h" company="Microsoft">
+// <copyright file="MultiNetworksEvaluator.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -566,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
-                node->EvaluateThisNode(FrameRange(atTime));
+                node->EvaluateThisNode(FrameRange(node->GetMBLayout(), atTime));
                 if (node->GetNumCols() != node->GetNumParallelSequences())
                     RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
             }

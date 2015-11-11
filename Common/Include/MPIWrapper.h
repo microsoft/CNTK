@@ -79,6 +79,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
+        // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
+        // OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
+        // in a deadlock, where all processes killed but MPI is still waiting.
+        // This happens when several perfectly synchronized processes (for example on MPI barrier)
+        // simulatenously exit with non-0 exit code.
+        // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
+        // allowing MPI to sequentially handle terminations
+        static int s_myRank;
+        static void MPIWorkaroundAtExit()
+        {
+            // Note: we can't use g_mpi, since MPI stack is already down at this point
+            Sleep(s_myRank*50);
+        }
+
     public:
         MPIWrapper() 
             : m_currentComm(MPI_COMM_WORLD)
@@ -97,6 +111,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
             MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
             m_numNodesInUse = m_numMPINodes;
+
+            // Applying MPI workaround
+            s_myRank = m_myRank;
+            atexit(&MPIWrapper::MPIWorkaroundAtExit);
 
             // by default we use all of them
             RequestNodes("MPIWrapper");

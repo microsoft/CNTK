@@ -1,5 +1,5 @@
 //
-// <copyright file="NDLBuilder.h" company="Microsoft">
+// <copyright file="NDLNetworkBuilder.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

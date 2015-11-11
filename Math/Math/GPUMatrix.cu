@@ -371,6 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixName=NULL;
         m_format = matrixFormatDense; 
         m_externalBuffer = false;
+        m_workspace = nullptr;
     }
 
     template<class ElemType>
@@ -501,6 +502,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     int GPUMatrix<ElemType>::GetComputeDeviceId() const 
     {
         return m_computeDevice;
+    }
+
+    template<class ElemType>
+    std::unique_ptr<GPUMatrix<ElemType>> GPUMatrix<ElemType>::GetOrCreateWorkspace() const
+    {
+        // REVIEW alexeyk: not thread-safe, fine for now.
+        if (m_workspace == nullptr)
+            m_workspace = new conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>();
+        assert(m_workspace != nullptr);
+        auto deviceId = m_computeDevice;
+        return m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const
+    {
+        assert(m_workspace != nullptr);
+        m_workspace->push(std::move(src));
     }
 
 #pragma region Basic Operators
@@ -2203,6 +2222,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        Resize(a.GetNumRows(), a.GetNumCols());
+        if (isColWise)
+        {
+            PrepareDevice();
+            CUDA_LONG N = (CUDA_LONG)GetNumCols();
+            CUDA_LONG M = (CUDA_LONG)GetNumRows();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _assignColumnwiseHardmaxOf << <N, 512, 0, t_stream >> >(a.m_pArray, m_pArray, N, M);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
     {
         performInplaceFunction(2);        
@@ -3052,10 +3101,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cbtemp = ctemp * sizeof(ElemType);
         // ElemType count needed to store indices, accounting for natural alignment for uint64_t type.
         size_t cidx = ((celt + 1) * sizeof(uint64_t) - 1 + sizeof(ElemType) - 1) / sizeof(ElemType);
-        // Prepare temp workspace.
-        auto deviceId = m_computeDevice;
-        assert(m_workspace != nullptr);
-        auto workspace = m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
+        // Get temp workspace.
+        auto workspace = GetOrCreateWorkspace();
         // Resize to store: output values for the 1st and 2nd passes, input indices, output indices, and temp storage.
         workspace->Resize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
         outVal1 = workspace->m_pArray;
@@ -3081,7 +3128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
         _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.m_pArray, maxValues.m_pArray, m, n, topK);
 
-        m_workspace->push(std::move(workspace));
+        ReleaseWorkspace(std::move(workspace));
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
@@ -3381,43 +3428,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         a.PrepareDevice();
         if ((a.GetComputeDeviceId()!=b.GetComputeDeviceId()) || (b.GetComputeDeviceId()!=c.GetComputeDeviceId())) //different GPUs
-        {
             InvalidArgument("All matrices must be on the same GPU");
-        }
-        else
-        {  
-            cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
-            cublasOperation_t transA =  transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
-            cublasOperation_t transB =  transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
-            int m = int(transposeA ? a.m_numCols : a.m_numRows);
-            int n = int(transposeB ? b.m_numRows : b.m_numCols);
-            int k = int(transposeA ? a.m_numRows : a.m_numCols);
-            int l = int(transposeB ? b.m_numCols : b.m_numRows);
-            c.Resize(m,n);
 
-            if (!(m>0 && k>0 && l>0 && n>0)) 
-            {
-                RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
-            }
-            if (k!=l) 
-            {
-                RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-            }
-            if (sizeof(ElemType)==sizeof(float))
-            {
-                CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
-            }
-            else if (sizeof(ElemType)==sizeof(double))
-            {            
-                CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
-            }
-            else 
-            {
-                RuntimeError("Unsupported template argument in GPUMatrix");             
-            }
-            c.m_numRows=m;
-            c.m_numCols=n;
+        cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
+        cublasOperation_t transA =  transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
+        cublasOperation_t transB =  transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
+        int m = int(transposeA ? a.m_numCols : a.m_numRows);
+        int n = int(transposeB ? b.m_numRows : b.m_numCols);
+        int k = int(transposeA ? a.m_numRows : a.m_numCols);
+        int l = int(transposeB ? b.m_numCols : b.m_numRows);
+        c.Resize(m,n);
+
+        if (!(m>0 && k>0 && l>0 && n>0)) 
+        {
+            RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
         }
+        if (k!=l) 
+        {
+            RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
+        }
+        if (sizeof(ElemType)==sizeof(float))
+        {
+            CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
+        }
+        else if (sizeof(ElemType)==sizeof(double))
+        {            
+            CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
+        }
+        else 
+        {
+            RuntimeError("Unsupported template argument in GPUMatrix");             
+        }
+        c.m_numRows=m;
+        c.m_numCols=n;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c)
+    {
+        a.PrepareDevice();
+        if ((a.GetComputeDeviceId() != b.GetComputeDeviceId()) || (b.GetComputeDeviceId() != c.GetComputeDeviceId())) //different GPUs
+            InvalidArgument("All matrices must be on the same GPU");
+        CUDA_LONG N = (CUDA_LONG)c.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _multiply1x1AndWeightedAdd<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(alpha, a.m_pArray, b.m_pArray, beta, c.m_pArray, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
     }
 
     template<class ElemType>

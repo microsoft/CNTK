@@ -2304,6 +2304,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //[this]=hardmax([this]) 
+    //the max element is 1 else is 0
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            LogicError("AssignHardmaxOf: Matrix a is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+
+        if (isColWise)
+        {
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                //we need to extract max
+                ElemType maxV = a(0, j);
+                long maxI = 0;
+                foreach_row(i, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxI = i;
+                    }
+                }
+
+                foreach_row(i, us)
+                    us(i, j) = (i == maxI) ? 1.0f : 0.0f;
+            }
+
+        }
+        else
+        {
+#pragma omp parallel for
+            foreach_row(i, a)
+            {
+                //we need to extract max 
+                ElemType maxV = a(i, 0);
+                long maxJ = 0;
+                foreach_column(j, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxJ = j;
+                    }
+                }
+
+                foreach_column(j, us)
+                    us(i, j) = (j == maxJ)? 1.0f : 0.0f;
+            }
+
+        }
+
+        return *this;
+    }
+
     //[this]=sqrt([this]) element wise
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSqrt ()
@@ -3829,7 +3895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1); //inclusive end
                 long startOutY = (long)  max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
                 for (long outY=startOutY; outY<=endOutY; outY++)
@@ -3881,8 +3947,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     long rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
                     for (long rowInWindow=0; rowInWindow<windowHeight; rowInWindow++)
                     {
-                        const ElemType val = inputBatch(rowInInput, sample); //pf[rowInWindow*channels]; 
-                        sum += val; 
+                        sum += inputBatch(rowInInput, sample);
+                        rowInInput += (long)channels;
                     }
                 }
 
@@ -3924,7 +3990,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long)verticalSubsample : outputHeight - 1); //inclusive end
                 long startOutY = (long) max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 for (long outY=startOutY; outY<=endOutY; outY++)
                 {
@@ -3956,7 +4022,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, CPUMatrix<ElemType>& c)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            return;
 
         int m, n, k, l;
         int lda, ldb, ldc;
@@ -4038,6 +4104,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
+        ElemType beta, CPUMatrix<ElemType>& c)
+    {
+        assert(a.GetNumElements() == 1);        // a is a scalar
+
+        ElemType f = alpha * a.Get00Element();
+        if (beta == 0)      // don't even read the memory if beta is 0
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+                c(i, j) = b(i, j) * f;
+        else
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+            c(i, j) = b(i, j) * f + c(i, j) * beta;
     }
 
     /* compute singular value decomposition as 
@@ -4769,9 +4852,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool CPUMatrix<ElemType>::AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AreEqual: one of the input matrices is empty.");
-
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
 
@@ -4807,9 +4887,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t k = (na / D / S / M    ) % K;
             size_t t = (na / D / S / M / K) % T;
             // compute index for the a and b/c tensors
-            size_t na1= (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
-            size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // tensor of dimension (D x K x M x S x T)  --note: k/K and s/S swapped
-            assert(na == na1); na1;
+            assert(na== (((t * K + k) * M + m) * S + s) * D + d);   // input tensor of dimension (D x S x M x K x T)
+            size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
             assert(nb < N);
             // perform the computation
             ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)

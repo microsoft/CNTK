@@ -1,6 +1,6 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 //
-// <copyright file="ComputationNode.cpp" company="Microsoft">
+// <copyright file="ComputationNetworkBuilder.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -17,7 +17,7 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "DecoderNode.h"
+#include "EsotericNodes.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
@@ -69,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode) || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode) || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PlusNode))	            return New<PlusNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RectifiedLinearNode))	    return New<RectifiedLinearNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(ReshapeNode))	            return New<ReshapeNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowElementTimesNode))	    return New<RowElementTimesNode<ElemType>>(deviceId, name);
@@ -80,7 +81,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(SequenceDecoderNode))	    return New<SequenceDecoderNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SigmoidNode))	            return New<SigmoidNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SoftmaxNode))	            return New<SoftmaxNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(HardmaxNode))	            return New<HardmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SquareErrorNode))	    return New<SquareErrorNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(LogisticNode))	    return New<LogisticNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(StrideTimesNode))	    return New<StrideTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumColumnElementsNode))   return New<SumColumnElementsNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumElementsNode))	    return New<SumElementsNode<ElemType>>(deviceId, name);
@@ -292,6 +295,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b, c);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
+    {
+        vector<ComputationNodeBasePtr> inputs(pinputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+            inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), inputs);
+    }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName)
     {
@@ -405,6 +425,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cos(const ComputationNodePtr a, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<CosineNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Hardmax(const ComputationNodePtr a, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Softmax(const ComputationNodePtr a, const std::wstring nodeName)

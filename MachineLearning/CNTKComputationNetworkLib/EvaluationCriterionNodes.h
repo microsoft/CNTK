@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     // -----------------------------------------------------------------------
-    // ErrorPredictionNode (label, prediction)    --TODO: is that correct?
+    // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             Inputs(0)->ValueSlice(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
             Inputs(1)->ValueSlice(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
             MaskMissingColumnsToZero(*m_maxIndexes0, Inputs(0)->GetMBLayout(), frameRange);
@@ -98,15 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_maxIndexes0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxIndexes1->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
