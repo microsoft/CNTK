@@ -217,6 +217,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM"))
+		ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(CTCwithSoftmaxNode), L"CTCWithSM"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode)))
         ret = true;
@@ -231,6 +233,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarDeNormalizationNode), L"PerDimMVDeNorm"))
         ret = true;            
     else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError"))
+        ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(PhoneErrorNode), L"PhoneError"))
         ret = true;    
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode)))
         ret = true;

@@ -216,6 +216,19 @@ bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::db
 	}
 	return bRet;
 }
+// GetMinibatch4CTC - Get the next minibatch for CTC training, including phone boundary
+// boundary - phone ID
+// returns - true if there are more minibatches, false if no more minibatchs remain
+template<class ElemType>
+bool DataReader<ElemType>::GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+{
+	bool bRet = true;
+	for (size_t i = 0; i < m_ioNames.size(); i++)
+	{
+		bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch4CTC(boundaries, extrauttmap);
+	}
+	return bRet;
+}
 
 // GetHmmData - Get the HMM definition for SE training
 // hmm - HMM definition 

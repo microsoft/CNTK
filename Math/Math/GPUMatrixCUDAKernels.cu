@@ -4628,5 +4628,235 @@ __global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LON
         a[IDX2C(rowIdx, colIdx, numRows)] = val;
     }
 }
+template<class ElemType>
+__global__ void _assignAlphaScore(
+	const ElemType *prob,
+	ElemType *Alphascore,
+	const unsigned __int64 *phoneseq,
+	const long  t,
+	const long M,
+	const long phonenum,
+	unsigned __int64 blanknum)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+
+	if (t == 0)
+	{
+
+		if (id >= 1 && id < blanknum + 2)
+		{
+			long phoneid = phoneseq[id];
+			Alphascore[M*t + id] = prob[t*phonenum + phoneid];
+
+		}
+	}
+	else
+	{
+		if (id >= 1 && id < M - 1 /*&& id >= alphaT*/)
+		{
+			long phoneid = phoneseq[id];
+			float x = CNLOGZERO;
+			float y;
+			long s2;
+			int i;
+			ElemType ascore;
+			s2 = id - blanknum -1;
+			if (id > blanknum+1)
+			{
+				if (phoneid < (phonenum - blanknum) && phoneid != phoneseq[s2])
+				{
+					y = Alphascore[(t - 1)*M + s2];
+					x = logadd(x, y);
+				}
+			}
+			s2 = id - 1;
+			if (id > 1)
+			{
+				if (phoneid < (phonenum - blanknum)) //non blank
+				{
+					for (i = 1; i <= blanknum; i++)
+					{
+						if (id > i)
+						{
+							y = Alphascore[(t - 1)*M + id - i];
+							x = logadd(x, y);
+						}
+					}
+				}
+				else
+				{
+					for (i = 1; i <= blanknum; i++)
+					{
+						if (id > i && phoneseq[id - i] < (phonenum - blanknum))
+						{
+							y = Alphascore[(t - 1)*M + id - i];
+							x = logadd(x, y);
+							//break;
+						}
+					}
+
+				}
+				
+			}
+			s2 = id;
+			y = Alphascore[(t - 1)*M + s2];
+			x = logadd(x, y);
+
+			if (phoneid != 65535)
+				ascore = prob[t*phonenum + phoneid];
+			else
+				ascore = 0;
+			Alphascore[t*M + id] = (ElemType)x + ascore;
+		}
+
+
+
+	}
+	//__syncthreads();
+
+}
+
+template<class ElemType>
+__global__ void _assignBetaScore(
+	const ElemType *prob,
+	ElemType *Betascore,
+	const unsigned __int64 *phoneseq,
+	const long  t,
+	const long N,
+	const long M,
+	const long phonenum,
+	unsigned __int64 blanknum)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	int i;
+	if (t == N - 1)
+	{
+		if (id >= M - blanknum -2 && id < M - 1)
+		{
+			long phoneid = phoneseq[id];
+			Betascore[M*t + id] = prob[t*phonenum + phoneid];
+		}
+	}
+	else
+	{
+		if (id >= 1 && id < M - 1 /*&& id <= betaT*/)
+		{
+			long phoneid = phoneseq[id];
+			float x = CNLOGZERO;
+			float y;
+			long s2;
+			ElemType ascore;
+			s2 = id + blanknum + 1;
+			if (id < M - blanknum -2)
+			{
+				if (phoneid < (phonenum - blanknum) &&  phoneid != phoneseq[s2])
+				{
+					y = Betascore[(t + 1)*M + s2];
+					x = logadd(x, y);
+				}
+			}
+			s2 = id + 1;
+			if (id < M - 2)
+			{
+				if (phoneid < (phonenum - blanknum))
+				{
+					for (i = 1; i <= blanknum; i++)
+					{
+						if (id < M - i - 1)
+						{
+							y = Betascore[(t + 1)*M + id + i];
+							x = logadd(x, y);
+						}
+					}
+				}
+				else
+				{
+					for (i = 1; i <= blanknum; i++)
+					{
+						if (id < M - i - 1 && phoneseq[id + i] < (phonenum - blanknum))
+						{
+							y = Betascore[(t + 1)*M + id + i];
+							x = logadd(x, y);
+						}
+					}
+				}
+			}
+			s2 = id;
+			y = Betascore[(t + 1)*M + s2];
+			x = logadd(x, y);
+
+			if (phoneid != 65535)
+				ascore = prob[t*phonenum + phoneid];
+			else
+				ascore = 0;
+			Betascore[t*M + id] = (ElemType)x + ascore;
+		}
+
+	}
+	//__syncthreads();
+	//printf("frameid %d\n", t);
+	/*if (t == 0)
+	{
+		Betascore[0] = logadd(Betascore[1], Betascore[2]);
+		//printf("beta %f %f\n", Betascore[1], Betascore[2]);
+	}*/
+
+}
+
+template<class ElemType>
+__global__ void _assignCTCScore(
+	ElemType *CTCscore,
+	ElemType *prob,
+	ElemType *Alphascore,
+	ElemType *Betascore,
+	const unsigned __int64 *phoneseq,
+	const long N,
+	const long M,
+	const long phonenum)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	ElemType Zt = CNLOGZERO;
+	
+	if (id < N)
+	{		
+		Zt = Betascore[0];
+		
+		for (int s = 1; s < M - 1; s++)
+		{
+			long phoneid = phoneseq[s];
+			if (phoneid != 65535)
+			{
+				ElemType logoccu = Alphascore[id*M + s] + Betascore[id*M + s] - prob[id*phonenum + phoneid] - (ElemType)Zt;
+				CTCscore[id*phonenum + phoneid] = logadd(CTCscore[id*phonenum + phoneid], logoccu);				
+			}
+		}
+
+		for (int s = 0; s < phonenum; s++)
+		{
+			ElemType logoccu = CTCscore[id*phonenum + s];
+			if (logoccu < CNLOGZERO)
+				CTCscore[id*phonenum + s] = 0.0f;
+			else
+				CTCscore[id*phonenum + s] = exp(logoccu);
+		}
+	}
+	//__syncthreads();
+	//printf("gamma end %d\n",id);
+}
+template<class ElemType>
+__global__ void _assigntotalscore(ElemType *Betascore, unsigned __int64 blanknum)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	int i;
+	if (id == 0)
+	{
+		ElemType Zt = CNLOGZERO;
+		for (i = 1; i <= blanknum + 1; i++)
+		{
+			Zt = logadd(Zt, Betascore[i]);
+		}
+		Betascore[0] = Zt;
+	}
+}
 
 #endif // !CPUONLY

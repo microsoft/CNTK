@@ -377,6 +377,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return TrainingCriterion::CrossEntropyWithSoftmax;
         if (s == L"SequenceWithSoftmax")
             return TrainingCriterion::SequenceWithSoftmax;
+				if (s == L"CTCwithSoftmax")
+					return TrainingCriterion::CTCwithSoftmax;
         else if (s == L"squareerror")
             return TrainingCriterion::SquareError;
         else if (s == L"logistic")
@@ -397,6 +399,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return EvalCriterion::CrossEntropyWithSoftmax;
         else if (s == L"SequenceWithSoftmax")
             return EvalCriterion::SequenceWithSoftmax;
+				else if (s == L"phoneerror")
+					return EvalCriterion::PhoneError;				
+				else if (s == L"ctcwithsoftmax")
+					return EvalCriterion::CTCwithSoftmax;
         else if (s == L"classcrossentropywithsoftmax")
             return EvalCriterion::ClassCrossEntropyWithSoftmax;
         else if (s == L"noisecontrastiveestimationnode")

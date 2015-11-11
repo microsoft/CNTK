@@ -47,6 +47,8 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
+#define cnminLogExp -69
+#define CNLOGZERO -1e30
 #define NOT_IMPLEMENTED \
     {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \

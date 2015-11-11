@@ -231,6 +231,10 @@ public:
         return true;
     }
 
+	virtual bool GetMinibatch4CTC(vector<size_t> &/*boundaries*/, vector<size_t> &/*extrauttmap*/)
+	{
+		return true;
+	}
     virtual bool GetHmmData(msra::asr::simplesenonehmm * /*hmm*/)
     {
         return true;

@@ -149,7 +149,8 @@ struct SGDParams
               const size_t minibatchSearchCriterionErrorMargin,
               const double hsmoothingWeight,
               const double frameDropThresh,
-              const bool doreferencealign);
+              const bool doreferencealign,
+              const size_t blanknum);
 
 protected:
     // learning rate per sample provided outside
@@ -295,6 +296,7 @@ protected:
     double m_hsmoothingWeight;
     double m_frameDropThresh;
     bool m_doreferencealign;
+    size_t m_blanknum;
 };
 
 template<class ElemType> class IDistGradAggregator;

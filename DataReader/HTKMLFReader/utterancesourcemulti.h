@@ -513,10 +513,20 @@ public:
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                     {
                                             classids[j]->push_back ((CLASSIDTYPE) e.classid);
+										if (e.phonestart == 65535) // for CTC
+										{
+											if (t == e.firstframe)
+												phoneboundaries[j]->push_back((CLASSIDTYPE)e.classid);
+											else
+												phoneboundaries[j]->push_back((CLASSIDTYPE)65535);
+										}
+										else
+										{
                                         if (e.phonestart != 0 && t == e.firstframe)
                                             phoneboundaries[j]->push_back((CLASSIDTYPE)e.phonestart);
                                         else
                                             phoneboundaries[j]->push_back((CLASSIDTYPE)0);
+                                    }
                                     }
                                         numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize (numclasses[j], 0);

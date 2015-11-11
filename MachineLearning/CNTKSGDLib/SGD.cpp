@@ -144,6 +144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool doReferenceAlign = configSGD("doReferenceAlign", "false");
         ConfigArray dropoutRatesStr = configSGD("dropoutRate", "0.0");
         floatargvector dropoutRates = dropoutRatesStr;
+        size_t blanknum = configSGD("blankNum", "1");
 
         GradientUpdateInfo gUpdateInfo;
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
@@ -238,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                           useCVSetControlLRIfCVExists,
                           useEvalCriterionControlLR,
                           minibatchSearchCriterionErrorMargin,
-                          hsmoothingWeight, frameDropThresh, doReferenceAlign);
+                          hsmoothingWeight, frameDropThresh, doReferenceAlign, blanknum);
 
         // BUGBUG: these are not passed to Init()
         m_doUnitTest = configSGD("unittest", "false");
@@ -333,7 +334,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                          const size_t minibatchSearchCriterionErrorMargin,
                          const double hsmoothingWeight,
                          const double frameDropThresh,
-                         const bool doreferencealign)
+                         const bool doreferencealign,
+                         const size_t blanknum)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -407,6 +409,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_hsmoothingWeight = hsmoothingWeight;
         m_frameDropThresh = frameDropThresh;
         m_doreferencealign = doreferencealign;
+        m_blanknum = blanknum;
         for (size_t i = 0; i < m_mbSize.size(); i++)
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -757,6 +760,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader->GetHmmData(hmm);
         }
 
+		isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
+		if (isSequenceTrainingCriterion)
+		{
+			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+			auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
+            auto  hmm = node->gethmm();
+            trainSetDataReader->GetHmmData(hmm);
+        }
+
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
@@ -872,7 +884,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
-
+        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], m_blanknum);
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {

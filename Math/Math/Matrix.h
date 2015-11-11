@@ -302,6 +302,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //sequence training 
         Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
         Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
+		Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const std::vector<size_t> phoneseq,
+			ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
         Matrix<ElemType>& InplaceSqrt ();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
 

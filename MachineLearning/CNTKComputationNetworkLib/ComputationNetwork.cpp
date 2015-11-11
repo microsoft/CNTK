@@ -483,6 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
+			nodePtr->OperationName() == OperationNameOf(CTCwithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
             nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
@@ -678,6 +679,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
+
+	template<class ElemType>
+	void ComputationNetwork::SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t blanknum)
+	{
+
+		fprintf(stderr, "set blank phone num %d\n", blanknum);
+		std::list<ComputationNodeBasePtr> ctcNodes = net.GetNodesWithType(OperationNameOf(CTCwithSoftmaxNode), criterionNode);
+		if (ctcNodes.size() == 0)
+		{
+			fprintf(stderr, "WARNING: there is no CTC creterion node.\n");
+		}
+		else
+		{
+			for (auto nodeIter = ctcNodes.begin(); nodeIter != ctcNodes.end(); nodeIter++)
+			{
+				auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(*nodeIter);
+				node->SetBlankNum(blanknum);
+			}
+		}
+
+		ctcNodes = net.GetNodesWithType(OperationNameOf(PhoneErrorNode), criterionNode);
+		if (ctcNodes.size() == 0)
+		{
+			fprintf(stderr, "WARNING: there is no CTC evaluation node.\n");
+		}
+		else
+		{
+			for (auto nodeIter = ctcNodes.begin(); nodeIter != ctcNodes.end(); nodeIter++)
+			{
+				auto node = dynamic_pointer_cast<PhoneErrorNode<ElemType>>(*nodeIter);
+				node->SetBlankNum(blanknum);
+			}
+		}
+	}
+
 
     /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
     {
@@ -1155,10 +1191,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-
+    template void ComputationNetwork::SetCTCParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode,  const size_t blanknum);
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SetCTCParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t blanknum);
 }}}

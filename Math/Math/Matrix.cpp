@@ -5083,6 +5083,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			);
 		return *this;
 	}
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+		const std::vector<size_t> phoneseq, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+	{
+		if (prob.IsEmpty())
+			throw std::logic_error("AssignCTCScore: Matrix a is empty.");
+
+
+
+		DecideAndMoveToRightDevice(prob, *this);
+
+
+		//if (phoneseq.size() > alpha.GetNumRows() || framenum > alpha.GetNumCols() )
+		{
+			alpha.Resize(phoneseq.size(), framenum);
+			beta.Resize(phoneseq.size(), framenum);
+		}
+
+		alpha.SetValue(CNLOGZERO);
+		beta.SetValue(CNLOGZERO);
+		SetValue(CNLOGZERO);
+		SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+
+
+
+		DISPATCH_MATRIX_ON_FLAG(&prob,
+			this,
+			this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, phoneseq, totalscore, framenum, blanknum, isColWise),
+			this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, phoneseq, totalscore, framenum, blanknum, isColWise),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+
+		/*Matrix<ElemType> temp(prob.GetDeviceId());
+		temp = alpha.ColumnSlice(prob.GetNumCols() - 1, 1);
+		ElemType *dataP;
+		dataP = temp.CopyToArray();
+		totalscore = -1 * (ElemType) logadd((double)dataP[phoneseq.size() - 2], (double)dataP[phoneseq.size() - 3]);
+		fprintf(stderr, "totalscore: %f \n", totalscore / prob.GetNumCols()	)
+		delete dataP;*/
+
+
+		return *this;
+	}
+
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 

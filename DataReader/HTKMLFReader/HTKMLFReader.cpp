@@ -857,6 +857,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             extrauttmap.insert(extrauttmap.end(), m_extraSeqsPerMB.begin(), m_extraSeqsPerMB.end());
             return true;
         }
+        template<class ElemType>
+		bool HTKMLFReader<ElemType>::GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+		{
+			if (m_trainOrTest)
+			{
+				return GetMinibatch4CTCToTrainOrTest(boundaries, extrauttmap);
+			}
+			else
+			{
+				return true;
+			}
+		}
+		template<class ElemType>
+		bool HTKMLFReader<ElemType>::GetMinibatch4CTCToTrainOrTest(std::vector<size_t> &boundaries, std::vector<size_t> &extrauttmap)
+		{
+
+			boundaries.clear();
+			extrauttmap.clear();
+			
+
+			for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
+				{
+				boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
+				}
+
+			extrauttmap.insert(extrauttmap.end(), m_extraSeqsPerMB.begin(), m_extraSeqsPerMB.end());
+			
+			return true;
+		}
+
 
         template<class ElemType>
         bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm * hmm)
@@ -961,8 +991,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 {
                                     m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                                     m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                 }
+                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                             }
                         }
                         ReNewBufferForMultiIO(i);
@@ -992,8 +1022,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             {
                                                 m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                                                 m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                             }
+                                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                             fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
                                             assert(!m_frameMode);
                                             m_pMBLayout->SetAsSentence(j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
@@ -1611,13 +1641,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (m_mbiter->haslattice())
-            {
                 m_latticeBufferMultiUtt[i] = std::move(m_mbiter->lattice(0));
                 m_phoneboundaryIDBufferMultiUtt[i].clear();
                 m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
                 m_labelsIDBufferMultiUtt[i].clear();
                 m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
-            }
 
             m_processedFrame[i] = 0;
 

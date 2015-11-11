@@ -201,6 +201,144 @@ namespace msra { namespace lattices {
             functionValues.SetValue(objectValue);
         }
 
+		void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& functionvalue, const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<size_t> &uids, size_t samplesInRecurrentStep,
+			std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, std::vector<size_t> &extrauttmap, size_t blanknum)
+			//UMATRIX & Pugv, UMATRIX & uids, const UIDSVECTOR & phoneboundary)
+		{
+			std::vector<size_t> validframes;
+			validframes.assign(samplesInRecurrentStep, 0);
+			//convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
+			size_t numrows = prob.GetNumRows();
+			size_t numcols = prob.GetNumCols();
+
+			m_deviceid = prob.GetDeviceId();
+			//tempmatrix.TransferFromDeviceToDevice(tempmatrix.GetDeviceId(), m_deviceid);
+			//oneUttCTCScore.TransferFromDeviceToDevice(oneUttCTCScore.GetDeviceId(), m_deviceid);
+			Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(m_deviceid);
+			Microsoft::MSR::CNTK::Matrix<ElemType> oneUttCTCScore(m_deviceid);
+			Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
+			Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
+
+			Microsoft::MSR::CNTK::Matrix<ElemType> rowsum(m_deviceid);
+
+			ElemType finalscore = 0;
+
+			std::vector<size_t> phoneseq;
+			size_t blankid;
+
+			size_t mbsize = numcols / samplesInRecurrentStep;
+
+
+			size_t mapi = 0;
+
+			//cal gamma for each utterance
+			size_t ts = 0;
+			size_t numframes = 0;
+			//size_t ts_uid = 0;                
+			for (size_t i = 0; i < extrauttmap.size(); i++)
+			{
+				{
+					//get frame number for each utterance
+					mapi = extrauttmap[i];
+
+					for (size_t j = validframes[mapi]; j < mbsize; j++)
+					{
+						if (pMBLayout->Is(mapi, j, MinibatchPackingFlags::SequenceEnd))
+						{
+							numframes = j - validframes[mapi] + 1;
+							break;
+							//validframes.push_back(j + 1);								
+						}
+					}
+
+					//if (numframes > tempmatrix.GetNumCols())
+					{
+						tempmatrix.Resize(numrows, numframes);
+
+					}
+
+					for (size_t nframe = 0; nframe < numframes; nframe++)
+					{
+						Microsoft::MSR::CNTK::Matrix<ElemType> columndata = prob.ColumnSlice((nframe + validframes[mapi])*samplesInRecurrentStep + mapi, 1);
+						tempmatrix.SetColumn(columndata, nframe);
+					}
+				}
+
+
+				array_ref<size_t> uidsstripe(&uids[ts], numframes);
+
+				//make phone sequence 
+
+				phoneseq.clear();
+				phoneseq.push_back(65535);
+				for (size_t i = 0; i < uidsstripe.size(); i++)
+				{
+					if (uidsstripe[i] != 65535 /*&& uids[i] != 0 && uids[i] != 1 && uids[i] != 2 && uids[i] != 34*/)
+					{
+						for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+							phoneseq.push_back(blankid);
+						phoneseq.push_back(uidsstripe[i]);
+
+					}
+				}
+				//phoneseq.push_back(blankid);
+				for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+					phoneseq.push_back(blankid);
+				phoneseq.push_back(65535);
+				oneUttCTCScore.Resize(numrows, numframes);
+
+				oneUttCTCScore.AssignCTCScore(tempmatrix, alpha, beta, phoneseq, finalscore, numframes, blanknum, true);
+				rowsum.Resize(1, numframes);
+
+
+				finalscore += -1 * beta.Get00Element();
+				ElemType ftemp = -1 * beta.Get00Element() / numframes;
+				if (ftemp > 100)
+				{
+					tempmatrix.Print("prob");
+					alpha.Print("alpha");
+					beta.Print("beta");
+					oneUttCTCScore.Print("gamma");
+				}
+				fprintf(stderr, "totalscore: %f\n", ftemp);
+
+
+				oneUttCTCScore.VectorSum(oneUttCTCScore, rowsum, true);
+				//rowsum.Print("row sum");
+				oneUttCTCScore.RowElementDivideBy(rowsum);
+
+				//oneUttCTCScore.Print("gamma_after");
+				if (samplesInRecurrentStep == 1)
+				{
+					tempmatrix = functionValues.ColumnSlice(ts, numframes);
+                    tempmatrix.SetValue(oneUttCTCScore);
+				}
+
+
+				// set gamma for multi channel
+				if (samplesInRecurrentStep > 1)
+				{
+					for (size_t nframe = 0; nframe < numframes; nframe++)
+					{
+						Microsoft::MSR::CNTK::Matrix<ElemType> columndata = oneUttCTCScore.ColumnSlice(nframe, 1);
+						functionValues.SetColumn(columndata, (nframe + validframes[mapi])*samplesInRecurrentStep + mapi);
+					}
+				}
+
+
+				if (samplesInRecurrentStep > 1)
+					validframes[mapi] += numframes;
+
+				/*if (samplesInRecurrentStep == 1)
+				ts += numframes;
+				else
+				ts = (i+1) * mbsize;*/
+				ts += numframes;
+			}
+			functionvalue(0,0) = finalscore;
+
+		}
+
     private:
         // Helper methods for copying between ssematrix objects and CNTK matrices
         void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)
