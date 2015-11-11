@@ -111,7 +111,7 @@ endif
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml -lm -lpthread
+  LIBS += -lacml_mp -liomp5 -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 
@@ -414,6 +414,9 @@ CNTK_SRC =\
 	MachineLearning/CNTK/tests.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNode.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetwork.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEvaluation.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
@@ -424,6 +427,7 @@ CNTK_SRC =\
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
+	Common/MPIWrapper.cpp \
 
 
 ifdef CUDA_PATH
@@ -434,7 +438,7 @@ CNTK_SRC +=\
 
 else
 CNTK_SRC +=\
-	MachineLearning/CNTKSequenceTrainingLib/NoGPU.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/latticeNoGPU.cpp \
 
 endif
 

@@ -145,7 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues()(0, 2) = 6;
             Resize(nInput0 + nInput1, nT);
 
-            EvaluateThisNode(FrameRange());
+            EvaluateThisNode(FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
@@ -170,8 +170,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(3, 1) = 5;
             GradientValues()(3, 2) = 6;
 
-            ComputeInputPartial(0, FrameRange());
-            ComputeInputPartial(1, FrameRange());
+            ComputeInputPartial(0, FrameRange(m_pMBLayout));
+            ComputeInputPartial(1, FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON)
@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -326,7 +326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -368,6 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -375,7 +376,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
+            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
 
             auto & samples = Inputs(0)->FunctionValues();
             auto & avg = FunctionValues();
@@ -453,6 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -460,7 +462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
+            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
 
             auto & samples = Inputs(0)->FunctionValues();
 #if 1//NANCHECK
@@ -492,15 +494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples += samples.GetNumCols();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_mean.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_var.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -843,6 +837,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // TimeReverseNode (input)
+    // BUGBUG: This must actually implement reversing the layout.
+    // Challenge: This reverses the layout. If we time-reverse back, we'd reverse the layout again.
+    // We will get the original layout. Unfortunately, it is not the same layout pointer.
+    // To turn it back to the same layout pointer, insert a ReconcileMBLayout node.
     // -----------------------------------------------------------------------
 
     /**
@@ -860,7 +858,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BatchModeNode<ElemType>(deviceId, name)
         { }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -874,51 +872,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_memory.TransferToDeviceIfNotThere(deviceId, true, m_memory.HasNoElements());
-        }
-
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             assert(inputIndex == 0); inputIndex;
-#if 1
             VerifySize(Inputs(0));
 
             size_t nT = GetNumTimeSteps();
             for (size_t t = 0; t < nT; t++)
             {
-                Matrix<ElemType> g = GradientSlice(FrameRange(t));
-                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(nT - 1 - t));
+                Matrix<ElemType>  g =            GradientSlice(FrameRange(GetMBLayout(), t));
+                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(Inputs(0)->GetMBLayout(), nT - 1 - t));
                 ig += g;
             }
-#else
-            ComputationNodePtr child = Inputs(0);
-            Matrix<ElemType>& gradientValues = GradientValues();
-            Matrix<ElemType>& inputGradientValues = child->GradientValues();
-            int nSamples = GetNumParallelSequences();
-            size_t nc = inputGradientValues.GetNumCols();
-            size_t nr = inputGradientValues.GetNumRows();
-            if (nc != gradientValues.GetNumCols() || nr != gradientValues.GetNumRows())
-            {
-                inputGradientValues.Resize(nr, nc);
-                inputGradientValues.SetValue(0);
-            }
-
-            for (size_t i = 0; i < nc; i += nSamples)
-            {
-                Matrix<ElemType> ig = gradientValues.ColumnSlice(i, nSamples);
-                Matrix<ElemType> ii = inputGradientValues.ColumnSlice(nc - i - nSamples, nSamples);
-                ii += ig;
-            }
-#endif
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             // BUGBUG: We must flip the layout, too.
-            //         Challenge: When we flip it back, it will be yet another layout. Turns out, to handle this, ALL nodes must compare layouts now upon Evaluate(), and by comparing content!
             if (GetNumParallelSequences() != 1)
                 LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.", NodeName().c_str(), OperationName().c_str());
             if (!m_hasComputed)
@@ -926,23 +896,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
                 Resize(Inputs(0));
 
-#if 1
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
                 {
-                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(t));
-                    ValueSlice(FrameRange(nT - 1 - t)).SetValue(v);
+                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(Inputs(0)->GetMBLayout(), t));
+                    ValueSlice(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
                 }
-#else
-                Matrix<ElemType>& functionValues = EvaluateThisNodeS(FunctionValues();
-                Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
-                int nSamples = GetNumParallelSequences());
-                for (size_t i = 0; i < cols0; i += nSamples)
-                {
-                    Matrix<ElemType> ig = inputFunctionValues.ColumnSlice(i, nSamples);
-                    functionValues.ColumnSlice(cols0 - i - nSamples, nSamples).SetValue(ig);
-                }
-#endif
 
 #if NANCHECK
                 FunctionValues().HasNan("TimeReverse");
@@ -985,7 +944,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(0)->FunctionValues()(0, 2) = 3;
             Resize(nOutput, nT);
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            EvaluateThisNode(FrameRange());
+            EvaluateThisNode(FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
@@ -1006,7 +965,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(0, 2) = 3;
             GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            ComputeInputPartial(0, FrameRange());
+            ComputeInputPartial(0, FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON) ||

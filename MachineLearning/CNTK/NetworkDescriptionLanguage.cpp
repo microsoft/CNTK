@@ -16,7 +16,7 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "DecoderNode.h"
+#include "EsotericNodes.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
@@ -206,11 +206,15 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos"))
         ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(HardmaxNode)))
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM"))
         ret = true;

@@ -318,7 +318,7 @@ public:
         wstring logicalpath;    // virtual path that this file should be understood to belong to
         wstring archivepath;    // physical path of archive file
         size_t s, e;            // first and last frame inside the archive file; (0, INT_MAX) if not given
-        void malformed() const { RuntimeError(msra::strfun::strprintf ("parsedpath: malformed path '%S'", xpath.c_str())); }
+        void malformed(const wstring& path) const { RuntimeError(msra::strfun::strprintf("parsedpath: malformed path '%S'", path.c_str())); }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
         wstring consume (wstring & input, const wchar_t * delim)
@@ -328,10 +328,11 @@ public:
             else input = parts[1];                  // found: break at delimiter
             return parts[0];
         }
+
     public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
-        parsedpath (wstring xpath) : xpath (xpath)
+        parsedpath(const wstring& pathParam) : xpath(pathParam)
         {
             // parse out logical path
             logicalpath = consume (xpath, L"=");
@@ -360,9 +361,9 @@ public:
                 else
                 {
                     s = msra::strfun::toint (consume (xpath, L","));
-                    if (xpath.empty()) malformed();
+                    if (xpath.empty()) malformed(pathParam);
                     e = msra::strfun::toint (consume (xpath, L"]"));
-                    if (!xpath.empty()) malformed();
+                    if (!xpath.empty()) malformed(pathParam);
                     isarchive = true;
                 }
             }
@@ -382,6 +383,9 @@ public:
             return e - s + 1;
         }
     };
+
+    // Make sure 'parsedpath' type has a move constructor
+    static_assert(std::is_move_constructible<parsedpath>::value, "Type 'parsedpath' should be move constructible!");
 
 private:
 
@@ -778,7 +782,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         wstring key = msra::strfun::utf16 (regex_replace (filename, regex ("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
 #endif
 #ifdef __unix__
-        wstring key = msra::strfun::utf16 (removeExtension(basename(filename))); // note that c++ 4.8 is incomplete for supporting regex
+        wstring key = msra::strfun::utf16 (removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
 #endif
 
         // determine lines range

@@ -92,9 +92,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static cublasHandle_t s_cuHandle[MaxGpus];
         static void *s_curandGenerator;
 
-        // Have to use naked pointer to avoid issues with __declspec(dllexport) on Windows.
-        // REVIEW alexeyk: can be allocated lazily but the current footprint is small anyway.
-        mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace = new conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>;
+        // Have to use naked pointer to avoid issues with __declspec(dllexport) on Windows (C4251).
+        // Cannot use atomic for the same reason either.
+        mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace;
 
     private:
         void performInplaceFunction(int kind);
@@ -102,6 +102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t LocateColumn (const size_t j) const;        
         void Clear();
         void ZeroInit(int deviceId);
+        
+        std::unique_ptr<GPUMatrix<ElemType>> GetOrCreateWorkspace() const;
+        void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
 
     public:
         GPUMatrix(int deviceId);
@@ -229,6 +232,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
+
+        GPUMatrix<ElemType>& InplaceHardmax(const bool isColWise);
+        GPUMatrix<ElemType>& AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
 
         //sequence training
         GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
@@ -359,11 +365,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     public:
         //static BLAS functions
-        static void MultiplyAndWeightedAdd(ElemType alpha,const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, 
-            ElemType beta, GPUMatrix<ElemType>& c);
+        static void MultiplyAndWeightedAdd(ElemType alpha,const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
         static void MultiplyAndAdd(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
         static void Multiply(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
         static void Multiply(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
+        static void Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c);
 
         static void ScaleAndAdd(ElemType alpha,const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
         static void AddScaledDifference(const ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);

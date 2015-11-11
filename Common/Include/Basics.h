@@ -44,6 +44,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         va_start(args, format);
         vsprintf(buffer, format, args);
         Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+#ifdef _DEBUG   // print this to log before throwing, so we can see what the error is
+        fprintf(stderr, "%s\n", buffer);
+#endif
         throw E(buffer);
     };
 #pragma warning(pop)

@@ -1,5 +1,5 @@
 //
-// <copyright file="GPUMatrixCUDAKernels.cpp" company="Microsoft">
+// <copyright file="GPUMatrixCUDAKernels.cu" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -547,6 +547,20 @@ __global__ void _scaleAndAddScalar(
 };
 
 template<class ElemType>
+__global__ void _multiply1x1AndWeightedAdd(
+    ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType f = alpha * *a;    // scalar matrix
+    if (beta == 0)              // don't even read the memory if beta is 0
+        c[id] = b[id] * f;
+    else
+        c[id] = b[id] * f + c[id] * beta;
+}
+
+template<class ElemType>
 __global__ void _addValue(    
     ElemType* a,
     const ElemType v,
@@ -709,31 +723,31 @@ __global__ void _logSoftMaxColWise(
     const CUDA_LONG m_numRows) //ld
 {
     int col_id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (col_id>=m_numCols)
+    if (col_id >= m_numCols)
         return;
 
     __shared__ ElemType maxV[threadsPerBlock];
     __shared__ ElemType Sum[threadsPerBlock];
-    maxV[threadIdx.x]=a[IDX2C(0,col_id,m_numRows)];
-    Sum[threadIdx.x]=0;
+    maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
+    Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        if (a[IDX2C(i,col_id,m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(i, col_id, m_numRows)]>maxV[threadIdx.x])
         {
-            maxV[threadIdx.x]=a[IDX2C(i,col_id,m_numRows)];
+            maxV[threadIdx.x] = a[IDX2C(i, col_id, m_numRows)];
         }
     }
 
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        ElemType tmp = a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x];
-        Sum[threadIdx.x] += (sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp));
+        ElemType tmp = a[IDX2C(i, col_id, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += (sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp));
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
-    for (CUDA_LONG i=0;i<m_numRows;++i)
+    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    for (CUDA_LONG i = 0; i<m_numRows; ++i)
     {
-        a[IDX2C(i,col_id,m_numRows)] -= Sum[threadIdx.x] ;
+        a[IDX2C(i, col_id, m_numRows)] -= Sum[threadIdx.x];
     }
 }
 
@@ -786,7 +800,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     const ElemType *a,
     ElemType* us,
     const CUDA_LONG m_numCols,
-    const CUDA_LONG m_numRows) 
+    const CUDA_LONG m_numRows)
 {
     // We first find max per column
     __shared__ ElemType colMax[1];
@@ -922,31 +936,174 @@ __global__ void _logSoftMaxRowWise(
     const CUDA_LONG m_numRows) //ld
 {
     int row_id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (row_id>=m_numRows)
+    if (row_id >= m_numRows)
         return;
 
     __shared__ ElemType maxV[threadsPerBlock];
     __shared__ ElemType Sum[threadsPerBlock];
-    maxV[threadIdx.x]=a[IDX2C(row_id,0,m_numRows)];
-    Sum[threadIdx.x]=0;
+    maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
+    Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        if (a[IDX2C(row_id,j,m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(row_id, j, m_numRows)]>maxV[threadIdx.x])
         {
-            maxV[threadIdx.x]=a[IDX2C(row_id,j,m_numRows)];
+            maxV[threadIdx.x] = a[IDX2C(row_id, j, m_numRows)];
         }
     }
 
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        ElemType tmp = a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x];
-        Sum[threadIdx.x] += sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp);
+        ElemType tmp = a[IDX2C(row_id, j, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp);
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x]+(sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
-    for (CUDA_LONG j=0;j<m_numCols;++j)
+    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    for (CUDA_LONG j = 0; j<m_numCols; ++j)
     {
-        a[IDX2C(row_id,j,m_numRows)] -= Sum[threadIdx.x] ;
+        a[IDX2C(row_id, j, m_numRows)] -= Sum[threadIdx.x];
+    }
+}
+
+// each block processes one column. There must be 512 threads in a block
+template<class ElemType>
+__global__ void _assignColumnwiseHardmaxOf(
+    const ElemType *a,
+    ElemType* us,
+    const CUDA_LONG m_numCols,
+    const CUDA_LONG m_numRows) 
+{
+    // We first find max per column
+    __shared__ ElemType partials[512];
+    __shared__ int colMaxI[512];
+    int row = threadIdx.x % m_numRows;
+    colMaxI[threadIdx.x] = row;
+    partials[threadIdx.x] = a[IDX2C(row, blockIdx.x, m_numRows)];
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        if (partials[threadIdx.x] < a[IDX2C(i, blockIdx.x, m_numRows)])
+        {
+            partials[threadIdx.x] = a[IDX2C(i, blockIdx.x, m_numRows)];
+            colMaxI[threadIdx.x] = i;
+        }
+    }
+    __syncthreads();
+
+    if (m_numRows > 256)
+    {
+        if (threadIdx.x < 256)
+        {
+            int other = threadIdx.x + 256;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 128)
+    {
+        if (threadIdx.x < 128)
+        {
+            int other = threadIdx.x + 128;
+
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 64)
+    {
+        if (threadIdx.x < 64)
+        {
+            int other = threadIdx.x + 64;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 32)
+    {
+        if (threadIdx.x < 32)
+        {
+            int other = threadIdx.x + 32;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 16)
+    {
+        if (threadIdx.x < 16)
+        {
+            int other = threadIdx.x + 16;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 8)
+    {
+        if (threadIdx.x < 8)
+        {
+            int other = threadIdx.x + 8;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (m_numRows > 4)
+    {
+        if (threadIdx.x < 4)
+        {
+            int other = threadIdx.x + 4;
+            if (partials[threadIdx.x] < partials[other])
+            {
+                partials[threadIdx.x] = partials[other];
+                colMaxI[threadIdx.x] = colMaxI[other];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+        for (int i = 1; i < 4 && i < m_numRows; i++)
+        {
+            if (partials[0] < partials[i])
+            {
+                partials[0] = partials[i];
+                colMaxI[0] = colMaxI[i];
+            }
+        }
+    }
+    __syncthreads();
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        us[IDX2C(i, blockIdx.x, m_numRows)] = (i == colMaxI[0]) ? 1 : 0;
     }
 }
 
@@ -1063,18 +1220,17 @@ __global__ void _tensorShuffleScaleAndAdd(
     ElemType keepWeight, const ElemType* pa, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const ElemType* pb, ElemType* pc)
 {
     size_t N = D * S * M * K * T;
-    CUDA_LONG n = blockDim.x * blockIdx.x + threadIdx.x;
-    if (n >= N)
+    CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (na >= N)
         return;
     // recover the 5 indices from the loop counter
-    size_t d =  n                  % D;
-    size_t s = (n / D            ) % S;
-    size_t m = (n / D / S        ) % M;
-    size_t k = (n / D / S / M    ) % K;
-    size_t t = (n / D / S / M / K) % T;
+    size_t d =  na                  % D;
+    size_t s = (na / D            ) % S;
+    size_t m = (na / D / S        ) % M;
+    size_t k = (na / D / S / M    ) % K;
+    size_t t = (na / D / S / M / K) % T;
     // compute index for the a and b/c tensors
-    size_t na = (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
-    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // tensor of dimension (D x K x M x S x T)  --note: k/K and s/S swapped
+    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
     // perform the computation
     ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
     cval += scaleFactor * pa[na];
@@ -1655,7 +1811,7 @@ __global__ void _addMaxPoolingGradient(ElemType * inputGradientBatch, const Elem
     CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
     CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
     CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
 
 
     ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
@@ -1749,7 +1905,7 @@ __global__ void _addAveragePoolingGradient(ElemType * inputGradientBatch, const 
     CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
     CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
     CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
 
     ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
     const ElemType *outputGradientBatchBase4Sample = outputGradientBatch + sample*outputSizePerSample;

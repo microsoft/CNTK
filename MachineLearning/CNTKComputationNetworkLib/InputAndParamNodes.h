@@ -132,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // computation functions don't do anything for parameter nodes
-        virtual size_t UpdateFunctionMBSize(size_t /*numCols*/) override { return 0; }
+        virtual void UpdateFunctionMBSize() override { }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override { }
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
@@ -290,14 +290,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
-        virtual size_t UpdateFunctionMBSize(size_t numCols)
+        virtual void UpdateFunctionMBSize() override
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                return numCols;             // BUGBUG: what to return here?
-            if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
-                numCols = m_pMBLayout->GetNumCols();
-            VerifySize(GetNumRows(), numCols);
-            return numCols;
+                VerifySize(GetNumRows(), m_pMBLayout->GetNumCols());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
@@ -490,7 +486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
                 Resize(nInput, nOutput);
 
-                EvaluateThisNode(FrameRange());
+                EvaluateThisNode(FrameRange(m_pMBLayout));
 
                 /// check with expected values
                 FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
@@ -509,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
-                    ComputeInputPartial(i, FrameRange());
+                    ComputeInputPartial(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 2, EPSILON) /// bi

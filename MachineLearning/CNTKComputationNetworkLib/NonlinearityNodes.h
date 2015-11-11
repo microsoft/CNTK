@@ -66,13 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_gradient->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -483,13 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            NonlinearityNodeBase<ElemType>::MoveMatricesToDevice(deviceId);
-            m_diff->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -577,13 +565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_softmax->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -784,16 +766,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual size_t UpdateFunctionMBSize(size_t numCols)
+        virtual void UpdateFunctionMBSize() override
         {
-            numCols = Base::UpdateFunctionMBSize(numCols);
-            // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
-            if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
-                return numCols;         // BUGBUG: what do we return here?
+            Base::UpdateFunctionMBSize();
 
+            size_t numCols = Inputs(3)->GetNumCols();
             size_t numComponents = Inputs(0)->GetNumRows();
             size_t colsPrior = Inputs(0)->GetNumCols();
-            //size_t numCols = Inputs(3)->GetNumCols();
             size_t featureSize = Inputs(3)->GetNumRows();
 
             m_prior->Resize(numComponents, colsPrior);
@@ -801,7 +780,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_normedDeviation->Resize(numComponents, numCols);
             m_normedDeviationVectors->Resize(numComponents * featureSize, numCols);
             m_posterior->Resize(numComponents, numCols);
-            return numCols;
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
@@ -965,17 +943,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_prior->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_normedDeviation->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_normedDeviationVectors->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_stddev->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_posterior->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1115,26 +1083,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
-                //functionValues = inputFunctionValues;
+                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override FunctionValues() to return the input; which now breaks stuff.
+                functionValues.SetValue(inputFunctionValues);
             }
         }
 
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (m_dropoutRate > 0)
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
-
-        virtual Matrix<ElemType>& FunctionValues()
-        {
-            if (m_dropoutRate > 0)
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        //virtual const Matrix<ElemType>& FunctionValues() const override
+        //{
+        //    if (m_dropoutRate > 0)
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
+        //
+        //virtual Matrix<ElemType>& FunctionValues() override
+        //{
+        //    if (m_dropoutRate > 0)
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
@@ -1154,13 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomSeed = (unsigned long)val;
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_maskOfDropout->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1194,4 +1156,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
+    // -----------------------------------------------------------------------
+    // Hardmax(prediction) 
+    // -----------------------------------------------------------------------
+    // the result is a 1 of n coding in which the (r, c) = 1 if row r has max value in column c
+    // this node is not differentiable and so cannot be used in the backpropagation
+    // TODO: make function value sparse?
+    template<class ElemType>
+    class HardmaxNode : public NonlinearityNodeBase/*ComputationNode*/<ElemType>
+    {
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Hardmax"; }
+
+    public:
+        HardmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //TODO: this is still needed?
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/) override
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) 
+        { 
+            gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  
+            LogicError("wrong signature :( need to unify code more"); 
+        }
+
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            //TODO: temp solution, we need to write a math function specifically for this
+            functionValues.AssignHardmaxOf(inputFunctionValues, true);
+#if NANCHECK
+            functionValues.HasNan("Hardmax");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+    };
+
+    template class HardmaxNode<float>;
+    template class HardmaxNode<double>;
 }}}

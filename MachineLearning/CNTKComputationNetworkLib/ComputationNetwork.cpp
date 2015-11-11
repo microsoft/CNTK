@@ -7,6 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
+#include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"  // used for load & save
 #include "LinearAlgebraNodes.h"
@@ -17,14 +18,20 @@
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
-#include "MPIWrapper.h"
+#include "MPIWrapper.h"                 // TODO: does not belong here
 #include <string>
-#include <fstream>
+#include <vector>
+#include <list>
 #include <set>
+
+using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
     // MatrixPool methods
+    // -----------------------------------------------------------------------
+
     template<>
     vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
     {
@@ -41,6 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // construction
     // -----------------------------------------------------------------------
 
+    // TODO: why is this needed? Why is this not just construction?
     void ComputationNetwork::ClearNet()
     {
         for (auto groupIter : GetAllNodeGroups())
@@ -52,14 +60,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
+        m_cachedOuterLoopNodes.clear();
 
         m_inputs.clear();
         m_learnableParameters.clear();
 
-        //for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        //{
-        //    delete nodeIter->second;
-        //}
         m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
     }
 
@@ -67,10 +72,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
-    void ComputationNetwork::SaveToFile(const std::wstring& fileName, const FileOptions fileFormat) const
+    void ComputationNetwork::SaveToFile(const wstring& fileName, const FileOptions fileFormat) const
     {
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
+        // TODO: This does not belong here.
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
             // Saving into temporary file and then renaming it to the requested fileName
@@ -82,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // TODO: how does the file distinguish float vs double nodes?
-    void ComputationNetwork::SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const
+    void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptions fileFormat) const
     {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
@@ -112,10 +118,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
             for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
             {
-                if (nodePtr->GetChildren()[i] == nullptr)
+                if (!nodePtr->Inputs(i))
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
-                    fstream << nodePtr->GetChildren()[i]->NodeName();
+                    fstream << nodePtr->Inputs(i)->NodeName();
             }
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
@@ -177,7 +183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.Flush();
     }
 
-    void ComputationNetwork::LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation,
+    void ComputationNetwork::LoadPersistableParametersFromFile(const wstring& fileName, const bool requireValidation,
                                                                const FileOptions fileFormat)
     {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
@@ -199,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
         for (size_t i = 0; i < numNodes; i++)
         {
-            std::wstring opName, nodeName;
+            wstring opName, nodeName;
             fstream >> opName >> nodeName;
             ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
             // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
@@ -218,909 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // node construction
-    // -----------------------------------------------------------------------
-
-    ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const std::wstring & nodeName, const double value)
-    {
-        ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
-
-        // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
-        if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->FunctionValues().SetValue((float)value);
-        else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->FunctionValues().SetValue((double)value);
-        else if (pNode->RequiresPreCompute())
-        {
-            if (IsNodePtr<PreComputedNode<float>>(pNode))
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
-                preComputedNode->FunctionValues().SetValue((float)value);    // TODO: comment: is this an expensive operation?
-                preComputedNode->MarkComputed(true);
-            }
-            else
-            {
-                auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
-                preComputedNode->FunctionValues().SetValue((double)value);    // TODO: comment: is this an expensive operation?
-                preComputedNode->MarkComputed(true);
-            }
-        }
-        else
-            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
-
-        return pNode;
-    }
-
-    // sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
-    // Called from MEL  --TODO: correct?
-    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
-    {
-        // find nodes from all available nodes
-        if (rootNode == nullptr)
-        {
-            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->SetParameterUpdateRequired(needGradient);
-            }
-        }
-        else
-        {
-            // for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = (*nodeIter);
-                if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->SetParameterUpdateRequired(needGradient);
-            }
-        }
-    }
-
-    // non-static version needed because it accesses m_randomSeedOffset
-    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template<class ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
-    {
-        auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-        learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
-    }
-
-    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
-    void ComputationNetwork::FixupInputMinibatchSize()
-    {
-        std::list<ComputationNodeBasePtr> inputs = GetNodesWithType(OperationNameOf(InputValue));
-        int minibatchMax = 0;
-        bool minibatchDifferent = false; // flag to see if all the values are already the same
-        for (ComputationNodeBasePtr node : inputs)
-        {
-            size_t cols = node->GetNumCols();
-            if (cols != minibatchMax)
-            {
-                if (minibatchMax != 0)
-                    minibatchDifferent = true;
-                if (minibatchMax < cols)
-                    minibatchMax = cols;
-            }
-        }
-        if (minibatchDifferent)
-        {
-            for (ComputationNodeBasePtr node : inputs)
-                node->Resize(node->GetNumRows(), minibatchMax);
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // evaluation
-    // -----------------------------------------------------------------------
-
-    void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo)
-    {
-        todo = 0;           // returns how many nodes are to be redone
-        for (auto & node : nodes)
-        {
-            const auto & children = node->GetChildren();
-            const bool isLeaf = node->IsLeaf();
-            // only validate a node if it has at least one child
-            bool hasVisitedChild = false;
-            bool allChildrenVisited = true;
-            for (auto & child : children)
-            {
-                hasVisitedChild |= child->m_visited;    // if not a single visited child then no point in validating
-                allChildrenVisited &= child->m_visited;
-            }
-            // if there is not at least one visited child
-            bool valid = false;
-            if (hasVisitedChild || isLeaf)
-            {
-                // got at least one child: it makes sense to call Validate()
-                // keep state
-                MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-                auto dim = node->GetDims();
-                vector<pair<size_t, size_t>> childDims;
-                for (auto & child : children)
-                    childDims.push_back(child->GetDims());
-                auto imageLayouts = node->GetImageLayouts();
-                // We do call validate(final) as many times as needed, since stuff may have changed underneath.
-                node->PrintSelfBeforeValidation();
-                node->Validate(isFinalValidationPass/*final*/);      // all nodes have been visited: do verification instead of just inference
-                fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
-                node->m_visited = true;
-                // also take the opportunity to propagate m_needsGradient
-                auto needsGradient = node->m_needsGradient;
-                for (auto & child : children)       // TODO: do we need a check that this is stable if isFinalValidationPass?
-                    node->m_needsGradient |= child->m_needsGradient;
-                // check state --node will be valid if all nodes have been visited and node has not been updated
-                bool unchanged = true;
-                unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
-                unchanged &= (dim == node->GetDims());
-                vector<pair<size_t, size_t>> newChildDims;
-                for (auto & child : children)
-                    newChildDims.push_back(child->GetDims());
-                unchanged &= (childDims == newChildDims);
-                unchanged &= (imageLayouts == node->GetImageLayouts());
-                unchanged &= (needsGradient == node->m_needsGradient);
-                if (isFinalValidationPass && !unchanged)
-                    LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
-                if (isFinalValidationPass && !allChildrenVisited)
-                    LogicError("ValidateSubNetwork: %ls %ls operation in final validation although not all children were visited?", node->NodeName().c_str(), node->OperationName().c_str());
-                // if all children valid then 
-                valid = (allChildrenVisited && unchanged) || isLeaf;
-            }
-            // count those that we need to redo
-            if (!valid)
-                todo++;
-        }
-    }
-
-    // validate sub-network needed to evalute a specific output node
-    // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
-    // This is called lazily but once only per node until next ClearCache().
-    // This also sets up MBLayout links.
-    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
-    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
-    // TODO: ^^ is this really needed? Can we just call it inside?
-    void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNode)
-    {
-        // set up MBLayout links of inputs (all others get propagated upwards through Validate())
-        // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
-        for (auto node : InputNodes(rootNode))
-        {
-            node->LinkToMBLayout(m_pMBLayout);
-            // handle the special case of being validated before reading a minibatch
-            // In that case, the layout is empty. We set up a dummy layout to match the first InputValue.
-            // TODO: This is a stop-gap. We need a better-controlled way of when what gets validated.
-            if (m_pMBLayout->GetNumCols() == 0)
-                m_pMBLayout->Init(1, node->GetNumCols(), false);
-        }
-
-        // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
-        // A problem is that recurrent loops may require partial validation.
-        // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
-        const auto & nodes = GetEvalOrder(rootNode, false);
-
-        for (auto & node : nodes)
-        {
-            node->m_visited = false;
-            node->m_needsGradient = node->IsParameterUpdateRequired();  // these get propagated upwards in the following
-        }
-
-        // loop and validate until we are done
-        // steps:
-        //  - validate (not final)          // not final means no dimension checks
-        //    Keep going through the list until all nodes have been validated and all inputs have been validated as well.
-        //  - validate (final)              // final means consistency checks
-        //    Fail if any change during this stage.
-        size_t pass = 0;
-        size_t toValidate = nodes.size();
-        while (toValidate > 0)
-        {
-            pass++;
-            fprintf(stderr, "\n\nValidating for node %ls. %d nodes to process in pass %d.\n", rootNode->NodeName().c_str(), (int)toValidate, (int)pass);
-            ValidateNodes(nodes, false/*isFinalValidationPass*/, toValidate);
-        }
-        fprintf(stderr, "\n\nValidating for node %ls, final verification.\n", rootNode->NodeName().c_str());
-        ValidateNodes(nodes, true/*isFinalValidationPass*/, toValidate);
-        if (toValidate != 0)
-            LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
-
-        for (auto & node : nodes)
-        {
-#if 1       // not possible once we have inconsistent layouts
-            // verify that the contract with MB layout was obeyed by Validate()
-            if (node->GetMBLayout() && node->GetMBLayout()->GetNumCols() != node->GetNumCols())
-            {
-                fprintf(stderr, "\n%ls %ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (T=%d x S=%d)\n",
-                        node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
-                LogicError("%ls %ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (T=%d x S=%d)",
-                           node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
-            }
-#endif
-            // nodes must output non-zero dimensional data, otherwise assume user error
-            if (node->GetNumRows() == 0 && (node->GetMBLayout() || node->GetNumCols() == 0))
-                RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
-        }
-        fprintf(stderr, "\n\n");
-
-        // logging the non-default-layout nodes
-        vector<ComputationNodeBasePtr> nonDefaultNodes;
-        for (auto node : nodes)
-        {
-            if (!(node->GetMBLayout() == m_pMBLayout))
-                nonDefaultNodes.push_back(node);
-        }
-        if (!nonDefaultNodes.empty())
-        {
-            fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n\n", (int)nonDefaultNodes.size(), (int)nodes.size());
-            //for (auto node : nonDefaultNodes)
-            //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
-            //fprintf(stderr, "\n\n");
-        }
-    }
-
-    bool ComputationNetwork::BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode)
-    {
-        return m_built.find(rootNode) != m_built.end();
-    }
-
-    // prepare to compute with the subnetwork that this rootNode depends on, including
-    //  - auto-detecting recurrent loops
-    //  - collect input and learnable nodes
-    //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
-    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
-    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
-    void ComputationNetwork::BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
-    {
-        const auto inserted = m_built.insert(rootNode).second;  // remember we built it
-        if (!inserted)
-            return;                                             // already done
-
-        // detect recurrent loops for this root node (more loops will be detected inside ValidateSubNetwork())
-        // TODO: not nice--why not always call this in ValidateSubNetwork() only?
-        FormRecurrentLoops(rootNode);
-
-        // for the m_inputs and m_learnableParameters sets for this rootNode
-        CollectInputAndLearnableParameters(rootNode);
-
-        // validate the rootNode and all nodes it depends on, in evaluation order
-        ValidateSubNetwork(rootNode);
-
-        // (gone: now done more directly without state in ComputationNode)
-        //SetRequestNodesMultiSeqHandling();
-    }
-
-    bool ComputationNetwork::IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes)
-    {
-        for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
-        {
-            if ((*ptr)->IsFuncValueOlderThanInputs() && 
-                (*ptr)->OperationName() != OperationNameOf(PastValueNode) &&
-                (*ptr)->OperationName() != OperationNameOf(FutureValueNode))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
-    bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
-    {
-        if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
-            nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
-            nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
-            nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
-            nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-            nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||               
-            nodePtr->OperationName() == OperationNameOf(CRFNode) ||
-            nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
-            return true;
-
-        return false;
-    }
-
-    // test for user-specified request for masking to the individual nodes
-    // This is only needed if users explicitly perform reduce-like operations, to workaround current limitations of CNTK.
-    // It makes no sense for some nodes, so we skip those.
-    template <typename T>
-    static bool VectorContains(const vector<T> & v, const T & what)
-    {
-        // TODO: I am sure there is some std algorithm for this, need to look for it
-        for (const auto & elem : v)
-            if (elem == what)
-                return true;
-        return false;
-    }
-    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
-    {
-        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
-        if (maskingWasRequested &&
-            (node->OperationName() == OperationNameOf(SumElementsNode) ||
-             node->OperationName() == OperationNameOf(TransposeNode) ||
-             node->OperationName() == OperationNameOf(MeanNode) ||
-             node->OperationName() == OperationNameOf(InvStdDevNode)))
-        {
-            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
-        }
-        return maskingWasRequested;
-    }
-
-#if 0
-    // TODO: this vv has become this ^^
-    // transfer user-specified request for masking to the indivudal nodes
-    // This is only needed if users explicitly perform reduce-like operations.
-    // It makes no sense for some nodes, so we skip those.
-    void ComputationNetwork::SetRequestNodesMultiSeqHandling()
-    {
-        for (auto & node : m_requestNodesMultiSeqHandling)  // this set is defined in NDL; here we propagate that into the actual nodes' flags, except for a few where it makes no sense (avoid user error)
-        {
-            //SumElements node will generate a scalar value and so it should never require special handling
-            //TransposeNode will change the size of columns and so it should also not included for special handling
-            //their child node should instead
-#if 0
-            if (node->OperationName() != OperationNameOf(SumElementsNode) &&
-                node->OperationName() != OperationNameOf(TransposeNode) &&
-                node->OperationName() != OperationNameOf(MeanNode) &&
-                node->OperationName() != OperationNameOf(InvStdDevNode) 
-                )
-                node->SetMaskMissingColumnsToZero();
-#else
-            if (node->OperationName() == OperationNameOf(SumElementsNode) ||
-                node->OperationName() == OperationNameOf(TransposeNode) ||
-                node->OperationName() == OperationNameOf(MeanNode) ||
-                node->OperationName() == OperationNameOf(InvStdDevNode))
-            {
-                RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
-            }
-            node->SetMaskMissingColumnsToZero();
-#endif
-        }
-
-        // if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
-        // this is for backward compatibility
-        // All of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() return true, i.e. they will not have MaskMissingColumnsToZero() auto-called from Network.
-        // Hence, instead of setting the flag, we just ensure that this is true.
-        for (auto & node : m_finalCriteria)
-            if (IsTypicalCriterionNode(node))
-                //node->SetMaskMissingColumnsToZero();
-                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
-
-        for (auto & node : m_evalNodes)
-            if (IsTypicalCriterionNode(node))
-                //node->SetMaskMissingColumnsToZero();
-                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
-    }
-#endif
-
-    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
-    {
-        if (!rootNode)              // find nodes from all available nodes
-        {
-            for (const auto & nodep : m_nameToNodeMap)
-            {
-                auto node = dynamic_pointer_cast<N>(nodep.second);
-                if (node)
-                {
-                    assert(node->RequiresPreCompute());
-                    if (!checkComputed || !node->HasComputed())
-                        nodesRequiringX.push_back(node);
-                }
-            }
-        }
-        else                            // or for calculating a specific node
-        {
-            for (const auto & nodei : GetEvalOrder(rootNode, false))
-            {
-                auto node = dynamic_pointer_cast<N>(nodei);
-                if (node)
-                {
-                    assert(node->RequiresPreCompute());
-                    if (!checkComputed || !node->HasComputed())
-                        nodesRequiringX.push_back(node);
-                }
-            }
-        }
-        nodesRequiringX.unique();
-    }
-
-    //return list of nodes that require precomputation and not precomputed yet.
-    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
-    {
-        std::list<ComputationNodeBasePtr> nodesRequiringX;
-        GetNodesRequiringX<PreComputedNode<float>>(nodesRequiringX, rootNode, checkComputed);
-        GetNodesRequiringX<PreComputedNode<double>>(nodesRequiringX, rootNode, checkComputed);
-        return nodesRequiringX;
-    }
-
-    //return list of nodes that require batch mode and not precomputed yet.
-    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode, bool checkComputed)
-    {
-        std::list<ComputationNodeBasePtr> nodesRequiringX;
-        GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
-        GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
-        return nodesRequiringX;
-    }
-
-    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
-
-    void ComputationNetwork::ClearCalcOrderCaches()
-    {
-        for (auto & it : m_cacheEvalOrders)
-            for (auto & iter2 : m_cacheEvalOrders[it.first])
-                iter2->ClearCache();
-        m_cacheEvalOrders.clear();
-        m_cacheGradientCalcOrders.clear();
-    }
-
-    // purge identical loops (i.e. loops that have the same source node)
-    void ComputationNetwork::MergeRecurrentLoops(const ComputationNodeBasePtr& /*rootNode*/)
-    {
-        if (m_recurrentInfo.size() <= 1)
-            return;
-
-        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        std::vector<RecurrentInfo> m_recurrentInfoTmp;
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
-        {
-            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
-            {
-                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
-                {
-                    bFound = true;
-                    break;
-                }
-            }
-            if (!bFound)
-                m_recurrentInfoTmp.push_back(*iter);
-        }
-        m_recurrentInfo = move(m_recurrentInfoTmp);
-
-        // for debug purposes
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            fprintf(stderr, " nodes in the recurrent loops : \n");
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-                fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
-        }
-    }
-
-    // get the strong connected component from the graph
-    // This sets index, lowLink, m_visited, m_inStack
-    void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr& rootNode)    // TODO: method names start uppercase
-    {
-        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
-        std::unordered_set<ComputationNodeBasePtr> visited;
-        std::list<ComputationNodeBasePtr> sccStack;
-        size_t index = 0;
-        size_t loopId = 0;
-        if (rootNode->IsVisisted() == false)
-            strongSCC(rootNode, sccStack, index, loopId);
-    }
-
-    // (called only from getStrongSCC())
-    void ComputationNetwork::strongSCC(ComputationNodeBasePtr cur,      // TODO: method names start uppercase
-                                       std::list<ComputationNodeBasePtr>& sccStack,
-                                       size_t& index, size_t& loopId)
-    {
-        cur->SetIndex(index);
-        cur->SetLowLink(index);
-        index++;
-
-        cur->SetVisited(true);
-        sccStack.push_back(cur);
-        cur->SetInStack(true);
-
-        if (cur->OperationName() != L"PairNetwork")
-        {
-            // pairnetwork is the socket from other network, so ignore its children, which are in the other networks
-            for (int i = 0; i < cur->ChildrenSize(); i++)
-            {
-                if (cur->GetChildren()[i]->IsVisisted() == false)
-                {
-                    strongSCC(cur->GetChildren()[i], sccStack, index, loopId);
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
-                }
-                else if (cur->GetChildren()[i]->IsInStack())
-                {
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
-                }
-            }
-        }
-
-        if (cur->GetLowLink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
-        {
-            RecurrentInfo rInfo;
-            rInfo.m_loopId = loopId;
-            rInfo.m_sourceNode = cur;
-            size_t sccSize = 0;
-            for (;;)
-            {
-                ComputationNodeBasePtr w = sccStack.back();
-                sccStack.pop_back();
-                w->SetInStack(false);
-                rInfo.m_recurrentNodes.push_back(w);
-                sccSize++;
-                if (w == cur)
-                    break;
-            }
-            rInfo.Reset();
-            if (sccSize > 1)
-            {
-                loopId++;
-                m_recurrentInfo.push_back(rInfo);
-            }
-        }
-    }
-
-    void ComputationNetwork::getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited,   // TODO: method name
-                                                 std::unordered_set<ComputationNodeBasePtr>& recStack,
-                                                 std::list<ComputationNodeBasePtr>& nodesStack,
-                                                 ComputationNodeBasePtr cur)
-    {
-        if (visited.find(cur) == visited.end())
-        {
-            visited.insert(cur);
-            recStack.insert(cur);
-
-            if (cur->OperationName() != OperationNameOf(PastValueNode) && 
-                cur->OperationName() != OperationNameOf(FutureValueNode))
-            {
-                for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
-                        getLoopForwordOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
-            }
-            recStack.erase(cur);
-            nodesStack.push_back(cur);
-        }
-        else
-        {
-            if (!(recStack.find(cur) == recStack.end()))
-                LogicError("There is infinite Loop which cannot be unrolled!!");
-        }
-    }
-
-    // forms the recurrent loop that 'rootNode' participates in
-    // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
-    // This sets/updates:
-    //  - 
-    // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
-    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
-    {
-        // ...?
-        getStrongSCC(rootNode);
-
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
-
-        // ??
-        MergeRecurrentLoops(rootNode);
-
-        /// debug purpose  --TODO: <-- this comment seems incorrect; SetVisitedOrder() is basis of IsSmaller()
-        // ... where does m_recurrentInfo get set?
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            fprintf(stderr, " nodes in the recurrent loops : \n");
-            size_t max_visitedOrderInLoop = 0;
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-            {
-                fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
-                if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
-                    max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
-            }
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-                (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
-        }
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            if ((*iter).m_recurrentNodes.size() > 1)
-            {
-                /// it is done in the mergerecurrentloops function, but just keep the code
-                std::sort((*iter).m_recurrentNodes.begin(),
-                          (*iter).m_recurrentNodes.end(),
-                          (*iter).m_recurrentNodes[0]->IsSmaller);
-
-                for (auto nodeRecIter = (*iter).m_recurrentNodes.begin(); nodeRecIter != (*iter).m_recurrentNodes.end(); nodeRecIter++)
-                {
-                    (*nodeRecIter)->SetLoop(true);
-                    (*nodeRecIter)->SetLoopId((*iter).m_loopId);
-                }
-            }
-        }
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            (*iter).m_recurrentNodesForForward.clear();
-            if ((*iter).m_recurrentNodes.size() > 1)
-            {
-                std::list<ComputationNodeBasePtr> result;
-                std::unordered_set<ComputationNodeBasePtr> visited;
-                std::unordered_set<ComputationNodeBasePtr> recStack;
-
-                for (size_t j = 0; j < (*iter).m_recurrentNodes.size(); j++)
-                {
-                    ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[j];
-                    for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
-                    {
-                        if (nodeRecIter->GetChildren()[i]->GetLoopId() == nodeRecIter->GetLoopId() && 
-                            nodeRecIter->OperationName() != OperationNameOf(PastValueNode) &&
-                            nodeRecIter->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
-                        {
-                            nodeRecIter->GetChildren()[i]->SetIndexInLoop(nodeRecIter->GetChildren()[i]->GetIndexInLoop() + 1);
-                        }
-                    }
-                }
-
-                //for (auto nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
-
-                for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
-                {
-                    ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[i];
-                    if (visited.find(nodeRecIter) == visited.end() && nodeRecIter->GetIndexInLoop() == 0)
-                        getLoopForwordOrder(visited, recStack, result, nodeRecIter);
-                }
-
-                for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
-                {
-                    (*iter).m_recurrentNodesForForward.push_back(result.front());
-                    result.pop_front();
-                }
-
-                (*iter).m_recurrentNodes = (*iter).m_recurrentNodesForForward;
-            }
-        }
-
-        if (m_recurrentInfo.size() > 0)
-        {
-            std::map<int, std::list<ComputationNodeBasePtr>> recurrentNodes;
-            std::list<ComputationNodeBasePtr> noRecurrentNodes;
-
-            noRecurrentNodes = rootNode->ReshuffleNodes(recurrentNodes);
-
-            nodes.sort(ComputationNodeBase::IsSmaller);
-
-            ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);
-
-            m_cacheEvalOrders[rootNode] = nodes;
-            std::list<ComputationNodeBasePtr> nodesForGrad = nodes;
-            nodesForGrad.reverse();
-            m_cacheGradientCalcOrders[rootNode] = nodesForGrad;
-
-#ifdef DISPLAY_DEBUG
-            fprintf(stderr, "Reordered nodes\n");
-            for (auto itr = nodes.begin(); itr != nodes.end(); itr++)
-            {
-                fprintf (stderr, "%ls\n", (*itr)->NodeName().c_str() );
-            }
-#endif
-        }
-        
-        DetermineLoopTypes();
-        
-        for (auto & iter : nodes)
-            iter->ClearCache();
-    }
-
-    void ComputationNetwork::DetermineLoopTypes()
-    {
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            bool hasPastValueNode = false;
-            bool hasFutureValueNode = false;
-
-            RecurrentInfo* recurrentInfo = &(*iter);
-
-            if (recurrentInfo->m_recurrentNodes.size() > 0)
-            {
-                for (size_t j = 0; j < recurrentInfo->m_recurrentNodes.size(); j++)
-                {
-                    ComputationNodeBasePtr nodeRecIter = recurrentInfo->m_recurrentNodes[j];
-
-                    if (nodeRecIter->OperationName() == OperationNameOf(PastValueNode))
-                    {
-                        hasPastValueNode = true;
-                    }
-                    else if (nodeRecIter->OperationName() == OperationNameOf(FutureValueNode))
-                    {
-                        hasFutureValueNode = true;
-                    }
-                }
-
-                if (hasPastValueNode && hasFutureValueNode)
-                {
-                    RuntimeError("It is not allowed to have both PastValue and FutureValue nodes in the same loop.");
-                }
-                else if (!hasPastValueNode && !hasFutureValueNode)
-                {
-                    RuntimeError("There is neither PastValue nor FutureValue nodes in the loop.");
-                }
-                else if (hasPastValueNode)
-                {
-                    recurrentInfo->m_isForwardLoop = true;
-                }
-                else
-                {
-                    recurrentInfo->m_isForwardLoop = false;
-                }
-            }
-        }
-    }
-
-    void ComputationNetwork::ReorderLoops(std::list<ComputationNodeBasePtr>& nodes,
-                                                    const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/,
-                                                    const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/)
-    {
-        std::list<ComputationNodeBasePtr> newList;
-
-        std::list<ComputationNodeBasePtr> vTmp;
-        std::list<ComputationNodeBasePtr> vRecurrentTmp;
-        vector<bool> accessed(m_recurrentInfo.size(), false);
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            const RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
-            if (recInfo)
-            {
-                int iId = recInfo->m_loopId;
-                if (!accessed[iId])
-                {
-                    newList.insert(newList.end(),
-                                   m_recurrentInfo[iId].m_recurrentNodes.begin(),
-                                   m_recurrentInfo[iId].m_recurrentNodes.end());
-                    accessed[iId] = true;
-                }
-            }
-            else
-            {
-                newList.push_back(*nodeIter);
-            }
-        }
-
-        if (vRecurrentTmp.size() > 0)
-        {
-            newList.insert(newList.end(), vRecurrentTmp.begin(), vRecurrentTmp.end());
-            vRecurrentTmp.clear();
-        }
-
-        if (vTmp.size() > 0)
-        {
-            newList.insert(newList.end(), vTmp.begin(), vTmp.end());
-            vTmp.clear();
-        }
-
-        nodes = newList;
-    }
-
-    // lazily reate the m_inputs[] and m_learnableParameters lists
-    // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
-    void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
-    {
-        //not found
-        if (m_inputs.find(rootNode) == m_inputs.end())
-        {
-            std::list<ComputationNodeBasePtr> inputs;
-
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = *nodeIter;
-                if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
-                    node->OperationName() == InputValue<float>::SparseTypeName())
-                {
-                    inputs.push_back(node);
-                }
-            }
-            m_inputs[rootNode] = inputs;
-        }
-
-        //not found
-        if (m_learnableParameters.find(rootNode) == m_learnableParameters.end())
-        {
-            std::list<std::wstring> learnableParameterNames;
-            std::list<ComputationNodeBasePtr> learnableParameters;
-
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-
-            // instead of collecting the nodes themselves, collect the names (they will be sorted below)
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = *nodeIter;
-                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired()) ||
-                    (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired()))
-                {
-                    learnableParameterNames.push_back(node->NodeName());
-                }
-            }
-
-            // we need to sort it so that we get consistent order when load it from saved file
-            learnableParameterNames.sort();
-
-            // now collect the actual nodes in the sort order of their node names
-            for (auto nodeNameIter = learnableParameterNames.begin(); nodeNameIter != learnableParameterNames.end(); nodeNameIter++)
-            {
-                learnableParameters.push_back(GetNodeFromName((*nodeNameIter)));
-            }
-
-            m_learnableParameters[rootNode] = learnableParameters;
-        }
-    }
-
-    /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
-    {
-        for (size_t i = 0; i<nodes.size(); i++)
-            nodes[i]->UpdateEvalTimeStamp();
-    }
-
-    template<class ElemType>
-    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
-    {
-        if (dropoutRate != prevDropoutRate)
-        {
-            fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
-            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
-            if (dropoutNodes.size() == 0 && dropoutRate > 0)
-                fprintf(stderr, "WARNING: there is no dropout node.\n");
-            else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
-            {
-                auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(*nodeIter);
-                node->SetDropoutRate(dropoutRate);
-                node->SetRandomSeed(dropOutSeed++);
-            }
-
-            prevDropoutRate = dropoutRate;
-        }
-    }
-
-    //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
-    template<class ElemType>
-    void ComputationNetwork::SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
-    {
-        fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
-        std::list<ComputationNodeBasePtr> seqNodes = net.GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
-        if (seqNodes.size() == 0)
-        {
-            fprintf(stderr, "WARNING: there is no sequence node.\n");
-        }
-        else
-        {
-            for (auto nodeIter = seqNodes.begin(); nodeIter != seqNodes.end(); nodeIter++)
-            {                
-                auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(*nodeIter);
-                node->SetSmoothWeight(hsmoothingWeight);
-                node->SetFrameDropThresh(frameDropThresh);
-                node->SetReferenceAlign(doreferencealign);
-            }
-        }
-    }
-
-    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
-    {
-        fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
-        std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
-        if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
-        {
-            fprintf(stderr, "WARNING: there is no convolution node.\n");
-        }
-        else
-        {
-            for (auto nodeIter = convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
-            {
-                auto node = dynamic_pointer_cast<ConvolutionNode<float>>(*nodeIter);
-                node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // serialization
-    // -----------------------------------------------------------------------
-
-    template<class ElemType> void ComputationNetwork::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    template<class ElemType> void ComputationNetwork::LoadFromFile(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
     {
         ClearNet();
 
@@ -1143,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
         for (size_t i = 0; i < numNodes; i++)
         {
-            std::wstring opName, nodeName;
+            wstring opName, nodeName;
             fstream >> opName >> nodeName;
 
             auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
@@ -1162,12 +266,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
         for (size_t i = 0; i < numNodes; i++)
         {
-            std::wstring nodeName;
+            wstring nodeName;
             size_t numChildren;
             fstream >> nodeName >> numChildren;
             if (numChildren > 0)
             {
-                std::vector<std::wstring> childrenNames;
+                vector<wstring> childrenNames;
                 childrenNames.resize(numChildren);
                 for (size_t j = 0; j < numChildren; j++)
                 {
@@ -1176,44 +280,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // TODO: how does the file distinguish float from double?
                 ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
-                std::vector<ComputationNodeBasePtr> childrenNodes;
+                vector<ComputationNodeBasePtr> childrenNodes;
                 childrenNodes.resize(numChildren);
                 for (int j = 0; j < numChildren; j++)
                     childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
 
-                if (nodePtr->OperationName() == OperationNameOf(RowStackNode)) {
+                if (nodePtr->OperationName() == OperationNameOf(RowStackNode))
+                {
                     //allow for variable input nodes
                     nodePtr->AttachInputs(childrenNodes);
                 }
                 else
                 {
                     //fixed input nodes
+                    // TODO: don't we have a variable-length AttachInputs() now?
                     switch (numChildren)
                     {
                         case 1:
                             nodePtr->AttachInputs(childrenNodes[0]);
                             break;
-
                         case 2:
                             nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
                             break;
                         case 3:
-                            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1],
-                                                  childrenNodes[2]);
+                            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1], childrenNodes[2]);
                             break;
                         case 4:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1],
-                                                  childrenNodes[2], childrenNodes[3]);
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
                             break;
                         case 5:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2],
-                                                  childrenNodes[3], childrenNodes[4]);
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
                             break;
                         case 6:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2],
-                                                  childrenNodes[3], childrenNodes[4], childrenNodes[5]);
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
                             break;
-
                         default:
                             LogicError("Invalid number of children.");
                     }
@@ -1225,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
         {
-            std::wstring nodeName;
+            wstring nodeName;
             size_t num;
 
             fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
@@ -1305,8 +405,358 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
         //some internal values in the nodes are computed during validation
-        //SetFakeMBLayoutForValidation();
         ValidateNetwork(false, bAllowNoCriterionNode);
+    }
+
+    // -----------------------------------------------------------------------
+    // node construction
+    // -----------------------------------------------------------------------
+
+    ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
+    {
+        ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
+
+        // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
+        if (IsNodePtr<LearnableParameter<float>>(pNode))
+            AsNodePtr<LearnableParameter<float>>(pNode)->FunctionValues().SetValue((float)value);
+        else if (IsNodePtr<LearnableParameter<double>>(pNode))
+            AsNodePtr<LearnableParameter<double>>(pNode)->FunctionValues().SetValue((double)value);
+        else if (pNode->RequiresPreCompute())
+        {
+            if (IsNodePtr<PreComputedNode<float>>(pNode))
+            {
+                auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
+                preComputedNode->FunctionValues().SetValue((float)value);
+                preComputedNode->MarkComputed(true);
+            }
+            else
+            {
+                auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
+                preComputedNode->FunctionValues().SetValue((double)value);
+                preComputedNode->MarkComputed(true);
+            }
+        }
+        else
+            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
+
+        return pNode;
+    }
+
+
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
+    template<class ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+    {
+        auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+        learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+    }
+
+    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
+    void ComputationNetwork::FixupInputMinibatchSize()
+    {
+        list<ComputationNodeBasePtr> inputs = GetNodesWithType(OperationNameOf(InputValue));
+        int minibatchMax = 0;
+        bool minibatchDifferent = false; // flag to see if all the values are already the same
+        for (ComputationNodeBasePtr node : inputs)
+        {
+            size_t cols = node->GetNumCols();
+            if (cols != minibatchMax)
+            {
+                if (minibatchMax != 0)
+                    minibatchDifferent = true;
+                if (minibatchMax < cols)
+                    minibatchMax = cols;
+            }
+        }
+        if (minibatchDifferent)
+        {
+            for (ComputationNodeBasePtr node : inputs)
+                node->Resize(node->GetNumRows(), minibatchMax);
+        }
+    }
+
+    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
+    bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
+    {
+        // TODO: just use return!
+        if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
+			nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
+            nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
+            nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+            nodePtr->OperationName() == OperationNameOf(CRFNode) ||
+            nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
+            return true;
+
+        return false;
+    }
+
+    // test for user-specified request for masking to the individual nodes
+    // This will go away. It is currently only needed if users explicitly perform reduce-like operations, to work around current limitations of CNTK.
+    // It makes no sense for some nodes, so we skip those.
+    template <typename T>
+    static bool VectorContains(const vector<T> & v, const T & what)
+    {
+        // TODO: I am sure there is some std algorithm for this, need to look for it
+        for (const auto & elem : v)
+            if (elem == what)
+                return true;
+        return false;
+    }
+    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
+    {
+        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
+        if (maskingWasRequested &&
+            (node->OperationName() == OperationNameOf(SumElementsNode) ||
+             node->OperationName() == OperationNameOf(TransposeNode) ||
+             node->OperationName() == OperationNameOf(MeanNode) ||
+             node->OperationName() == OperationNameOf(InvStdDevNode)))
+        {
+            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
+        }
+        return maskingWasRequested;
+    }
+
+    template<class N> void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
+    {
+        if (!rootNode)              // find nodes from all available nodes
+        {
+            for (const auto & nodep : m_nameToNodeMap)
+            {
+                auto node = dynamic_pointer_cast<N>(nodep.second);
+                if (node)
+                {
+                    assert(node->RequiresPreCompute());
+                    if (!checkComputed || !node->HasComputed())
+                        nodesRequiringX.push_back(node);
+                }
+            }
+        }
+        else                            // or for calculating a specific node
+        {
+            for (const auto & nodei : GetEvalOrder(rootNode, false))
+            {
+                auto node = dynamic_pointer_cast<N>(nodei);
+                if (node)
+                {
+                    assert(node->RequiresPreCompute());
+                    if (!checkComputed || !node->HasComputed())
+                        nodesRequiringX.push_back(node);
+                }
+            }
+        }
+        nodesRequiringX.unique();
+    }
+
+    //return list of nodes that require precomputation and not precomputed yet.
+    list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
+    {
+        list<ComputationNodeBasePtr> nodesRequiringX;
+        GetNodesRequiringX<PreComputedNode<float>>(nodesRequiringX, rootNode, checkComputed);
+        GetNodesRequiringX<PreComputedNode<double>>(nodesRequiringX, rootNode, checkComputed);
+        return nodesRequiringX;
+    }
+
+    //return list of nodes that require batch mode and not precomputed yet.
+    list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode, bool checkComputed)
+    {
+        list<ComputationNodeBasePtr> nodesRequiringX;
+        GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
+        GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
+        return nodesRequiringX;
+    }
+
+    // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
+    // Basically, it invalidates all post-processing, reducing the network to the graph.
+    void ComputationNetwork::ClearCalcOrderCaches()
+    {
+        for (auto & it : m_cacheEvalOrders)
+            for (auto & iter2 : m_cacheEvalOrders[it.first])
+                iter2->PurgeStateForFormingRecurrentLoops();
+        // TODO: ^^ Why is this done? This looks like an error (this function was called ClearCache() before, so maybe someone threw this call in for good measure)
+
+        // clear network Iterations cache
+        m_cacheEvalOrders.clear();
+        m_cacheGradientCalcOrders.clear();
+        m_cachedOuterLoopNodes.clear();
+    }
+
+    // lazily reate the m_inputs[] and m_learnableParameters lists
+    // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
+    void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
+    {
+        //not found
+        if (m_inputs.find(rootNode) == m_inputs.end())
+        {
+            list<ComputationNodeBasePtr> inputs;
+
+            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
+                    node->OperationName() == InputValue<float>::SparseTypeName())
+                {
+                    inputs.push_back(node);
+                }
+            }
+            m_inputs[rootNode] = inputs;
+        }
+
+        //not found
+        if (m_learnableParameters.find(rootNode) == m_learnableParameters.end())
+        {
+            list<wstring> learnableParameterNames;
+            list<ComputationNodeBasePtr> learnableParameters;
+
+            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+
+            // instead of collecting the nodes themselves, collect the names (they will be sorted below)
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired()) ||
+                    (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired()))
+                {
+                    learnableParameterNames.push_back(node->NodeName());
+                }
+            }
+
+            // we need to sort it so that we get consistent order when load it from saved file
+            learnableParameterNames.sort();
+
+            // now collect the actual nodes in the sort order of their node names
+            for (auto nodeNameIter = learnableParameterNames.begin(); nodeNameIter != learnableParameterNames.end(); nodeNameIter++)
+            {
+                learnableParameters.push_back(GetNodeFromName((*nodeNameIter)));
+            }
+
+            m_learnableParameters[rootNode] = learnableParameters;
+        }
+    }
+
+    template<class ElemType>
+    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
+    {
+        if (dropoutRate != prevDropoutRate)
+        {
+            fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
+            list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
+            if (dropoutNodes.size() == 0 && dropoutRate > 0)
+                fprintf(stderr, "WARNING: there is no dropout node.\n");
+            else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
+            {
+                auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(*nodeIter);
+                node->SetDropoutRate(dropoutRate);
+                node->SetRandomSeed(dropOutSeed++);
+            }
+
+            prevDropoutRate = dropoutRate;
+        }
+    }
+
+    //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
+    template<class ElemType>
+    void ComputationNetwork::SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
+    {
+        fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
+        list<ComputationNodeBasePtr> seqNodes = net.GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
+        if (seqNodes.size() == 0)
+        {
+            fprintf(stderr, "WARNING: there is no sequence node.\n");
+        }
+        else
+        {
+            for (auto nodeIter = seqNodes.begin(); nodeIter != seqNodes.end(); nodeIter++)
+            {                
+                auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(*nodeIter);
+                node->SetSmoothWeight(hsmoothingWeight);
+                node->SetFrameDropThresh(frameDropThresh);
+                node->SetReferenceAlign(doreferencealign);
+            }
+        }
+    }
+
+    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
+    {
+        fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
+        list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
+        if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
+        {
+            fprintf(stderr, "WARNING: there is no convolution node.\n");
+        }
+        else
+        {
+            for (auto nodeIter = convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
+            {
+                auto node = dynamic_pointer_cast<ConvolutionNode<float>>(*nodeIter);
+                node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // unit test
+    // -----------------------------------------------------------------------
+
+    /**
+    call unit test of each node
+    this adds a verification of the correctness of node operations.
+    */
+    bool ComputationNetwork::UnitTest(bool allowFragment)
+    {
+        vector<wstring> vErrors;
+        // currently only validates nodes, we should validate everything we can
+        if (FeatureNodes().size() == 0 && !allowFragment)
+            RuntimeError("No Feature nodes specified");
+        // first give criteria nodes as root node
+        if (FinalCriterionNodes().size() > 0)
+        {
+            for (auto & node : FinalCriterionNodes())
+            {
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
+                //this->SetActualMiniBatchSizeFromFeatures();
+                if (!UnitTest(node))
+                    vErrors.push_back(node->NodeName().c_str());
+            }
+        }
+        else if (!allowFragment)
+            RuntimeError("No Criterion nodes specified");
+        // now output nodes
+        if (OutputNodes().size() > 0)
+        {
+            for (auto & node : OutputNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        else if (!allowFragment)
+            RuntimeError("No Output nodes specified");
+        // now evaluation nodes
+        if (EvaluationNodes().size() > 0)
+        {
+            for (auto & node : EvaluationNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        return vErrors.empty();
+    }
+
+    bool ComputationNetwork::UnitTest(const ComputationNodeBasePtr& rootNode)
+    {
+        fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
+
+        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
+
+        for (auto & nodeIter : nodes)
+            if (!nodeIter->UnitTest())
+                return false;
+
+        fprintf(stderr, "\n\n");
+
+        return true;
     }
 
     // -----------------------------------------------------------------------
@@ -1340,7 +790,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    wstring ComputationNetwork::FormSpecialNodes(wstring style, std::vector<ComputationNodeBasePtr>& specialNodes)
+    wstring ComputationNetwork::FormSpecialNodes(wstring style, vector<ComputationNodeBasePtr>& specialNodes)
     {
         if (specialNodes.empty())
             return L"";
@@ -1352,16 +802,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return str + L"; \n";
     }
 
-    void ComputationNetwork::DescribeNetworkUsingDot(std::list<ComputationArc>& arcs,
-                                                     std::wstring outFile)
+    void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
+                                                     wstring outFile)
     {
         DotGraphConfigure dotcfg;
 
         File fstream(outFile,FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
         // get precompute node
-        std::vector<ComputationNodeBasePtr> PreComputedNodes;
-        std::vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
+        vector<ComputationNodeBasePtr> PreComputedNodes;
+        vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
         for (const auto & n : allnodes)
         {
             if (n->RequiresPreCompute())
@@ -1369,7 +819,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get PastValue node
-        std::vector<ComputationNodeBasePtr> pastValueNodes;
+        vector<ComputationNodeBasePtr> pastValueNodes;
         for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
@@ -1377,14 +827,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get FuturetValue node
-        std::vector<ComputationNodeBasePtr> futureValueNodes;
+        vector<ComputationNodeBasePtr> futureValueNodes;
         for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(FutureValueNode))
                 futureValueNodes.push_back(n);
         }
         // get learnableParameters
-        std::vector<ComputationNodeBasePtr> learnableParameters;
+        vector<ComputationNodeBasePtr> learnableParameters;
         for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(LearnableParameter))
@@ -1470,8 +920,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodeBasePtr src = (*x).first;
             ComputationNodeBasePtr des = (*x).second;
 
-            std::wstring srcname = src->GetName();
-            std::wstring desname = des->GetName();
+            wstring srcname = src->GetName();
+            wstring desname = des->GetName();
 
             if (des->OperationName() == OperationNameOf(PastValueNode) || des->OperationName() == L"Delay")
             {
@@ -1507,15 +957,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"\n}\n";
     }
 
-    void ComputationNetwork::PlotNetworkTopology(const std::wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
+    void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
     {
         BuildAndValidateSubNetwork(m_evalNodes[0]);
 
         //////////////////////////////////////////////////////////////////////////
         //    step 1.        get all the arcs in the network
         //////////////////////////////////////////////////////////////////////////
-        std::unordered_set<ComputationNodeBasePtr> visited;
-        std::list<ComputationArc> arcs;
+        unordered_set<ComputationNodeBasePtr> visited;
+        list<ComputationArc> arcs;
 
         for (auto groupIter : GetAllNodeGroups())
         {
@@ -1536,8 +986,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // specialized operations
     // -----------------------------------------------------------------------
 
+    // TODO: lift this into config language, move underlying code to math lib
+
+    //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
-    template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig)
+    // we perform SVD decomposition such that
+    //  A \approx B*C, where rank(B)=rank(C)=r < rank(A)
+    // After SVD decomposition, the node A will become an intermediate node whose children are B,C ;
+    // B and C are two learnable parameters
+    //========================================
+    // BUGBUG: this only currently works for one ElemType, not both
+    template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize)
     {
         vector<pair<vector<wstring>, float>> nodeGroups;
         wregex NameFilter;
@@ -1606,9 +1065,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t n = A.GetNumCols();
 
                 Matrix<ElemType> S(-1), U(-1), VT(-1), W(-1);
-                std::chrono::time_point < std::chrono::system_clock > stTime = std::chrono::system_clock::now();
+                chrono::time_point < chrono::system_clock > stTime = chrono::system_clock::now();
                 Matrix<ElemType>::SVD(A, S, U, VT, W);
-                std::chrono::time_point < std::chrono::system_clock > enTime = std::chrono::system_clock::now();
+                chrono::time_point < chrono::system_clock > enTime = chrono::system_clock::now();
 
                 // A \in R^{mXn}
                 // U \in R^{mXm}
@@ -1633,10 +1092,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                r = (r + 7) & (~7); //  to keep the number of rows/cols of resultant matrix a multipier of 8
+                r = r > S.GetNumRows() ? S.GetNumRows() : r;
+
+                if (r%AlignedSize != 0)
+                {
+                    r -= r%AlignedSize;
+                    r = r + AlignedSize > S.GetNumRows() ? S.GetNumRows() : r + AlignedSize;
+                }
+                // r = (r + 7) & (~7); //  to keep the number of rows/cols of resultant matrix a multipier of 8
                 //  which can be helpful at runtime
 
-                std::chrono::duration<double> elapsedtime = enTime - stTime;
+                chrono::duration<double> elapsedtime = enTime - stTime;
                 fprintf(stderr,
                         "Performing SVD for a %5d-by-%-5d matrix (node name: %-20ls) ---  computation time %5.2f secs ;  keep %4.1f%% energy ===> keep %5d svd values (reduce to %4.1f%% parameters) \n",
                         (int) m, (int) n, name.c_str(), elapsedtime.count(),
@@ -1672,7 +1138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pLeft->FunctionValues() = redU;
                 pRight->FunctionValues() = redVT;
 
-                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
+                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"/*, m, n*/), pLeft, pRight);
+                // BUGBUG: This ^^ is reported to cause a crash since m_functionValues is no longer created.
 
                 //========================================
                 // Step 3. remove old node
@@ -1684,14 +1151,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<float>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
+    template void ComputationNetwork::LoadFromFile<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig);
+    template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 }}}
