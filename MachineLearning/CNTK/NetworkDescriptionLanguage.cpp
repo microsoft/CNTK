@@ -280,6 +280,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(StrideTimesNode), L"StrideTimes"))
         ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode)))
+        ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)
