@@ -788,4 +788,142 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class AveragePoolingNode<float>; 
     template class AveragePoolingNode<double>;    
 
+    // Implements batch normalization technique as described in:
+    // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
+    // http://arxiv.org/abs/1502.03167
+    // REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
+    template<class ElemType>
+    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"BatchNormalization"; }
+    public:
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name), m_expAvgFactor(0)
+        {
+        }
+
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, double expAvgFactor) :
+            Base(deviceId, name), m_expAvgFactor(expAvgFactor)
+        {
+        }
+
+        void SaveToFile(File& fstream) const override
+        {
+            Base::SaveToFile(fstream);
+            fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
+            fstream << m_expAvgFactor;
+        }
+
+        void LoadFromFile(File& fstream, size_t modelVersion) override
+        {
+            Base::LoadFromFile(fstream, modelVersion);
+
+            // Read and check version.
+            // REVIEW alexeyk: extract version checking so it can be re-used in other places.
+            int32_t verWritten;
+            int32_t verReadable;
+            fstream >> verWritten >> verReadable;
+
+            if (verReadable > verWritten)
+                RuntimeError("Corrupt model file.");
+            if (verWritten < m_version.VerWeCanReadBack())
+                RuntimeError("Model is too old.");
+            if (verReadable > m_version.VerWrittenCur())
+                RuntimeError("Model is too new.");
+
+            fstream >> m_expAvgFactor;
+        }
+
+        void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
+                assert(node != nullptr);
+
+                node->m_expAvgFactor = m_expAvgFactor;
+            }
+        }
+
+        void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        {
+            RuntimeError("Not implemented.");
+        }
+
+        void EvaluateThisNode(const FrameRange & frameRange) override
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_convEng != nullptr);
+#if NANCHECK
+            sliceInputValue.HasNan("BatchNormalization-input");
+#endif
+            //m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, , , m_expAvgFactor, sliceOutputValue);
+#if NANCHECK
+            sliceOutputValue.HasNan("BatchNormalization");
+#endif
+        }
+
+        void Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs();
+
+            Resize(m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels, Inputs(0)->GetNumCols());
+        }
+
+        void InferImageDimsFromInputs() override
+        {
+            InferImageDimsFromInput(0);
+
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
+            if (m_convEng == nullptr)
+                m_convEng = m_factory->CreateConvEngine(0);
+            if (m_inT == nullptr)
+                m_inT = m_factory->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
+            if (m_scaleBiasT == nullptr)
+            {
+                if (IsConvLayer())
+                    m_scaleBiasT = m_factory->CreateTensor(1, 1, m_outputImageLayout.channels, 1);
+                else
+                    m_scaleBiasT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
+            }
+        }
+
+    private:
+        bool IsConvLayer() const
+        {
+            return m_outputImageLayout.channels > 1;
+        }
+
+    private:
+        struct VersionInfo
+        {
+            int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
+            int32_t VerReadableCur() const    { return 0x00010001; }
+            int32_t VerWeCanReadBack() const  { return 0x00010001; }
+        };
+        VersionInfo m_version;
+
+    private:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
+
+        double m_expAvgFactor;
+    };
+
+    template class BatchNormalizationNode<float>; 
+    template class BatchNormalizationNode<double>;    
+
 }}}
