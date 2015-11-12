@@ -235,7 +235,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::InplaceTranspose() { }
 
     template<class ElemType>
-    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    {
+        GPUSparseMatrix<ElemType> a;
+        return a;
+    }
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         GPUMatrix<ElemType> a(0);
         return a;
@@ -666,12 +672,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanhOf(const GPUMatrix<ElemType>& /*a*/) { return *this; }
 
-    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise)
-    {
-        return *this;
-    }
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf(const GPUMatrix<ElemType>& /*a*/, const bool isColWise) { return *this; }
+
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceHardmax(const bool isColWise) { return *this; }
+
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemType>& /*a*/, const bool isColWise) { return *this; }
+
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha) { return *this; }
 

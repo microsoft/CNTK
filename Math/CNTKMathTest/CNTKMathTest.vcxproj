@@ -109,7 +109,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GPUSparseMatrixUnitTests.cpp" />
     <ClCompile Include="GPUWatcherTests.cpp" />
     <ClCompile Include="MatrixBLASTests.cpp" />
     <ClCompile Include="MatrixDataSynchronizationTests.cpp" />

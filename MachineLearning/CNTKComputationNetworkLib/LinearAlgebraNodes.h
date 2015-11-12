@@ -32,6 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        using Base::ValueSliceToDense;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -100,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> functionValues = ValueSlice(frameRange);
+            Matrix<ElemType> functionValues = ValueSliceToDense(frameRange, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange.AllowBroadcast());
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
@@ -125,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  // first summand is a matrix with number of columns that is a multiple of the column number of the second matrix
             {
                 if (m_pMBLayout)
-                    InvalidArgument("%ls %ls operation applied to mismatching number of columns when columns are samples of a minibatch");
+                    InvalidArgument("%ls %ls operation applied to mismatching number of columns when columns are samples of a minibatch", NodeName().c_str(), OperationName().c_str());
                 // the children matrix is [a b] and the parent considers it as [a a a b b b]
                 // This can be useful for dealing with images.
                 Matrix<ElemType> tmpMat(inputFunctionValues1.GetDeviceId());
@@ -415,7 +416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             VerifySize(rows0, cols1);
@@ -423,7 +424,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
-
 #if DUMPOUTPUT
             Inputs(0)->FunctionValues().Print("TimesNode - Input0");
 #endif
@@ -1391,8 +1391,11 @@ private:
         {
             Base::Validate(isFinalValidationPass);
             ValidateInferBinaryChildrenDims();
+
+#if 0
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || (HasMBLayout() && (Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))))
                 LogicError("%ls %ls operation: The input dimensions do not match.", NodeName().c_str(), OperationName().c_str());
+#endif
 
             Resize(1, Inputs(1)->GetNumCols());
 

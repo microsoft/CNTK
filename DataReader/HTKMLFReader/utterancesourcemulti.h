@@ -86,7 +86,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 LogicError("utterancechunkdata: frames already paged into RAM--too late to add data");
             firstframes.push_back (totalframes);
             totalframes += utt.numframes();
-            utteranceset.push_back (utt);
+            utteranceset.push_back (std::move(utt));
         }
 
         // accessors to an utterance's data
@@ -1115,20 +1115,9 @@ public:
             const size_t spos = positer->second;
 
             // determine how many utterances will fit into the requested minibatch size
-            // In case of MPI we need to choose enough number of frames such that current MPI subset
-            // gets at least one utterance even if 'mbframes' execeeds 'framesrequested'
-            size_t epos = spos;
-            bool currentSubsetCovered = false;
-            do
-            {
-                mbframes += randomizedutterancerefs[epos].numframes;
-                currentSubsetCovered = ((randomizedutterancerefs[epos].chunkindex % numsubsets) == subsetnum);
-                epos++;
-
-            } while (!currentSubsetCovered && (epos < numutterances));
-
-            // add more utterances as long as they fit within requested minibatch size
-            for (; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)  
+            mbframes = randomizedutterancerefs[spos].numframes;   // at least one utterance, even if too long
+            size_t epos;
+            for (epos = spos + 1; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)  // add more utterances as long as they fit within requested minibatch size
                 mbframes += randomizedutterancerefs[epos].numframes;
 
             // do some paging housekeeping

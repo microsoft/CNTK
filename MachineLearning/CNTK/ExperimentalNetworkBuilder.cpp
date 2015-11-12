@@ -124,6 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //BinaryStandardNode(SequenceDecoderNode)
         UnaryStandardNode(Sigmoid, z)
         UnaryStandardNode(Softmax, z)
+        UnaryStandardNode(Hardmax, z)
         BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
         //BinaryStandardNode(StrideTimesNode)
         //BinaryStandardNode(SumColumnElementsNode)
