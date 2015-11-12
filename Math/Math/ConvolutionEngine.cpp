@@ -246,6 +246,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("Not yet implemented.");
         }
 
+        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& out) override
+        {
+            UNUSED(inT); UNUSED(in); UNUSED(scaleBiasT); UNUSED(scale); UNUSED(bias); UNUSED(out); UNUSED(expAvgFactor);
+            RuntimeError("Not yet implemented.");
+        }
+
     private:
         size_t m_maxTempMemSizeInSamples;
         Mat m_tempMatrix;

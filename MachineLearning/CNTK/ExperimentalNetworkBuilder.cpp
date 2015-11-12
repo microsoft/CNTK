@@ -61,6 +61,7 @@ using namespace std;
         L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n"   // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
         L"ClassificationError = ErrorPrediction \n"
         L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
+        L"BatchNormalization(input, expAvgFactor, tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = input /*plus the function args*/ ]\n"
         // standard nodes. We use macros to define these strings.
 #define UnaryStandardNode(Op,a) L ## #Op L"(" L ## #a L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = " L ## #a L" /*plus the function args*/ ]\n"
 #define BinaryStandardNode(Op,a,b) L ## #Op L"(" L ## #a L", " L ## #b L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = (" L ## #a L" : " L ## #b L") /*plus the function args*/ ]\n"

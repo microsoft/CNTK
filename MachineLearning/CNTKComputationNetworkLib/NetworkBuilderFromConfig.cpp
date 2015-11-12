@@ -174,6 +174,10 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
                     node = New<AveragePoolingNode<ElemType>>(deviceId, nodeName, (size_t)config[L"windowWidth"], (size_t)config[L"windowHeight"], (size_t)config[L"horizontalSubsample"], (size_t)config[L"verticalSubsample"]);
                 }
+                else if (OpIs(BatchNormalizationNode))
+                {
+                    node = New<BatchNormalizationNode<ElemType>>(deviceId, nodeName, (ElemType)config[L"expAvgFactor"]);
+                }
                 // last group: standard nodes that only take 'inputs'
                 else
                 {

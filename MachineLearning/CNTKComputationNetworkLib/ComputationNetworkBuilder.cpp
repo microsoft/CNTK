@@ -115,6 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
         else return nullptr;
     }
 
@@ -608,6 +609,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(net.GetDeviceId(), nodeName), dictionary, input);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
+        ElemType expAvgFactor, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, expAvgFactor), input);
     }
 
     template class ComputationNetworkBuilder<float>;

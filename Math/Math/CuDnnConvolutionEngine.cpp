@@ -306,6 +306,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDNN_CALL(cudnnConvolutionBackwardBias(m_cudnn, &C::One, t(srcGradT), ptr(srcGrad), &C::One, t(biasT), ptr(biasGrad)));
         }
 
+        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& out) override
+        {
+            // REVIEW alexeyk: is relying on c() good enough?
+            cudnnBatchNormMode_t mode = scaleBiasT.c() > 1 ? CUDNN_BATCHNORM_PER_ACTIVATION : CUDNN_BATCHNORM_SPATIAL
+            CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
+                t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, nullptr, nullptr, CUDNN_BN_MIN_EPSILON, nullptr, nullptr);
+        }
+
     private:
         void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
         {
