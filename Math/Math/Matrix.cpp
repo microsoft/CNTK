@@ -753,22 +753,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
-            // TODO: Implement optimized ColumnSlice functions for sparse matrices. For now use the ColumnSliceToDense instead.
             if (devId == CPUDEVICE)
             {
-                if (slice.m_CPUMatrix != nullptr)
-                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                if (slice.m_CPUSparseMatrix != nullptr)
+                    slice.m_CPUSparseMatrix->operator=(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
                 else
-                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
-                slice.SetDataLocation(CPU, DENSE);
+                    slice.m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.SetDataLocation(CPU, SPARSE);
             }
             else
             {
-                if (slice.m_GPUMatrix != nullptr)
-                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                if (slice.m_GPUSparseMatrix != nullptr)
+                    slice.m_GPUSparseMatrix->operator=(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
                 else
-                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
-                slice.SetDataLocation(GPU, DENSE);
+                    slice.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.SetDataLocation(GPU, SPARSE);
             }
         }
         else 
@@ -904,50 +903,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked.
     // In case of !keepValues, the matrix content will be undefined.
     template<class ElemType>
-    void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
+    void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues)
     {
-        if (m_matrixType==newMatrixType)
+        // This check should be uncommented but unfortunately there are still places
+        // this function is being called with incorrect "default" format value
+        /*if (m_matrixType == newMatrixType && GetFormat() != newMatrixFormat)
+            NOT_IMPLEMENTED;*/
+
+        if (m_matrixType == newMatrixType)
             return;
+
+        if (m_baseMatrix == nullptr)
+            keepValues = false;
 
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
      
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-        {            
-            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);         
-        }      
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
+
         if (GetDeviceId()<0) //CPU
         {
             if (newMatrixType==MatrixType::SPARSE)
             {
-                if (m_CPUSparseMatrix == nullptr)
-                {
-                    m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat); 
+                if (m_baseMatrix == nullptr)
+                    m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat);
+                else
+                    m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat, GetNumRows(), GetNumCols(), 1);
 
-                    if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
-                    {
-                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols(), 1, true, false);
-                        if (keepValues)
-                            CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
-                    }
-                    else
-                    {
-                        // TODO: Assign Sparse from Sparse!
-                    }
+                if (keepValues)
+                    CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
 
-                    delete m_CPUMatrix;
-                    m_CPUMatrix = nullptr;
-                }
+                delete m_CPUMatrix;
+                m_CPUMatrix = nullptr;
+
                 SetDataLocation(CPU, SPARSE);
             }
             else if (newMatrixType==MatrixType::DENSE)
             {
-                if (m_CPUMatrix == nullptr)
-                {
-                    m_CPUMatrix = new CPUMatrix<ElemType>(); 
-                    delete m_CPUSparseMatrix;
-                    m_CPUSparseMatrix = nullptr;
-                }
+                if (m_baseMatrix == nullptr)
+                    m_CPUMatrix = new CPUMatrix<ElemType>();
+                else
+                    m_CPUMatrix = new CPUMatrix<ElemType>(GetNumRows(), GetNumCols());
+
+                if (keepValues)
+                    m_CPUMatrix->SetValue(m_CPUSparseMatrix->CopyColumnSliceToDense(0, GetNumCols()));
+
+                delete m_CPUSparseMatrix;
+                m_CPUSparseMatrix = nullptr;
+
                 SetDataLocation(CPU, DENSE);
             }
             else
@@ -957,47 +961,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (newMatrixType==MatrixType::SPARSE)
             {
-                if (m_GPUSparseMatrix == nullptr)
-                {
-                    if (m_GPUMatrix == nullptr)
-                    {
-                        m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());                        
-                    }
-                    else 
-                    {
-                        m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
-                        if (m_GPUMatrix->GetNumElements() != 0)
-                        {
-                            if (keepValues)
-                                m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
-                            else
-                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0, true, false);
-                        }
+                if (m_baseMatrix == nullptr)
+                    m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
+                else
+                    m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(GetNumRows(), GetNumCols(), 0, newMatrixFormat, GetDeviceId());
 
-                        delete m_GPUMatrix;
-                        m_GPUMatrix = nullptr;
-                    }
-                }
+                if (keepValues)
+                    m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
+
+                delete m_GPUMatrix;
+                m_GPUMatrix = nullptr;
+
                 SetDataLocation(GPU, SPARSE);
             }
             else if (newMatrixType==MatrixType::DENSE)
             {
-                if (m_GPUMatrix == nullptr)
-                {
+                if (m_baseMatrix == nullptr)
                     m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
-                }
+                else
+                    m_GPUMatrix = new GPUMatrix<ElemType>(GetNumRows(), GetNumCols(), GetDeviceId());
 
-                if (m_GPUSparseMatrix != nullptr)
-                {
-                    if (keepValues)
-                        m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);
-                    else
-                        m_GPUMatrix->Resize(m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols());
+                if (keepValues)
+                    m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);
 
-                    delete m_GPUSparseMatrix;
-                    m_GPUSparseMatrix = nullptr;
-                }
-                
+                delete m_GPUSparseMatrix;
+                m_GPUSparseMatrix = nullptr;
+
                 SetDataLocation(GPU, DENSE);
             }
             else
@@ -4760,6 +4749,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
+        // Not implemented for sparse matrices.
+        // Return false as a workaround to at
+        // least evaluate the dense matrices.
+        if (m_matrixType == MatrixType::SPARSE)
+            return false;
+
+        if (IsEmpty())
+            return false;
+
         // if GPU then first detect NaN there, will be faster
         if (GetDeviceId() != CPUDEVICE)
         {
