@@ -1156,4 +1156,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
+    // -----------------------------------------------------------------------
+    // Hardmax(prediction) 
+    // -----------------------------------------------------------------------
+    // the result is a 1 of n coding in which the (r, c) = 1 if row r has max value in column c
+    // this node is not differentiable and so cannot be used in the backpropagation
+    // TODO: make function value sparse?
+    template<class ElemType>
+    class HardmaxNode : public NonlinearityNodeBase/*ComputationNode*/<ElemType>
+    {
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Hardmax"; }
+
+    public:
+        HardmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //TODO: this is still needed?
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/) override
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) 
+        { 
+            gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  
+            LogicError("wrong signature :( need to unify code more"); 
+        }
+
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            //TODO: temp solution, we need to write a math function specifically for this
+            functionValues.AssignHardmaxOf(inputFunctionValues, true);
+#if NANCHECK
+            functionValues.HasNan("Hardmax");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+    };
+
+    template class HardmaxNode<float>;
+    template class HardmaxNode<double>;
 }}}

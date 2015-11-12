@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     // -----------------------------------------------------------------------
-    // ErrorPredictionNode (label, prediction)    --TODO: is that correct?
+    // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
     // -----------------------------------------------------------------------
 
     template<class ElemType>

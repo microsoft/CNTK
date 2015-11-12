@@ -2222,6 +2222,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        Resize(a.GetNumRows(), a.GetNumCols());
+        if (isColWise)
+        {
+            PrepareDevice();
+            CUDA_LONG N = (CUDA_LONG)GetNumCols();
+            CUDA_LONG M = (CUDA_LONG)GetNumRows();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _assignColumnwiseHardmaxOf << <N, 512, 0, t_stream >> >(a.m_pArray, m_pArray, N, M);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
     {
         performInplaceFunction(2);        
