@@ -22,7 +22,7 @@
     </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
-    <ProjectName>CNTKComputationNetworkLib</ProjectName>
+    <ProjectName>CNTKActionsLib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -157,31 +157,13 @@
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\nvml.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\..\Common\Include\Sequences.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
-    <ClInclude Include="..\..\Math\Math\Matrix.h" />
-    <ClInclude Include="CompositeComputationNodes.h" />
-    <ClInclude Include="ComputationNetwork.h" />
-    <ClInclude Include="ComputationNetworkBuilder.h" />
-    <ClInclude Include="ComputationNode.h" />
-    <ClInclude Include="ConvolutionalNodes.h" />
-    <ClInclude Include="EsotericNodes.h" />
-    <ClInclude Include="EvaluationCriterionNodes.h" />
-    <ClInclude Include="InputAndParamNodes.h" />
-    <ClInclude Include="LinearAlgebraNodes.h" />
-    <ClInclude Include="MatrixPool.h" />
-    <ClInclude Include="NonlinearityNodes.h" />
-    <ClInclude Include="RecurrentNodes.h" />
-    <ClInclude Include="ReshapingNodes.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
-    <ClInclude Include="TrainingCriterionNodes.h" />
+    <ClInclude Include="Actions.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\BestGpu.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -189,14 +171,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
-    <ClCompile Include="ComputationNetwork.cpp" />
-    <ClCompile Include="ComputationNetworkAnalysis.cpp" />
-    <ClCompile Include="ComputationNetworkBuilder.cpp" />
-    <ClCompile Include="ComputationNetworkEditing.cpp" />
-    <ClCompile Include="ComputationNetworkEvaluation.cpp" />
-    <ClCompile Include="ComputationNode.cpp" />
-    <ClCompile Include="NetworkBuilderFromConfig.cpp" />
-    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="TrainActions.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -11,6 +11,7 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
+#include "Actions.h"
 #include <string>
 #include <chrono>
 #include <algorithm>
