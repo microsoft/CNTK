@@ -38,10 +38,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ;
             else if (!pMBLayout)                // first non-NULL layout: just copy it
                 pMBLayout = child->m_pMBLayout;
-            else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
 #if 0
+            else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
+//#if 0
                 fprintf(stderr, "InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
-#else
+//#else
                 RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
 #endif
         }
@@ -118,8 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
         // NOTE: The assert is set to check if >= 2 since this is called from nodes which have more than two children.
-        //      The number of children is formally verified elsewhere, so this will not break consistency. Should this
-        //      assert be removed?
+        //      The number of children is formally verified elsewhere, so this will not break consistency. 
         assert(m_children.size() >= 2);
         for (size_t index = 0; index < 2; index++)
         {

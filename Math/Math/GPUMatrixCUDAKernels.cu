@@ -2674,12 +2674,13 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     int end = colCSCIndex[colInC + 1];
 
     ElemType s = 0;
-   for (int j = start; j<end; j++)  //j points to the value
+    for (int j = start; j<end; j++)  //j points to the value
     {
         int i = rowIndex[j];
         s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
     }
-    c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
+
+    c[IDX2C(rowInC, colInC, m)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m)]); // If beta is zero then don't lookup c
 }
 
 /// c += alpha * a * b^T

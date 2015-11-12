@@ -323,7 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
-            LogicError("Mean operation should not be involved in the gradient calculation.");
+            //LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -890,7 +890,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // BUGBUG: We must flip the layout, too.
             if (GetNumParallelSequences() != 1)
-                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.");
+                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.", NodeName().c_str(), OperationName().c_str());
             if (!m_hasComputed)
             {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
