@@ -20,6 +20,7 @@
 #include <wchar.h>
 #include "simplesenonehmm.h"   
 #include <array>
+#include "minibatchsourcehelpers.h"
 
 namespace msra { namespace asr {
 
@@ -624,9 +625,8 @@ struct htkmlfentry
 {
     unsigned int firstframe;    // range [firstframe,firstframe+numframes)
     unsigned int numframes;
-    //unsigned short classid;     // numeric state id
-    unsigned int classid;     // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
-    unsigned int phonestart;     // numeric phone start  time
+    msra::dbn::CLASSIDTYPE classid;     // numeric state id
+    msra::dbn::HMMIDTYPE phonestart;     // numeric phone start  time
     
 private:
     // verify and save data
@@ -636,7 +636,7 @@ private:
         // save
         firstframe = (unsigned int) ts;
         numframes = (unsigned int) (te - ts);
-        classid = (unsigned int) uid;
+        classid = (msra::dbn::CLASSIDTYPE) uid;
         // check for numeric overflow
         if (firstframe != ts || firstframe + numframes != te || classid != uid)
             RuntimeError("htkmlfentry: not enough bits for one of the values");
@@ -685,12 +685,15 @@ public:
                 auto hmmiter = hmmnamehash.find(toks[4]);
                 if (hmmiter == hmmnamehash.end())
                     RuntimeError(msra::strfun::strprintf("htkmlfentry: hmm %s not found in hmmlist", toks[4]));
-                phonestart = (unsigned short)(hmmiter->second + 1);
+                phonestart = (msra::dbn::HMMIDTYPE)(hmmiter->second + 1);
+
+                // check for numeric overflow
+                if ((hmmiter->second + 1) != phonestart)
+                    RuntimeError("htkmlfentry: not enough bits for one of the values");
             }
             else
                 phonestart = 0;
         }
-
     }
 
     // ... note: this will be too simplistic for parsing more complex MLF formats. Fix when needed.
@@ -786,7 +789,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
-            // We can destroy the original string as it is no longer needed after tokenization
+            // We can mutate the original string as it is no longer needed after tokenization
             strtok(const_cast<char*>(lines[i].c_str()), " \t", toks);
             if (statelistmap.size() == 0)
                 entries[i-s].parse (toks, htkTimeToFrame);
