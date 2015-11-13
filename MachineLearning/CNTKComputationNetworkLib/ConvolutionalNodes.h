@@ -150,6 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
                     tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
                                                             m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
                                                             m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
@@ -234,6 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const Matrix<ElemType> & weightMatrix = input0;
             assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_outputImageLayout.channels);
+            functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
             functionValues.Resize(m_outputImageLayout.channels, outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
@@ -246,7 +248,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t smallBatchSize = endSampleID-startSampleID; 
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                Matrix<ElemType>  inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                Matrix<ElemType>  inputSubBatch;
+
+                // This is a temporary work-around to make convolution work for sparse matrices.
+                // AssignPackedConvolutionInput only supports dense matrix input today. So convert
+                // to dense if input matrix is sparse. Allocating/de-allocating memory is costly.
+                // So for dense matrices operate on the slice directly.
+                if (input1.GetMatrixType() == MatrixType::DENSE)
+                {
+                    inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                }
+                else
+                {
+                    inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat());
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+                }
+
                 tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
                                                         m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
                                                         m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
