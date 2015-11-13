@@ -106,13 +106,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t smallBatchSize = endSampleId - startSampleId;
 
                 m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                Mat inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
+                Mat inputSubBatch;
+                inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat()); // Get a copy of the slice because it will need to be resized.
+                inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
                     inT.w(), inT.h(), inT.c(),
                     outT.w(), outT.h(), outT.c(),
                     filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
                     convDesc.padding());
-
+                
                 Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
                 Mat::Multiply(filter, false, m_tempMatrix, false, outputSubBatch);
             }
@@ -219,6 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Matrix<ElemType> inputSubBatch = in.ColumnSlice(startSampleID, smallBatchSize);
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
                     m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
                         inT.w(), inT.h(), inT.c(),
                         srcGradT.w(), srcGradT.h(), srcGradT.c(),
@@ -246,9 +249,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("Not yet implemented.");
         }
 
-        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& out) override
+        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, 
+            bool spatial, double expAvgFactor, Mat& out) override
         {
-            UNUSED(inT); UNUSED(in); UNUSED(scaleBiasT); UNUSED(scale); UNUSED(bias); UNUSED(out); UNUSED(expAvgFactor);
+            UNUSED(inT); UNUSED(in); UNUSED(scaleBiasT); UNUSED(scale); UNUSED(bias); UNUSED(out); UNUSED(spatial); UNUSED(expAvgFactor);
+            RuntimeError("Not yet implemented.");
+        }
+
+        void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
+            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, Mat& scaleGrad, Mat& biasGrad) override
+        {
+            UNUSED(inT); UNUSED(in); UNUSED(srcGrad); UNUSED(grad); UNUSED(scaleBiasT); UNUSED(scale); UNUSED(scaleGrad); UNUSED(biasGrad); UNUSED(spatial); 
             RuntimeError("Not yet implemented.");
         }
 

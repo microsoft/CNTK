@@ -133,7 +133,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"");
         ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"");
         ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"");
-        ComputationNodePtr BatchNormalization(const ComputationNodePtr input, ElemType expAvgFactor, const std::wstring nodeName = L"");
+        ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
+            bool spatial, double expAvgFactor = 1, const std::wstring nodeName = L"");
     };
 
     // create a new from config

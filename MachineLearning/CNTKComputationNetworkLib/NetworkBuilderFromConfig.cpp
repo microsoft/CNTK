@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 }
                 else if (OpIs(BatchNormalizationNode))
                 {
-                    node = New<BatchNormalizationNode<ElemType>>(deviceId, nodeName, (ElemType)config[L"expAvgFactor"]);
+                    node = New<BatchNormalizationNode<ElemType>>(deviceId, nodeName, (bool)config[L"spatial"], (ElemType)config[L"expAvgFactor"]);
                 }
                 // last group: standard nodes that only take 'inputs'
                 else

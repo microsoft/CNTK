@@ -611,10 +611,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(net.GetDeviceId(), nodeName), dictionary, input);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
-        ElemType expAvgFactor, const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input, 
+        const ComputationNodePtr scale, const ComputationNodePtr bias, bool spatial, double expAvgFactor, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, expAvgFactor), input);
+        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, expAvgFactor), input, scale, bias);
     }
 
     template class ComputationNetworkBuilder<float>;
