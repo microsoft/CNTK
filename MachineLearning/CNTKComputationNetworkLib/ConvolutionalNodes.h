@@ -793,18 +793,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // http://arxiv.org/abs/1502.03167
     // REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
     template<class ElemType>
-    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<1>
+    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"BatchNormalization"; }
     public:
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name), m_expAvgFactor(0)
+            Base(deviceId, name), m_spatial(false), m_expAvgFactor(0)
         {
         }
 
-        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, double expAvgFactor) :
-            Base(deviceId, name), m_expAvgFactor(expAvgFactor)
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool spatial, double expAvgFactor) :
+            Base(deviceId, name), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
         {
         }
 
@@ -812,6 +812,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
+
+            fstream << m_spatial;
             fstream << m_expAvgFactor;
         }
 
@@ -832,6 +834,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (verReadable > m_version.VerWrittenCur())
                 RuntimeError("Model is too new.");
 
+            fstream >> m_spatial;
             fstream >> m_expAvgFactor;
         }
 
@@ -849,22 +852,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            RuntimeError("Not implemented.");
         }
 
         void EvaluateThisNode(const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            const Matrix<ElemType>& scale = Inputs(1)->FunctionValues();
+            const Matrix<ElemType>& bias = Inputs(1)->FunctionValues();
+            assert(scale.GetNumRows() == bias.GetNumRows());
+            assert(scale.GetNumCols() == bias.GetNumCols());
+
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
-            m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
 #if NANCHECK
             sliceInputValue.HasNan("BatchNormalization-input");
 #endif
-            //m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, , , m_expAvgFactor, sliceOutputValue);
+            m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, sliceOutputValue);
 #if NANCHECK
             sliceOutputValue.HasNan("BatchNormalization");
 #endif
@@ -889,20 +896,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = m_factory->CreateConvEngine(0);
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
+            {
+                m_inT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
+            }
             if (m_scaleBiasT == nullptr)
             {
-                if (IsConvLayer())
+                if (m_spatial)
                     m_scaleBiasT = m_factory->CreateTensor(1, 1, m_outputImageLayout.channels, 1);
                 else
                     m_scaleBiasT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
             }
-        }
-
-    private:
-        bool IsConvLayer() const
-        {
-            return m_outputImageLayout.channels > 1;
         }
 
     private:
@@ -920,6 +923,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::unique_ptr<ConvolutionTensor4D> m_inT;
         std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
 
+        bool m_spatial;
         double m_expAvgFactor;
     };
 

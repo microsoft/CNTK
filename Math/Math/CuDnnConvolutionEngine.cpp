@@ -210,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
 
         CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0), m_tempC(deviceId)
+            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0), m_tempC(deviceId), m_tempMean(deviceId), m_tempInvVar(deviceId)
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
             CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
@@ -303,15 +303,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
         {
+            assert(biasT.c() == srcGradT.c());
+            assert(biasT.w() == 1);
+            assert(biasT.h() == 1);
+            assert(biasT.n() == 1);
+
             CUDNN_CALL(cudnnConvolutionBackwardBias(m_cudnn, &C::One, t(srcGradT), ptr(srcGrad), &C::One, t(biasT), ptr(biasGrad)));
         }
 
-        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& out) override
+        void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, 
+            bool spatial, double expAvgFactor, Mat& out) override
         {
-            // REVIEW alexeyk: is relying on c() good enough?
-            cudnnBatchNormMode_t mode = scaleBiasT.c() > 1 ? CUDNN_BATCHNORM_PER_ACTIVATION : CUDNN_BATCHNORM_SPATIAL
+            if (spatial)
+            {
+                assert(scaleBiasT.c() == inT.c());
+                assert(scaleBiasT.w() == 1);
+                assert(scaleBiasT.h() == 1);
+            }
+            else
+            {
+                assert(scaleBiasT.c() == inT.c());
+                assert(scaleBiasT.w() == inT.w());
+                assert(scaleBiasT.h() == inT.h());
+            }
+            assert(scaleBiasT.n() == 1);
+            assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+            assert(inT.n() == in.GetNumCols());
+
+            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            m_tempMean.Resize(spatial ? inT.c() : inT.w() * inT.h() * inT.c(), 1);
+            m_tempInvVar.Resize(m_tempMean.GetNumRows(), 1);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
-                t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, nullptr, nullptr, CUDNN_BN_MIN_EPSILON, nullptr, nullptr);
+                t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, nullptr, nullptr, CUDNN_BN_MIN_EPSILON, m_tempMean.BufferPointer(), m_tempInvVar.BufferPointer()));
+        }
+
+        void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
+            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, Mat& scaleGrad, Mat& biasGrad) override
+        {
+            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+            CUDNN_CALL(cudnnBatchNormalizationBackward(m_cudnn, mode, &C::One, &C::One, t(inT), ptr(in), t(inT), ptr(srcGrad), t(inT), ptr(grad),
+                t(scaleBiasT), ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, m_tempMean.BufferPointer(), m_tempInvVar.BufferPointer()));
         }
 
     private:
@@ -398,6 +429,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudnnConvolutionFwdAlgoPerf_t m_fwdAlgo;
         cudnnConvolutionBwdDataAlgoPerf_t m_backDataAlgo;
         cudnnConvolutionBwdFilterAlgoPerf_t m_backFiltAlgo;
+
+        // Cache for more efficient backprop of batch norm.
+        GPUMatrix<ElemType> m_tempMean;
+        GPUMatrix<ElemType> m_tempInvVar;
     };
 
     template<class ElemType>
