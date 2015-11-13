@@ -1732,8 +1732,12 @@ private:
                 ValidateInferChildDims(index, rows, cols);
             }
 
-            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
-                LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
+            if (isFinalValidationPass &&
+                (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() ||
+                 (!Inputs(1)->GetMBLayout() && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())))
+            {
+                LogicError("The Matrix dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
+            }
 
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
