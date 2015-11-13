@@ -18,6 +18,7 @@
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
+#include "EsotericNodes.h"
 #include "MPIWrapper.h"                 // TODO: does not belong here
 #include <string>
 #include <vector>

@@ -17,6 +17,94 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // This header collects special-purpose nodes.
     // It is likely that these are no longer functional.
+    // -----------------------------------------------------------------------
+    /// DummyCriterionNode (objectives, derivatives, prediction)
+    // -----------------------------------------------------------------------
+
+    // This training criterion node needs derivatives and objectives to be
+    // computed out of the node. Derivatives and objectives will be fed to the
+    // node as input features. It has 3 inputs:
+    // 1. feature node that feeds objectives
+    // 2. feature node that feeds derivatives
+    // 3. neural network output
+    //
+    // This node is useful in sequence training for speech recognition, so that
+    // we can separate lattice computation (which may rely other softwares, such
+    // as Kaldi) with the neural network training.
+    template<class ElemType>
+    class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
+    {
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DummyCriterion"; }
+    public:
+        DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
+          Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        {
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            if (inputIndex == 0)
+                LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
+            else if (inputIndex == 1)
+                LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
+            else if (inputIndex == 2)
+            {
+                auto gradient = Inputs(2)->GradientSlice(frameRange);
+                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
+            }
+        }
+
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        {
+            FunctionValues().VerifySize(1, 1);
+            Inputs(0)->FunctionValues().VerifySize(1, 1);
+            FunctionValues().SetValue(Inputs(0)->FunctionValues());
+#if NANCHECK
+            FunctionValues().HasNan("DummyCriterionNode");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            if (Inputs(0)->OperationName() != L"InputValue")
+                LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
+            if (Inputs(0)->OperationName() != L"InputValue")
+                LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
+            if (isFinalValidationPass)
+            {
+                if (Inputs(0)->GetNumRows() != 1)
+                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
+                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 || Inputs(2)->GetNumRows() == 0)
+                    LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
+                if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
+                LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
+            }
+            // TODO: What is this about?
+            //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
+            //    ValidateInferChildDims(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
+
+            Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            InferImageDimsFromInputs(); 
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, false);
+
+            m_outputImageLayout = ImageLayout();
+        }
+    protected:
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+    };
+
+    template class DummyCriterionNode<float>; 
+    template class DummyCriterionNode<double>;
+
 
     // -----------------------------------------------------------------------
     // SequenceDecoderNode (label, position_dependent_score, transition_score)
