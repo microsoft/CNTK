@@ -16,6 +16,8 @@
 #include "ssematrix.h"      // for matrix type
 #endif
 
+#pragma warning (disable: 4505) // unreferenced local function has been removed
+
 namespace msra { namespace dbn {
 
 // ---------------------------------------------------------------------------
@@ -272,7 +274,11 @@ public:
     }
 };
 
-//typedef unsigned short CLASSIDTYPE; // type to store state ids; don't use size_t --saves HUGE amounts of RAM
-typedef unsigned int CLASSIDTYPE; //mseltzer - change to unsigned int for untied context-dependent phones 
+// Using a smaller sized integer type to store the state ids saves a huge amount of space
+// We need more than 2 bytes (i.e. an unsigned int or bigger) to support untied context-dependent phones 
+// TODO: This is currently being hardcoded to unsigned short for saving space, which means untied context-dependent phones
+// will not work. This needs to be changed to dynamically choose what size to use based on the number of class ids.
+typedef unsigned short CLASSIDTYPE;
+typedef unsigned short HMMIDTYPE;
 
 };};
