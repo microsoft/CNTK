@@ -1307,7 +1307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
-        {
+            {
                 auto gradient = Inputs(2)->GradientSlice(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
@@ -1316,8 +1316,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1 || Inputs(0)->HasMBLayout())
-                LogicError("%ls %ls operation expects first input to be a (1 x 1) matrix", NodeName().c_str(), OperationName().c_str());
             FunctionValues().VerifySize(1, 1);
             Inputs(0)->FunctionValues().VerifySize(1, 1);
             FunctionValues().SetValue(Inputs(0)->FunctionValues());
