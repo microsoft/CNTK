@@ -20,9 +20,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // We sub-sample the parallel utterances.
         template<class ElemType> 
-        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,   // matrix to be decimated
-                                                   int numprocs, int rank,             // rank info
-                                                   MBLayoutPtr pMBLayout)              // gets decimated as well
+        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
+                                      int numprocs, int rank,                           // rank info
+                                      MBLayoutPtr pMBLayout)                            // gets decimated as well
         {
             if (numprocs == 1)
                 return;
@@ -174,7 +174,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
+            {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                net.NotifyFeatureNodesFunctionValuesModified(); // need to tell'm again since we modified it again
+            }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames.

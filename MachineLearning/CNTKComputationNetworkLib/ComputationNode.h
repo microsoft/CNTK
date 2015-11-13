@@ -1466,30 +1466,31 @@ protected: \
     using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateSize; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
-public: \
     using Base::CreateUniqId; \
-    using Base::AttachInputs; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
+    using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
-    using Base::FunctionValues; using Base::GradientValues; \
     using Base::Inputs; using Base::SetInput; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
-    using Base::LoadFromFile; using Base::NodeName; \
+    using Base::LoadFromFile; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
-    using Base::RequiresPreCompute; \
     using Base::SaveToFile; using Base::UpdateFunctionMBSize; \
     using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
     using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims; \
+public: \
+    using Base::RequiresPreCompute; \
+    using Base::AttachInputs; using Base::NodeName; \
+    using Base::FunctionValues
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
