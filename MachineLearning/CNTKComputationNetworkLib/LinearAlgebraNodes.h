@@ -1298,7 +1298,7 @@ private:
             if (isFinalValidationPass && dim != Inputs(0)->GetNumRows())
                 InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
 
-            FunctionValues().Resize(1, dim);
+            SetDims(1, dim);
             InferImageDimsFromInputs();
         }
 

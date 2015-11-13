@@ -942,7 +942,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                m_functionValues->ResizeColumns(m_pMBLayout->GetNumCols());
+            {
+                SetDims(GetNumRows(), m_pMBLayout->GetNumCols());
+                UpdateSize();
+                //m_functionValues->ResizeColumns();
+            }
         }
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
