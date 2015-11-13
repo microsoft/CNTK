@@ -180,8 +180,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) = 0;
         virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;
 
-        virtual void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, double expAvgFactor, Mat& out) = 0;
-        //virtual void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, Mat& out) = 0;
+        virtual void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+            bool spatial, double expAvgFactor, Mat& out) = 0;
+        virtual void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
+            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, Mat& scaleGrad, Mat& biasGrad) = 0;
 
     public:
         ConvolutionEngine(const ConvolutionEngine&) = delete;
