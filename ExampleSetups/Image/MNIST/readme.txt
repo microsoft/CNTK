@@ -18,5 +18,11 @@ To run the sample, navigate to this folder and run the following command:
 To run the sample, navigate to this folder and run the following command:
 <path to CNTK executable> configFile=02_Conv.config configName=02_Conv
 
+3. 03_ConvBatchNorm.ndl is almost identical to 02_Convolution.ndl except that it uses batch normalization for the fully connected layer h1.
+Note that batch normalization is implemented using just NDL (see Macros.ndl for details).
+As a result, it uses less epochs (8 vs 15 in 02_Convolution) to achieve the same accuracy.
+To run the sample, navigate to this folder and run the following command:
+<path to CNTK executable> configFile=03_ConvBatchNorm.config configName=03_ConvBatchNorm
+
 For more details, refer to .ndl and corresponding .config files.
 

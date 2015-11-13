@@ -48,9 +48,12 @@ DNN=[
     pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
 
     h1Dim = 128
-    # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
-    h1 = DNNSigmoidLayer(512, h1Dim, pool2, 1)
-    ol = DNNLayer(h1Dim, labelDim, h1, 1)
+    h1 = DNNLayer(512, h1Dim, pool2, 1)
+    # BatchNorm is defined in Macros.ndl
+    h1_n = BatchNorm(h1Dim, h1, 0.3, 0.3)
+    h1_act = Sigmoid(h1_n)
+    
+    ol = DNNLayer(h1Dim, labelDim, h1_act, 1)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)
