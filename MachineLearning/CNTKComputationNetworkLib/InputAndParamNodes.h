@@ -552,7 +552,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t row_size, size_t col_size)
         {
             CreateMatrixIfNull(m_functionValues);
-            m_functionValues->Resize(row_size, col_size);
+            SetDims(row_size, col_size);
+            UpdateSize();
         }
     public:
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :

@@ -480,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            m_functionValues->Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
+            SetDims(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
