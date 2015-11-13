@@ -168,33 +168,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
-    {               
-
-        if (m_matrixName!=NULL) 
+    {
+        // If m_externalBuffer is true then this matrix
+        // is simply a view over another matrix. In that
+        // case we shouldn't free anything.
+        if (!m_externalBuffer)
         {
-            delete[] m_matrixName;
-            m_matrixName = nullptr;
-        }
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
-        {
-            if(m_pArray != NULL) 
+            if (m_matrixName!=NULL) 
+            {
+                delete[] m_matrixName;
+            }
+            if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+            {
+                    delete[] m_pArray;
+                    delete[] m_unCompIndex;
+                    delete[] m_compIndex;
+            }
+            else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+            {
                 delete[] m_pArray;
-            if(m_unCompIndex != NULL) 
-                delete[] m_unCompIndex;
-            if(m_compIndex != NULL)
-                delete[] m_compIndex;
-            m_pArray = NULL; 
-            m_unCompIndex = NULL; 
-            m_compIndex = NULL;
-        }  
-        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
-        {
-            if (m_pArray != NULL)
-                delete[] m_pArray;
-            if(m_blockIds != NULL) 
                 delete[] m_blockIds;
-            m_pArray = NULL;
-            m_blockIds = NULL;
+            }
         }
     }
 
@@ -208,6 +202,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, const ElemType v)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if(m_format != MatrixFormat::matrixFormatSparseCSC && m_format != MatrixFormat::matrixFormatSparseCSR) 
         {
             LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
@@ -255,6 +252,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         this->Reset();
         m_format = v.GetFormat();
 
@@ -302,7 +302,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    {
+        if (startColumn + numCols > m_numCols)
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        CPUSparseMatrix<ElemType> slice(m_format, m_numRows, numCols, m_elemSizeAllocated);
+        slice.m_pArray = m_pArray;
+        slice.m_unCompIndex = m_unCompIndex;
+        slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+        slice.m_externalBuffer = true;
+
+        return slice;
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         //if (numCols == 0)
         //    LogicError("The slice cannot have 0 columns.");
@@ -367,6 +385,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         m_format = matrixFormatSparseCSC;
         Resize(numRows, numCols, nz, true, false);
         this->SetNzCount(nz);
@@ -384,7 +405,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
-    {               
+    {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (m_numRows != numRows || m_numCols != numCols)
             keepExistingValues = false;  
 
@@ -477,7 +501,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
         const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
-
     {
         if (lhs.IsEmpty() || rhs.IsEmpty())
             LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
@@ -566,6 +589,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
         const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (lhs.IsEmpty() || rhs.IsEmpty())
             LogicError("LeftMultiplyAndAdd:  one of the input matrix is empty.");
 
@@ -833,6 +859,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
@@ -865,6 +894,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
@@ -897,6 +929,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         ElemType locThresholdPos = abs(threshold);
         ElemType locTHresholdNeg = -locThresholdPos; 
 
@@ -941,6 +976,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
@@ -1182,6 +1220,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template char* CPUSparseMatrix<char>::BufferPointer() const;
     template void CPUSparseMatrix<char>::Reset(void);
     template CPUSparseMatrix<char>::~CPUSparseMatrix();
-    template CPUMatrix<char> CPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 
 }}}

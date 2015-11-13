@@ -53,6 +53,9 @@
     <ClCompile Include="SimpleNetworkBuilder.cpp">
       <Filter>Model Building, Standard Models</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\MPIWrapper.cpp">
+      <Filter>MPI Interfacing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -274,6 +277,9 @@
     </Filter>
     <Filter Include="from CNTKMath">
       <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MPI Interfacing">
+      <UniqueIdentifier>{6f6d67fe-2cc6-40ca-a349-cb5e32201ec9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

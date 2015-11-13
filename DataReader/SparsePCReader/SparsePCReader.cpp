@@ -69,6 +69,11 @@ void SparsePCReader<ElemType>::Destroy()
 template<class ElemType>
 void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
+    // Sparse PC reader considers every consecutive N rows to be part of a single block.
+    // This is used later to compute the corss-entropy with softmax per block.
+    // Default value is 1 to indicate all rows are independent.
+    m_microBatchSize = readerConfig("microbatchSize", "1");
+
     m_miniBatchSize = 0;
     m_traceLevel = readerConfig("traceLevel", "0");
     m_maxReadData = readerConfig("maxReadData", "0");
@@ -243,6 +248,8 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         m_currOffset += sizeof(int32_t);
     }
 
+    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize, false);
+
     for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
@@ -266,9 +273,14 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         size_t labelRows = (*labels).GetNumRows();
         size_t labelCols = (*labels).GetNumCols();
 
+        if (labelRows != 1)
+        {
+            RuntimeError("SparsePCReader only supports single label value per column.");
+        }
+
         if (labelCols != j)
         {
-            (*labels).Resize(labelRows, j);
+            (*labels).Resize(1, j);
         }
 
         (*labels).SetValue((ElemType)0);
