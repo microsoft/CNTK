@@ -5,6 +5,7 @@
 //
 // DataReader.cpp : Defines the exported functions for the DLL application.
 //
+
 #include "stdafx.h"
 #define DATAREADER_LOCAL
 #include "Basics.h"
