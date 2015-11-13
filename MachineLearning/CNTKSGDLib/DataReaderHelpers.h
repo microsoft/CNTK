@@ -126,6 +126,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: The reader does not always resize the input matrices to zero when 
             // no data is read. When it does, 'wasDataRead' can be removed
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
+            // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
+            if (wasDataRead)
+                net.NotifyFeatureNodesFunctionValuesModified();
             size_t readMBSize = net.DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
                 wasDataRead = false;

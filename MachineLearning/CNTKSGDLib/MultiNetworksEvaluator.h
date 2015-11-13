@@ -621,7 +621,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = 0; i < outputNodes.size(); i++)
             {
                 size_t dim = outputNodes[i]->GetNumRows();
-                outputNodes[i]->Resize(dim, bSize);
+                outputNodes[i]->SetDims(dim, bSize);
+                dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateSize();
                 dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(0);
                 for (int k = 0; k < bSize; k++)
                     dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(best_path[k], k, 1.0);
@@ -755,7 +756,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
             {
                 size_t nr = (*ptr)->GetNumRows();
-                (*ptr)->Resize(nr, 1);
+                (*ptr)->SetDims(nr, 1);
             }
             // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
             //evalnet->SetActualMiniBatchSizeFromFeatures();

@@ -327,7 +327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
 
-            Resize(Inputs(1));
+            SetDims(Inputs(1));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -419,7 +419,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-            VerifySize(rows0, cols1);
+            VerifyDims(rows0, cols1);
 
             // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
@@ -460,7 +460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Inputs(1)->GetNumRows(), (int)Inputs(0)->GetNumCols());
-            Resize(rows0, cols1);
+            SetDims(rows0, cols1);
 
             if (isFinalValidationPass && Inputs(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
@@ -577,7 +577,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
 
-            Resize(cols0, cols1);
+            SetDims(cols0, cols1);
             InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
@@ -756,7 +756,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -904,7 +904,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1011,8 +1011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
-            Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
-
+            SetDims(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -1085,7 +1084,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -1137,7 +1136,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(1, Inputs(0)->GetNumCols());
+            SetDims(1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1204,7 +1203,7 @@ private:
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
 
-            Resize(cols0, rows0);
+            SetDims(cols0, rows0);
             if (Inputs(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -1397,8 +1396,7 @@ private:
                 LogicError("%ls %ls operation: The input dimensions do not match.", NodeName().c_str(), OperationName().c_str());
 #endif
 
-            Resize(1, Inputs(1)->GetNumCols());
-
+            SetDims(1, Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -1521,7 +1519,7 @@ private:
             if (isFinalValidationPass && !HasMBLayout() && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
 
-            Resize(rows0 * rows1, Inputs(0)->GetNumCols());
+            SetDims(rows0 * rows1, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()  
@@ -1742,8 +1740,7 @@ private:
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
 
-            Resize(negNumber + 1, Inputs(1)->GetNumCols());
-
+            SetDims(negNumber + 1, Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }

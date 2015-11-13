@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             CreateMatrixIfNull(m_functionValues);
-            Resize(row_size, col_size);
+            SetDims(row_size, col_size);
             //m_delayedActivation.Resize(row_size, col_size);     // TODO: relevance of col_size? Why not timeStep?
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
 
             // Note: Do we need load cols for delay node? I just set to zero to see if there is any problem.
-            Resize(rows, 0);
+            SetDims(rows, 0);
             m_delayedActivation.Resize(rows, 0);    // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
@@ -239,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = frameRange.t();
 
-            VerifySize(Inputs(0));
+            VerifyDims(Inputs(0));
 
             size_t T = GetNumTimeSteps();
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0;  // (note: should never happen in full-sequence mode)
@@ -885,7 +885,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t outputDim = Inputs(1)->GetNumRows();
 
             {
-                Resize(outputDim, nT);
+                SetDims(outputDim, nT);
                 FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
                 m_State.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
@@ -1255,7 +1255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            Resize(noutdim, nT);
+            SetDims(noutdim, nT);
             FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
         }
 
@@ -1292,18 +1292,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < nT; i++)
                     target(0, i) = 1;
 
-                Inputs(0)->Resize(nInput, nT);
+                Inputs(0)->SetDims(nInput, nT);
                 Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
                 Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(1)->Resize(nHidden, nInput + nOutput + 2);
+                Inputs(1)->SetDims(nHidden, nInput + nOutput + 2);
                 Inputs(1)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(2)->Resize(nHidden, nInput + nHidden + 2);
+                Inputs(2)->SetDims(nHidden, nInput + nHidden + 2);
                 Inputs(2)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(3)->Resize(nOutput, nInput + nHidden + 2);
+                Inputs(3)->SetDims(nOutput, nInput + nHidden + 2);
                 Inputs(3)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(4)->Resize(nOutput, nHidden + nInput + 1);
+                Inputs(4)->SetDims(nOutput, nHidden + nInput + 1);
                 Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
-                Resize(nOutput, nT);
+                SetDims(nOutput, nT);
 
                 m_DefaultState = 0.0;
                 EvaluateThisNode(FrameRange(m_pMBLayout));

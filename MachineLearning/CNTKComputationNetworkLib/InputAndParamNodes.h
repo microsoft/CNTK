@@ -48,7 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = true;
             m_outputImageLayout = ImageLayout(1, rows, 1);
             CreateMatrixIfNull(m_functionValues);
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            UpdateSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
         }
 
@@ -68,12 +69,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_parameterUpdateRequired;
             fstream >> rows >> cols;
 
-            //intentionally comment out to support automatic dimension inference
-            //if (rows * cols == 0) 
-            //    LogicError("This LearnableParameter dimension is 0.");
-
             CreateMatrixIfNull(m_functionValues);
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            UpdateSize();   // allocate the matrix storage actually
             fstream >> FunctionValues();
 
             m_outputImageLayout = ImageLayout(1, rows, 1);
@@ -218,7 +216,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            //UpdateSize();
             m_parameterUpdateRequired = false;
         }
     public:
@@ -281,7 +280,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_isSparse)
                 ConvertToSparseMatrix();
 
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            //UpdateSize();                   // TODO: Is this needed? Wouldn't the reader allocate this for us?
             //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
             m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
@@ -293,7 +293,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void UpdateFunctionMBSize() override
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                VerifySize(GetNumRows(), m_pMBLayout->GetNumCols());
+                VerifyDims(GetNumRows(), m_pMBLayout->GetNumCols());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
@@ -311,10 +311,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
         {
-            size_t rows = m_functionValues->GetNumRows();
-            size_t cols = m_functionValues->GetNumCols();
             m_functionValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
+            UpdateSize();
+            // This ^^ is due to a comment I found here: //SwitchToMatrixType does not reserve information right now.
+            // I think it means SwitchToMatrixType() does nto carry over the dimension. Which makes no sense, it should be fixed there, not worked around here.
         }
     };
 
@@ -460,7 +460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
 
-            Resize(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
+            SetDims(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -474,17 +474,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Inputs(0)->Resize(nInput, nHidden);
+                Inputs(0)->SetDims(nInput, nHidden);
+                Inputs(0)->UpdateSize();
                 Inputs(0)->FunctionValues().SetValue(1.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Inputs(1)->Resize(nHidden, nOutput);
+                Inputs(1)->SetDims(nHidden, nOutput);
+                Inputs(1)->UpdateSize();
                 Inputs(1)->FunctionValues().SetValue(0.0);
                 Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
                 Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                Resize(nInput, nOutput);
+                SetDims(nInput, nOutput);
+                UpdateSize();
 
                 EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -604,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
-                Resize(Inputs(0));
+                SetDims(Inputs(0));
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();

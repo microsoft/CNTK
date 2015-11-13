@@ -89,17 +89,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
 
-        virtual void UpdateFunctionMBSize() = 0;
+        virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
         virtual void OnEvaluateBeginIteration() = 0;
         virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
         virtual void OnEvaluateEndIteration() = 0;              // called after last iteration step of EvaluateThisNode()
 
-        virtual void OnComputeGradientBeginIteration() = 0;             // called before first iteration step of ComputeGradient()
+        virtual void OnComputeGradientBeginIteration() = 0;     // called before first iteration step of ComputeGradient()
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
-        virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
+        virtual void OnComputeGradientEndIteration() = 0;       // called after last iteration step of ComputeGradient()
 
-        // TODO: this one does not quite fit here
+        // TODO: this one does not quite fit here --they are implemented in Base and overridden by the ControlFlowNodes
         // functions that are called from Network, but not necessarily overridden by the node implementations themselves
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
@@ -249,7 +249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             m_deviceId(deviceId),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
-            m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+            m_nodeName(name == L"" ? CreateUniqNodeName() : name),
+            m_numRows(0), m_numCols(0)
         {
         }
         virtual ~ComputationNodeBase(){}
@@ -294,18 +295,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // float/double-independent access to the m_functionValues for a few specific use cases
         // TODO: Not nice. This would go away if we abstracted out the matrix type as well from float/double.
-        virtual size_t GetNumRows() const = 0;
-        virtual size_t GetNumCols() const = 0;
+        size_t GetNumRows() const { return m_numRows; }
+        size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
-        virtual void Resize(size_t rows, size_t cols) = 0;
-        virtual void Resize(ComputationNodeBasePtr node) { Resize(node->GetNumRows(), node->GetNumCols()); }
-        void VerifySize(size_t rows, size_t cols)
+        virtual // for now virtual as this still updates m_functionValues
+        void SetDims(size_t rows, size_t cols)
+        {
+            m_numRows = rows;
+            m_numCols = cols;
+            // actual memory allocation happens elsewhere
+            // NOTE: current ComputationNode<> overrides this in order to still do actual memory allocation like before
+        }
+        void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
+        virtual void NotifyFunctionValuesModified() { } // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
+        void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                LogicError("VerifyDims: expected m_functionValues size %d x %d, but it is %d x %d",
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
         }
-        virtual void VerifySize(ComputationNodeBasePtr node) { VerifySize(node->GetNumRows(), node->GetNumCols()); }
+        virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
         virtual double Get00Element() const = 0;
 
         // validation
@@ -736,18 +745,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         // data members
         //std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
-        bool m_gradientInitialized; //indicate whether the gradient matrix has been resized and initialzed to 0
-        DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
+        DEVICEID_TYPE m_deviceId;   // CPU=-1, >=0 GPU
         std::wstring m_nodeName;
 
-        MBLayoutPtr m_pMBLayout;
-
+        // inputs
         std::vector<ComputationNodeBasePtr> m_children;
 
-        bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
-
+        // dimensions and layout
+        // Data is stored as a matrix, but often it is interpreted as a more complex structure.
+        // If the matrix is minibatch data (inputs, activations, labels), then matrix columns are samples.
+        // Note that the actual matrix storage does not always exist.
+        size_t m_numRows, m_numCols;        // matrix dimension of function values and gradients
         ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
         ImageLayout m_outputImageLayout;    // and the output
+        MBLayoutPtr m_pMBLayout;
+
+        // flags related to gradient propagation
+        bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
+        bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -769,7 +784,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNode() { }
     public:
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
-        using ComputationNodeBase::Resize;
+        using ComputationNodeBase::SetDims;
         typedef ElemType OurElemType;
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
@@ -780,14 +795,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodeBase(deviceId, name)
         {
         }
-#if 0   // (this was used by TimesNode when created by SVD, but seems unneccessary, and is buggy since inconsistent with the above)
-        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
-        {
-            CreateMatrixIfNull(m_functionValues);
-            Resize(rows, cols);
-            FunctionValues().SetValue(0);
-        }
-#endif
     public:
         // public constructor
         // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
@@ -806,24 +813,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // our own output dimensions
-        /*implement*/size_t GetNumRows() const { return FunctionValues().GetNumRows(); }
-        /*implement*/size_t GetNumCols() const { return FunctionValues().GetNumCols(); }
-        /*implement*/void Resize(size_t rows, size_t cols)
+        virtual void SetDims(size_t rows, size_t cols) override final
         {
-            FunctionValues().Resize(rows, cols);
-#if 0//def _DEBUG
-            fprintf(stderr, "Resize: Destructive resize to (%d x %d) in %ls %ls operation.\n", (int)rows, (int)cols, NodeName().c_str(), OperationName().c_str());
-#endif
-#ifdef _DEBUG
-            a_rows = rows; a_cols = cols;
-#endif
+            Base::SetDims(rows, cols);
+            // TODO: in the future we will NOT resize here, but in a different function
+            //       Then this function will no longer be virtual.
+            UpdateSize();
+            // This ^^ recovers the previous behavior of this function, keeping it compatible at this time, for testing.
         }
-#ifdef _DEBUG
-    private:
-        size_t a_rows, a_cols;      // convenience copy of rows/cols that show high up in the debugger
-    public:
-#endif
-        /*implement*/double Get00Element() const { return FunctionValues().Get00Element(); }
+        // update m_functionValues to match the dimensions given in m_numRows, m_numCols
+        void UpdateSize()
+        {
+            FunctionValues().Resize(m_numRows, m_numCols);
+        }
+        // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
+        // Yes, it is bad design that this is possible.
+        virtual void NotifyFunctionValuesModified() override final
+        {
+            m_numRows = FunctionValues().GetNumRows();
+            m_numCols = FunctionValues().GetNumCols();
+        }
+        virtual double Get00Element() const override final { return FunctionValues().Get00Element(); }
 
         // recover a shared_ptr from ourselves if given a naked pointer
         ComputationNodePtr shared_from_this()
@@ -928,6 +938,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         // Important: Unless overridden, this function is destructive. Nodes cannot carry over minibatch-size dependent state across minibatches through m_functionValues because of this.
         // TODO: How is this function different from OnEvaluateBeginIteration()?
+        // TODO: This should be part of the split of Resize() and UpdateSize().
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
@@ -1098,6 +1109,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MaskMissingGradientColumnsToZero(frameRange);
             return GradientSlice(frameRange);
         }
+
+        //virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
+        //{
+        //    if (!IsLeaf())
+        //        UpdateSize();
+        //}
 
 #ifdef _DEBUG
         // NaN checks
@@ -1408,9 +1425,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
-        virtual size_t GetNumRows() const override { NOT_IMPLEMENTED; }
-        virtual size_t GetNumCols() const override { NOT_IMPLEMENTED; }
-        virtual void Resize(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
+        //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override { NOT_IMPLEMENTED; }
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
@@ -1448,7 +1463,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
-    using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
+    using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
@@ -1459,7 +1474,7 @@ protected: \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
 public: \
     using Base::CreateUniqId; \
-    using Base::AttachInputs; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
+    using Base::AttachInputs; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
