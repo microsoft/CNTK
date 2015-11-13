@@ -59,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_leftMinusRight->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
             MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
-            VerifySize(1,1);
+            VerifyDims(1,1);
             FunctionValues().SetValue(v*v / 2);
 #if NANCHECK
             FunctionValues().HasNan("SquareError");
@@ -403,7 +403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
-            VerifySize(1, 1);
+            VerifyDims(1, 1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).MatrixNorm1());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL1Reg");
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
-            VerifySize(1,1);
+            VerifyDims(1,1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL2Reg");
@@ -670,7 +670,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
-            Resize(1,1);
+            SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -955,7 +955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
             }
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
@@ -1239,7 +1239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
 
-            Resize(1,1);
+            SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -1347,7 +1347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
             //    ValidateInferChildDims(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
-            Resize(1,1);
+            SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -1497,7 +1497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;  // no layout
             InferImageDimsFromInputs();
 

@@ -281,9 +281,9 @@ public:
     {
         size_t actualMBSize = 0;
 
-        const auto & featureNodes = this->FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
-        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
-            actualMBSize = max(actualMBSize, (*nodeIter)->GetNumCols());
+        const auto & featureNodes = FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
+        for (auto & nodeIter : featureNodes)
+            actualMBSize = max(actualMBSize, nodeIter->GetNumCols());
 
         return actualMBSize;
     }
@@ -294,9 +294,18 @@ public:
     // UNTESTED stopgap. Most likely places that are never used.
     void ResizeAllFeatureNodes(size_t cols)
     {
-        auto & featureNodes = this->FeatureNodes();
-        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
-            (*nodeIter)->Resize((*nodeIter)->GetNumRows(), cols);
+        auto & featureNodes = FeatureNodes();
+        for (auto & nodeIter : featureNodes)
+            nodeIter->SetDims(nodeIter->GetNumRows(), cols);
+    }
+
+    // When external code (readers, namely) updates InputValue's m_functionValues,
+    // calling this function is required to make sure that any internal state gets updated correctly.
+    void NotifyFeatureNodesFunctionValuesModified()
+    {
+        auto & featureNodes = FeatureNodes();
+        for (auto & nodeIter : featureNodes)
+            nodeIter->NotifyFunctionValuesModified();
     }
 
     // -----------------------------------------------------------------------

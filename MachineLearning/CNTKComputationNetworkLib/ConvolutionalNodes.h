@@ -299,11 +299,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
-            //    LogicError("Convolution operation: one of the operands has 0 elements.");
-            
             size_t outputDim = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
-            Resize(outputDim, Inputs(1)->GetNumCols());
+            SetDims(outputDim, Inputs(1)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()

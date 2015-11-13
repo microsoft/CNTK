@@ -931,7 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
-            Resize(1, cols[3]);
+            SetDims(1, cols[3]);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1057,7 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                Resize(Inputs(0));
+                SetDims(Inputs(0));
                 m_maskOfDropout->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
                 sliceMask = DataSlice(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             }

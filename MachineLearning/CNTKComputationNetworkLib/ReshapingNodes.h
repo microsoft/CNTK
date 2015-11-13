@@ -128,6 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ReshapeNode (input) -- reinterpret input matrix as having different dimensions
     // where the new row dimension is given, and the column dimension is inferred.
+    // Also optionally associate a different ImageLayout with the data.
     //
     // If input has no layout, then this reshapes the input matrix
     // from (rows x cols) to (newRows x (cols / newRows * rows)).
@@ -147,10 +148,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //       E.g. ReinterpretRowStackAsSequence and ReinterpretSequenceAsRowStack.
     // BUGBUG: This is not actually implemented yet. Instead, it goes from 1 to K steps or from K to 1 step. This is temporary/experimental, until the plumbing for nesting is there.
     //
+    // Thirdly, ReshapeNode can also be used to update only the ImageLayout. In that case, the MBLayout is kept as is.
+    //
     // Note: The new row dimension must be a straight multiple or divisor of the current row dimension.
     // To reshape to a non-multiple go to row dim 1 first.
     //
     // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
+    // TODO: Changing the ImageLayout does not seem to belong here.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -238,8 +242,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
             }
 
-            Resize(m_numRows, newCols);
-            if (Inputs(0)->HasMBLayout())
+            SetDims(m_numRows, newCols);
+            if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the ImageLayout)
+                m_pMBLayout = Inputs(0)->GetMBLayout();
+            else if (Inputs(0)->HasMBLayout())
             {
                 if (!m_pMBLayout)
                     m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates its own layout
@@ -256,58 +262,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_pMBLayout)
             {
 #if 0
-                VerifySize(m_numRows, newCols);
+                VerifyDims(m_numRows, newCols);
 #endif
             }
             else
-                Resize(m_numRows, newCols);
+                SetDims(m_numRows, newCols);
         }
 
         // TODO: there seems to be semantic overlap between OnEvaluateBeginIteration() and UpdateFunctionMBSize()
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override
         {
             Base::OnEvaluateBeginIteration();
-            if (m_pMBLayout)
+            // create the derived layout
+            if (m_pMBLayout && factor() != 1)
             {
-                // create the derived layout
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
-#if 1           // temporary hack until nested sequences are plumbed for
                 if (weStack())
                 {
+                    // going from many samples to one: layout entry will get no flags
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
                     // leave flags empty (single-frame 'utterances' come form frame randomization, hence no flags)
                 }
                 else
                 {
+                    // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                     if (Inputs(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to add a nested time dimension only works when coming from a single frame per sequence.");
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
                         m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
                 }
-#else
-                if (!m_pMBLayout->IsAllNone())
-                    LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
-                // TODO: ^^ MBLayout update
-#endif
             }
         }
 
         // notes:
-        //  - input and output have different time base and different layouts
+        //  - input and output have different time base and different layouts (unless the canonical case of factor() == 1)
         //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
             assert(newCols * m_numRows == cols * rows); // follows from above check
-            VerifySize(m_numRows, newCols);
+            VerifyDims(m_numRows, newCols);
 
-            // no layout case: this is indeed just a reshape
+            // no layout case: this is indeed just a reshape. Same for canonical case
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
-            if (!m_pMBLayout)
+            if (!m_pMBLayout || factor() == 1)
             {
                 FunctionValues().Reshaped(newCols * m_numRows, 1).SetValue(Inputs(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
@@ -330,8 +332,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
 
-            // no layout case: this is indeed just a reshape
-            if (!m_pMBLayout)
+            // no layout case: this is indeed just a reshape. Same for canonical case
+            if (!m_pMBLayout || factor() == 1)
             {
                 Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numRows, 1);   // treat the values as one long vector
             }
@@ -456,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
             // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferImageDimsFromInputs();
         }
     };
@@ -520,7 +522,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
                 RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
-            Resize(m_numRows, Inputs(0)->GetNumCols());
+            SetDims(m_numRows, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -600,7 +602,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 totalRows += Inputs(i)->GetNumRows();
             }
 
-            Resize(totalRows, numCols);
+            SetDims(totalRows, numCols);
             InferImageDimsFromInputs();
         }
 
@@ -702,7 +704,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
+            SetDims(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -717,23 +719,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Inputs(0)->GradientSlice(frameRange).AddToRowRepeatValuesOf(GradientSlice(frameRange), m_numRepeat);
         }
-
-        // TODO: Can we remove this const-related duplication as well?
-        //virtual const Matrix<ElemType>& FunctionValues() const override
-        //{
-        //    if (!isNoop())
-        //        return *m_functionValues;
-        //    else
-        //        return Inputs(0)->FunctionValues();
-        //}
-
-        //virtual Matrix<ElemType>& FunctionValues() override 
-        //{
-        //    if (!isNoop())
-        //        return *m_functionValues;
-        //    else
-        //        return Inputs(0)->FunctionValues();
-        //}
 
     private:
         //bool isNoop() const { return m_numRepeat == 1; }    // in this case this node does nothing

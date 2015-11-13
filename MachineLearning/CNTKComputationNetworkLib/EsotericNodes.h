@@ -415,9 +415,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
-                Resize(rows0 / GetNumParallelSequences(), cols1);
-            if (m_strideDim == 1)
-                Resize(rows0, cols1);
+                SetDims(rows0 / GetNumParallelSequences(), cols1);
+            if (m_strideDim == 1)       // TODO: no else??
+                SetDims(rows0, cols1);
 
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
@@ -524,14 +524,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (isFinalValidationPass && rows1 != cols0)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_strideDim, cols0, rows1);
                 size_t T1 = rows0 / m_stride;
-                Resize(T1, cols1);
+                SetDims(T1, cols1);
             }
 
             else // by col
             {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_strideDim, cols0, rows1);
-                Resize(rows0, cols1);
+                SetDims(rows0, cols1);
             }
             LinkToMBLayout(Inputs(1)->GetMBLayout());   // retains the layout of the right input
 
