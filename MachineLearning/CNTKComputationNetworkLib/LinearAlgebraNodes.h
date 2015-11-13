@@ -1736,7 +1736,7 @@ private:
                 LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
             // input(2) is shift, input(3) is the #neg
-            size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
+            size_t negNumber = (size_t)Inputs(3)->Get00Element();
 
             Resize(negNumber + 1, Inputs(1)->GetNumCols());
 
