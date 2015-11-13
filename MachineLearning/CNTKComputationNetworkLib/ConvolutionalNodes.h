@@ -249,8 +249,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch;
-                inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat()); // Get a copy of the slice because it will need to be resized.
-                inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+
+                // This is a temporary work-around to make convolution work for sparse matrices.
+                // AssignPackedConvolutionInput only supports dense matrix input today. So convert
+                // to dense if input matrix is sparse. Allocating/de-allocating memory is costly.
+                // So for dense matrices operate on the slice directly.
+                if (input1.GetMatrixType() == MatrixType::DENSE)
+                {
+                    inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                }
+                else
+                {
+                    inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat());
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+                }
+
                 tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
                                                         m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
                                                         m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
