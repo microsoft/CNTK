@@ -119,8 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
         // NOTE: The assert is set to check if >= 2 since this is called from nodes which have more than two children.
-        //      The number of children is formally verified elsewhere, so this will not break consistency. Should this
-        //      assert be removed?
+        //      The number of children is formally verified elsewhere, so this will not break consistency. 
         assert(m_children.size() >= 2);
         for (size_t index = 0; index < 2; index++)
         {
