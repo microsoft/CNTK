@@ -947,6 +947,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateSize();
                 //m_functionValues->ResizeColumns();
             }
+            // saniyty check:
+            if (m_functionValues->GetNumRows() != GetNumRows() || m_functionValues->GetNumCols() != GetNumCols())
+                LogicError("UpdateFunctionMBSize: m_functionValues out of sync with m_numRows/m_numCols");
         }
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
