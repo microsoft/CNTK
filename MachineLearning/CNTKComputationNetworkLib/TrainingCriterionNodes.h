@@ -102,9 +102,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-
     private:
         shared_ptr<Matrix<ElemType>> m_leftMinusRight;
     };
@@ -226,8 +223,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
@@ -352,8 +347,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_leftDivRight, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         // matrix value passed from evaluate to computePartial
         shared_ptr<Matrix<ElemType>> m_logOfRight;
@@ -446,8 +439,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_gradientOfL1Norm, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         shared_ptr<Matrix<ElemType>> m_gradientOfL1Norm;    // temporary
     };
@@ -505,9 +496,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
 
     template class MatrixL2RegNode<float>; 
@@ -681,8 +669,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -969,8 +955,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1265,8 +1249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->mEndLbl = mEndLbl;
             }
         }
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+
     private:
         Matrix<ElemType> mAlpha;    // TODO: m_Alpha etc.
         Matrix<ElemType> mBeta;
@@ -1490,8 +1473,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gammatime = m_gammatime;
             partialtime = m_partialtime;
         }
+
     protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
         shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
@@ -1658,8 +1641,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         shared_ptr<Matrix<ElemType>> m_classZeroLabels;
         shared_ptr<Matrix<ElemType>> m_result;
