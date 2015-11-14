@@ -98,8 +98,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
 
     template class DummyCriterionNode<float>; 

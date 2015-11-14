@@ -470,11 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (auto & node2 : m_nestedNodes)
             {
-                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
                 node2->EvaluateThisNode(t);
-                // TODO: this cannot be done since it is stored in the network now
-                //if (IsNodeReqMultiSeqHandling(node2))
-                //    node2->MaskMissingValuesColumnsToZero(t);
                 node2->UpdateEvalTimeStamp();
             }
         } 
@@ -504,11 +500,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
             {
                 auto & node2 = *nodeIter2;
-                // BUGBUG: The following can no longer be done after this code was moved into SEQTraversalFlowControlNode
-                //node2->VerifyNumParallelSequences(GetNumParallelSequences());
-                //if (IsNodeReqMultiSeqHandling(node2))
-                //    node2->MaskMissingGradientColumnsToZero(t);
-                // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
 #define OPT_OUTER_GRADIENT  // if true then we compute the gradient outside of the loop where it is possible
 #ifdef OPT_OUTER_GRADIENT
                 node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
@@ -525,11 +516,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
-            // BUGBUG: The following can no longer be done after this code was moved into SEQTraversalFlowControlNode
-            //node2->VerifyNumParallelSequences(GetNumParallelSequences());
-            //if (IsNodeReqMultiSeqHandling(node2))
-            //    node2->MaskMissingGradientColumnsToZero(t);
-            // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
             node2->ComputeGradientForChildren(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 #endif

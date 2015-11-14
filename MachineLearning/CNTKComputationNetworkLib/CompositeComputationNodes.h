@@ -967,13 +967,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return true;
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() 
-        { 
-           return true; 
-        }
-
     };
 
     template class TimeReverseNode<float>;
