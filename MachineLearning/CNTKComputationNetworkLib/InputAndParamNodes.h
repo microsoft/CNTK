@@ -638,9 +638,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 #endif
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-
     };
 
     template class PairNetworkNode<float>;

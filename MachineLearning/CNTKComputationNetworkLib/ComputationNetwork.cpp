@@ -147,12 +147,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_finalCriteria[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
-        fstream << m_requestNodesMultiSeqHandling.size();
-        for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
-            fstream << m_requestNodesMultiSeqHandling[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
-
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
         fstream << m_evalNodes.size();
         for (size_t i = 0; i < m_evalNodes.size(); i++)
@@ -360,14 +354,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
+            // TODO: this section is defunct
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
             {
+                fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
                 fstream >> num;
                 for (size_t i = 0; i<num; i++)
-                {
                     fstream >> nodeName;
-                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
-                }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
 
@@ -476,7 +469,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
         // TODO: just use return!
@@ -492,32 +484,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
 
         return false;
-    }
-
-    // test for user-specified request for masking to the individual nodes
-    // This will go away. It is currently only needed if users explicitly perform reduce-like operations, to work around current limitations of CNTK.
-    // It makes no sense for some nodes, so we skip those.
-    template <typename T>
-    static bool VectorContains(const vector<T> & v, const T & what)
-    {
-        // TODO: I am sure there is some std algorithm for this, need to look for it
-        for (const auto & elem : v)
-            if (elem == what)
-                return true;
-        return false;
-    }
-    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
-    {
-        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
-        if (maskingWasRequested &&
-            (node->OperationName() == OperationNameOf(SumElementsNode) ||
-             node->OperationName() == OperationNameOf(TransposeNode) ||
-             node->OperationName() == OperationNameOf(MeanNode) ||
-             node->OperationName() == OperationNameOf(InvStdDevNode)))
-        {
-            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
-        }
-        return maskingWasRequested;
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
@@ -858,8 +824,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
-        // nodes that requires multi sequence handling 
-        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_requestNodesMultiSeqHandling);            
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
@@ -901,8 +865,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"\t\t rank=sink ; ";
         line.clear();
         for (const auto & x : m_finalCriteria)
-            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (const auto & x : m_requestNodesMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());

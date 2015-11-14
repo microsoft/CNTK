@@ -127,8 +127,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);
         }
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
