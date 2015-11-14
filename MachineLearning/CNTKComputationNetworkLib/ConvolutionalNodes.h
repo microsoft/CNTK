@@ -782,18 +782,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // http://arxiv.org/abs/1502.03167
     // REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
     template<class ElemType>
-    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
+    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"BatchNormalization"; }
     public:
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name), m_spatial(false), m_expAvgFactor(0)
+            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0)
         {
         }
 
-        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool spatial, double expAvgFactor) :
-            Base(deviceId, name), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor) :
+            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
         {
         }
 
@@ -802,6 +802,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::SaveToFile(fstream);
             fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
 
+            fstream << m_eval;
             fstream << m_spatial;
             fstream << m_expAvgFactor;
         }
@@ -823,6 +824,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (verReadable > m_version.VerWrittenCur())
                 RuntimeError("Model is too new.");
 
+            fstream >> m_eval;
             fstream >> m_spatial;
             fstream >> m_expAvgFactor;
         }
@@ -835,12 +837,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
                 assert(node != nullptr);
 
+                node->m_eval = m_eval;
+                node->m_spatial = m_spatial;
                 node->m_expAvgFactor = m_expAvgFactor;
             }
         }
 
         void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
+            if (m_eval)
+                LogicError("BatchNormalization does not compute derivatives in inference mode.");
+
+            if (inputIndex == 0) // derivative with respect to the input.
+            {
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Inputs(0)->GetNumParallelSequences(), m_pMBLayout));
+                const Matrix<ElemType>& scale = Inputs(1)->FunctionValues();
+                const Matrix<ElemType>& bias = Inputs(2)->FunctionValues();
+
+                size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+                m_inT->setN(batchSize);
+                assert(m_convEng != nullptr);
+
+                Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                m_dScale->Resize(scale.GetNumRows(), scale.GetNumCols());
+                m_dBias->Resize(bias.GetNumRows(), bias.GetNumCols());
+                // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
+                m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
+                    *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
+            }
+            else if (inputIndex == 1) // derivative with respect to the scale
+            {
+                // Derivative with respect to the scale was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Inputs(1)->GradientValues();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->BufferPointer());
+            }
+            else if (inputIndex == 2) // derivative with respect to the bias
+            {
+                // Derivative with respect to the bias was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Inputs(2)->GradientValues();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
+            }
+            // No derivatives with respect to running mean and InvStdDev.
         }
 
         void EvaluateThisNode(const FrameRange & frameRange) override
@@ -848,9 +886,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             const Matrix<ElemType>& scale = Inputs(1)->FunctionValues();
-            const Matrix<ElemType>& bias = Inputs(1)->FunctionValues();
+            const Matrix<ElemType>& bias = Inputs(2)->FunctionValues();
+            Matrix<ElemType>& runMean = Inputs(3)->FunctionValues();
+            Matrix<ElemType>& runInvStdDev = Inputs(4)->FunctionValues();
             assert(scale.GetNumRows() == bias.GetNumRows());
             assert(scale.GetNumCols() == bias.GetNumCols());
+            assert(runMean.GetNumRows() == scale.GetNumRows());
+            assert(runMean.GetNumCols() == scale.GetNumCols());
+            assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
+            assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
 
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
@@ -860,7 +904,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             sliceInputValue.HasNan("BatchNormalization-input");
 #endif
-            m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, sliceOutputValue);
+            if (m_eval)
+                m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
+            else
+            {
+                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, runMean, runInvStdDev,
+                    sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+            }
 #if NANCHECK
             sliceOutputValue.HasNan("BatchNormalization");
 #endif
@@ -885,15 +935,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = m_factory->CreateConvEngine(0);
             if (m_inT == nullptr)
-            {
                 m_inT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
-            }
             if (m_scaleBiasT == nullptr)
             {
                 if (m_spatial)
                     m_scaleBiasT = m_factory->CreateTensor(1, 1, m_outputImageLayout.channels, 1);
                 else
                     m_scaleBiasT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
+            }
+        }
+
+        void RequestMatricesBeforeEval(MatrixPool& matrixPool) override
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            if (!m_eval)
+            {
+                RequestMatrixFromPool(m_saveMean, matrixPool);
+                RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
+            }
+        }
+
+        void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) override
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            if (!m_eval)
+            {
+                RequestMatrixFromPool(m_dScale, matrixPool);
+                RequestMatrixFromPool(m_dBias, matrixPool);
+            }
+        }
+
+        void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) override
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            if (!m_eval)
+            {
+                ReleaseMatrixToPool(m_saveMean, matrixPool);
+                ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+                ReleaseMatrixToPool(m_dScale, matrixPool);
+                ReleaseMatrixToPool(m_dBias, matrixPool);
             }
         }
 
@@ -912,8 +992,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::unique_ptr<ConvolutionTensor4D> m_inT;
         std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
 
+        // Determines whether to use training or inference(evaluation) mode.
+        bool m_eval;
+        // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
+        // or spatial (used after convolutional layers).
         bool m_spatial;
+        // Smoothing factor.
         double m_expAvgFactor;
+        // Stores pre-computed on forward pass mean values that are used in gradient computation.
+        shared_ptr<Matrix<ElemType>> m_saveMean;
+        // Stores pre-computed on forward pass InvStdDev values that are used in gradient computation.
+        shared_ptr<Matrix<ElemType>> m_saveInvStdDev;
+        // Stores scale derivatives
+        shared_ptr<Matrix<ElemType>> m_dScale;
+        // Stores bias derivatives.
+        shared_ptr<Matrix<ElemType>> m_dBias;
     };
 
     template class BatchNormalizationNode<float>; 

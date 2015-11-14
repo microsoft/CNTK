@@ -1,3 +1,4 @@
+# Fully-connected layer with sigmoid activation.
 DNNSigmoidLayer(inDim, outDim, x, parmScale)
 {
     W = Parameter(outDim, inDim, init = Uniform, initValueScale = parmScale) 
@@ -7,6 +8,20 @@ DNNSigmoidLayer(inDim, outDim, x, parmScale)
     y = Sigmoid(z)
 }
 
+# Fully-connected layer with sigmoid activation and batch normalization.
+DnnBNSigmoidLayer(inDim, outDim, x, parmScale)
+{
+    W = Parameter(outDim, inDim, init = Uniform, initValueScale = parmScale) 
+    b = Parameter(outDim, init = Uniform, initValueScale = 0.3) 
+    sc = Parameter(outDim, 1, init = Uniform, initValueScale = 0.3)
+    m = Parameter(outDim, 1, init=fixedValue, value=0)
+    isd = Parameter(outDim, 1, init=fixedValue, value=0)
+    t = Times(W, x)
+    bn = BatchNormalization(t, sc, b, m, isd, spatial = false, expAvgFactor = 1.0)
+    y = Sigmoid(bn)
+}
+
+# Fully-connected layer.
 DNNLayer(inDim, outDim, x, parmScale)
 {
     W = Parameter(outDim, inDim, init = Uniform, initValueScale = parmScale)
@@ -15,6 +30,7 @@ DNNLayer(inDim, outDim, x, parmScale)
     z = Plus(t, b)
 }
 
+# Convolutional layer with ReLU activation.
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
 {
     convW = Parameter(outMap, inWCount, init = Uniform, initValueScale = wScale)
@@ -24,6 +40,21 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
     act = RectifiedLinear(convPlusB);
 }
 
+# Convolutional layer with ReLU activation and batch normalization.
+ConvReLUBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, parmScale)
+{
+    W = Parameter(outMap, inWCount, init = Uniform, initValueScale = parmScale)
+    b = Parameter(outMap, 1, init = Uniform, initValueScale = 0.3)
+    sc = Parameter(outMap, 1, init = Uniform, initValueScale = 0.3)
+    m = Parameter(outMap, 1, init=fixedValue, value=0)
+    isd = Parameter(outMap, 1, init=fixedValue, value=0)
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = false)
+    bn = BatchNormalization(c, sc, b, m, isd, spatial = true, expAvgFactor = 1.0)
+    y = RectifiedLinear(bn);
+}
+
+# This is how batch normalization can be implemented purely in NDL.
+# Does not fully implemented as means/invstddev require proper derivative propagation.
 BatchNorm(dim, x, scaleInit, biasInit)
 {
     m = Mean(x)
