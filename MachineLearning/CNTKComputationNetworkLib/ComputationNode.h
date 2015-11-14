@@ -315,6 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
+        virtual void VerifyDimsMatch() const = 0;     // verify that m_functionValues dimensions match ours
         virtual double Get00Element() const = 0;
 
         // validation
@@ -947,8 +948,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateSize();
                 //m_functionValues->ResizeColumns();
             }
-            // saniyty check:
-            if (m_functionValues->GetNumRows() != GetNumRows() || m_functionValues->GetNumCols() != GetNumCols())
+        }
+        virtual void VerifyDimsMatch() const override final
+        {
+            if (!m_functionValues)
+                return;
+            auto f_numRows = m_functionValues->GetNumRows();    // variables for easy inspection in debugger
+            auto f_numCols = m_functionValues->GetNumCols();
+            if (f_numRows != m_numRows || f_numCols != m_numCols)
                 LogicError("UpdateFunctionMBSize: m_functionValues out of sync with m_numRows/m_numCols");
         }
 
@@ -1434,6 +1441,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
         //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override { NOT_IMPLEMENTED; }
+        virtual void VerifyDimsMatch() const override { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); };
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
         virtual void ValidateInferChildDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }

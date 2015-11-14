@@ -301,10 +301,11 @@ public:
 
     // When external code (readers, namely) updates InputValue's m_functionValues,
     // calling this function is required to make sure that any internal state gets updated correctly.
-    void NotifyFeatureNodesFunctionValuesModified()
+    void NotifyInputNodesFunctionValuesModified()
     {
-        auto & featureNodes = FeatureNodes();
-        for (auto & nodeIter : featureNodes)
+        for (auto & nodeIter : FeatureNodes())
+            nodeIter->NotifyFunctionValuesModified();
+        for (auto & nodeIter : LabelNodes())
             nodeIter->NotifyFunctionValuesModified();
     }
 

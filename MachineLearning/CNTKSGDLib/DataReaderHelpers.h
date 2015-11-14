@@ -127,8 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // no data is read. When it does, 'wasDataRead' can be removed
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
-            if (wasDataRead)
-                net.NotifyFeatureNodesFunctionValuesModified();
+            net.NotifyInputNodesFunctionValuesModified();
             size_t readMBSize = net.DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
                 wasDataRead = false;
@@ -176,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
             {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                net.NotifyFeatureNodesFunctionValuesModified(); // need to tell'm again since we modified it again
+                net.NotifyInputNodesFunctionValuesModified(); // need to tell'm again since we modified it again
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices

@@ -312,6 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // BUGBUG: IsLeaf() for RecurrentFlowControlNode returns false because that node has no children. So we get lucky here. Otherwise it would fail in Validate(). Fix this by getting rid of the Validate() call here.
                 if (node && !node->IsLeaf() && !node->RequiresPreCompute())
                     node->Validate(true);                       // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
+                node->VerifyDimsMatch();
 
                 node->OnEvaluateBeginIteration();
                 node->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));

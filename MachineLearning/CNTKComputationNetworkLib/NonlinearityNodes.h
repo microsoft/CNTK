@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
+        void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
         {
             gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
 #if DUMPOUTPUT
@@ -121,7 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
 #if NANCHECK
@@ -318,36 +318,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
-        // TODO: get rid of code dup
-        void ComputeInputPartialMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
-        }
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            m_gradient->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
+            sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradient);
         }
+        virtual void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { NOT_IMPLEMENTED; }   // not needed
 
-        // should be:
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
-        {
-            gradient.AssignExpOf(inputFunctionValues); // Exp(x) is its own partial
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignExpOf(inputFunctionValues);
 #if NANCHECK
@@ -392,7 +376,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
-
 
         // should be:
         /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
