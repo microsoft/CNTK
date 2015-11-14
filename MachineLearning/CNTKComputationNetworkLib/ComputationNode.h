@@ -1459,7 +1459,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelfBeforeValidation() const override { }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
     protected:
-    public: // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of RecurrentFlowControlNode
+    public: // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
         std::vector<ComputationNodeBasePtr> m_nestedNodes;                  // nodes tucked away in this node, in evaluation order
     };
 
@@ -1474,11 +1474,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // because the standard does not allow the compiler to do that for you (as MSVC still kindly does).
     // If you add new members to ComputationNode, please also add them here.
     // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
-    // BUGBUG: some should be protected, not public
     // Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
+    using Base::ComputationNodePtr; \
     using Base::SetDims; using Base::NotifyFunctionValuesModified; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateSize; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
