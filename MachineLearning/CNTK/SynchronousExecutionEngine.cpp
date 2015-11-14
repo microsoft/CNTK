@@ -451,25 +451,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
         {
-            if (parameter.size() != 3)
-                RuntimeError("%ls should have 3 fixed parameters[inputValueNodeName, scale, bias].", cnNodeType.c_str());
+            if (parameter.size() != 5)
+                RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runInvStdDev].", cnNodeType.c_str());
 
             // setup the parameter position of children so we can hook them up later
-            nodeParamCount = 3;
+            nodeParamCount = 5;
             nodeParamStart = 0;
 
             if (pass == ndlPassInitial)
             {
-                int id = 3; // skip inputValueNode, scale and bias.
-
+                int id = 5; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
                 // evaluate only scalar parameters
                 vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
                 // Optional parameters
+                bool eval = node->GetOptionalParameter("eval", "false");
                 bool spatial = node->GetOptionalParameter("spatial", "false");
                 double expAvgFactor = node->GetOptionalParameter("expAvgFactor", "1.0");
 
-                nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, spatial, expAvgFactor, name);
+                nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, name);
             }
         }
         else

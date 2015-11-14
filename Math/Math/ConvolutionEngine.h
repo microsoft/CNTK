@@ -172,8 +172,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
             const Tensor4D& outT, Mat& out) = 0;
+
         virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
             const Tensor4D& gradT, Mat& grad) = 0;
+
         virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
             const Filter& filterT, Mat& filter, bool allowReuse) = 0;
 
@@ -181,9 +183,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;
 
         virtual void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-            bool spatial, double expAvgFactor, Mat& out) = 0;
+            bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) = 0;
+
+        virtual void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
+            bool spatial, Mat& runMean, Mat& runInvStdDev, Mat& out) = 0;
+
         virtual void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
-            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, Mat& scaleGrad, Mat& biasGrad) = 0;
+            const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
+            Mat& scaleGrad, Mat& biasGrad) = 0;
 
     public:
         ConvolutionEngine(const ConvolutionEngine&) = delete;
