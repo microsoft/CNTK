@@ -54,7 +54,6 @@ enum MELProperty
     melPropFeature,
     melPropLabel,
     melPropFinalCriterion,
-    melPropMultiSeqHandling,
     melPropEvaluation,
     melPropOutput,
     melPropRecurrent
