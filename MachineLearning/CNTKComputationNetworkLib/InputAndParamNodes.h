@@ -73,6 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(rows, cols);
             UpdateSize();   // allocate the matrix storage actually
             fstream >> FunctionValues();
+            if (FunctionValues().GetNumRows() != rows || FunctionValues().GetNumCols() != cols)
+                LogicError("LoadFromFile: %ls %ls operation detected mismatch in m_functionValues, malformed input file.", NodeName().c_str(), OperationName().c_str());
 
             m_outputImageLayout = ImageLayout(1, rows, 1);
         }
