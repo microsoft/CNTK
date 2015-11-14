@@ -124,7 +124,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // --- optional overrides that describe a feature or property of the node
 
         virtual bool RequiresPreCompute() const = 0;                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() = 0; // // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
 
         // --- optional overrides for more informative logging
 
@@ -520,11 +519,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MaskMissingGradientColumnsToZero(const FrameRange &) = 0;
         virtual void InvalidateMissingValuesColumns(const FrameRange &) = 0;
         virtual void InvalidateMissingGradientColumns(const FrameRange &) = 0;
-
-        // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
-        // The need for this seems an artifact of the old inconsistent layout architecture. In the future, this can probably just go away.
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
         {
@@ -1455,7 +1449,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual std::wstring ToString(void) const override { NOT_IMPLEMENTED; }
         // these are meant to be called during computation, so provide dummy implementations
         virtual bool RequiresPreCompute() const override { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() override { return true; }
         virtual void PrintSelfBeforeValidation() const override { }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
     protected:
@@ -1477,7 +1470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
-    using Base::ComputationNodePtr; \
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
     using Base::SetDims; using Base::NotifyFunctionValuesModified; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateSize; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \

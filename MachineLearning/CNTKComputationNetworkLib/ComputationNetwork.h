@@ -515,7 +515,6 @@ private:
     static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
     bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
-    bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode, const bool forwardCompute, const bool printMatrices = false);
 public:
 
@@ -592,7 +591,7 @@ public:
         return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
+    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)  --TODO: defunct; remove completely
     inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
     inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
     inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }

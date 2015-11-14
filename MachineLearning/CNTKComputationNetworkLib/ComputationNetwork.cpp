@@ -147,6 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_finalCriteria[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
+        // TODO: this section is now defunct
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
         fstream << m_requestNodesMultiSeqHandling.size();
         for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
@@ -360,6 +361,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
+            // TODO: this section is defunct
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
             {
                 fstream >> num;
@@ -476,7 +478,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
         // TODO: just use return!
@@ -492,32 +493,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
 
         return false;
-    }
-
-    // test for user-specified request for masking to the individual nodes
-    // This will go away. It is currently only needed if users explicitly perform reduce-like operations, to work around current limitations of CNTK.
-    // It makes no sense for some nodes, so we skip those.
-    template <typename T>
-    static bool VectorContains(const vector<T> & v, const T & what)
-    {
-        // TODO: I am sure there is some std algorithm for this, need to look for it
-        for (const auto & elem : v)
-            if (elem == what)
-                return true;
-        return false;
-    }
-    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
-    {
-        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
-        if (maskingWasRequested &&
-            (node->OperationName() == OperationNameOf(SumElementsNode) ||
-             node->OperationName() == OperationNameOf(TransposeNode) ||
-             node->OperationName() == OperationNameOf(MeanNode) ||
-             node->OperationName() == OperationNameOf(InvStdDevNode)))
-        {
-            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
-        }
-        return maskingWasRequested;
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)

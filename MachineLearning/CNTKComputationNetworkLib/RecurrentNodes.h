@@ -1463,9 +1463,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-
-    protected:
         size_t m_inputDim;
         size_t m_outputDim;
 
