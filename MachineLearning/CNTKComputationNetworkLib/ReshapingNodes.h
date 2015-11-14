@@ -274,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
 #if 1           // temporary hack until nested sequences are plumbed for
-                if (weStack())
+                if (weStack() || factor() == 1)
                 {
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
@@ -452,7 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             if (isFinalValidationPass && (!Inputs(0)->HasMBLayout() || !Inputs(1)->HasMBLayout()))
-                RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.");
+                RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
             // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
