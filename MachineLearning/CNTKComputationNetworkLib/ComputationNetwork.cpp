@@ -147,13 +147,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_finalCriteria[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
-        // TODO: this section is now defunct
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
-        fstream << m_requestNodesMultiSeqHandling.size();
-        for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
-            fstream << m_requestNodesMultiSeqHandling[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
-
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
         fstream << m_evalNodes.size();
         for (size_t i = 0; i < m_evalNodes.size(); i++)
@@ -364,12 +357,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: this section is defunct
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
             {
+                fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
                 fstream >> num;
                 for (size_t i = 0; i<num; i++)
-                {
                     fstream >> nodeName;
-                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
-                }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
 
@@ -833,8 +824,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
-        // nodes that requires multi sequence handling 
-        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_requestNodesMultiSeqHandling);            
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
@@ -876,8 +865,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"\t\t rank=sink ; ";
         line.clear();
         for (const auto & x : m_finalCriteria)
-            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (const auto & x : m_requestNodesMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
