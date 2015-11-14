@@ -311,7 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifyDims: expected m_functionValues size %d x %d, but it is %d x %d",
+                LogicError("VerifyDims: %ls %ls operation expected size %d x %d, but it is %d x %d",
+                           NodeName().c_str(), OperationName().c_str(),
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
