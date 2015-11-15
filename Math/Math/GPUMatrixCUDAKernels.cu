@@ -4859,4 +4859,275 @@ __global__ void _assigntotalscore(ElemType *Betascore, unsigned __int64 blanknum
 	}
 }
 
+template<class ElemType>
+__global__ void _assignAlphaScore_m(
+	const ElemType *prob,
+	ElemType *Alphascore,
+	ElemType *phoneseq,
+	const unsigned __int64 *uttmap,
+	const unsigned __int64 *uttframenum,
+	const unsigned __int64 *uttbeginframe,
+	const unsigned __int64 *uttphonenum,
+	unsigned __int64 samplesInRecurrentStep,
+	const unsigned __int64 uttNum,
+	const unsigned __int64  t,
+	const unsigned __int64 maxphonenum,
+	const unsigned __int64 totalphonenum)	
+{
+	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
+	LONG64 phonenum = uttphonenum[uttid];
+	LONG64 framenum = uttframenum[uttid];
+
+	if (uttid >= uttNum || phoneseqid >= phonenum - 1 || t >= framenum || phoneseqid == 0) return;
+
+	LONG64 labelid = uttid*maxphonenum + phoneseqid;
+	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid - 1;
+	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid - 2;
+	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
+	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
+	LONG64 timeid_1 = (t - 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
+
+	LONG64 probid = timeid*totalphonenum + phoneid;
+	LONG64 alphaid = maxphonenum* timeid + phoneseqid;
+	LONG64 alphaid_0 = maxphonenum* timeid_1 + phoneseqid;
+	LONG64 alphaid_1 = maxphonenum* timeid_1 + phoneseqid-1;
+	LONG64 alphaid_2 = maxphonenum* timeid_1 + phoneseqid-2;
+
+	if (t == 0)
+	{
+		if (phoneseqid >= 1 && phoneseqid < 3)
+		{			
+			Alphascore[alphaid] = prob[probid];
+		}
+	}
+	else
+	{
+		if (phoneseqid >= 1 )
+		{
+			
+			float x = CNLOGZERO;
+			float y;
+			
+			ElemType ascore;			
+			if (phoneseqid > 2)
+			{
+				if ((LONG64)(phoneseq[labelid_1]) == totalphonenum - 1 && phoneid != (LONG64)(phoneseq[labelid_2]))
+				{
+					y = Alphascore[alphaid_2];
+					x = logadd(x, y);
+				}
+			}
+			
+			if (phoneseqid > 1)
+			{
+				y = Alphascore[alphaid_1];
+				x = logadd(x, y);
+			}
+			
+			y = Alphascore[alphaid_0];
+			x = logadd(x, y);
+
+			if (phoneid != 65535)
+				ascore = prob[probid];
+			else
+				ascore = 0;
+			Alphascore[alphaid] = (ElemType)x + ascore;
+		}
+	}
+	//__syncthreads();
+
+}
+
+
+template<class ElemType>
+__global__ void _assignBetaScore_m(
+	const ElemType *prob,
+	ElemType *Betascore,
+	ElemType *phoneseq,
+	const unsigned __int64 *uttmap,
+	const unsigned __int64 *uttframenum,
+	const unsigned __int64 *uttbeginframe,
+	const unsigned __int64 *uttphonenum,
+	long samplesInRecurrentStep,
+	const unsigned __int64 uttNum,
+	const long  t,	
+	const long maxphonenum,
+	const long totalphonenum)
+{
+	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
+	LONG64 phonenum = uttphonenum[uttid];
+	LONG64 framenum = uttframenum[uttid];
+
+	if (uttid >= uttNum || phoneseqid >= phonenum - 1 || t >= framenum || phoneseqid == 0) return;
+
+	LONG64 labelid = uttid*maxphonenum + phoneseqid;
+	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid + 1;
+	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid + 2;
+	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
+	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
+	LONG64 timeid_1 = (t + 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
+
+	LONG64 probid = timeid*totalphonenum + phoneid;
+	LONG64 betaid = maxphonenum* timeid + phoneseqid;
+	LONG64 betaid_0 = maxphonenum* timeid_1 + phoneseqid;
+	LONG64 betaid_1 = maxphonenum* timeid_1 + phoneseqid + 1;
+	LONG64 betaid_2 = maxphonenum* timeid_1 + phoneseqid + 2;
+
+	if (t == framenum - 1)
+	{
+		if (phoneseqid >= phonenum - 3 && phoneseqid < phonenum - 1)
+		{			
+			Betascore[betaid] = prob[probid];
+		}
+	}
+	else
+	{
+		if (phoneseqid >= 1)
+		{			
+			float x = CNLOGZERO;
+			float y;			
+			ElemType ascore;
+			if (phoneseqid < phonenum - 3)
+			{
+				if (phoneseq[labelid_1] == totalphonenum - 1 && phoneid != phoneseq[labelid_2])
+				{
+					y = Betascore[betaid_2];
+					x = logadd(x, y);
+				}
+			}
+			
+			if (phoneseqid < phonenum - 2)
+			{
+				y = Betascore[betaid_1];
+				x = logadd(x, y);
+			}			
+			y = Betascore[betaid_0];
+			x = logadd(x, y);
+
+			if (phoneid != 65535)
+				ascore = prob[probid];
+			else
+				ascore = 0;
+			Betascore[betaid] = (ElemType)x + ascore;
+		}
+
+	}
+	//__syncthreads();
+	//printf("frameid %d\n", t);
+	/*if (t == 0)
+	{
+	Betascore[0] = logadd(Betascore[1], Betascore[2]);
+	//printf("beta %f %f\n", Betascore[1], Betascore[2]);
+	}*/
+
+}
+
+template<class ElemType>
+__global__ void _assignCTCScore_m(
+	ElemType *CTCscore,
+	ElemType *prob,
+	ElemType *Alphascore,
+	ElemType *Betascore,
+	ElemType *phoneseq,
+	const unsigned __int64 uttNum,	
+	const unsigned __int64 *uttmap,
+	const unsigned __int64 *uttbeginframe,
+	const unsigned __int64 *uttphonenum,
+	const unsigned __int64 *uttframenum,
+	long samplesInRecurrentStep,
+	const long totalframenum,
+	const long maxphonenum,
+	const long totalphonenum)
+{
+	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 t = blockDim.y * blockIdx.y + threadIdx.y;
+	
+	//if (i < totalframenum)
+	{
+		//LONG64 uttid = i % uttNum;
+		//LONG64 t = i / uttNum;
+
+		if (uttid < uttNum && t < uttframenum[uttid])
+		{
+			LONG64 phonenum = uttphonenum[uttid];
+			LONG64 alphaid_0 = (uttbeginframe[uttid] * samplesInRecurrentStep + uttmap[uttid]) * maxphonenum;
+			LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
+			ElemType Zt = CNLOGZERO;
+			Zt = Betascore[alphaid_0];
+		
+			for (int s = 1; s < phonenum - 1; s++)
+			{
+				long phoneid = phoneseq[uttid*maxphonenum + s];
+				LONG64 alphaid = maxphonenum* timeid + s;
+				LONG64 probid = timeid*totalphonenum + phoneid;
+
+				if (probid > totalframenum*totalphonenum)
+					printf("%u %u\n", uttid, t);
+				if (phoneid != 65535)
+				{
+					ElemType logoccu = Alphascore[alphaid] + Betascore[alphaid] - prob[probid] - (ElemType)Zt;
+					CTCscore[probid] = logadd(CTCscore[probid], logoccu);
+				}
+
+			}
+			for (int s = 0; s < totalphonenum; s++)
+			{						
+				LONG64 probid = timeid*totalphonenum + s;
+				ElemType logoccu = CTCscore[probid];
+				if (logoccu < CNLOGZERO)
+					CTCscore[probid] = 0.0f;
+				else
+					CTCscore[probid] = exp(logoccu);
+			}
+		}
+	}
+	//__syncthreads();
+	//printf("gamma end %d\n",id);
+}
+
+template<class ElemType>
+__global__ void _assigntotalscore_m(ElemType *Betascore,
+	ElemType & totalscore,
+	const unsigned __int64 uttNum,
+	const unsigned __int64 *uttmap,
+	const unsigned __int64 *uttbeginframe,
+	unsigned __int64 samplesInRecurrentStep,
+	const unsigned __int64 maxphonenum)
+{
+	LONG64 uttid =  blockIdx.x ;
+	//totalscore = 0; 
+	//for (uttid = 0; uttid < uttNum;uttid++)
+	if (uttid < uttNum)
+	{		
+		LONG64 alphaid_0 = (uttbeginframe[uttid] * samplesInRecurrentStep + uttmap[uttid]) * maxphonenum;
+		Betascore[alphaid_0] = logadd(Betascore[alphaid_0 + 1], Betascore[alphaid_0 + 2]);
+		//totalscore += Betascore[alphaid_0];
+	}
+}
+
+
+
+template<class ElemType>
+__global__ void _assigntotaluttscore_m(ElemType *Betascore,
+	ElemType & totalscore,
+	const unsigned __int64 uttNum,
+	const unsigned __int64 *uttmap,
+	const unsigned __int64 *uttbeginframe,
+	unsigned __int64 samplesInRecurrentStep,
+	const unsigned __int64 maxphonenum)
+{
+	LONG64 uttid ;
+	//totalscore = 0; 
+	for (uttid = 1; uttid < uttNum;uttid++)
+	
+	{
+		LONG64 alphaid_0 = (uttbeginframe[uttid] * samplesInRecurrentStep + uttmap[uttid]) * maxphonenum;
+		Betascore[0] += Betascore[alphaid_0];
+		//totalscore += Betascore[alphaid_0];
+	}
+
+    Betascore[0] /= uttNum;
+}
 #endif // !CPUONLY

@@ -452,7 +452,7 @@ protected:
 
 public:
     // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
+    static void UpdateWeightsS(const SGD<ElemType>* sgd, Matrix<ElemType>& functionValues,
                                Matrix<ElemType>& gradientValues,
                                Matrix<ElemType>& smoothedGradient,
                                const double learnRatePerSample,
@@ -473,7 +473,7 @@ protected:
                        const bool needAveMultiplier) const;
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
-
+    double GetMomentumCTC(double momentumPerSample) const;
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,

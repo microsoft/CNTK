@@ -681,7 +681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 	template<class ElemType>
-	void ComputationNetwork::SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t blanknum)
+    void ComputationNetwork::SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum)
 	{
 
 		fprintf(stderr, "set blank phone num %d\n", blanknum);
@@ -699,7 +699,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			}
 		}
 
-		ctcNodes = net.GetNodesWithType(OperationNameOf(PhoneErrorNode), criterionNode);
+        ctcNodes = net.GetNodesWithType(OperationNameOf(PhoneErrorNode), evaluationNode);
 		if (ctcNodes.size() == 0)
 		{
 			fprintf(stderr, "WARNING: there is no CTC evaluation node.\n");
@@ -1191,11 +1191,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-    template void ComputationNetwork::SetCTCParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode,  const size_t blanknum);
+    template void ComputationNetwork::SetCTCParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-    template void ComputationNetwork::SetCTCParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t blanknum);
+    template void ComputationNetwork::SetCTCParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
 }}}

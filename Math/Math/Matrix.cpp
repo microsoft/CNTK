@@ -5128,6 +5128,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		return *this;
 	}
 
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+		Matrix<ElemType>& phoneseq, ElemType &totalscore, std::vector<size_t> & extrauttmap,
+		std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum, 
+		size_t samplesInRecurrentStep , size_t & mbsize, const bool isColWise)
+	{
+		if (prob.IsEmpty())
+			throw std::logic_error("AssignCTCScore: Matrix a is empty.");
+
+
+
+		DecideAndMoveToRightDevice(prob, *this);
+
+
+		//if (phoneseq.size() > alpha.GetNumRows() || framenum > alpha.GetNumCols() )
+		{
+			alpha.Resize(phoneseq.GetNumRows(), prob.GetNumCols());
+			beta.Resize(phoneseq.GetNumRows(), prob.GetNumCols());
+			Resize(prob.GetNumRows(), prob.GetNumCols());
+		}
+
+		alpha.SetValue(CNLOGZERO);
+		beta.SetValue(CNLOGZERO);
+		SetValue(CNLOGZERO);
+		SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+
+
+
+		DISPATCH_MATRIX_ON_FLAG(&prob,
+			this,
+			NOT_IMPLEMENTED,
+			this->m_GPUMatrix->AssignCTCScore_m(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneseq.m_GPUMatrix, totalscore, 
+			extrauttmap, uttBeginFrame, uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, isColWise),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+
+		/*Matrix<ElemType> temp(prob.GetDeviceId());
+		temp = alpha.ColumnSlice(prob.GetNumCols() - 1, 1);
+		ElemType *dataP;
+		dataP = temp.CopyToArray();
+		totalscore = -1 * (ElemType) logadd((double)dataP[phoneseq.size() - 2], (double)dataP[phoneseq.size() - 3]);
+		fprintf(stderr, "totalscore: %f \n", totalscore / prob.GetNumCols()	)
+		delete dataP;*/
+
+
+		return *this;
+	}
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 

@@ -884,7 +884,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
-        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], m_blanknum);
+        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blanknum);
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
@@ -2369,7 +2369,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                const bool needAveMultiplier)
     {
         // we use simple linear (instead of log linear) scaling here
-        const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
+        //const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
+        double momentum = sgd->GetMomentumCTC(momentumPerSample);
 #if DUMPOUTPUT
         fprintf(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
                 learnRatePerSample, momentum, actualMBSize);
@@ -2493,6 +2494,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType>
+    double SGD<ElemType>::GetMomentumCTC(double momentumPerSample) const
+    {
+        return pow(momentumPerSample, m_momentumSpecifiedForMBSize[0]);
+    }
     template<class ElemType>
     void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const double learnRatePerSample,

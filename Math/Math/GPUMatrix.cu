@@ -4387,6 +4387,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 
 	
+	template<class ElemType>
+	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+		const GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+		std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, const bool isColWise)
+	{
+		//Resize(a.GetNumRows(), a.GetNumCols());  do resize outside
+		if (isColWise)
+		{
+			PrepareDevice();
+			long totalphonenum = prob.GetNumRows();
+			size_t uttnum = uttFrameNum.size();
+			size_t maxphonenum = phoneseq.GetNumRows();
+			
+
+			size_t *gpuframenum;
+			CUDA_CALL(cudaMalloc((void **)&gpuframenum, uttnum*sizeof(size_t)));
+			CUDA_CALL(cudaMemcpy(gpuframenum, uttFrameNum.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+			size_t *gpuphonenum;
+			CUDA_CALL(cudaMalloc((void **)&gpuphonenum, uttnum*sizeof(size_t)));
+			CUDA_CALL(cudaMemcpy(gpuphonenum, uttPhoneNum.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+			size_t *gpubeginframe;
+			CUDA_CALL(cudaMalloc((void **)&gpubeginframe, uttnum*sizeof(size_t)));
+			CUDA_CALL(cudaMemcpy(gpubeginframe, uttBeginFrame.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+			size_t *gpuuttmap;
+			CUDA_CALL(cudaMalloc((void **)&gpuuttmap, uttnum*sizeof(size_t)));
+			CUDA_CALL(cudaMemcpy(gpuuttmap, uttMap.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+			cudaEvent_t done = nullptr;
+			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+			dim3 block_tail((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxphonenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+			
+			
+			for (long t = 0; t < maxframenum; t++)
+			{
+				
+				_assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.m_pArray, alpha.m_pArray, phoneseq.m_pArray, gpuuttmap,
+					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum);
+				//_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, alpha.m_pArray, N);
+			}
+			for (long t = maxframenum - 1; t >= 0; t--)
+			{
+				_assignBetaScore_m << <block_tail, thread_tail , 0, t_stream >> >(prob.m_pArray, beta.m_pArray, phoneseq.m_pArray, gpuuttmap,
+					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t,  maxphonenum, totalphonenum);
+			}
+
+			_assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.m_pArray, totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+			
+			dim3 block_tail_2((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxframenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+			
+			_assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(m_pArray, prob.m_pArray, alpha.m_pArray, beta.m_pArray, phoneseq.m_pArray, uttnum, gpuuttmap,
+				gpubeginframe, gpuphonenum, gpuframenum, samplesInRecurrentStep, maxframenum*samplesInRecurrentStep, maxphonenum, totalphonenum);
+			_assigntotaluttscore_m << <1, 1, 0, t_stream >> > (beta.m_pArray, totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+			CUDA_CALL(cudaFree(gpuframenum));
+			CUDA_CALL(cudaFree(gpuphonenum));
+			CUDA_CALL(cudaFree(gpubeginframe));
+			CUDA_CALL(cudaFree(gpuuttmap));
+			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+		}
+		else
+		{
+			NOT_IMPLEMENTED;
+		}
+
+
+		return *this;
+	}
 
 
 #pragma endregion Static BLAS Functions

@@ -510,7 +510,7 @@ public:
     template<class ElemType>
     static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
     template<class ElemType>
-    static void SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode,  const size_t blanknum);
+    static void SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
