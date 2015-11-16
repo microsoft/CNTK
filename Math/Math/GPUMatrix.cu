@@ -1492,6 +1492,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_numRows==numRows && m_numCols==numCols)
             return;   
+        if (!OwnBuffer())
+            InvalidArgument("Can't resize a externally managed matrix");
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1505,11 +1507,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pArray = NULL;
             }
             else
-            {            
-                if (!OwnBuffer())
-                    InvalidArgument("Can't resize a externally managed matrix");
+            {
+                //if (!OwnBuffer())
+                //    InvalidArgument("Can't resize a externally managed matrix");
                 PrepareDevice();
-                if (m_pArray!=NULL)
+                if (m_pArray)
                     CUDA_CALL(cudaFree(m_pArray)); //delete and reallocate                            
                 m_elemSizeAllocated = numElements;
                 CUDA_CALL(cudaMalloc((void**)&m_pArray,sizeof(ElemType)*m_elemSizeAllocated));

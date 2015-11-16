@@ -155,6 +155,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
+    <ClInclude Include="..\..\Common\Include\DataTensor.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
@@ -194,6 +195,7 @@
     <ClCompile Include="ComputationNetworkBuilder.cpp" />
     <ClCompile Include="ComputationNetworkEditing.cpp" />
     <ClCompile Include="ComputationNetworkEvaluation.cpp" />
+    <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="NetworkBuilderFromConfig.cpp" />
     <ClCompile Include="stdafx.cpp" />
