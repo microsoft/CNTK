@@ -913,34 +913,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
 
-#if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
-        static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
-                                                          size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
-        {
-            Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
-            colSeg.Resize(nStream, nStream);
-            size_t nStateRow = newprevstate.GetNumRows();
-
-            assert(nStream == sentenceBegin.GetNumRows());
-
-            /// only set state to init state value for segmentation = 0, and -1
-            /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0 
-
-            Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
-            colPos.SetValue(sentenceBegin); /// -1 0 1
-            colPos.InplaceTruncateBottom(((int) MinibatchPackingFlags::SequenceStart));
-            Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
-            colPos += ((int) MinibatchPackingFlags::None);
-            // BUGBUG: ^^ What is this? colPos is a matrix, None is a flag; and it is 0
-            colSeg.SetDiagonalValue(colPos);
-            Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
-            ones.Resize(nStateRow, nStream);
-            ones.SetValue((ElemType)1);
-            /// add default state value if it is for reset
-            Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
-        }
-#endif
-
     public:
         static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
         {
@@ -1118,20 +1090,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::OnComputeGradientBeginIteration();
 
-#if 0       // BUGBUG: This does not work, for unknown reasons. For now, we must keep the LazyZeroGradient() call inside ComputeGradientForChildren
-            // allocate gradients for ourselves and also our children that we propagate into
-            if (m_needsGradient)
-            {
-                LazyZeroGradient();          // set gradient to 0 if this is the first time
-                for (size_t i = 0; i < m_children.size(); i++)
-                {
-                    ComputationNodePtr child = Inputs(i);
-                    if (child->m_needsGradient)
-                        child->LazyZeroGradient();          // set gradient to 0 if this is the first time
-                }
-            }
-#endif
-
 #if 0       // TODO: If you get a NaN failure, feel free to put this back in
             // many gradients are reduction operations
             // They touch both in-flowing gradients and function values, so we must set both to 0.
@@ -1196,16 +1154,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
                     child->LazyZeroGradient();              // set gradient to 0 if this is the first time
 
-#if 1
-                    // TODO: There is an inefficiency here which we should fix.
+                    // If we propagate from a loop to a node that is outside the loop, we are not efficient.
+                    // This case is handled by SEQTraversalFlowControlNode::ComputeGradientForChildren().
+                    // The check below is to verify that.
                     if (IsPartOfLoop() && !child->IsPartOfLoop() && !frameRange.IsAllFrames())
                     {
+#if 1
+                        LogicError("ComputeGradientForChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
+                                   NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+#else
                         static int warnings = 0;
                         if (warnings++ < 20)
                             fprintf (stderr, "ComputeGradientForChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
-                            NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-                    }
+                                     NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
 #endif
+                    }
 
                     //fprintf(stderr, "ComputeInputPartial %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
                     ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child

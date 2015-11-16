@@ -524,7 +524,6 @@ public:
 
 private:
     static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
-    bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode, const bool forwardCompute, const bool printMatrices = false);
 public:
