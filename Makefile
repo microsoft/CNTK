@@ -418,6 +418,7 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \

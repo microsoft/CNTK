@@ -371,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (FeatureNodes().size() == 0 && !allowFragment)
             RuntimeError("No Feature nodes specified");
 
-#if 1   // If it is not done here, it will causea crash. But it really only belongs into StartEvluationMinibatchLoop()
+#if 1   // If it is not done here, it will causea crash. But it really only belongs into StartEvaluationMinibatchLoop()
         // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
         // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
         AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
