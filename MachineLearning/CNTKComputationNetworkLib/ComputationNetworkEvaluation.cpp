@@ -307,6 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //if (recInfo)
                 //    assert(!recInfo->m_completedEvaluate);      // TODO: not needed anymore, I think
 
+#if 0           // moved to OnEvaluateBeginIteration()
                 node->UpdateFunctionMBSize();
 
                 // update the actual m_functionValues
@@ -320,6 +321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
                 // TODO: this ^^ should be eliminated now that we have separate dimension variables on nodes
                 node->VerifyDimsMatch();
+#endif
 
                 node->OnEvaluateBeginIteration();
                 node->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
@@ -436,10 +438,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // unrolls the loop over time steps and runs the network once per time step.
     // -----------------------------------------------------------------------
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionMBSize()     /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionMBSize(); }
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionValuesSize() /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionValuesSize(); };
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::VerifyDimsMatch() const    /*override*/ { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); }
-
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateBeginIteration() /*override*/
     {
         // take the opportunity to check that layout is shared by all nodes in the loop
@@ -454,15 +452,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tell all that loop is about to commence
         for (auto & node : m_nestedNodes)
             node->OnEvaluateBeginIteration();
-
-        // since we share memory we need to resize function value matrices correctly
-        // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
-        for (auto & node : m_nestedNodes)
-#if 1
-            node->UpdateFunctionValuesSize();
-#else
-            node->Validate(true);
-#endif
     }
 
     // evaluation of a SEQTraversalFlowControlNode FlowControlNode
