@@ -165,6 +165,7 @@
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
+    <ClInclude Include="..\..\Common\Include\DataTensor.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />

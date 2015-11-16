@@ -25,6 +25,9 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
+#if 0
+// TODO commented temporarily
+
 				BOOST_AUTO_TEST_CASE(GPUMatrixConstructorNoFlag)
 				{
                     // TODO: consider splitting into several tests
@@ -45,6 +48,8 @@ namespace Microsoft
 					GPUMatrix<float> m1Copy(m1);
 					BOOST_CHECK(m1.IsEqualTo(m1Copy));
                 }
+
+#endif
 
 				BOOST_AUTO_TEST_CASE(GPUMatrixConstructorFlagNormal)
 				{

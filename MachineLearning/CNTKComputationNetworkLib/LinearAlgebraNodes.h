@@ -327,7 +327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
 
-            Resize(Inputs(1));
+            SetDims(Inputs(1));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -386,13 +386,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Times"; }
     public:
-        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+
+        // TODO: The createOutputMatrix parameter here is temporarily added to allow creating the function values
+        // matrix for the times node added during SVD decomposition. Since ValidateSubNetwork is called after addition
+        // of the times node, the validation crashes if the function values matrix has not yet been allocated
+        // This can be removed after the  Validation has been fixed to not access the function values matrix at all
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name, bool createOutputMatrix = false) :
             Base(deviceId, name)
-        { }
-        //TimesNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-        //    Base(deviceId, name, rows, cols)
-        //{ }
-		
+        {
+            if (createOutputMatrix)
+            {
+                CreateMatrixIfNull(m_functionValues);
+            }
+        }
+
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex == 0)    // left derivative
@@ -419,7 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-            VerifySize(rows0, cols1);
+            VerifyDims(rows0, cols1);
 
             // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
@@ -460,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Inputs(1)->GetNumRows(), (int)Inputs(0)->GetNumCols());
-            Resize(rows0, cols1);
+            SetDims(rows0, cols1);
 
             if (isFinalValidationPass && Inputs(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
@@ -473,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
+            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 
@@ -577,7 +584,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
 
-            Resize(cols0, cols1);
+            SetDims(cols0, cols1);
             InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
@@ -587,7 +594,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
+            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 
@@ -756,7 +763,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -904,7 +911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1011,8 +1018,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
-            Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
-
+            SetDims(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -1085,7 +1091,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -1094,7 +1100,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
     };
 
@@ -1137,7 +1143,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(1, Inputs(0)->GetNumCols());
+            SetDims(1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1146,7 +1152,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
     };
 
@@ -1204,7 +1210,7 @@ private:
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
 
-            Resize(cols0, rows0);
+            SetDims(cols0, rows0);
             if (Inputs(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -1216,7 +1222,7 @@ private:
             InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
 
             // after transposition, the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
+            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumCols(), 1);
         }
     };
 
@@ -1250,10 +1256,9 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_outputImageLayout.width = 1;
-            m_outputImageLayout.channels = 1;
+            m_imageLayout = ImageLayoutWHC(1, m_imageLayout.GetHeight(), 1);
 
-            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -1299,7 +1304,7 @@ private:
             if (isFinalValidationPass && dim != Inputs(0)->GetNumRows())
                 InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
 
-            FunctionValues().Resize(1, dim);
+            SetDims(1, dim);
             InferImageDimsFromInputs();
         }
 
@@ -1397,8 +1402,7 @@ private:
                 LogicError("%ls %ls operation: The input dimensions do not match.", NodeName().c_str(), OperationName().c_str());
 #endif
 
-            Resize(1, Inputs(1)->GetNumCols());
-
+            SetDims(1, Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -1407,7 +1411,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1521,7 +1525,7 @@ private:
             if (isFinalValidationPass && !HasMBLayout() && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
 
-            Resize(rows0 * rows1, Inputs(0)->GetNumCols());
+            SetDims(rows0 * rows1, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()  
@@ -1531,7 +1535,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             //after KhatriRaoProduct the structure is lost
-            m_outputImageLayout = ImageLayout(1, m_functionValues->GetNumRows(), 1);
+            m_imageLayout = ImageLayoutWHC(1, m_functionValues->GetNumRows(), 1);
         }
     };
 
@@ -1732,14 +1736,17 @@ private:
                 ValidateInferChildDims(index, rows, cols);
             }
 
-            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
-                LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
+            if (isFinalValidationPass &&
+                (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() ||
+                 (!Inputs(1)->GetMBLayout() && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())))
+            {
+                LogicError("The Matrix dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
+            }
 
             // input(2) is shift, input(3) is the #neg
-            size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
+            size_t negNumber = (size_t)Inputs(3)->Get00Element();
 
-            Resize(negNumber + 1, Inputs(1)->GetNumCols());
-
+            SetDims(negNumber + 1, Inputs(1)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1748,7 +1755,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
