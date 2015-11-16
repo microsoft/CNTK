@@ -59,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_leftMinusRight->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
             MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
-            VerifySize(1,1);
+            VerifyDims(1,1);
             FunctionValues().SetValue(v*v / 2);
 #if NANCHECK
             FunctionValues().HasNan("SquareError");
@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }       
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -101,9 +101,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::ReleaseMatricesAfterGradientComp(matrixPool);
             ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         shared_ptr<Matrix<ElemType>> m_leftMinusRight;
@@ -204,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -226,8 +223,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
@@ -316,7 +311,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -352,8 +347,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_leftDivRight, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         // matrix value passed from evaluate to computePartial
         shared_ptr<Matrix<ElemType>> m_logOfRight;
@@ -403,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
-            VerifySize(1, 1);
+            VerifyDims(1, 1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).MatrixNorm1());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL1Reg");
@@ -419,7 +412,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -446,8 +439,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_gradientOfL1Norm, matrixPool);
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         shared_ptr<Matrix<ElemType>> m_gradientOfL1Norm;    // temporary
     };
@@ -487,7 +478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
-            VerifySize(1,1);
+            VerifyDims(1,1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL2Reg");
@@ -503,11 +494,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
 
     template class MatrixL2RegNode<float>; 
@@ -670,7 +658,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
-            Resize(1,1);
+            SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -678,11 +666,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -955,7 +941,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
             }
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
@@ -966,11 +952,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1239,7 +1223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
 
-            Resize(1,1);
+            SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -1248,7 +1232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1265,8 +1249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->mEndLbl = mEndLbl;
             }
         }
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+
     private:
         Matrix<ElemType> mAlpha;    // TODO: m_Alpha etc.
         Matrix<ElemType> mBeta;
@@ -1274,96 +1257,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mStartLbl;
         int mEndLbl;
     };
-
-    // -----------------------------------------------------------------------
-    /// DummyCriterionNode (objectives, derivatives, prediction)
-    // -----------------------------------------------------------------------
-
-    // This training criterion node needs derivatives and objectives to be
-    // computed out of the node. Derivatives and objectives will be fed to the
-    // node as input features. It has 3 inputs:
-    // 1. feature node that feeds objectives
-    // 2. feature node that feeds derivatives
-    // 3. neural network output
-    //
-    // This node is useful in sequence training for speech recognition, so that
-    // we can separate lattice computation (which may rely other softwares, such
-    // as Kaldi) with the neural network training.
-    template<class ElemType>
-    class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
-    {
-        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        static const std::wstring TypeName() { return L"DummyCriterion"; }
-    public:
-        DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-          Base(deviceId, name)
-        { }
-
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
-        {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
-            if (inputIndex == 0)
-                LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
-            else if (inputIndex == 1)
-                LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
-            else if (inputIndex == 2)
-        {
-                auto gradient = Inputs(2)->GradientSlice(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
-            }
-        }
-
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
-        {
-            if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1 || Inputs(0)->HasMBLayout())
-                LogicError("%ls %ls operation expects first input to be a (1 x 1) matrix", NodeName().c_str(), OperationName().c_str());
-            FunctionValues().VerifySize(1, 1);
-            Inputs(0)->FunctionValues().VerifySize(1, 1);
-            FunctionValues().SetValue(Inputs(0)->FunctionValues());
-#if NANCHECK
-            FunctionValues().HasNan("DummyCriterionNode");
-#endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            Base::Validate(isFinalValidationPass);
-
-            if (Inputs(0)->OperationName() != L"InputValue")
-                LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
-            if (Inputs(0)->OperationName() != L"InputValue")
-                LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
-            if (isFinalValidationPass)
-            {
-                if (Inputs(0)->GetNumRows() != 1)
-                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
-                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 || Inputs(2)->GetNumRows() == 0)
-                    LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
-                if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
-                LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
-            }
-            // TODO: What is this about?
-            //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
-            //    ValidateInferChildDims(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_outputImageLayout = ImageLayout();
-        }
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-    };
-
-    template class DummyCriterionNode<float>; 
-    template class DummyCriterionNode<double>;
 
     // -----------------------------------------------------------------------
     /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
@@ -1497,7 +1390,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
 
-            Resize(1, 1);
+            SetDims(1, 1);
             m_pMBLayout = nullptr;  // no layout
             InferImageDimsFromInputs();
 
@@ -1509,7 +1402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1580,8 +1473,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gammatime = m_gammatime;
             partialtime = m_partialtime;
         }
+
     protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
         shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
         shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
@@ -1733,7 +1626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1748,8 +1641,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         shared_ptr<Matrix<ElemType>> m_classZeroLabels;
         shared_ptr<Matrix<ElemType>> m_result;

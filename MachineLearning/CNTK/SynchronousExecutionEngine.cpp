@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+// Note: Despite its name, this file is really about parsing NDL into an actual ComputationNetwork.
+
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
@@ -108,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
-                nodePtr = builder.CreateInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
             }
         }
         else if (cnNodeType == L"SparseImageInput")
@@ -125,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
-                nodePtr = builder.CreateSparseInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateSparseInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
             }
         }
         else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -321,7 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageLayout(img_width, img_height, img_channels), name);
+                nodePtr = builder.Reshape(NULL, num_rows, ImageLayoutWHC(img_width, img_height, img_channels), name);
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }

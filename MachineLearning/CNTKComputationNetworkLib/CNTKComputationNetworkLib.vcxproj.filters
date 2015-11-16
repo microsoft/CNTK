@@ -37,6 +37,9 @@
     <ClCompile Include="ComputationNetworkEditing.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="ComputationNetworkScripting.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -122,6 +125,9 @@
     </ClInclude>
     <ClInclude Include="EsotericNodes.h">
       <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataTensor.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
