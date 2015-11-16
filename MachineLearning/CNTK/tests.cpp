@@ -333,6 +333,7 @@ void TestConfiguration(const ConfigParameters& configBase)
             {
                 std::wstring nodeName = configNode[i];
             }
+            fprintf(stderr, "WARNING: 'NodesReqMultiSeqHandling' flag is defunct\n");
         }
 
         if (configRoots.Exists("EvalNodes"))

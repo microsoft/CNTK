@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -127,8 +127,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);
         }
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;

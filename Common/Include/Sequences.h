@@ -571,23 +571,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                          const FrameRange & frameRange/*select frame or entire batch*/,
                                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
-        // TODO: for now we verify that we always pass in layouts in frameRange that match data.
-        //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
+        // MBLayout of data and of FrameRange must be identical pointers,
+        // or in case of broadcasting, respective parent pointers.
+        // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
+        // For those cases, use a ReconcileMBLayout node.
         if (frameRange.m_pMBLayout != pMBLayout)
         {
             // if broadcast allowed then it is allowed to broadcast from an outer-loop value
             // Currently, the only 'outer' loop we have is to have no layout.
             if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
                 return data.AsReference();
-            LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
+            if (frameRange.m_pMBLayout && pMBLayout && *frameRange.m_pMBLayout == *pMBLayout)
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            else
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
         }
         // if FrameRange refers to whole minibatch (map mode)
         // or if we don't even have a layout
         // then return the whole matrix
+        // but as a reference (e.g. it cannot be resized)
         if (!pMBLayout || frameRange.IsAllFrames())
         {
             if (frameRange.seqIndex == SIZE_MAX)
-                return data.ColumnSlice(0, data.GetNumCols());
+                return data.AsReference();
             else
             {
                 if (!pMBLayout)

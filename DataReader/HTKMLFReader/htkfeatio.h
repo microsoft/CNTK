@@ -918,14 +918,14 @@ public:
 
         auto_file_ptr f(fopenOrDie(path, L"rb"));
         std::string headerLine = fgetline(f);
-        if (strcmp(headerLine.c_str(), "#!MLF!#"))
+        if (headerLine != "#!MLF!#")
             malformed("header missing");
 
         // Read the file in blocks and parse MLF entries
-        vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        std::vector<typename WORDSEQUENCE::word> wordsequencebuffer;
+        std::vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
         size_t readBlockSize = 1000000;
-        vector<char> currBlockBuf(readBlockSize + 1);
+        std::vector<char> currBlockBuf(readBlockSize + 1);
         size_t currLineNum = 1;
         std::vector<string> currMLFLines;
         bool reachedEOF = (feof(f) != 0);
@@ -945,10 +945,11 @@ public:
             char* context = nullptr;
             const char* delim = "\r\n";
 
-            auto consumeMLFLine = [&](const char* mlfLine) {
+            auto consumeMLFLine = [&](const char* mlfLine) 
+            {
                 currLineNum++;
                 currMLFLines.push_back(mlfLine);
-                if ((mlfLine[0] == '.') && (mlfLine[1] == 0)) // end delimiter: a single dot on a line
+                if ((mlfLine[0] == '.') && (mlfLine[1] == 0)) // utterance end delimiter: a single dot on a line
                 {
                     if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
                     {

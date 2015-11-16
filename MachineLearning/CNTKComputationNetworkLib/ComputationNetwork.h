@@ -17,20 +17,28 @@
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     EvaluateThisNode     -> ForwardProp
-//     ComputeInputPartial  -> BackpropToInput
-//     m_children           -> m_inputs   and related functions
-//     Inputs()             -> Input()
-//     Children()           -> Inputs()
-//     ChildrenSize()       -> NumInputs()
-//     ValueSlice           -> FunctionValues (with FrameRange argument)
-//     GradientSlice        -> GradientValues
+//     EvaluateThisNode()           -> ForwardProp()        // the familiar names
+//     ComputeInputPartial()        -> BackpropTo()
+//     OnEvaluateBeginIteration()   -> BeginForwardProp()   // and similar functions likewise
+//     m_children                   -> m_inputs             // likewise related functions
+//     Inputs()                     -> Input()              // or In()? or GetInput()?
+//     Children()                   -> Inputs()
+//     ChildrenSize()               -> NumInputs()
+//     m_functionValues             -> m_output
+//     FunctionValues()             -> Output()             // or Out()?
+//     frameRange                   -> t                    // make it more lightweight
+//     DataSlice(frameRange)        -> DataFor(t)           // also more lightweight; 'slice' is an implementation detail
+//     ValueSlice(.)                -> OutputFor(t)
+//     GradientSlice(.)             -> GradientFor(t)
+//     LoadFromFile()               -> Load()               // keep it simpler (where else would one load from?)
+//     SaveToFile()                 -> Save()
+//     ImageLayout                  -> DataLayout           // general tensor descriptor
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
 //  - known issues that need actual test cases to be fixed:
 //     - CRFNode::ComputeInputPartial() fails for >1 parallel sequence due to DataSlice() not being able to return whole sequences
-//     - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
+//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -60,17 +68,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
-    // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
-    // This structure stores that little sub-network.
-    class RecurrentFlowControlNode : public FlowControlNode
+
+    // FlowControlNodes for internal use by this class:
+
+    // -----------------------------------------------------------------------
+    // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
+    //
+    // This is to implement recurrent loops. All nodes inside a loop are listed
+    // inside this node. This node's EvaluateThisNode() function will execute
+    // them inside a loop over all time steps of the recurrence.
+    // For every time step, the entire chain of nodes is called, with the time index
+    // passed as a FrameRange object.
+    // -----------------------------------------------------------------------
+
+    class SEQTraversalFlowControlNode : public FlowControlNode
     {
-    public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of RecurrentFlowControlNode
+    public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         // next steps:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
-        virtual const std::wstring OperationName() const override { return L"RecurrentFlowControlNode"; }
-        virtual void UpdateFunctionMBSize() override;
+        virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
         virtual void OnEvaluateBeginIteration() override;
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override;
@@ -88,28 +106,32 @@ protected:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
-        bool m_completedGradient;
-        bool m_completedEvaluate;
         int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
-        RecurrentFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
+        SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
             m_loopId(loopId),
-            m_sourceNode(cur),
-            m_completedGradient(false),
-            m_completedEvaluate(false)
+            m_sourceNode(cur)
         {
             SetNodeName(L"Loop_" + m_sourceNode->NodeName());
         }
     };
 
-    // entire network is represented by this
-    // This is the outer loop over the network nodes in PAR mode.
-    class OuterLoopNode : public FlowControlNode
+    // -----------------------------------------------------------------------
+    // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
+    //
+    // This node contains a list of nodes in a (sub-)network. This node's
+    // EvaluateThisNode() method will execute all those nodes once in PAR mode,
+    // that is, by passing a FrameRange object that represents to operate
+    // on all frames in the node simultaneously.
+    //
+    // The outermost network level is also represented by this node for execution.
+    // -----------------------------------------------------------------------
+
+    class PARTraversalFlowControlNode : public FlowControlNode
     {
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
-        virtual const std::wstring OperationName() const override { return L"OuterLoopNode"; }
-        virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
+        virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
         virtual void OnEvaluateBeginIteration() override { }
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override { }
@@ -123,8 +145,10 @@ protected:
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
     public:
-        OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        // m_nestedNodes contains all top-level nodes, in evaluation order
+        // this special constructor constructs the top-level network node
+        // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
+        PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
+        // Base::m_nestedNodes contains all top-level nodes, in evaluation order
     };
 
 public:
@@ -135,16 +159,21 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
+    ComputationNetwork() :
         m_randomSeedOffset(0),
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
+        m_pMBLayout(make_shared<MBLayout>())
+    {
+    }
+    ComputationNetwork(DEVICEID_TYPE deviceId) :
+        ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
+    ComputationNetwork(const ScriptableObjects::IConfigRecordPtr configp);  // construct from config
 
     virtual ~ComputationNetwork()
     {
-        ClearNet();
+        ClearNet();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
     }
 
     // -----------------------------------------------------------------------
@@ -256,12 +285,11 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    void SetDeviceId(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+    void SetDeviceId(DEVICEID_TYPE deviceId)
     {
-        if (m_deviceId == AUTOPLACEMATRIX)
-            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
-        else
-            m_deviceId = deviceId;
+        if (deviceId == AUTOPLACEMATRIX)
+            deviceId = Matrix<float>::GetBestGPUDeviceId();
+        m_deviceId = deviceId;
         m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
     }
 
@@ -281,22 +309,37 @@ public:
     {
         size_t actualMBSize = 0;
 
-        const auto & featureNodes = this->FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
-        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
-            actualMBSize = max(actualMBSize, (*nodeIter)->GetNumCols());
+        const auto & featureNodes = FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
+        for (auto & nodeIter : featureNodes)
+            actualMBSize = max(actualMBSize, nodeIter->GetNumCols());
 
         return actualMBSize;
     }
 
+    // only called from MultiNetworksEvaluator
     // a helper function for some places that like to hack the features directly
     // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
     // This is now changed in that they must actually resize the features, and then the system takes it from here.
     // UNTESTED stopgap. Most likely places that are never used.
+    // This function does not actually allocate the matrices. I don't know whether that currently happens correctly.
     void ResizeAllFeatureNodes(size_t cols)
     {
-        auto & featureNodes = this->FeatureNodes();
-        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
-            (*nodeIter)->Resize((*nodeIter)->GetNumRows(), cols);
+        auto & featureNodes = FeatureNodes();
+        for (auto & nodeIter : featureNodes)
+        {
+            nodeIter->SetDims(nodeIter->GetNumRows(), cols);
+        }
+    }
+
+    // When external code (readers, namely) updates InputValue's m_functionValues,
+    // calling this function is required to make sure that any internal state gets updated correctly.
+    // Only a change to the column dimension i sallowed
+    void NotifyInputNodesFunctionValuesMBSizeModified()
+    {
+        for (auto & nodeIter : FeatureNodes())
+            nodeIter->NotifyFunctionValuesMBSizeModified();
+        for (auto & nodeIter : LabelNodes())
+            nodeIter->NotifyFunctionValuesMBSizeModified();
     }
 
     // -----------------------------------------------------------------------
@@ -484,10 +527,8 @@ public:
     void ResetEvalTimeStamp();
 
 private:
-    static std::shared_ptr<RecurrentFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
-    bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
+    static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
-    bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode, const bool forwardCompute, const bool printMatrices = false);
 public:
 
@@ -564,12 +605,9 @@ public:
         return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
     inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
     inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
     inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }
-
-    //inline std::vector<std::shared_ptr<RecurrentFlowControlNode>> & RecurrentNodes() { return m_recurrentInfo; }
 
     // -----------------------------------------------------------------------
     // node access
@@ -820,8 +858,8 @@ public:
         for (auto &node : allNodes)
             node->ClearGradientForChildren();
 
-        for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
-            recInfo->m_completedGradient = false;
+        //for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
+        //    recInfo->m_completedGradient = false;
     }
 
     // -----------------------------------------------------------------------
@@ -846,7 +884,7 @@ public:
     ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
     {
         if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
-            m_cachedOuterLoopNodes[rootNode] = make_shared<OuterLoopNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
+            m_cachedOuterLoopNodes[rootNode] = make_shared<PARTraversalFlowControlNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
         return m_cachedOuterLoopNodes[rootNode];
     }
 
@@ -916,13 +954,12 @@ protected:
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::vector<ComputationNodeBasePtr> m_pairNodes; /// nodes for the children network to pair
-    std::vector<ComputationNodeBasePtr> m_requestNodesMultiSeqHandling;
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
+        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes };
     }
 
-    std::vector<std::shared_ptr<RecurrentFlowControlNode>> m_recurrentInfo;     // [loopId] each entry is one recurrent loop (local little network that implements a recurrence)
+    std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfo;     // [loopId] cache of SEQTraversalFlowControlNodes to allow itempotence of FormRecurrentLoops()
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample

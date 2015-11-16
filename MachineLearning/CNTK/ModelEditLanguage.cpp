@@ -54,7 +54,6 @@ enum MELProperty
     melPropFeature,
     melPropLabel,
     melPropFinalCriterion,
-    melPropMultiSeqHandling,
     melPropEvaluation,
     melPropOutput,
     melPropRecurrent
@@ -415,7 +414,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         }
         else if (EqualInsensitive(propName, "MultiSeq", "ReqMultiSeqHandling"))
         {
-            prop = melPropMultiSeqHandling;
+            fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
         else if (EqualInsensitive(propName, "Evaluation", "Eval"))
         {
@@ -467,12 +466,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 {
                     bool set = params[2];
                     SetProperty(node, cn->FinalCriterionNodes(), set);
-                    break;
-                }
-                case melPropMultiSeqHandling:
-                {
-                    bool set = params[2];
-                    SetProperty(node, cn->RequestNodesMultiSeqHandling(), set);
                     break;
                 }
                 case melPropEvaluation:

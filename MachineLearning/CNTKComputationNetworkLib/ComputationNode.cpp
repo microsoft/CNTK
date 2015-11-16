@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
+        SetDims(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus
@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        Resize(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
+        SetDims(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
         InferImageDimsFromInputs();
     }
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
@@ -91,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-        Resize(1, 1);
+        SetDims(1, 1);
         InferImageDimsFromInputs();
     }
     // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -107,7 +107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
               (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-        Resize(1, 1);
+        SetDims(1, 1);
         InferImageDimsFromInputs();
     }
     // helper function for validation
@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (rows == 0 || cols == 0)
                 LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
-            Inputs(i)->Resize(rows, cols);
+            Inputs(i)->SetDims(rows, cols);
             Inputs(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
