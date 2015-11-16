@@ -1843,9 +1843,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			size_t sequenceNum = Inputs(1)->GetNumParallelSequences();
 			m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
 			m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
-
+			m_CTCposterior->SetValue(*m_CTCposterior);
+			sequenceNum;
 			//m_GammaCal.doCTC(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
-            m_GammaCal.doCTC_m(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap);
+            //m_GammaCal.doCTC_m(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap);
 
 #if NANCHECK
 			functionValues.HasNan("CTCwithSoftmaxNode");

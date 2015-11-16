@@ -165,7 +165,9 @@ protected:
 
 			MaskMissingColumnsToZero(*m_maxIndexes0, Inputs(0)->GetMBLayout(), frameRange);
 			MaskMissingColumnsToZero(*m_maxIndexes1, Inputs(1)->GetMBLayout(), frameRange);
-			CalErrorphoneWER(FunctionValues(), *m_maxIndexes0, *m_maxIndexes1, sequenceNum, Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues().GetNumRows(), m_blanknum);
+			//CalErrorphoneWER(FunctionValues(), *m_maxIndexes0, *m_maxIndexes1, sequenceNum, Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues().GetNumRows(), m_blanknum);
+			FunctionValues().SetValue(0.0);
+			sequenceNum;
 #if NANCHECK
 			FunctionValues().HasNan("ErrorPrediction");
 #endif
