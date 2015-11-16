@@ -79,7 +79,8 @@ void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_maxReadData = readerConfig("maxReadData", "0");
     m_doGradientCheck = readerConfig("gradientCheck", "false");
     m_returnDense = readerConfig("returnDense", "false");
-    m_sparsenessFactor = (m_doGradientCheck ? 1 : SPARSENESS_FACTOR_DEFAULT); // Disable sparseness test if gradient check is enabled
+    m_sparsenessFactor = readerConfig("sparsenessFactor", "50"); // We don't expect more than one in 50 input positions to have non-zero values
+    m_verificationCode = readerConfig("verificationCode", "0");
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -239,9 +240,9 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
         int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
 
-        if (verifCode != VERIFICATION_CODE)
+        if (m_verificationCode != 0 && verifCode != m_verificationCode)
         {
-            RuntimeError("Verification code did not match - error in reading data");
+            RuntimeError("Verification code did not match (expected %d) - error in reading data", m_verificationCode);
             return false;
         }
 
