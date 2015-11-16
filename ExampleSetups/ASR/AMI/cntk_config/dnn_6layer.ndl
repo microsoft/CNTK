@@ -1,0 +1,130 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork
+
+ndlMacroDefine=[
+    # Macro definitions
+
+    MeanVarNorm(x)
+    {
+        xMean = Mean(x)
+        xStdDev = InvStdDev(x)
+        xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    }
+
+    LogPrior(labels)
+    {
+        Prior=Mean(labels)
+        LogPrior=Log(Prior)
+    }
+
+    # Macro definitions
+    #Feed Forward
+    FF(X1, W1, B1)
+    {
+        T=Times(W1,X1)
+        P=Plus(T, B1)
+    }
+
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF(in, w, b)
+    }
+
+    #RectifiedLinear Base Feed Forward
+    RBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount)
+        RL = RectifiedLinear(BFF)
+    }
+
+    #Rectified Linear Feed Forward
+    RFF(X2,W2,B2)
+    {
+        FF = FF(X2, W2, B2)
+        RL = RectifiedLinear(FF)
+    }
+
+    #RectifiedLinear Feed Forward with Dropout
+    RFFD(X3,W3,B3)
+    {
+        RFF=RFF(X3, W3, B3)
+        DO=Dropout(RFF)
+    }
+
+    #Sigmoid Base Feed Forward
+    SBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount)
+        S = Sigmoid(BFF)
+    }
+
+    #Sigmoid Feed Forward
+    SFF(X2,W2,B2)
+    {
+        FF = FF(X2, W2, B2)
+        S = Sigmoid(FF)
+    }
+
+    #Sigmoid Feed Forward with Dropout
+    SFFD(X3,W3,B3)
+    {
+        SFF=SFF(X3, W3, B3)
+        DO=Dropout(SFF)
+    }
+
+    #Sigmoid Feed Forward with Dropout
+    SBFFD(inputVal,rowCount,colCount)
+    {
+        SBFF=SBFF(inputVal,rowCount,colCount)
+        DO=Dropout(SBFF)
+    }
+
+    #SoftMax Feed Forward
+    SMFF(x,y,z, labels)
+    {
+        FF = FF(x,y,z)
+        SM = CrossEntropyWithSoftmax(labels, FF)
+    }
+
+    #SoftMax Base Feed Forward
+    SMBFF(x,r,c, labels)
+    {
+        BFF = BFF(x,r,c)
+        SM = CrossEntropyWithSoftmax(labels, BFF)
+    }
+
+    #inline Rectified Linear Feed Forward
+    RFF_R(x1, w1, b1)=RectifiedLinear(Plus(Times(w1,x1),b1))
+
+    #inline Rectified Linear Feed Forward with Dropout
+    RFFD_R(x1, w1, b1)=Dropout(RectifiedLinear(Plus(Times(w1,x1),b1)))
+
+]
+
+ndlCreateNetwork=[
+
+    #define basic i/o
+    featDim=$featDim$
+    labelDim=$labelDim$
+    hiddenDim=2048
+    features=Input(featDim, tag=feature)
+    labels=Input(labelDim, tag=label)
+
+     # define network
+     featNorm = MeanVarNorm(features)
+     L1 = SBFF(featNorm,hiddenDim,featDim)
+     L2 = SBFF(L1,hiddenDim,hiddenDim)
+     L3 = SBFF(L2,hiddenDim,hiddenDim)
+     L4 = SBFF(L3,hiddenDim,hiddenDim)
+     L5 = SBFF(L4,hiddenDim,hiddenDim)
+     L6 = SBFF(L5,hiddenDim,hiddenDim)
+     CE = SMBFF(L6,labelDim,hiddenDim,labels,tag=Criteria)
+     Err = ErrorPrediction(labels,CE.BFF.FF.P,tag=Eval)
+
+     # define output (scaled loglikelihood)
+     logPrior = LogPrior(labels)
+     ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
+]
