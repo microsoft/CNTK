@@ -40,13 +40,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayout(1, SIZE_MAX, 1);
+            m_outputImageLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(rows, cols);
             LoadFunctionValues(fstream);
 
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
         }
 
         // initialize with random numbers
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :

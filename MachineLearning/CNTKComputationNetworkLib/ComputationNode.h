@@ -23,6 +23,10 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
+// these 3 are for ImageLayout, which will move out of here. Don't forget to move these along
+#include <array>
+#include <numeric>
+#include <functional>
 
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
@@ -55,46 +59,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
-    // describes inner layout of feature vector that is an image
-    // TODO: change to variable-length tensor descriptor; rename to DataLayout
-    // TODO: add serialization code, which will also handle variable-length descriptors
-    // TODO: move the 3-arg constructor to new function or derived class ImageLayoutWHC(w,h,c) since main class will be column-major
-    //       image is array [1..H] of array [1..W] of array [1..C] (each image row consists of consecutive float3 values)
-    //       ImageLayoutWHC(w,h,c) = ImageLayout(array<size_t,3> { c, w, h })
-    // must match ComputationNode::m_numRows; or, rather, the ImageLayout is how m_numRows is stored
+    // describes inner layout of feature vector that is a tensor
+    // Specifically if the image is an image, then this is a 3-dimensional tensor with dimensions ( channels, width, height ),
+    // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores (R,G,B) as a float3.
+    // TODO: really support lengths other than 3, e.g. fix serialization code to handle variable-length descriptors
+    // TODO: rename to DataLayout
+    // TODO: must match ComputationNode::m_numRows; or, rather, the ImageLayout is how m_numRows is stored??
     struct ImageLayout
     {
     public:
         // BUGBUG: This initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
         // Idea: We could construct this thing with a ref to the enclosing ComputationNode, and replace 'width' by an expression.
-        ImageLayout() : width(1), height(1), channels(1) { }
-        ImageLayout(size_t width, size_t height, size_t channels) : width(width), height(height), channels(channels) { }
+        ImageLayout() : m_tensorDims(3, 1) { }
+        template<class VEC>
+        ImageLayout(const VEC & dims) { m_tensorDims.reserve(dims.size()); m_tensorDims.assign(dims.begin(), dims.end()); }
 
-        void Invalidate() { width = SIZE_MAX; height = SIZE_MAX; channels = SIZE_MAX; } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
+        void Invalidate() { m_tensorDims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
 
-        void LoadFromFile(File& fstream)
-        {
-            fstream >> width >> height >> channels;
-        }
         void SaveToFile(File& fstream) const
         {
-            fstream << width << height << channels;
+            // TODO: need to use a generic format
+            assert(m_tensorDims.size() == 3);   // current format does not understand anything else
+            fstream << m_tensorDims[1] << m_tensorDims[2] << m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+        }
+        void LoadFromFile(File& fstream)
+        {
+            // TODO: need to use a generic format
+            m_tensorDims.resize(3);     // current format is hard-coded for 3, for back compat
+            fstream >> m_tensorDims[1] >> m_tensorDims[2] >> m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
         }
 
-        size_t GetNumChannels() const { return channels; }
-        size_t GetWidth()       const { return width; }
-        size_t GetHeight()      const { return height; }
+        // interpretation as an image tensor
+        size_t GetNumChannels() const { return m_tensorDims[0]; }
+        size_t GetWidth()       const { return m_tensorDims[1]; }
+        size_t GetHeight()      const { return m_tensorDims[2]; }
 
-        size_t GetNumElements() const { return width * height * channels; }
+        size_t GetNumElements() const { return std::accumulate(m_tensorDims.begin(), m_tensorDims.end(), (size_t)1, std::multiplies<size_t>()); }
 
-        bool operator==(const ImageLayout & other) const { return width == other.width && height == other.height &&channels == other.channels; }
+        bool operator==(const ImageLayout & other) const { return m_tensorDims == other.m_tensorDims; }
     private:
-        size_t width, height, channels;
+        vector<size_t> m_tensorDims;
     };
-    // use this function to construct an ImageLayout for images
+    // use this function to construct an W,H,C tensor ImageLayout for images
     static inline ImageLayout ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
-        return ImageLayout(width, height, channels);
+        return ImageLayout(array<size_t, 3> { channels, width, height });
     }
 
 #pragma region base computation class
