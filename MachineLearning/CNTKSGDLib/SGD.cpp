@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // AutoAdjust Parameters
         ConfigParameters configAALR(configSGD("AutoAdjust", ""));
-        LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
+        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
         double reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
         bool continueReduce = (bool) configAALR("continueReduce", "false");
         size_t learnRateAdjustInterval = (size_t) configAALR("learnRateAdjustInterval", "1");
@@ -188,57 +188,158 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: the number of parameters of this function is waaay to little!
         // TODO: it may be easier to write the values directly into the members
-        *this = SGDParams(learningRatesPerMB,
-                          learningRatesPerSample,
-                          mbSize,
-                          truncated,
-                          fullEpochsOffset,
-                          fullTotalMaxEpochs,
-                          epochSize,
-                          maxEpochs,
-                          modelPath,
-                          momentumPerMB,
-                          momentumPerSample,
-                          gradientClippingWithTruncation,
-                          clippingThresholdPerSample,
-                          autoAdjustLRType,
-                          increaseLearnRateIfImproveMoreThan,
-                          learnRateIncreaseFactor,
-                          reduceLearnRateIfImproveLessThan,
-                          continueReduce,
-                          learnRateDecreaseFactor,
-                          dropoutRates,
-                          loadBestModel,
-                          numMiniBatch4LRSearch,
-                          numPrevLearnRates,
-                          numBestSearchEpoch,
-                          traceLevel,
-                          progressTracing,
-                          numMBsToShowResult,
-                          numMBsToCUDAProfile,
-                          maxTempMemSizeInSamplesForCNN,
-                          gUpdateInfo,
-                          keepCheckPointFiles,
-                          adaptationRegType,
-                          adaptationRegWeight,
-                          trainCriterionNodeName,
-                          evalCriterionNodeName,
-                          doGradientCheck,
-                          gradientCheckSigDigit,
-                          validateAfterModelReloading,
-                          rpi,
-                          learnRateAdjustInterval,
-                          UsingAllDataForPreComputedNode,
-                          needAveMultiplier,
-                          L2RegWeight,
-                          L1RegWeight,
-                          autoAdjustMinibatch,
-                          minibatchSizeTuningFrequency,
-                          minibatchSizeTuningMax,
-                          useCVSetControlLRIfCVExists,
-                          useEvalCriterionControlLR,
-                          minibatchSearchCriterionErrorMargin,
-                          hsmoothingWeight, frameDropThresh, doReferenceAlign);
+        m_numPrevLearnRates = numPrevLearnRates;
+        m_prevChosenMinibatchSize = 0;
+        m_autoAdjustMinibatch = autoAdjustMinibatch;
+        m_minibatchSizeTuningMax = minibatchSizeTuningMax;
+        m_minibatchSizeTuningFrequency = minibatchSizeTuningFrequency;
+        m_minibatchSearchCriterionErrorMargin = minibatchSearchCriterionErrorMargin;
+
+        m_mbSize = mbSize;
+        m_truncated = truncated;
+
+        m_fullTotalMaxEpochs = fullTotalMaxEpochs;
+        m_fullEpochsOffset = fullEpochsOffset;
+
+        // the number of samples in each epoch (0 means, use all the samples in each epoch).
+        m_epochSize = epochSize;
+        if (m_epochSize == 0)
+        {
+            m_epochSize = requestDataSize;
+        }
+        m_maxComputedEpochSize = m_epochSize;
+
+        // the total number of epochs to run.
+        m_maxEpochs = maxEpochs;
+
+        m_gradientClippingWithTruncation = gradientClippingWithTruncation;
+        m_modelPath = modelPath;
+        m_autoLearnRateSearchType = autoLearnRateSearchType;
+        m_traceLevel = traceLevel;
+        m_progressTracing = progressTracing;
+
+        if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
+        {
+            m_progressTracingTimer.Start();
+        }
+        m_lastFinishedEpochEvalErr = 0.0;
+
+        m_loadBestModel = loadBestModel;
+        m_increaseLearnRateIfImproveMoreThan = increaseLearnRateIfImproveMoreThan;
+        m_learnRateIncreaseFactor = learnRateIncreaseFactor;
+        m_reduceLearnRateIfImproveLessThan = reduceLearnRateIfImproveLessThan;
+        m_continueReduce = continueReduce;
+
+        //minimum interval is 1 epoch
+        m_learnRateAdjustInterval = max((size_t)1, learnRateAdjustInterval);
+
+        m_learnRateDecreaseFactor = learnRateDecreaseFactor;
+        m_clippingThresholdPerSample = abs(clippingThresholdPerSample);
+        m_numMiniBatch4LRSearch = numMiniBatch4LRSearch;
+        m_dropoutRates = dropoutRates;
+        m_numMBsToShowResult = int(numMBsToShowResult);
+        m_numMBsToCUDAProfile = int(numMBsToCUDAProfile);
+        m_numBestSearchEpoch = numBestSearchEpoch;
+        m_maxTempMemSizeInSamplesForCNN = maxTempMemSizeInSamplesForCNN;
+        m_gradType = gUpdateInfo;
+        m_rpi = rpi;
+        m_keepCheckPointFiles = keepCheckPointFiles;
+
+        m_adaptationRegType = adaptationRegType;
+        m_adaptationRegWeight = adaptationRegWeight;
+
+        m_trainCriterionNodeName = trainCriterionNodeName;
+        m_evalCriterionNodeName = evalCriterionNodeName;
+        m_useAllDataForPreComputedNode = UsingAllDataForPreComputedNode;
+
+        m_needAveMultiplier = needAveMultiplier;
+        m_L2RegWeight = L2RegWeight;
+        m_L1RegWeight = L1RegWeight;
+
+        //sequence training parameters
+        m_hsmoothingWeight = hsmoothingWeight;
+        m_frameDropThresh = frameDropThresh;
+        m_doreferencealign = doReferenceAlign;
+        for (size_t i = 0; i < m_mbSize.size(); i++)
+        {
+            if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
+            {
+                InvalidArgument("epoch size must be larger than mbsize.");
+            }
+        }
+
+        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None &&
+            (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
+        {
+            InvalidArgument("If autoLearnRateSearchType is false "
+                "you must specify the learningRatesPerSample "
+                "or learningRatesPerMB parameter.");
+        }
+
+        if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
+        {
+            InvalidArgument("You specified both learningRatesPerSample "
+                "and learningRatesPerMB. Please comment "
+                "out one of them.");
+        }
+        else if (learningRatesPerSample.size() > 0)
+        {
+            m_learningRatesParam = learningRatesPerSample;
+            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
+        }
+        else if (learningRatesPerMB.size() > 0)     // this actually means per specified minibatch size
+        {
+            m_learningRatesParam = learningRatesPerMB;
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
+        }
+
+        if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
+        {
+            InvalidArgument("You specified both momentumPerSample "
+                "and momentumPerMB. Please comment "
+                "out one of them.");
+        }
+        else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
+        {
+            m_momentumParam = momentumPerSample;
+            m_momentumSpecifiedForMBSize = intargvector(L"1");
+        }
+        else if (momentumPerMB.size() > 0)
+        {
+            m_momentumParam = momentumPerMB;
+            m_momentumSpecifiedForMBSize = m_mbSize;
+        }
+        else    // default: momentumPerMB = 0.9 per MB
+        {
+            m_momentumParam = floatargvector(L"0.9");
+            m_momentumSpecifiedForMBSize = m_mbSize;
+        }
+        for (int i = 0; i < m_momentumParam.size(); i++)
+        {
+            if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
+                InvalidArgument("Momentum parameter must be in [0, 1).");
+        }
+
+        if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
+            InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
+
+        for (size_t i = 0; i < m_dropoutRates.size(); i++)
+            if (m_dropoutRates[i] >= 1 || m_dropoutRates[i] < 0)
+                InvalidArgument("dropoutRate must be >= 0 and < 1.");
+
+        if (m_adaptationRegWeight > 1 || m_adaptationRegWeight < 0)
+            InvalidArgument("adaptationRegWeight must be in [0 1]");
+
+        m_minLearnRate = 1e-9f;
+
+        m_needAdaptRegularization = false;
+
+        m_doGradientCheck = doGradientCheck;
+        m_gradientCheckSigDigit = gradientCheckSigDigit;
+        m_validateAfterModelReloading = validateAfterModelReloading;
+
+        m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
+        m_useEvalCriterionControlLR = useEvalCriterionControlLR;
 
         // BUGBUG: these are not passed to Init()
         m_doUnitTest = configSGD("unittest", "false");
@@ -280,6 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+#if 0
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
     SGDParams::SGDParams(const floatargvector& learningRatesPerMB,
                          const floatargvector& learningRatesPerSample,
@@ -488,6 +590,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
     }
+#endif
 
     template<class ElemType>
     SGD<ElemType>::SGD(SGDParams&& sgdParams)
