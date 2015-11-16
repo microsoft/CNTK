@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
                 node->OnEvaluateEndIteration();
 
-                node->UpdateEvalTimeStamp();                // TODO: abstract this out to a virtual function
+                node->UpdateEvalTimeStamp();
             }
 #ifdef _DEBUG
             else if (node)
@@ -156,12 +156,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             auto & node = *pnode;
 
-            auto recInfo = dynamic_pointer_cast<SEQTraversalFlowControlNode>(node);
-            if (recInfo)
-                assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
-
             node->OnComputeGradientBeginIteration();
-            node->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
+            node->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
             node->OnComputeGradientEndIteration();
         }
     }
@@ -206,6 +202,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(GetMBLayout() == m_nestedNodes[0]->GetMBLayout());
 
         // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+        // Note: Currently, this is limited to linear-time loops. But nothing stops the iteration below to, e.g., be a 2D iteration over an image
+        // if we implement an according FrameRangeIteration.
         FrameRangeIteration range(GetMBLayout(), m_steppingDirection);
         for (auto t = range.begin(); t != range.end(); t++)
         {
@@ -230,6 +228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & node2 : m_nestedNodes)
             node2->OnComputeGradientBeginIteration();
     }
+
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
@@ -247,11 +246,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
+
     // called after last iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnComputeGradientEndIteration() /*override*/
     {
-        // This handles the case that a node inside the loop back-propagates a gradient into a node outside of the loop.
-        // We do this outside the loop in PAR mode for efficiency (in one LSTM setup, we measured 12..14% overall speed-up).
+        // The following loop handles the case that a node inside the loop back-propagates a gradient into a node outside of the loop.
+        // For efficiency, we perform this outside the loop in PAR mode. E.g., in one LSTM speech setup, we measured 12..14% overall speed-up.
         for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
