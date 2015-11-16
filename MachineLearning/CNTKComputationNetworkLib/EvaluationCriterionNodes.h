@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

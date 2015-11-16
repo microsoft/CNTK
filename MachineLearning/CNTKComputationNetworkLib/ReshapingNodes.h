@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayoutWHC(0,0,0)) :
             Base(deviceId, name),
             m_numTargetRows(numRows),
-            m_imageLayout(imageLayout)
+            m_targetImageLayout(imageLayout)
         { }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
                 node->m_numTargetRows = m_numTargetRows;
-                node->m_imageLayout = m_imageLayout;
+                node->m_targetImageLayout = m_targetImageLayout;
             }
         }
 
@@ -184,14 +184,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_numTargetRows;
-            m_imageLayout.SaveToFile(fstream);
+            m_targetImageLayout.SaveToFile(fstream);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_numTargetRows;
-            m_imageLayout.LoadFromFile(fstream);
+            m_targetImageLayout.LoadFromFile(fstream);
         }
 
         virtual void InferImageDimsFromInputs()
@@ -199,15 +199,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, true);
             InferImageDimensions();
 
-            if (m_imageLayout.GetWidth() == 0 || m_imageLayout.GetHeight() == 0 || m_imageLayout.GetNumChannels() == 0)
+            if (m_targetImageLayout.GetWidth() == 0 || m_targetImageLayout.GetHeight() == 0 || m_targetImageLayout.GetNumChannels() == 0)
             {
-                m_outputImageLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
+                m_imageLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
                 if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             }
             else
             {
-                m_outputImageLayout = m_imageLayout;
+                m_imageLayout = m_targetImageLayout;
             }
         }
 
@@ -225,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
             }
-            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels());
+            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -353,35 +353,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numTargetRows;
         bool weStack() const { return m_numTargetRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
         size_t factor() const { return m_numTargetRows > Inputs(0)->GetNumRows() ? m_numTargetRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
-        ImageLayout m_imageLayout;
+        ImageLayout m_targetImageLayout;
 
         void InferImageDimensions()
         {
-            if (m_imageLayout.GetWidth() > 0)
+            if (m_targetImageLayout.GetWidth() > 0)
             {
-                if (m_imageLayout.GetHeight() > 0)
+                if (m_targetImageLayout.GetHeight() > 0)
                 {
-                    if (m_imageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout.GetNumChannels() > 0)
                     {
-                        if (m_imageLayout.GetNumElements() != m_numTargetRows)
+                        if (m_targetImageLayout.GetNumElements() != m_numTargetRows)
                             RuntimeError("Image dimensions do not match row size.");
                     }
                     else
                     {
-                        if (m_numTargetRows % (m_imageLayout.GetWidth() * m_imageLayout.GetHeight()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_numTargetRows / (m_imageLayout.GetWidth() * m_imageLayout.GetHeight()));
+                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()));
                     }
                 }
                 else
                 {
-                    if (m_imageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout.GetNumChannels() > 0)
                     {
-                        if (m_numTargetRows % (m_imageLayout.GetWidth() * m_imageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_numTargetRows / (m_imageLayout.GetWidth() * m_imageLayout.GetNumChannels()), m_imageLayout.GetNumChannels());
+                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetNumChannels());
                     }
                     else
                     {
@@ -391,19 +391,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (m_imageLayout.GetHeight() > 0)
+                if (m_targetImageLayout.GetHeight() > 0)
                 {
-                    if (m_imageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout.GetNumChannels() > 0)
                     {
-                        if (m_numTargetRows % (m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout = ImageLayoutWHC(m_numTargetRows / (m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels()), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels());
+                            m_targetImageLayout = ImageLayoutWHC(m_numTargetRows / (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
                     }
                     else
                         RuntimeError("At least two image dimensions must be specified.");
                 }
-                else if (m_imageLayout.GetNumChannels() > 0)
+                else if (m_targetImageLayout.GetNumChannels() > 0)
                     RuntimeError("At least two image dimensions must be specified.");
             }
         }
@@ -532,7 +532,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), m_sliceHeight, m_outputImageLayout.GetNumChannels());
+            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_sliceHeight, m_imageLayout.GetNumChannels());
 
 #if 1       // disabled for now since we now call Validate() inside the loop, and therefore get lots of these warnings. TODO: Bring it back once we no longer call Validate() from inside the loop.
             // warn that this node will destroy the image size information from the child
@@ -611,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), GetNumRows(), m_outputImageLayout.GetNumChannels());
+            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), GetNumRows(), m_imageLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
@@ -665,7 +665,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_outputImageLayout.GetNumChannels());
+            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_imageLayout.GetNumChannels());
 
             // watn that this node will destroy the image size information from the child
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
