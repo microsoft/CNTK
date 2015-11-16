@@ -195,6 +195,7 @@
     <ClCompile Include="ComputationNetworkBuilder.cpp" />
     <ClCompile Include="ComputationNetworkEditing.cpp" />
     <ClCompile Include="ComputationNetworkEvaluation.cpp" />
+    <ClCompile Include="ComputationNetworkScripting.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="NetworkBuilderFromConfig.cpp" />
     <ClCompile Include="stdafx.cpp" />

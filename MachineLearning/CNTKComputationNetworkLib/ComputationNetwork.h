@@ -159,16 +159,21 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
+    ComputationNetwork() :
         m_randomSeedOffset(0),
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
+        m_pMBLayout(make_shared<MBLayout>())
+    {
+    }
+    ComputationNetwork(DEVICEID_TYPE deviceId) :
+        ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
+    ComputationNetwork(const ScriptableObjects::IConfigRecordPtr configp);  // construct from config
 
     virtual ~ComputationNetwork()
     {
-        ClearNet();
+        ClearNet();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
     }
 
     // -----------------------------------------------------------------------
@@ -280,12 +285,11 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    void SetDeviceId(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+    void SetDeviceId(DEVICEID_TYPE deviceId)
     {
-        if (m_deviceId == AUTOPLACEMATRIX)
-            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
-        else
-            m_deviceId = deviceId;
+        if (deviceId == AUTOPLACEMATRIX)
+            deviceId = Matrix<float>::GetBestGPUDeviceId();
+        m_deviceId = deviceId;
         m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
     }
 

@@ -1379,6 +1379,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
+    // ILateAttachingNode -- helper wrapper class for ComputationNodes that must AttachInputs() late due to circular references
+    // =======================================================================
+
+    // Instantiate with LateAttachingNode<node type>(lambda, args for node constructor).
+    // To resolve, call AttachInputs()
+    // TODO: This is a bit indirect. Can it be done more nicely?
+    struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
+    template<class N>
+    class LateAttachingNode : public N, public ILateAttachingNode
+    {
+        typedef typename N::OurElemType ElemType;
+        function<void(ComputationNode<ElemType>*)> attachInputs;
+    public:
+        // constructor
+        template<class... _Types>
+        LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNode<ElemType>*)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
+        // the one member that does the work
+        void /*ILateAttachingNode::*/LateAttachInputs()
+        {
+            attachInputs(dynamic_cast<N*>(this));
+            attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
+        }
+    };
+
+    // =======================================================================
     // helper macro to ease access to base members in presence of C++ two-phase name lookup
     // =======================================================================
 

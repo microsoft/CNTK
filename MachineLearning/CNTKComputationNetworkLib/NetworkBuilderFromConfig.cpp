@@ -45,28 +45,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     // ComputationNode -- covers all standard nodes
     // -------------------------------------------------------------------
 
-    // helper wrapper class for ComputationNodes that must AttachInputs() late due to circular references
-    // Instantiate with LateAttachingNode<node type>(lambda, args for node constructor).
-    // To resolve, call AttachInputs()
-    // TODO: This is a bit indirect. Can it be done more nicely?
-    struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
-    template<class N>
-    class LateAttachingNode : public N, public ILateAttachingNode
-    {
-        typedef typename N::OurElemType ElemType;
-        function<void(ComputationNode<ElemType>*)> attachInputs;
-    public:
-        // constructor
-        template<class... _Types>
-        LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNode<ElemType>*)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
-        // the one member that does the work
-        void /*ILateAttachingNode::*/LateAttachInputs()
-        {
-            attachInputs(dynamic_cast<N*>(this));
-            attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
-        }
-    };
-
     template<class ElemType>
     struct DualPrecisionHelpers<ElemType, ComputationNode<ElemType>>
     {
@@ -227,88 +205,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
     };
 
-    // -------------------------------------------------------------------
-    // ComputationNetwork
-    // -------------------------------------------------------------------
-
-    // initialize a ComputationNetwork from a ConfigRecord
-    template<>
-    /*static*/ shared_ptr<Object> MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
-    {
-        let & config = *configp;
-
-        DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-        auto net = make_shared<ComputationNetwork>(deviceId);
-
-        auto & m_nameToNodeMap = net->GetNameToNodeMap();
-
-        deque<ComputationNodeBasePtr> workList;
-        // flatten the set of all nodes
-        // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
-        // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
-        // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
-        for (let & id : config.GetMemberIds())
-        {
-            let & value = config[id];
-            if (value.Is<ComputationNodeBase>())
-                workList.push_back((const ComputationNodeBasePtr&)value);
-        }
-        // process work list
-        // Also call FinalizeInit where we must.
-        while (!workList.empty())
-        {
-            let node = workList.front();
-            workList.pop_front();
-
-            // add to set
-            let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-            if (!res.second)        // not inserted: we already got this one
-                if (res.first->second == node)
-                    continue;       // the same
-                else                // oops, a different node with the same name
-                    LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
-
-            // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
-            // This may generate a whole new load of nodes, including nodes which in turn have late init.
-            // TODO: think this through whether it may generate circular references nevertheless
-            let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
-            if (lateAttachingNode)
-                lateAttachingNode->LateAttachInputs();
-
-            // add it to the respective node group based on the tag
-            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-            if (nodeWithTag)
-            {
-                wstring tag = nodeWithTag->GetTag();
-                if (tag == L"feature")                              net->FeatureNodes().push_back(node);
-                else if (tag == L"label")                           net->LabelNodes().push_back(node);
-                else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-                else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
-                else if (tag == L"output")                          net->OutputNodes().push_back(node);
-#if 0           // deprecated
-                else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-#endif
-                else if (!tag.empty())
-                    RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-                // TODO: are there nodes without tag? Where do they go?
-            }
-
-            // traverse children: append them to the end of the work list
-            let & children = node->GetChildren();
-            for (auto & child : children)
-                workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
-        }
-
-        net->ValidateNetwork();
-#if 1
-        wstring args = net->ToString();
-        fprintf(stderr, "%ls\n", args.c_str());
-#endif
-        // these post-processing steps are done by the other network builders, but I don't know why they are necessary
-        net->FixupInputMinibatchSize();         // make sure dimensions are set up correctly
-        net->ResetEvalTimeStamp();              // (should not really be needed)
-        return net;
-    }
 
     // creates the lambda for creating an object that can exist as 'float' or 'double'
     // Pass both types as the two template args.
