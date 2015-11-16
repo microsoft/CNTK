@@ -157,6 +157,21 @@ target_link_libraries(UCIFastReader
 set_target_properties(UCIFastReader PROPERTIES
     PREFIX "")
 
+add_library(HTKMLFReader SHARED
+	DataReader/HTKMLFReader/DataReader.cpp
+	DataReader/HTKMLFReader/DataWriter.cpp
+	DataReader/HTKMLFReader/HTKMLFReader.cpp
+	DataReader/HTKMLFReader/HTKMLFWriter.cpp
+    DataReader/HTKMLFReader/fileutil.cpp) # TODO :|
+
+# TODO default on Win anyway:
+set_target_properties(HTKMLFReader PROPERTIES
+    PREFIX "")
+
+target_link_libraries(HTKMLFReader
+    Common
+    Math)
+
 add_executable(cntk
     MachineLearning/CNTK/CNTK.cpp
     MachineLearning/CNTK/ModelEditLanguage.cpp
