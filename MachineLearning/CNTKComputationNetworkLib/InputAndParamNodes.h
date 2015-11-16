@@ -71,7 +71,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
-            UpdateFunctionValuesSize();   // allocate the matrix storage actually
             fstream >> FunctionValues();
             if (FunctionValues().GetNumRows() != rows || FunctionValues().GetNumCols() != cols)
                 LogicError("LoadFromFile: %ls %ls operation detected mismatch in m_functionValues, malformed input file.", NodeName().c_str(), OperationName().c_str());
@@ -283,8 +282,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             SetDims(rows, cols);
-            //UpdateFunctionValuesSize();                   // TODO: Is this needed? Wouldn't the reader allocate this for us?
-            //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
             m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
@@ -314,9 +311,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ConvertToSparseMatrix()
         {
             m_functionValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            UpdateFunctionValuesSize();
-            // This ^^ is due to a comment I found here: //SwitchToMatrixType does not reserve information right now.
-            // I think it means SwitchToMatrixType() does nto carry over the dimension. Which makes no sense, it should be fixed there, not worked around here.
         }
     };
 

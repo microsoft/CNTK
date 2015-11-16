@@ -17,27 +17,28 @@
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     EvaluateThisNode()       -> ForwardProp()    // the familiar names
-//     ComputeInputPartial()    -> BackpropTo()
-//     m_children               -> m_inputs   and related functions
-//     Inputs()                 -> Input()          // or In()?
-//     Children()               -> Inputs()
-//     ChildrenSize()           -> NumInputs()
-//     m_functionValues         -> m_output
-//     FunctionValues()         -> Output()         // or Out()?
-//     frameRange               -> t                // make it more lightweight
-//     DataSlice(frameRange)    -> DataFor(t)       // also more lightweight; 'slice' is an implementation detail
-//     ValueSlice(.)            -> OutputFor(t)
-//     GradientSlice(.)         -> GradientFor(t)
-//     LoadFromFile()           -> Load()           // keep it simpler (where else would one load from?)
-//     SaveToFile()             -> Save()
-//     ImageLayout              -> DataLayout       // general tensor descriptor
+//     EvaluateThisNode()           -> ForwardProp()        // the familiar names
+//     ComputeInputPartial()        -> BackpropTo()
+//     OnEvaluateBeginIteration()   -> BeginForwardProp()   // and similar functions likewise
+//     m_children                   -> m_inputs             // likewise related functions
+//     Inputs()                     -> Input()              // or In()? or GetInput()?
+//     Children()                   -> Inputs()
+//     ChildrenSize()               -> NumInputs()
+//     m_functionValues             -> m_output
+//     FunctionValues()             -> Output()             // or Out()?
+//     frameRange                   -> t                    // make it more lightweight
+//     DataSlice(frameRange)        -> DataFor(t)           // also more lightweight; 'slice' is an implementation detail
+//     ValueSlice(.)                -> OutputFor(t)
+//     GradientSlice(.)             -> GradientFor(t)
+//     LoadFromFile()               -> Load()               // keep it simpler (where else would one load from?)
+//     SaveToFile()                 -> Save()
+//     ImageLayout                  -> DataLayout           // general tensor descriptor
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
 //  - known issues that need actual test cases to be fixed:
 //     - CRFNode::ComputeInputPartial() fails for >1 parallel sequence due to DataSlice() not being able to return whole sequences
-//     - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
+//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -88,9 +89,6 @@ protected:
         // next steps:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
-        virtual void UpdateFunctionMBSize() override;
-        virtual void UpdateFunctionValuesSize() override;
-        virtual void VerifyDimsMatch() const override;
         virtual void OnEvaluateBeginIteration() override;
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override;
@@ -314,17 +312,18 @@ public:
         return actualMBSize;
     }
 
+    // only called from MultiNetworksEvaluator
     // a helper function for some places that like to hack the features directly
     // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
     // This is now changed in that they must actually resize the features, and then the system takes it from here.
     // UNTESTED stopgap. Most likely places that are never used.
+    // This function does not actually allocate the matrices. I don't know whether that currently happens correctly.
     void ResizeAllFeatureNodes(size_t cols)
     {
         auto & featureNodes = FeatureNodes();
         for (auto & nodeIter : featureNodes)
         {
             nodeIter->SetDims(nodeIter->GetNumRows(), cols);
-            nodeIter->UpdateFunctionValuesSize();   // and do the actual allocation
         }
     }
 

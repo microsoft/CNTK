@@ -312,7 +312,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void NotifyFunctionValuesModified() { } // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
-        virtual void UpdateFunctionValuesSize() = 0;    // allocate m_functionValues to match the dimensions
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
@@ -821,15 +820,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::SetDims(rows, cols);
             // TODO: in the future we will NOT resize here, but in a different function
             //       Then this function will no longer be virtual.
-            UpdateFunctionValuesSize();
+            FunctionValues().Resize(m_numRows, m_numCols);
             // This ^^ recovers the previous behavior of this function, keeping it compatible at this time, for testing.
         }
 #endif
-        // update m_functionValues to match the dimensions given in m_numRows, m_numCols
-        virtual void UpdateFunctionValuesSize() override final
-        {
-            FunctionValues().Resize(m_numRows, m_numCols);
-        }
         // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
         // Yes, it is bad design that this is possible.
         // TODO: change this as to only update the col dimension; where rows is updated too, just copy the code (it'd be in a node anyway) or rather create a function.
@@ -942,16 +936,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         // Note: This only updates the dimensions but does not actually allocate anything.
-        // To allocate, UpdateFunctionValuesSize() must be called afterwards.
+        // The actual allocation happens later, in OnEvaluateBeginIteration().
         // TODO: How is this function different from OnEvaluateBeginIteration()?  --> answer: it will be called from there some day
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-            {
                 SetDims(GetNumRows(), m_pMBLayout->GetNumCols());
-                //UpdateFunctionValuesSize();
-                //m_functionValues->ResizeColumns();
-            }
         }
         virtual void VerifyDimsMatch() const override final
         {
@@ -1128,11 +1118,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GradientSlice(frameRange);
         }
 
-        //virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
-        //{
-        //    if (!IsLeaf())
-        //        UpdateFunctionValuesSize();
-        //}
+        void UpdateFunctionValuesSize()
+        {
+            FunctionValues().Resize(m_numRows, m_numCols);
+        }
+
+        // this is called before a node's EvaluateThisNode() function is called (in loops: for the first time)
+        // This is where we
+        //  - update the node dimension based on actual MB size
+        //  - (re-)allocate the m_functionValues matrix, which may be shared across nodes and thus have changed dimensions
+        virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
+        {
+            Base::OnEvaluateBeginIteration();
+
+            // update dimensions based on MB size
+            UpdateFunctionMBSize();
+
+            // update the actual m_functionValues allocation
+            if (!IsLeaf() && !RequiresPreCompute())     // TODO: guard this through overrides instead
+                UpdateFunctionValuesSize();
+
+            // and make sure dimensions are what we expect
+            VerifyDimsMatch();
+        }
 
 #ifdef _DEBUG
         // NaN checks
@@ -1446,7 +1454,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override     { NOT_IMPLEMENTED; }
         virtual void UpdateFunctionMBSize() override     { NOT_IMPLEMENTED; }
-        virtual void UpdateFunctionValuesSize() override { NOT_IMPLEMENTED; }
         virtual void VerifyDimsMatch() const override    { NOT_IMPLEMENTED; }
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
