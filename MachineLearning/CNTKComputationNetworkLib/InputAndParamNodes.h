@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout(1, rows, 1);
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
-            UpdateSize();   // this allocates the matrix
+            UpdateFunctionValuesSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
         }
 
@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
-            UpdateSize();   // allocate the matrix storage actually
+            UpdateFunctionValuesSize();   // allocate the matrix storage actually
             fstream >> FunctionValues();
             if (FunctionValues().GetNumRows() != rows || FunctionValues().GetNumCols() != cols)
                 LogicError("LoadFromFile: %ls %ls operation detected mismatch in m_functionValues, malformed input file.", NodeName().c_str(), OperationName().c_str());
@@ -219,7 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             SetDims(rows, cols);
-            //UpdateSize();
+            //UpdateFunctionValuesSize();
             m_parameterUpdateRequired = false;
         }
     public:
@@ -283,7 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             SetDims(rows, cols);
-            //UpdateSize();                   // TODO: Is this needed? Wouldn't the reader allocate this for us?
+            //UpdateFunctionValuesSize();                   // TODO: Is this needed? Wouldn't the reader allocate this for us?
             //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
             m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
@@ -314,7 +314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ConvertToSparseMatrix()
         {
             m_functionValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            UpdateSize();
+            UpdateFunctionValuesSize();
             // This ^^ is due to a comment I found here: //SwitchToMatrixType does not reserve information right now.
             // I think it means SwitchToMatrixType() does nto carry over the dimension. Which makes no sense, it should be fixed there, not worked around here.
         }
@@ -477,19 +477,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nOutput = 3;
 
                 Inputs(0)->SetDims(nInput, nHidden);
-                Inputs(0)->UpdateSize();
+                Inputs(0)->UpdateFunctionValuesSize();
                 Inputs(0)->FunctionValues().SetValue(1.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
                 Inputs(1)->SetDims(nHidden, nOutput);
-                Inputs(1)->UpdateSize();
+                Inputs(1)->UpdateFunctionValuesSize();
                 Inputs(1)->FunctionValues().SetValue(0.0);
                 Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
                 Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
                 SetDims(nInput, nOutput);
-                UpdateSize();
+                UpdateFunctionValuesSize();
 
                 EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -555,7 +555,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             CreateMatrixIfNull(m_functionValues);
             SetDims(row_size, col_size);
-            UpdateSize();
+            UpdateFunctionValuesSize();
         }
     public:
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :

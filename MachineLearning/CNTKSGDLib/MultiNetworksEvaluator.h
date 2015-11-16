@@ -622,7 +622,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t dim = outputNodes[i]->GetNumRows();
                 outputNodes[i]->SetDims(dim, bSize);
-                dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateSize();
+                dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateFunctionValuesSize();
                 dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(0);
                 for (int k = 0; k < bSize; k++)
                     dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(best_path[k], k, 1.0);

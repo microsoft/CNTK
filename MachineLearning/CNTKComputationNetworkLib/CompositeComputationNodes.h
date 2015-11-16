@@ -133,20 +133,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             func = FunctionValues();
 
             Inputs(0)->SetDims(nInput0, nT);
-            Inputs(0)->UpdateSize();
+            Inputs(0)->UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
 
             Inputs(1)->SetDims(nInput1, nT);
-            Inputs(1)->UpdateSize();
+            Inputs(1)->UpdateFunctionValuesSize();
             Inputs(1)->FunctionValues().SetValue(0);
             Inputs(1)->FunctionValues()(0, 0) = 4;
             Inputs(1)->FunctionValues()(0, 1) = 5;
             Inputs(1)->FunctionValues()(0, 2) = 6;
             SetDims(nInput0 + nInput1, nT);
-            UpdateSize();
+            UpdateFunctionValuesSize();
 
             EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -367,7 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::MarkComputed(hasComputed);
             if (!m_hasComputed)     // initialize accumulation
             {
-                //UpdateSize();
+                UpdateFunctionValuesSize();
                 FunctionValues().SetValue(0);
             }
             // no else branch because EvaluateThisNodeNonLooping() already leaves a valid mean in m_functionValues
@@ -436,7 +436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_var.Resize(inputDim, 1);
                 m_mean.SetValue(0);
                 m_var.SetValue(0);
-                //UpdateSize();
+                UpdateFunctionValuesSize();
                 FunctionValues().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
             }
             else                // finalize
@@ -879,7 +879,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
                 SetDims(Inputs(0));
-                UpdateSize();
+                UpdateFunctionValuesSize();
 
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
@@ -923,13 +923,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             func = FunctionValues();
 
             Inputs(0)->SetDims(nInput, nT);
-            Inputs(0)->UpdateSize();
+            Inputs(0)->UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
             SetDims(nOutput, nT);
-            UpdateSize();
+            UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
             EvaluateThisNode(FrameRange(m_pMBLayout));
 

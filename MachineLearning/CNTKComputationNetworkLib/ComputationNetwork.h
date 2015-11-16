@@ -17,14 +17,21 @@
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     EvaluateThisNode     -> ForwardProp
-//     ComputeInputPartial  -> BackpropToInput
-//     m_children           -> m_inputs   and related functions
-//     Inputs()             -> Input()
-//     Children()           -> Inputs()
-//     ChildrenSize()       -> NumInputs()
-//     ValueSlice           -> FunctionValues (with FrameRange argument)
-//     GradientSlice        -> GradientValues
+//     EvaluateThisNode()       -> ForwardProp()    // the familiar names
+//     ComputeInputPartial()    -> BackpropTo()
+//     m_children               -> m_inputs   and related functions
+//     Inputs()                 -> Input()          // or In()?
+//     Children()               -> Inputs()
+//     ChildrenSize()           -> NumInputs()
+//     m_functionValues         -> m_output
+//     FunctionValues()         -> Output()         // or Out()?
+//     frameRange               -> t                // make it more lightweight
+//     DataSlice(frameRange)    -> DataFor(t)       // also more lightweight; 'slice' is an implementation detail
+//     ValueSlice(.)            -> OutputFor(t)
+//     GradientSlice(.)         -> GradientFor(t)
+//     LoadFromFile()           -> Load()           // keep it simpler (where else would one load from?)
+//     SaveToFile()             -> Save()
+//     ImageLayout              -> DataLayout       // general tensor descriptor
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
@@ -82,6 +89,7 @@ protected:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
         virtual void UpdateFunctionMBSize() override;
+        virtual void UpdateFunctionValuesSize() override;
         virtual void OnEvaluateBeginIteration() override;
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override;
@@ -125,7 +133,6 @@ protected:
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
-        virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
         virtual void OnEvaluateBeginIteration() override { }
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override { }
@@ -314,7 +321,10 @@ public:
     {
         auto & featureNodes = FeatureNodes();
         for (auto & nodeIter : featureNodes)
+        {
             nodeIter->SetDims(nodeIter->GetNumRows(), cols);
+            nodeIter->UpdateFunctionValuesSize();   // and do the actual allocation
+        }
     }
 
     // When external code (readers, namely) updates InputValue's m_functionValues,
