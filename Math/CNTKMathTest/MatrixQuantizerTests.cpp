@@ -10,6 +10,12 @@
 #include <io.h>
 #include <type_traits>
 
+#include "..\..\common\include\fileutil.h"
+#include "..\..\common\include\File.h"
+#include "..\..\common\File.cpp"
+#include "..\..\common\fileutil.cpp"
+#include <string>
+
 #include "..\Math\MatrixQuantizer.h"
 #include "..\Math\CUDAPageLockedMemAllocator.h"
 #include "..\Math\ValueQuantizer.h"
