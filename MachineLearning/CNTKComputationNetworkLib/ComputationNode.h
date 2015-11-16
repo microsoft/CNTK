@@ -103,8 +103,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
         virtual void OnComputeGradientEndIteration() = 0;       // called after last iteration step of ComputeGradient()
 
-        // TODO: this one does not quite fit here --they are implemented in Base and overridden by the ControlFlowNodes
-        // functions that are called from Network, but not necessarily overridden by the node implementations themselves
+        // --- these are meant to be overridden by ControlFlowNodes
+
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
@@ -140,8 +140,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
     // These members are only to be set, changed, and read by ComputationNetwork code.
-    // TODO: We could go much further and move all network-level evaluation routines into here as well.
-    //       I won't do it now as it will create a massive diff that would make merging of other ongoing changes much harder.
     // =======================================================================
 
     class ComputationNetwork;
@@ -234,12 +232,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // =======================================================================
     // ComputationNodeBase -- abstract base class for all computation nodes
-    // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
 
     class ComputationNodeBase :
         public IComputationNode,
-        public/*protected*/ ComputationNetworkOwnedNodeState,   // TODO: figure this out, somehow the 'friend' thing does not work
+        public/*protected*/ ComputationNetworkOwnedNodeState,   // TODO: figure the 'protected' business out, somehow the 'friend' thing does not work
         public TimeStamp,                                       // for time-stamp management
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
@@ -296,8 +293,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // base class has nothing to load
         }
 
-        // float/double-independent access to the m_functionValues for a few specific use cases
-        // TODO: Not nice. This would go away if we abstracted out the matrix type as well from float/double.
+        // dimensions
+
         size_t GetNumRows() const { return m_numRows; }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
@@ -311,7 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // NOTE: current ComputationNode<> overrides this in order to still do actual memory allocation like before
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
-        virtual void NotifyFunctionValuesModified() { } // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
+        virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
@@ -321,9 +318,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void VerifyDimsMatch() const = 0;     // verify that m_functionValues dimensions match ours
+
+        // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
 
         // validation
+        // This is overridden by every node. This base class just checks for unconnected and empty inputs.
         virtual void Validate(bool isFinalValidationPass)           // main base validation function
         {
             // check for NULL pointers
@@ -510,20 +510,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
-        virtual void /*IComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;    // (redeclaring, as compiler gets confused otherwise--will go away with ComputeInputPartial(t))
-        //void ComputeInputPartialMap(const size_t inputIndex)   // TODO: this will be replaced by FrameRange version
-        //{
-        //    ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        //}
-        //virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
-        virtual void ClearGradientForChildren() = 0;
-
         // masking
         // overridden by <ElemType> variant only
         virtual void MaskMissingValuesColumnsToZero(const FrameRange &) = 0;
         virtual void MaskMissingGradientColumnsToZero(const FrameRange &) = 0;
         virtual void InvalidateMissingValuesColumns(const FrameRange &) = 0;
         virtual void InvalidateMissingGradientColumns(const FrameRange &) = 0;
+
+        virtual void ClearGradientForChildren() = 0;
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
         {
@@ -603,7 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::unordered_set<ComputationNodeBasePtr> visited;
 
             // get forward computation order
-            EnumerateNodesR(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
+            EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
 
             // if caller wants order for backprop then reverse it
             if (!forForwardProp)
@@ -613,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork)
+        void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork)
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {
@@ -625,41 +619,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i = 0; i < m_children.size(); i++)
                     {
                         if (m_children[i])
-                            m_children[i]->EnumerateNodesR(visited, result, skipPairNetwork);
+                            m_children[i]->EnumerateNodesRec(visited, result, skipPairNetwork);
                     }
                 }
 
-#if 0
-                // propagate m_needsGradient flags upwards from leaves
-                // TODO: This belongs into Validate().
-                if (!IsLeaf())
-                    m_needsGradient = ChildrenNeedGradient();
-#endif
-
                 // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());
-
-#if 0           // this does not work, since m_visitedOrder gets cleared out, while the list survives in a cache
-                if (setVisitedOrder)    // FormRecurrentNodes() would like this variable to be set as well
-                    m_visitedOrder = result.size();
-#endif
             }
         }
     public:
-
-#if 0
-        bool ChildrenNeedGradient()  const //this is only valid when called in the forward computation order.
-        {
-            for (int i = 0; i<m_children.size(); i++)
-            {
-                if (!m_children[i])
-                    continue;
-                if (m_children[i]->m_needsGradient)
-                    return true;
-            }
-            return false;
-        }
-#endif
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.
@@ -667,16 +635,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is virtual because it is overridden by traversal nodes.
         virtual bool IsFuncValueOlderThanInputs() const
         {
-            for (size_t i = 0; i<ChildrenSize(); i++)
+            // TODO: use range-based for
+            for (size_t i = 0; i < ChildrenSize(); i++)
             {
-#if 1
                 if (IsOlderThan(*m_children[i]))
                     return true;
-#else
-                //the second condition is used when the time stamp change from positive to negative
-                if (m_children[i]->GetEvalTimeStamp() >= GetEvalTimeStamp() || m_children[i]->GetEvalTimeStamp() + 1e10 < GetEvalTimeStamp())
-                    return true;
-#endif
             }
 
             return false;
@@ -744,8 +707,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        // data members
-        //std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
+
         DEVICEID_TYPE m_deviceId;   // CPU=-1, >=0 GPU
         std::wstring m_nodeName;
 
@@ -759,6 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numRows, m_numCols;        // matrix dimension of function values and gradients
         ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
         ImageLayout m_outputImageLayout;    // and the output
+        // TODO: Why is the input layout not just the layout of the input node?
         MBLayoutPtr m_pMBLayout;
 
         // flags related to gradient propagation
@@ -787,20 +750,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
         using ComputationNodeBase::SetDims;
         typedef ElemType OurElemType;
-    protected:
-        // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
-        //        TODO: after memshare, this requirement has gone away. We can construct directly again.
-        // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
-        // TODO: verify that we initialize all members (e.g. m_parameterUpdateRequired was missing before)
+
+        // public constructor
+        // Note: use the New<> helper function that is declared next, which gives you the convenience of returning a shared_ptr
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeBase(deviceId, name)
         {
         }
-    public:
-        // public constructor
-        // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
-        // as we need to call a virtual function after construction. This function does that.
-        // TODO: Actually, that is no longer necessary. We can get rid of this again. Or keep it just as a convenience function that returns a shared_ptr.
+
+        // New() -- convenience wrapper around the constructor, which returns a shared_ptr, which is as this is always needed.
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             return make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
@@ -813,23 +771,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-#if 0   // take this out to no longer allocate in SetDims()
-        // our own output dimensions
-        virtual void SetDims(size_t rows, size_t cols) override final
+        // helper to load m_functionValues from a stream
+        // Since the dimensions are read as well, this function also updates m_numRows/m_numCols.
+        void LoadFunctionValues(File& fstream)
         {
-            Base::SetDims(rows, cols);
-            // TODO: in the future we will NOT resize here, but in a different function
-            //       Then this function will no longer be virtual.
-            FunctionValues().Resize(m_numRows, m_numCols);
-            // This ^^ recovers the previous behavior of this function, keeping it compatible at this time, for testing.
-        }
-#endif
-        // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
-        // Yes, it is bad design that this is possible.
-        // TODO: change this as to only update the col dimension; where rows is updated too, just copy the code (it'd be in a node anyway) or rather create a function.
-        virtual void NotifyFunctionValuesModified() override final
-        {
+            CreateMatrixIfNull(m_functionValues);
+            fstream >> FunctionValues();
+            // above reads dimensions, so we must update our own m_numRows/m_numCols
             m_numRows = FunctionValues().GetNumRows();
+            m_numCols = FunctionValues().GetNumCols();
+        }
+
+        // reader updated m_functionValue--update our internal state, i.e. m_numCols
+        // This is meant for the case when a new minibatch was read. Hence, theonly change that is allowed if for column dimension.
+        virtual void NotifyFunctionValuesMBSizeModified() override final
+        {
+            if (m_numRows != FunctionValues().GetNumRows())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension changed by the reader.", NodeName().c_str(), OperationName().c_str());
             m_numCols = FunctionValues().GetNumCols();
         }
         virtual double Get00Element() const override final { return FunctionValues().Get00Element(); }
@@ -1489,7 +1447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::SetDims; using Base::NotifyFunctionValuesModified; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; \
+    using Base::SetDims; /*using Base::NotifyFunctionValuesMBSizeModified;*/ using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadFunctionValues; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
