@@ -238,9 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            CreateMatrixIfNull(m_functionValues);
-            fstream >> FunctionValues();
-            NotifyFunctionValuesModified(); // above reads dimensions, so we must update our own m_numRows/m_numCols
+            LoadFunctionValues(fstream);
          }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -788,8 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            fstream >> FunctionValues();
-            NotifyFunctionValuesModified(); // above reads dimensions, so we must update our own m_numRows/m_numCols
+            LoadFunctionValues(fstream);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override

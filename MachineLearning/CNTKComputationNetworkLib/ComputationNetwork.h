@@ -329,12 +329,13 @@ public:
 
     // When external code (readers, namely) updates InputValue's m_functionValues,
     // calling this function is required to make sure that any internal state gets updated correctly.
-    void NotifyInputNodesFunctionValuesModified()
+    // Only a change to the column dimension i sallowed
+    void NotifyInputNodesFunctionValuesMBSizeModified()
     {
         for (auto & nodeIter : FeatureNodes())
-            nodeIter->NotifyFunctionValuesModified();
+            nodeIter->NotifyFunctionValuesMBSizeModified();
         for (auto & nodeIter : LabelNodes())
-            nodeIter->NotifyFunctionValuesModified();
+            nodeIter->NotifyFunctionValuesMBSizeModified();
     }
 
     // -----------------------------------------------------------------------
