@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }       
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -201,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -311,7 +311,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -412,7 +412,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -494,7 +494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
     };
 
@@ -666,7 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
     protected:
@@ -952,7 +952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
     protected:
@@ -1232,7 +1232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1402,7 +1402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1626,7 +1626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

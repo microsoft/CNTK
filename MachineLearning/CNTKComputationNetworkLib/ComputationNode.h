@@ -251,7 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_nodeName = newName;
 
                 node->m_inputImageLayout = m_inputImageLayout;
-                node->m_outputImageLayout = m_outputImageLayout;
+                node->m_imageLayout = m_imageLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
                 TimeStamp::CopyTo(*node);
@@ -445,7 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
                     if (IsChildAnImage(i))  //image
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
-                                child->m_outputImageLayout.GetWidth(), child->m_outputImageLayout.GetHeight(), child->m_outputImageLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
+                                child->m_imageLayout.GetWidth(), child->m_imageLayout.GetHeight(), child->m_imageLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
@@ -482,10 +482,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsChildAnImage(const size_t index) const
         {
-            return m_children[index]->m_outputImageLayout.GetWidth() != 1 || m_children[index]->m_outputImageLayout.GetNumChannels() != 1;
+            return m_children[index]->m_imageLayout.GetWidth() != 1 || m_children[index]->m_imageLayout.GetNumChannels() != 1;
         }
 
-        pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_outputImageLayout); }
+        const ImageLayout & GetImageLayout() const { return m_imageLayout; }
+
+        pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_imageLayout); }   // helper for Validate()
 
         const size_t ChildrenSize() const { return m_children.size(); }     // TODO: rename to NumChildren() or NumInputs(); and inside here where we use m_children, use m_children.size() as well
 
@@ -535,9 +537,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const auto & child = m_children[index];
             if (child != nullptr)
-                m_inputImageLayout = child->m_outputImageLayout;
+                m_inputImageLayout = child->m_imageLayout;
             if (outputSameAsInput)
-                m_outputImageLayout = m_inputImageLayout;
+                m_imageLayout = m_inputImageLayout;
         }
 
         void InferMBLayoutFromInputsForStandardCase();
@@ -701,7 +703,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that the actual matrix storage does not always exist.
         size_t m_numRows, m_numCols;        // matrix dimension of function values and gradients
         ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
-        ImageLayout m_outputImageLayout;    // and the output
+        ImageLayout m_imageLayout;    // and the output
         // TODO: Why is the input layout not just the layout of the input node?
         MBLayoutPtr m_pMBLayout;
 
@@ -1397,13 +1399,13 @@ protected: \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
-    using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
+    using Base::m_inputImageLayout; using Base::m_imageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
     using Base::CreateUniqId; \
     using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \

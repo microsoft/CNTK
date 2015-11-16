@@ -40,13 +40,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
+            m_imageLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
+            m_imageLayout = ImageLayoutWHC(1, rows, 1);
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(rows, cols);
             LoadFunctionValues(fstream);
 
-            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
+            m_imageLayout = ImageLayoutWHC(1, rows, 1);
         }
 
         // initialize with random numbers
@@ -222,13 +222,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
-            m_outputImageLayout.Invalidate();
+            m_imageLayout.Invalidate();
             Init(0, 0, false);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
-            m_outputImageLayout.Invalidate();
+            m_imageLayout.Invalidate();
             Init(0, 0, isSparse);
         }
         // ^^ TODO: merge the two above with optional arg
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputImageLayout = ImageLayoutWHC(1, rows, 1);
+            m_imageLayout = ImageLayoutWHC(1, rows, 1);
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
@@ -250,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputImageLayout = imageLayout;
+            m_imageLayout = imageLayout;
 
             Init(rows, cols, isSparse);
         }
@@ -261,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to LoadFromFile()
             size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
             fstream << rows << cols;
-            m_outputImageLayout.SaveToFile(fstream);
+            m_imageLayout.SaveToFile(fstream);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
             if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
                 cols = 0;
-            m_outputImageLayout.LoadFromFile(fstream);
+            m_imageLayout.LoadFromFile(fstream);
 
             CreateMatrixIfNull(m_functionValues);
             if (m_isSparse)
