@@ -165,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayout(0,0,0)) :
             Base(deviceId, name),
-            m_numRows(numRows),
+            m_numTargetRows(numRows),
             m_imageLayout(imageLayout)
         { }
 
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
-                node->m_numRows = m_numRows;
+                node->m_numTargetRows = m_numTargetRows;
                 node->m_imageLayout = m_imageLayout;
             }
         }
@@ -183,13 +183,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << m_numRows << m_imageLayout.width << m_imageLayout.height << m_imageLayout.channels;
+            fstream << m_numTargetRows;
+            m_imageLayout.SaveToFile(fstream);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
-            fstream >> m_numRows >> m_imageLayout.width >> m_imageLayout.height >> m_imageLayout.channels;
+            fstream >> m_numTargetRows;
+            m_imageLayout.LoadFromFile(fstream);
         }
 
         virtual void InferImageDimsFromInputs()
@@ -197,10 +199,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, true);
             InferImageDimensions();
 
-            if (m_imageLayout.width == 0 || m_imageLayout.height == 0 || m_imageLayout.channels == 0)
+            if (m_imageLayout.GetWidth() == 0 || m_imageLayout.GetHeight() == 0 || m_imageLayout.GetNumChannels() == 0)
             {
-                m_outputImageLayout = ImageLayout(1, 1, m_numRows);
-                if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+                m_outputImageLayout = ImageLayout(1, 1, m_numTargetRows);
+                if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             }
             else
@@ -223,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
             }
-            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageLayout.width, m_imageLayout.height, m_imageLayout.channels);
+            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -232,17 +234,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             // Note: During initial validation, cols may not be a multiple. E.g. cols may be 1 or 3. So we cannot check here whether the integer-multiple conditions are fulfilled.
-            size_t newCols = cols * rows / m_numRows;
+            size_t newCols = cols * rows / m_numTargetRows;
             if (isFinalValidationPass)
             {
-                if ((m_numRows > rows && m_numRows % rows != 0) ||  // grouping columns
-                    (m_numRows < rows && rows % m_numRows != 0))    // splitting columns
-                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int)m_numRows, (int)rows);
-                if (!m_pMBLayout && rows * cols != m_numRows * newCols)    // sadly, cannot verify here if we have a layout, since current #cols may be bogus
+                if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) ||  // grouping columns
+                    (m_numTargetRows < rows && rows % m_numTargetRows != 0))    // splitting columns
+                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int)m_numTargetRows, (int)rows);
+                if (!m_pMBLayout && rows * cols != m_numTargetRows * newCols)    // sadly, cannot verify here if we have a layout, since current #cols may be bogus
                     LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
             }
 
-            SetDims(m_numRows, newCols);
+            SetDims(m_numTargetRows, newCols);
             if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the ImageLayout)
                 m_pMBLayout = Inputs(0)->GetMBLayout();
             else if (Inputs(0)->HasMBLayout())
@@ -258,15 +260,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void UpdateFunctionMBSize() override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
-            size_t newCols = cols * rows / m_numRows;
+            size_t newCols = cols * rows / m_numTargetRows;
             if (!m_pMBLayout)
             {
 #if 0
-                VerifyDims(m_numRows, newCols);
+                VerifyDims(m_numTargetRows, newCols);
 #endif
             }
             else
-                SetDims(m_numRows, newCols);
+                SetDims(m_numTargetRows, newCols);
         }
 
         // TODO: there seems to be semantic overlap between OnEvaluateBeginIteration() and UpdateFunctionMBSize()
@@ -278,7 +280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
-                m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
+                m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numTargetRows);
                 if (weStack())
                 {
                     // going from many samples to one: layout entry will get no flags
@@ -303,15 +305,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
-            size_t newCols = cols * rows / m_numRows;
-            assert(newCols * m_numRows == cols * rows); // follows from above check
-            VerifyDims(m_numRows, newCols);
+            size_t newCols = cols * rows / m_numTargetRows;
+            assert(newCols * m_numTargetRows == cols * rows); // follows from above check
+            VerifyDims(m_numTargetRows, newCols);
 
             // no layout case: this is indeed just a reshape. Same for canonical case
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout || factor() == 1)
             {
-                FunctionValues().Reshaped(newCols * m_numRows, 1).SetValue(Inputs(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
+                FunctionValues().Reshaped(newCols * m_numTargetRows, 1).SetValue(Inputs(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
@@ -330,12 +332,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
-            size_t newCols = cols * rows / m_numRows;
+            size_t newCols = cols * rows / m_numTargetRows;
 
             // no layout case: this is indeed just a reshape. Same for canonical case
             if (!m_pMBLayout || factor() == 1)
             {
-                Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numRows, 1);   // treat the values as one long vector
+                Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numTargetRows, 1);   // treat the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
@@ -348,38 +350,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        size_t m_numRows;
-        bool weStack() const { return m_numRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
-        size_t factor() const { return m_numRows > Inputs(0)->GetNumRows() ? m_numRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numRows; }   // factor by which we stack or unstack
+        size_t m_numTargetRows;
+        bool weStack() const { return m_numTargetRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
+        size_t factor() const { return m_numTargetRows > Inputs(0)->GetNumRows() ? m_numTargetRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         ImageLayout m_imageLayout;
 
         void InferImageDimensions()
         {
-            if (m_imageLayout.width > 0)
+            if (m_imageLayout.GetWidth() > 0)
             {
-                if (m_imageLayout.height > 0)
+                if (m_imageLayout.GetHeight() > 0)
                 {
-                    if (m_imageLayout.channels > 0)
+                    if (m_imageLayout.GetNumChannels() > 0)
                     {
-                        if (m_imageLayout.GetNumElements() != m_numRows)
+                        if (m_imageLayout.GetNumElements() != m_numTargetRows)
                             RuntimeError("Image dimensions do not match row size.");
                     }
                     else
                     {
-                        if (m_numRows % (m_imageLayout.width * m_imageLayout.height) > 0)
+                        if (m_numTargetRows % (m_imageLayout.GetWidth() * m_imageLayout.GetHeight()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout.channels = m_numRows / (m_imageLayout.width * m_imageLayout.height);
+                            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_numTargetRows / (m_imageLayout.GetWidth() * m_imageLayout.GetHeight()));
                     }
                 }
                 else
                 {
-                    if (m_imageLayout.channels > 0)
+                    if (m_imageLayout.GetNumChannels() > 0)
                     {
-                        if (m_numRows % (m_imageLayout.width * m_imageLayout.channels) > 0)
+                        if (m_numTargetRows % (m_imageLayout.GetWidth() * m_imageLayout.GetNumChannels()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout.height = m_numRows / (m_imageLayout.width * m_imageLayout.channels);
+                            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_numTargetRows / (m_imageLayout.GetWidth() * m_imageLayout.GetNumChannels()), m_imageLayout.GetNumChannels());
                     }
                     else
                     {
@@ -389,19 +391,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (m_imageLayout.height > 0)
+                if (m_imageLayout.GetHeight() > 0)
                 {
-                    if (m_imageLayout.channels > 0)
+                    if (m_imageLayout.GetNumChannels() > 0)
                     {
-                        if (m_numRows % (m_imageLayout.height * m_imageLayout.channels) > 0)
+                        if (m_numTargetRows % (m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels()) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_imageLayout.width = m_numRows / (m_imageLayout.height * m_imageLayout.channels);
+                            m_imageLayout = ImageLayoutWHC(m_numTargetRows / (m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels()), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels());
                     }
                     else
                         RuntimeError("At least two image dimensions must be specified.");
                 }
-                else if (m_imageLayout.channels > 0)
+                else if (m_imageLayout.GetNumChannels() > 0)
                     RuntimeError("At least two image dimensions must be specified.");
             }
         }
@@ -481,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
             Base(deviceId, name),
             m_startIndex(startIndex),
-            m_numRows(numRows)
+            m_sliceHeight(numRows)
         { }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -490,39 +492,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
 
             node->m_startIndex = m_startIndex;
-            node->m_numRows = m_numRows;
+            node->m_sliceHeight = m_sliceHeight;
         }
 
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << m_startIndex << m_numRows;
+            fstream << m_startIndex << m_sliceHeight;
         }
         
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
-            fstream >> m_startIndex >> m_numRows;
+            fstream >> m_startIndex >> m_sliceHeight;
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_numRows);
+            Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_numRows);
+            ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
-                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_sliceHeight)
+                RuntimeError("RowSlice operation: m_startIndex + m_sliceHeight exceeds number of rows in the input.");
 
-            SetDims(m_numRows, Inputs(0)->GetNumCols());
+            SetDims(m_sliceHeight, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -530,17 +532,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout.height = m_numRows;        
+            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), m_sliceHeight, m_outputImageLayout.GetNumChannels());
 
-#if 0       // disabled for now since we now call Validate() inside the loop, and therefore get lots of these warnings. TODO: Bring it back once we no longer call Validate() from inside the loop.
-            //WARNING: this node will destroy the image size information from the child
-            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+#if 1       // disabled for now since we now call Validate() inside the loop, and therefore get lots of these warnings. TODO: Bring it back once we no longer call Validate() from inside the loop.
+            // warn that this node will destroy the image size information from the child
+            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
 #endif
         }
 
     private:
-        size_t m_startIndex, m_numRows;
+        size_t m_startIndex, m_sliceHeight;
     };
 
     template class RowSliceNode<float>; 
@@ -609,10 +611,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout.height = GetNumRows();
+            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), GetNumRows(), m_outputImageLayout.GetNumChannels());
 
-            //WARNING: this node will destroy the image size information from the child
-            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+            // warn that this node will destroy the image size information from the child
+            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -663,10 +665,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputImageLayout.height = m_inputImageLayout.height * m_numRepeat;
+            m_outputImageLayout = ImageLayoutWHC(m_outputImageLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_outputImageLayout.GetNumChannels());
 
-            // WARNING: this node will destroy the image size information from the child
-            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+            // watn that this node will destroy the image size information from the child
+            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 

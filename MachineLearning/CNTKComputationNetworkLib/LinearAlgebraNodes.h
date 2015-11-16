@@ -1256,10 +1256,9 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_outputImageLayout.width = 1;
-            m_outputImageLayout.channels = 1;
+            m_outputImageLayout = ImageLayout(1, m_outputImageLayout.GetHeight(), 1);
 
-            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 

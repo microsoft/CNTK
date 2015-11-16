@@ -64,16 +64,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // must match ComputationNode::m_numRows; or, rather, the ImageLayout is how m_numRows is stored
     struct ImageLayout
     {
-        size_t width, height, channels;
+    public:
         // BUGBUG: This initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
         // Idea: We could construct this thing with a ref to the enclosing ComputationNode, and replace 'width' by an expression.
         ImageLayout() : width(1), height(1), channels(1) { }
         ImageLayout(size_t width, size_t height, size_t channels) : width(width), height(height), channels(channels) { }
-        //void Set(size_t width, size_t height, size_t channels) { this->width = width; this->height = height; this->channels = channels; }
+
         void Invalidate() { width = SIZE_MAX; height = SIZE_MAX; channels = SIZE_MAX; } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
+
+        void LoadFromFile(File& fstream)
+        {
+            fstream >> width >> height >> channels;
+        }
+        void SaveToFile(File& fstream) const
+        {
+            fstream << width << height << channels;
+        }
+
+        size_t GetNumChannels() const { return channels; }
+        size_t GetWidth()       const { return width; }
+        size_t GetHeight()      const { return height; }
+
         size_t GetNumElements() const { return width * height * channels; }
+
         bool operator==(const ImageLayout & other) const { return width == other.width && height == other.height &&channels == other.channels; }
+    private:
+        size_t width, height, channels;
     };
+    // use this function to construct an ImageLayout for images
+    static inline ImageLayout ImageLayoutWHC(size_t width, size_t height, size_t channels)
+    {
+        return ImageLayout(width, height, channels);
+    }
 
 #pragma region base computation class
 
@@ -464,7 +486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
                     if (IsChildAnImage(i))  //image
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
-                                child->m_outputImageLayout.width, child->m_outputImageLayout.height, child->m_outputImageLayout.channels, mbSizeMark, child->GetNumCols());
+                                child->m_outputImageLayout.GetWidth(), child->m_outputImageLayout.GetHeight(), child->m_outputImageLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
@@ -501,7 +523,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsChildAnImage(const size_t index) const
         {
-            return m_children[index]->m_outputImageLayout.width != 1 || m_children[index]->m_outputImageLayout.channels != 1;
+            return m_children[index]->m_outputImageLayout.GetWidth() != 1 || m_children[index]->m_outputImageLayout.GetNumChannels() != 1;
         }
 
         pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_outputImageLayout); }
