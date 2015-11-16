@@ -4,9 +4,25 @@ cmake_minimum_required(VERSION 2.8)
 
 project(CNTKCMake CXX)
 
+# Enable usage of legacy environment variables (TODO we may not want this)
+if(EXISTS "$ENV{BOOST_LIB_PATH}")
+    set(BOOST_LIBRARYDIR $ENV{BOOST_LIB_PATH})
+endif()
+
+if(EXISTS "$ENV{BOOST_INCLUDE_PATH}")
+    set(BOOST_ROOT $ENV{BOOST_INCLUDE_PATH})
+endif()
+
+if(EXISTS "$ENV{ACML_PATH}")
+    set(ACML_PATH $ENV{ACML_PATH})
+endif()
+
+if(EXISTS "$ENV{CUB_PATH}")
+    set(CUB_PATH $ENV{CUB_PATH})
+endif()
+
 find_package(MPI)
 find_package(CUDA 7.0 REQUIRED)
-#find_package(CUDA 7.0 REQUIRED)
 
 if(WIN32)
 
@@ -16,28 +32,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(ACML_PATH C:/AMD/acml5.3.1/ifort64_mp)
+set(NVML_PATH "c:/Program Files/NVIDIA Corporation/GDK/gdk_win7_amd64_release/nvml")
 
 else()
-
-set(ACML_PATH /usr/local/acml5.3.1/ifort64)
 
 # Note: I'm on an older version on Linux, no CMAKE_CXX_STANDARD ?
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++11 -fpermissive")
 # TODO less flags?
 
-endif()
+# TODO set(NVML_PATH ...)
 
-#include_directories(${CUDA_INCLUDE_DIRS}) 
-# Not needed? "In addition CUDA_INCLUDE_DIRS is added automatically to include_directories()."
+endif()
 
 set(CMAKE_BUILD_TYPE "Release" "Build Type")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-set(CUB_PATH "C:/Users/mahilleb/Repos/Work/cub-1.4.1")
-set(NVML_PATH "c:/Program Files/NVIDIA Corporation/GDK/gdk_win7_amd64_release/nvml")
 
 include_directories(
     Math/Math
@@ -77,9 +87,7 @@ target_link_libraries(CNTKMathCUDA
     ${CUDA_curand_LIBRARY})
 remove_definitions(-DMATH_EXPORTS)
 
-message("------------------")
-message("CNTKMathCUDA ${CUDA_LIBRARIES}")
-#add_definitions(-DCPUONLY)
+# TODO add_definitions(-DCPUONLY)
 
 add_library(Common STATIC
     Common/BestGpu.cpp
@@ -230,7 +238,8 @@ find_package(Boost 1.55.0 REQUIRED
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(MathTests
-    Tests/UnitTests/MathTests/CPUMatrixTests.cpp)
+    Tests/UnitTests/MathTests/CPUMatrixTests.cpp
+    Tests/UnitTests/MathTests/CPUSparseMatrixTests.cpp)
 
 target_link_libraries(MathTests
     Math
@@ -282,7 +291,3 @@ add_test(NAME MathTests COMMAND MathTests)
 
 # TODO check out BLAS detection (i) with new version (ii) on Windows.
 #Math/Math/Math.vcxproj:      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
-
-#MESSAGE("$ENV{ACML_PATH}")
-#set(ACML_PATH $ENV{ACML_PATH})
-
