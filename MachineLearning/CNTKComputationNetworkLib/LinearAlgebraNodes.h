@@ -480,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
+            m_outputImageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 
@@ -594,7 +594,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
+            m_outputImageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 
@@ -1222,7 +1222,7 @@ private:
             InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
 
             // after transposition, the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
+            m_outputImageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumCols(), 1);
         }
     };
 
@@ -1256,7 +1256,7 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_outputImageLayout = ImageLayout(1, m_outputImageLayout.GetHeight(), 1);
+            m_outputImageLayout = ImageLayoutWHC(1, m_outputImageLayout.GetHeight(), 1);
 
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -1535,7 +1535,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             //after KhatriRaoProduct the structure is lost
-            m_outputImageLayout = ImageLayout(1, m_functionValues->GetNumRows(), 1);
+            m_outputImageLayout = ImageLayoutWHC(1, m_functionValues->GetNumRows(), 1);
         }
     };
 

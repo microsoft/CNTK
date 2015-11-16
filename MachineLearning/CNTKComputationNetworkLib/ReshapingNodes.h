@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ReinterpretNodeBase<ElemType> Base; UsingReinterpretNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
-        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayout(0,0,0)) :
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayoutWHC(0,0,0)) :
             Base(deviceId, name),
             m_numTargetRows(numRows),
             m_imageLayout(imageLayout)
@@ -201,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_imageLayout.GetWidth() == 0 || m_imageLayout.GetHeight() == 0 || m_imageLayout.GetNumChannels() == 0)
             {
-                m_outputImageLayout = ImageLayout(1, 1, m_numTargetRows);
+                m_outputImageLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
                 if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             }
