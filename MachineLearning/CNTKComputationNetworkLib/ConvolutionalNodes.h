@@ -245,16 +245,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t startSampleID = i*subBatchSize; 
                 size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                size_t smallBatchSize = endSampleID-startSampleID; 
+                size_t smallBatchSize = endSampleID-startSampleID;
+
+                // GPU and 1-dimensional image
+                bool is1DConvolutionOnGPU = (input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU && m_inputImageLayout.height == 1);
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch;
 
-                // This is a temporary work-around to make convolution work for sparse matrices.
-                // AssignPackedConvolutionInput only supports dense matrix input today. So convert
-                // to dense if input matrix is sparse. Allocating/de-allocating memory is costly.
-                // So for dense matrices operate on the slice directly.
-                if (input1.GetMatrixType() == MatrixType::DENSE)
+                // We optimize for three different scenarios here by handling them slightly differently.
+                // Scenario 1 (dense input): Unroll using AssignPackedConvolutionInput and multiply.
+                // Scenario 2 (sparse 1-dimensional image): for text scenarios we have a specific kernel.
+                // Scenario 3 (sparse all others): convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
+                if (input1.GetMatrixType() == MatrixType::DENSE || is1DConvolutionOnGPU)
                 {
                     inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                 }
@@ -264,14 +267,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 }
 
-                tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
-                                                        m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
-                                                        m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
-                                                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, 
-                                                        m_zeroPadding); 
-
                 Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
-                Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
+
+                if (is1DConvolutionOnGPU)
+                {
+                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, false, inputSubBatch, false, 1, outputSubBatch,
+                        m_horizontalSubsample * m_inputImageLayout.channels, m_zeroPadding);
+                }
+                else
+                {
+                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                        m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                        m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
+                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+                        m_zeroPadding);
+
+                    Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
+                }
             }
 
             functionValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //each sample becomes a column
