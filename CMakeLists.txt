@@ -158,11 +158,11 @@ set_target_properties(UCIFastReader PROPERTIES
     PREFIX "")
 
 add_library(HTKMLFReader SHARED
-	DataReader/HTKMLFReader/DataReader.cpp
-	DataReader/HTKMLFReader/DataWriter.cpp
-	DataReader/HTKMLFReader/HTKMLFReader.cpp
-	DataReader/HTKMLFReader/HTKMLFWriter.cpp
-    DataReader/HTKMLFReader/fileutil.cpp) # TODO :|
+    DataReader/HTKMLFReader/DataReader.cpp
+    DataReader/HTKMLFReader/DataWriter.cpp
+    DataReader/HTKMLFReader/HTKMLFReader.cpp
+    DataReader/HTKMLFReader/HTKMLFWriter.cpp
+    DataReader/HTKMLFReader/fileutil.cpp) # TODO :| expand_wildcards, and possibly diverged implementations
 
 # TODO default on Win anyway:
 set_target_properties(HTKMLFReader PROPERTIES
@@ -171,6 +171,32 @@ set_target_properties(HTKMLFReader PROPERTIES
 target_link_libraries(HTKMLFReader
     Common
     Math)
+
+add_library(LMSequenceReader SHARED
+    DataReader/LMSequenceReader/Exports.cpp
+    DataReader/LMSequenceReader/SequenceParser.cpp
+    DataReader/LMSequenceReader/SequenceReader.cpp)
+
+target_link_libraries(LMSequenceReader
+    Common
+    Math)
+
+# TODO default on Win anyway:
+set_target_properties(LMSequenceReader PROPERTIES
+    PREFIX "")
+
+add_library(LUSequenceReader SHARED
+    DataReader/LUSequenceReader/Exports.cpp
+    DataReader/LUSequenceReader/LUSequenceParser.cpp
+    DataReader/LUSequenceReader/LUSequenceReader.cpp)
+
+target_link_libraries(LUSequenceReader
+    Common
+    Math)
+
+# TODO default on Win anyway:
+set_target_properties(LUSequenceReader PROPERTIES
+    PREFIX "")
 
 add_executable(cntk
     MachineLearning/CNTK/CNTK.cpp
