@@ -96,7 +96,9 @@ struct SGDParams
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
+#if 0
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
+    // TODO: remove constructor from args; only do it from config (this is too error-prone, and also currently incomplete)
     SGDParams(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
@@ -150,6 +152,7 @@ struct SGDParams
               const double hsmoothingWeight,
               const double frameDropThresh,
               const bool doreferencealign);
+#endif
 
 protected:
     // learning rate per sample provided outside

@@ -132,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             {
                 let inputs = GetInputs(config);
                 // second group: nodes with special initializers
-                if (OpIs(RowSliceNode)) // TODO: untested
+                if (OpIs(RowSliceNode))
                 {
                     // startIndex, numRows, inputs /*one*/, needGradient=false
                     node = New<RowSliceNode<ElemType>>(deviceId, nodeName, (size_t)config[L"startIndex"], (size_t)config[L"numRows"]);
@@ -150,7 +150,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
                     node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
-                else if (OpIs(ReshapeNode)) // TODO: untested
+                else if (OpIs(ReshapeNode))
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayoutWHC(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
