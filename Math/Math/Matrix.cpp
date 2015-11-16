@@ -4272,6 +4272,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
     }
 
+    /// <summary>Convolution with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c. MultiplyAndWeightedAdd is just a special case of this.</summary>
+    /// <param name="alpha">Scalar</param>
+    /// <param name="a">Input matrix</param>
+    /// <param name="transposeA">Whether matrix a is transposed</param>
+    /// <param name="b">Input matrix</param>
+    /// <param name="transposeB">Whether matrix b is transposed</param>
+    /// <param name="beta">Scalar</param>
+    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+    template<class ElemType>
+    void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+        ElemType beta, Matrix<ElemType>& c, size_t colStep, bool padding)
+    {
+        DecideAndMoveToRightDevice(a, b, c);
+        
+        if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE
+            && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
+        {
+            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB,
+                beta, *c.m_GPUMatrix, colStep, padding);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+
     /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
     /// if a is a column vector, add to all columns of c 
     /// if a is a row vector, add to all rows of c    

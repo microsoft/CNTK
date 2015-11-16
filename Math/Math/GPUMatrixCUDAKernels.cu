@@ -2651,9 +2651,12 @@ __global__ void _sparseCSRElemMulDense(
 //c = alpha * op(a) * op(b) + beta*c
 //this function can be further improved by using shared memory
 template<class ElemType>
-__global__ void _denseMultSparseCSCAndWeightedAddToDense(
-    int m, //rowDense
-    int n,   //colSparse
+__global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
+    int m,  // rowDense
+    int k,  // colDense
+    int n,  // colSparse
+    int numSteps,   // convolution num steps
+    int stepSize,   // convolution step size
     ElemType alpha,
     const ElemType* a,  //dense
     const ElemType* bnzValues,  //sparse nz values
@@ -2664,11 +2667,12 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*n)  
+    if (id >= m*numSteps*n)
         return;
 
-    int colInC = id / m;
-    int rowInC = id - colInC * m;
+    int colInC = id / (m * numSteps);
+    int rowInC = id % (m * numSteps);
+    int stepIdx = rowInC / m;
 
     int start = colCSCIndex[colInC]; 
     int end = colCSCIndex[colInC + 1];
@@ -2676,8 +2680,12 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     ElemType s = 0;
     for (int j = start; j<end; j++)  //j points to the value
     {
-        int i = rowIndex[j];
-        s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
+        int i = rowIndex[j] - (stepSize * stepIdx); // offset row index by the convolution step
+
+        if (i >= 0 && i < k)
+        {
+            s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
+        }
     }
 
     c[IDX2C(rowInC, colInC, m)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m)]); // If beta is zero then don't lookup c
