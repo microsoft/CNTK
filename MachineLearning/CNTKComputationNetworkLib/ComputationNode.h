@@ -814,7 +814,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-#if 1   // take this out to no longer allocate in SetDims()
+#if 0   // take this out to no longer allocate in SetDims()
         // our own output dimensions
         virtual void SetDims(size_t rows, size_t cols) override final
         {
@@ -832,6 +832,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
         // Yes, it is bad design that this is possible.
+        // TODO: change this as to only update the col dimension; where rows is updated too, just copy the code (it'd be in a node anyway) or rather create a function.
         virtual void NotifyFunctionValuesModified() override final
         {
             m_numRows = FunctionValues().GetNumRows();
@@ -1443,10 +1444,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
         //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
-        virtual double Get00Element() const override { NOT_IMPLEMENTED; }
-        virtual void VerifyDimsMatch() const override    { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); };
+        virtual double Get00Element() const override     { NOT_IMPLEMENTED; }
         virtual void UpdateFunctionMBSize() override     { NOT_IMPLEMENTED; }
-        virtual void UpdateFunctionValuesSize() override { NOT_IMPLEMENTED };
+        virtual void UpdateFunctionValuesSize() override { NOT_IMPLEMENTED; }
+        virtual void VerifyDimsMatch() const override    { NOT_IMPLEMENTED; }
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
         virtual void ValidateInferChildDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }

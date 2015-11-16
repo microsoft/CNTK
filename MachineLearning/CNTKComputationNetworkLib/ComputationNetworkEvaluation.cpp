@@ -309,10 +309,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->UpdateFunctionMBSize();
 
-                // BUGBUG: IsLeaf() for SEQTraversalFlowControlNode returns false because that node has no children. So we get lucky here. Otherwise it would fail in Validate(). Fix this by getting rid of the Validate() call here.
                 // update the actual m_functionValues
+                // BUGBUG: IsLeaf() for SEQTraversalFlowControlNode returns false because that node has no children.
                 // TODO: This is virtual, so leaf precompute nodes should override this and leave it empty. But we will do this inside OnEvaluateBeginIteration() some day anyway, so don't bother for now.
-                if (!node->IsLeaf() && !node->RequiresPreCompute())
+                if (recInfo || (!node->IsLeaf() && !node->RequiresPreCompute()))
 #if 1
                     node->UpdateFunctionValuesSize();
 #else
@@ -438,6 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionMBSize()     /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionMBSize(); }
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionValuesSize() /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionValuesSize(); };
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::VerifyDimsMatch() const    /*override*/ { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); }
 
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateBeginIteration() /*override*/
     {

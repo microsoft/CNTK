@@ -90,6 +90,7 @@ protected:
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
         virtual void UpdateFunctionMBSize() override;
         virtual void UpdateFunctionValuesSize() override;
+        virtual void VerifyDimsMatch() const override;
         virtual void OnEvaluateBeginIteration() override;
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override;
