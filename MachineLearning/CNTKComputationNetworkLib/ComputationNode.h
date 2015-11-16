@@ -56,8 +56,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // describes inner layout of feature vector that is an image
-    // TODO: This will grow into a more general tensor mechanism.
-    // TODO: SaveToFile() and LoadFromFile() currently use individual elements; provide an overload for the entire object.
+    // TODO: change to variable-length tensor descriptor; rename to DataLayout
+    // TODO: add serialization code, which will also handle variable-length descriptors
+    // TODO: move the 3-arg constructor to new function or derived class ImageLayoutWHC(w,h,c) since main class will be column-major
+    //       image is array [1..H] of array [1..W] of array [1..C] (each image row consists of consecutive float3 values)
+    //       ImageLayoutWHC(w,h,c) = ImageLayout(array<size_t,3> { c, w, h })
+    // must match ComputationNode::m_numRows; or, rather, the ImageLayout is how m_numRows is stored
     struct ImageLayout
     {
         size_t width, height, channels;
@@ -297,6 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumRows() const { return m_numRows; }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
+        // TODO: add an overload SetDims(ImageLayout, cols)
         virtual // for now virtual as this still updates m_functionValues
         void SetDims(size_t rows, size_t cols)
         {
@@ -307,6 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void NotifyFunctionValuesModified() { } // someone outside changed our m_functionValues--update our internal state, e.g. m_numRows, m_numCols
+        virtual void UpdateFunctionValuesSize() = 0;    // allocate m_functionValues to match the dimensions
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
@@ -808,17 +814,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+#if 1   // take this out to no longer allocate in SetDims()
         // our own output dimensions
         virtual void SetDims(size_t rows, size_t cols) override final
         {
             Base::SetDims(rows, cols);
             // TODO: in the future we will NOT resize here, but in a different function
             //       Then this function will no longer be virtual.
-            UpdateSize();
+            UpdateFunctionValuesSize();
             // This ^^ recovers the previous behavior of this function, keeping it compatible at this time, for testing.
         }
+#endif
         // update m_functionValues to match the dimensions given in m_numRows, m_numCols
-        void UpdateSize()
+        virtual void UpdateFunctionValuesSize() override final
         {
             FunctionValues().Resize(m_numRows, m_numCols);
         }
@@ -926,21 +934,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        // update size (#columns) of m_{function,gradient}Values to match MBLayout
+        // update size (#columns) of node to match MBLayout
         // This must be called right before EvaluateThisNode() the first time for a given minibatch.
         // Currently overridden by
         //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
-        // Important: Unless overridden, this function is destructive. Nodes cannot carry over minibatch-size dependent state across minibatches through m_functionValues because of this.
-        // TODO: How is this function different from OnEvaluateBeginIteration()?
-        // TODO: This should be part of the split of Resize() and UpdateSize().
+        // Note: This only updates the dimensions but does not actually allocate anything.
+        // To allocate, UpdateFunctionValuesSize() must be called afterwards.
+        // TODO: How is this function different from OnEvaluateBeginIteration()?  --> answer: it will be called from there some day
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
             {
                 SetDims(GetNumRows(), m_pMBLayout->GetNumCols());
-                UpdateSize();
+                //UpdateFunctionValuesSize();
                 //m_functionValues->ResizeColumns();
             }
         }
@@ -1122,7 +1130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
         //{
         //    if (!IsLeaf())
-        //        UpdateSize();
+        //        UpdateFunctionValuesSize();
         //}
 
 #ifdef _DEBUG
@@ -1436,7 +1444,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
         //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override { NOT_IMPLEMENTED; }
-        virtual void VerifyDimsMatch() const override { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); };
+        virtual void VerifyDimsMatch() const override    { for (auto & node : m_nestedNodes) node->VerifyDimsMatch(); };
+        virtual void UpdateFunctionMBSize() override     { NOT_IMPLEMENTED; }
+        virtual void UpdateFunctionValuesSize() override { NOT_IMPLEMENTED };
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
         virtual void ValidateInferChildDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }
@@ -1471,7 +1481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::SetDims; using Base::NotifyFunctionValuesModified; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateSize; \
+    using Base::SetDims; using Base::NotifyFunctionValuesModified; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \

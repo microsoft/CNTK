@@ -310,8 +310,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->UpdateFunctionMBSize();
 
                 // BUGBUG: IsLeaf() for SEQTraversalFlowControlNode returns false because that node has no children. So we get lucky here. Otherwise it would fail in Validate(). Fix this by getting rid of the Validate() call here.
-                if (node && !node->IsLeaf() && !node->RequiresPreCompute())
+                // update the actual m_functionValues
+                // TODO: This is virtual, so leaf precompute nodes should override this and leave it empty. But we will do this inside OnEvaluateBeginIteration() some day anyway, so don't bother for now.
+                if (!node->IsLeaf() && !node->RequiresPreCompute())
+#if 1
+                    node->UpdateFunctionValuesSize();
+#else
                     node->Validate(true);                       // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
+#endif
                 // TODO: this ^^ should be eliminated now that we have separate dimension variables on nodes
                 node->VerifyDimsMatch();
 
@@ -423,35 +429,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
     // -----------------------------------------------------------------------
-    // SEQTraversalFlowControlNode methods -- implements SEQ traversal
+    // SEQTraversalFlowControlNode methods -- implements SEQ traversal (loop unrolling)
+    //
+    // While PAR mode processes all samples in the MB independently, and thus in
+    // PARallel, SEQ mode is to honor sequential dependencies. As such, it
+    // unrolls the loop over time steps and runs the network once per time step.
     // -----------------------------------------------------------------------
 
-    // implementations of SEQTraversalFlowControlNode (loop unrolling)
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionMBSize() /*override*/
-    {
-        for (auto & node2 : m_nestedNodes)
-            node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
-    }
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionMBSize()     /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionMBSize(); }
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::UpdateFunctionValuesSize() /*override*/ { for (auto & node : m_nestedNodes) node->UpdateFunctionValuesSize(); };
 
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateBeginIteration() /*override*/
     {
         // take the opportunity to check that layout is shared by all nodes in the loop
         // TODO: we should do this in a constructor.
-        for (auto & node2 : m_nestedNodes)
+        for (auto & node : m_nestedNodes)
         {
-            if (node2->GetMBLayout() != GetMBLayout())
+            if (node->GetMBLayout() != GetMBLayout())
                 LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                            node2->NodeName().c_str(), m_nestedNodes[0]->NodeName().c_str());
+                            node->NodeName().c_str(), m_nestedNodes[0]->NodeName().c_str());
         }
 
         // tell all that loop is about to commence
-        for (auto & node2 : m_nestedNodes)
-            node2->OnEvaluateBeginIteration();
+        for (auto & node : m_nestedNodes)
+            node->OnEvaluateBeginIteration();
 
         // since we share memory we need to resize function value matrices correctly
         // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
-        for (auto & node2 : m_nestedNodes)
-            node2->Validate(true);
+        for (auto & node : m_nestedNodes)
+#if 1
+            node->UpdateFunctionValuesSize();
+#else
+            node->Validate(true);
+#endif
     }
 
     // evaluation of a SEQTraversalFlowControlNode FlowControlNode
@@ -468,10 +478,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FrameRangeIteration range(GetMBLayout(), m_steppingDirection);
         for (auto t = range.begin(); t != range.end(); t++)
         {
-            for (auto & node2 : m_nestedNodes)
+            for (auto & node : m_nestedNodes)
             {
-                node2->EvaluateThisNode(t);
-                node2->UpdateEvalTimeStamp();
+                node->EvaluateThisNode(t);
+                node->UpdateEvalTimeStamp();
             }
         } 
     }
@@ -479,8 +489,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateEndIteration() /*override*/
     {
         // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
-        for (auto & node2 : m_nestedNodes)
-            node2->OnEvaluateEndIteration();
+        for (auto & node : m_nestedNodes)
+            node->OnEvaluateEndIteration();
     }
 
     // called before first iteration step of ComputeGradient()
