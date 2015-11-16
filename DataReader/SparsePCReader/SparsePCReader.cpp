@@ -238,15 +238,18 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         m_labelsBuffer[j] = label;
         m_currOffset += sizeof(ElemType);
 
-        int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
-
-        if (m_verificationCode != 0 && verifCode != m_verificationCode)
+        if (m_verificationCode != 0)
         {
-            RuntimeError("Verification code did not match (expected %d) - error in reading data", m_verificationCode);
-            return false;
-        }
+            int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
 
-        m_currOffset += sizeof(int32_t);
+            if (verifCode != m_verificationCode)
+            {
+                RuntimeError("Verification code did not match (expected %d) - error in reading data", m_verificationCode);
+                return false;
+            }
+
+            m_currOffset += sizeof(int32_t);
+        }
     }
 
     m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize, false);
