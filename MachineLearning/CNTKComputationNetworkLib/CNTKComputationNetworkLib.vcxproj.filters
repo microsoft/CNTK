@@ -123,6 +123,9 @@
     <ClInclude Include="EsotericNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataTensor.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
