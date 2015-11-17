@@ -1,0 +1,90 @@
+
+    # Macro definitions
+    #Feed Forward
+    FF(X1, W1, B1)
+    {
+        T=Times(W1,X1)
+        P=Plus(T, B1)
+    }
+
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF(in, w, b)
+    }
+
+    #RectifiedLinear Base Feed Forward
+    RBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount)
+        RL = RectifiedLinear(BFF)
+    }
+
+    #Rectified Linear Feed Forward
+    RFF(X2,W2,B2)
+    {   
+        FF = FF(X2, W2, B2)  
+        RL = RectifiedLinear(FF)
+    }
+
+    #RectifiedLinear Feed Forward with Dropout
+    RFFD(X3,W3,B3)
+    {
+        RFF=RFF(X3, W3, B3)
+        DO=Dropout(RFF)
+    }
+
+    #Sigmoid Base Feed Forward
+    SBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount)
+        S = Sigmoid(BFF)
+    }
+
+    #Sigmoid Feed Forward
+    SFF(X2,W2,B2)
+    {
+        FF = FF(X2, W2, B2)
+        S = Sigmoid(FF)
+    }
+
+    #Sigmoid Feed Forward with Dropout
+    SFFD(X3,W3,B3)
+    {
+        SFF=SFF(X3, W3, B3)
+        DO=Dropout(SFF)
+    }
+
+    #Sigmoid Feed Forward with Dropout
+    SBFFD(inputVal,rowCount,colCount)
+    {
+        SBFF=SBFF(inputVal,rowCount,colCount)
+        DO=Dropout(SBFF)
+    }
+
+    #SoftMax Feed Forward
+    SMFF(x,y,z, labels)
+    {
+        FF = FF(x,y,z)  
+        SM = CrossEntropyWithSoftmax(labels, FF)
+    }
+
+    #SoftMax Base Feed Forward
+    SMBFF(x,r,c, labels)
+    {
+        BFF = BFF(x,r,c)  
+        SM = CrossEntropyWithSoftmax(labels, BFF)
+    }
+
+    #inline Rectified Linear Feed Forward
+    RFF_R(x1, w1, b1)=RectifiedLinear(Plus(Times(w1,x1),b1))
+
+    #inline Rectified Linear Feed Forward with Dropout
+    RFFD_R(x1, w1, b1)=Dropout(RectifiedLinear(Plus(Times(w1,x1),b1)))
+   
+
+
+
+ 
