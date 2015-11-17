@@ -282,11 +282,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
             RuntimeError("SparsePCReader only supports single label value per column.");
         }
 
-        if (labelCols != j)
-        {
-            (*labels).Resize(1, j);
-        }
-
+        (*labels).Resize(1, j);
         (*labels).SetValue((ElemType)0);
         (*labels).SetValue(labelRows, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
     }
