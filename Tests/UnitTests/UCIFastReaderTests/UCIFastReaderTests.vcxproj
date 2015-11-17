@@ -108,7 +108,7 @@
       <OptimizeReferences>
       </OptimizeReferences>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ucifastreader.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ucifastreader.lib;cntkmath.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -142,7 +142,9 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\UCIFastReaderSimpleDataLoop_Config.txt" />
+    <None Include="Data\UCIFastReaderSimpleDataLoop_Config.txt">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
