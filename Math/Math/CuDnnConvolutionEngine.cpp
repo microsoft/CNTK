@@ -341,7 +341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-            bool spatial, Mat& runMean, Mat& runInvStdDev, Mat& out) override
+            bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) override
         {
             const size_t crowIn = inT.w() * inT.h() * inT.c();
 

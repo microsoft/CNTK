@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
         virtual void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
-            bool spatial, Mat& runMean, Mat& runInvStdDev, Mat& out) = 0;
+            bool spatial, const Mat& runMean, const Mat& runInvStdDev, Mat& out) = 0;
 
         virtual void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
             const Tensor4D& scaleBiasT, const Mat& scale, bool spatial, const Mat& saveMean, const Mat& saveInvStdDev,
