@@ -239,8 +239,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const Matrix<ElemType> & weightMatrix = input0;
             assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_imageLayout.GetNumChannels());
+
+            // GPU and 1-dimensional image
+            bool is1DConvolutionOnGPUSparse = (m_inputImageLayout.GetHeight() == 1
+                && input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU
+                && input1.GetMatrixType() == MatrixType::SPARSE);
+
             functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
-            functionValues.Resize(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
+
+            // Reshaping is only necessary if we are going to use the unpacking trick
+            if (!is1DConvolutionOnGPUSparse)
+                functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
             size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
@@ -251,17 +260,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
                 size_t smallBatchSize = endSampleID-startSampleID;
 
-                // GPU and 1-dimensional image
-                bool is1DConvolutionOnGPU = (input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU && m_inputImageLayout.height == 1);
-
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch;
 
                 // We optimize for three different scenarios here by handling them slightly differently.
-                // Scenario 1 (dense input): Unroll using AssignPackedConvolutionInput and multiply.
-                // Scenario 2 (sparse 1-dimensional image): for text scenarios we have a specific kernel.
-                // Scenario 3 (sparse all others): convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                if (input1.GetMatrixType() == MatrixType::DENSE || is1DConvolutionOnGPU)
+                // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
+                // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
+                // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
+                if (input1.GetMatrixType() == MatrixType::DENSE || is1DConvolutionOnGPUSparse)
                 {
                     inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                 }
@@ -271,12 +277,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 }
 
-                Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
-
-                if (is1DConvolutionOnGPU)
+                if (is1DConvolutionOnGPUSparse)
                 {
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, false, inputSubBatch, false, 1, outputSubBatch,
-                        m_horizontalSubsample * m_inputImageLayout.channels, m_zeroPadding);
+                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
+                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, inputSubBatch, 0, outputSubBatch,
+                        m_horizontalSubsample * m_inputImageLayout.GetNumChannels(), m_zeroPadding);
                 }
                 else
                 {
@@ -285,11 +290,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                         m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(),
                                                         m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
 
+                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
                     Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
                 }
             }
 
-            functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
+            if (!is1DConvolutionOnGPUSparse)
+                functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
 
 #if NANCHECK
             functionValues.HasNan("Convolution");

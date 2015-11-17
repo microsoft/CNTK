@@ -2684,11 +2684,11 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
 
         if (i >= 0 && i < k)
         {
-            s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
+            s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
         }
     }
 
-    c[IDX2C(rowInC, colInC, m)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m)]); // If beta is zero then don't lookup c
+    c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
 }
 
 /// c += alpha * a * b^T

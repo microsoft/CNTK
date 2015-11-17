@@ -868,28 +868,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
     {
-        int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
-        int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows();
-
-        assert(k > 0 && l > 0);  //converting from size_t to int may cause overflow
-        assert(k == l);
-        if (k != l)
-        {
-            InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
-        }
-
-        ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, false);
-    }
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
-        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, size_t stepSize, bool padding)
-    {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("ConvolveAndWeightedAdd: All matrices must be on the same GPU");
 
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            LogicError("ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
         int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
@@ -897,20 +880,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols();
 
         assert(m > 0 && k > 0 && l > 0 && n > 0);  //converting from size_t to int may cause overflow
-
-        int numSteps = (l / k);
-        if (padding)
-            numSteps += (int)ceil(1.0 * (l % k) / stepSize);
-
-        if (numSteps == 0)
-            LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
-
-        int cRows = m * numSteps;
-        int cCols = n;
-
-        if (c.GetNumRows() != cRows || c.GetNumCols() != cCols)
+        assert(k == l);
+        if (k != l)
         {
-            c.Resize(cRows, cCols);
+            InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
         c.PrepareDevice();
@@ -918,27 +891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeA && !transposeB)
             {
-                int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
-                cudaEvent_t done = nullptr;
-                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-                _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
-                    m,          // rowDense
-                    k,          // colDense
-                    n,          // colSparse
-                    numSteps,   // convolution num steps
-                    stepSize,   // convolution step size
-                    alpha,
-                    reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
-                    reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
-                    rhs.RowLocation(),
-                    rhs.ColLocation(),
-                    beta,
-                    reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                    );
-
-                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, false);
             }
             else if (!transposeA && transposeB)
             {
@@ -978,6 +931,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GPUSparseMatrix<ElemType> tempMatrix(matrixFormatSparseCSC, rhs.GetComputeDeviceId());
             rhs.ConvertToSparseFormat(matrixFormatSparseCSC, tempMatrix);
             MultiplyAndWeightedAdd(alpha, lhs, transposeA, tempMatrix, transposeB, beta, c);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+
+    template<class ElemType>
+    void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs,
+        ElemType beta, GPUMatrix<ElemType>& c, size_t stepSize, bool padding)
+    {
+        if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
+            RuntimeError("ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+
+        if (lhs.IsEmpty() || rhs.IsEmpty())
+            LogicError("ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+
+        int m = (int)lhs.GetNumRows();
+        int k = (int)lhs.GetNumCols();
+        int l = (int)rhs.GetNumRows();
+        int n = (int)rhs.GetNumCols();
+
+        assert(m > 0 && k > 0 && l > 0 && n > 0);  //converting from size_t to int may cause overflow
+
+        int numSteps = 0;
+        if (padding)
+            numSteps = (int)ceil(1.0 * l / stepSize);
+        else if (l >= k)
+            numSteps = 1 + (l - k) / stepSize;
+
+        if (numSteps == 0)
+            LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
+
+        int cRows = m * numSteps;
+        int cCols = n;
+
+        if (c.GetNumRows() != cRows || c.GetNumCols() != cCols)
+        {
+            c.Resize(cRows, cCols);
+        }
+
+        c.PrepareDevice();
+        if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
+        {
+            int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                m,          // rowDense
+                k,          // colDense
+                n,          // colSparse
+                numSteps,   // convolution num steps
+                stepSize,   // convolution step size
+                alpha,
+                reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                rhs.RowLocation(),
+                rhs.ColLocation(),
+                beta,
+                reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                );
+
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         }
         else
         {
