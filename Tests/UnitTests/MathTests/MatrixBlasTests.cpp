@@ -27,7 +27,7 @@ namespace Microsoft
 
 				BOOST_AUTO_TEST_SUITE(MatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(MatrixMultiplyAndWeightedAddTest)
+					BOOST_AUTO_TEST_CASE(MatrixMultiplyTest)
 				{
 					//Part 1: Multiply with identity matrix
 					SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2);
@@ -102,7 +102,7 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd) // This test will fail without GPU
+				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd)
 				{
 					const int seed = rand();
 					const SingleMatrix singleMatrixA = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 0, 0);
@@ -133,7 +133,7 @@ namespace Microsoft
 					const SingleMatrix singleMatrixB2 = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 5, 0); // Column
 					SingleMatrix singleMatrixC2(singleMatrixB2); // C2==B2            
 					const float betaOne = 1;
-					SingleMatrix::ScaleAndAdd(alpha, singleMatrixA2, betaOne, singleMatrixC2); // C1=alpha*A1+beta*C1
+					SingleMatrix::ScaleAndAdd(alpha, singleMatrixA2, betaOne, singleMatrixC2); // C2=alpha*A1+beta*C1
 					foreach_coord(i, j, singleMatrixC2)
 					{
 						float x = singleMatrixC2(i, j);
@@ -142,7 +142,7 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd_double) // This test will fail without GPU
+				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd_double)
 				{
 					const int seed = rand();
 					DoubleMatrix matrixA = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 0, 0);
@@ -173,7 +173,7 @@ namespace Microsoft
 					DoubleMatrix matrixB2 = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 5, 0); // Column
 					DoubleMatrix matrixC2(matrixB2); // C2==B2            
 					const float betaOne = 1;
-					DoubleMatrix::ScaleAndAdd(alpha, matrixA2, betaOne, matrixC2); // C1=alpha*A1+beta*C1
+					DoubleMatrix::ScaleAndAdd(alpha, matrixA2, betaOne, matrixC2); // C2=alpha*A1+beta*C1
 					foreach_coord(i, j, matrixC2)
 					{
 						float x = static_cast<float>(matrixC2(i, j));
@@ -253,7 +253,7 @@ namespace Microsoft
 					Matrix<float> matrixB = Matrix<float>::Eye(5);
 					BOOST_CHECK_EQUAL(5, matrixB.MatrixNorm0());
 				}
-				
+
 				BOOST_AUTO_TEST_CASE(MatrixInnerProductOfMatrices)
 				{
 					SingleMatrix vector1(c_value_2, c_value_3);
