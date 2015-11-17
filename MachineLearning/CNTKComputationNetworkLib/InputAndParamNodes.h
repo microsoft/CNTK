@@ -47,11 +47,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_parameterUpdateRequired = true;
             m_imageLayout = ImageLayoutWHC(1, rows, 1);
+            // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
         }
+#if 0
+        LearnableParameter(const IConfigValuePtr configp) :
+            LearnableParameter((DEVICEID_TYPE)(int)(*config)[L"deviceId"], L"<placeholder>", (*config)[L"rows"], (config*)[L"cols"]))
+        {
+            // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+            // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
+            SetParameterUpdateRequired(config[L"needGradient"]);
+            static int randomSeed = 1;
+            wstring initString = config[L"init"];
+            if (initString == L"fixedValue")
+                FunctionValues().SetValue((ElemType)config[L"value"]);
+            else if (initString == L"uniform" || initString == L"gaussian")
+            {
+                // TODO: add these options also to old NDL
+                int forcedRandomSeed = config[L"randomSeed"];   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
+                static unsigned long m_randomSeedOffset = 0;    // TODO: this is held in the ComputationNetwork, but we don't have one yet
+                InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? (randomSeed++ + m_randomSeedOffset) : (unsigned long)forcedRandomSeed, config[L"initValueScale"], config[L"initOnCPUOnly"]);
+            }
+            else if (initString == L"fromFile")
+            {
+                wstring initFromFilePath = config[L"initFromFilePath"];
+                if (initFromFilePath.empty())
+                    RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                InitFromFile(initFromFilePath);
+            }
+            else
+                RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
+        }
+#endif
 
         virtual void SaveToFile(File& fstream) const override
         {
