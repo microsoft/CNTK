@@ -1123,4 +1123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetwork> registerComputationNetwork(L"ComputationNetwork");
 }}}

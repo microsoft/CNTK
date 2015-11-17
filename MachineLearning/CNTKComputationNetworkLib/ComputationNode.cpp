@@ -151,6 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // others
     // -----------------------------------------------------------------------
 
+#if 0   // temporarily moved to NetworkBuilderFromConfig.cpp to make it emit something, for BrainScript reorg
     template<class ElemType>
     /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
     {
@@ -168,6 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << wstring(L")");
         }
     }
+#endif
 
     // -----------------------------------------------------------------------
     // instantiate the core class templates

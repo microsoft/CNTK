@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
     };
 
-
+#if 0
     // creates the lambda for creating an object that can exist as 'float' or 'double'
     // Pass both types as the two template args.
     template<class Cfloat, class Cdouble>
@@ -267,5 +267,43 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             return &newIter->second;
         return nullptr; // not found
     }
+#endif
 
+    // temporary code for BrainScript update (using register)
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr configp)
+    {
+        return DualPrecisionHelpers<float, ComputationNode<float>>::MakeRuntimeObject(configp);
+    }
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<double>>(const IConfigRecordPtr configp)
+    {
+        return DualPrecisionHelpers<double, ComputationNode<double>>::MakeRuntimeObject(configp);
+    }
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNode<float>, ComputationNode<double>> adderx(L"ComputationNode");
+}}}
+
+// temporarily moved this function here, to force this compilation unit to emit something
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace Microsoft::MSR;
+
+    template<class ElemType>
+    /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
+    {
+        fstream << L"\n" + NodeName() + L"=" + OperationName();
+
+        if (!IsLeaf())
+        {
+            fstream << wstring(L"(");
+            for (size_t i = 0; i<ChildrenSize(); i++)
+            {
+                if (i > 0)
+                    fstream << wstring(L",");
+                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+            }
+            fstream << wstring(L")");
+        }
+    }
 }}}
