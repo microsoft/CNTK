@@ -215,7 +215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             SetDims(rows, cols);
-            //UpdateFunctionValuesSize();
+            UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
         }
     public:
