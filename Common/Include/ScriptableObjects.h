@@ -512,4 +512,82 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     // TODO: should this be a static member of above class?
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId);
 
+    // -----------------------------------------------------------------------
+    // static table of all configurable runtime types
+    // -----------------------------------------------------------------------
+
+    class ConfigurableRuntimeTypeRegister
+    {
+        // we wrap the static variable in a function so that we don't need a CPP file
+        static map<wstring, ConfigurableRuntimeType> & GetTheRegister()
+        {
+            // the one static variable that contains all configurable runtime types
+            static map<wstring, ConfigurableRuntimeType> reg;
+            return reg;
+        }
+
+        static void Register(const wchar_t * typeId, ConfigurableRuntimeType && rtInfo)
+        {
+            auto & reg = GetTheRegister();
+            auto res = reg.insert(std::make_pair((std::wstring)typeId, std::move(rtInfo)));
+            if (!res.second)
+                LogicError("RegisterConfigurableRuntimeType: Attempted to register type '%ls' twice.", typeId);
+        }
+    public:
+
+        // to instantiate a ConfigurableRuntimeType object, use this function to find its constructor
+        static const ConfigurableRuntimeType * Find(const wstring & typeId)
+        {
+            auto & reg = GetTheRegister();
+            auto iter = reg.find(typeId);
+            if (iter == reg.end())
+                return nullptr;
+            else
+                return &iter->second;
+        }
+
+        // to register a runtime type, use an instance of this class in each library
+        // ConfigurableRuntimeTypeRegister::Add<ClassName> registerClassName(L"ClassName")l
+        template<class C>
+        struct Add
+        {
+            Add(const wchar_t * typeId)
+            {
+                // create the runtime info
+                ConfigurableRuntimeType rtInfo;
+                rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+                {
+                    return MakeRuntimeObject<C>(config);
+                };
+                rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
+                // insert it into the static table
+                Register(typeId, std::move(rtInfo));
+            }
+        };
+        // to register a class that exists in dual precisions (Something<ElemType>>, use this one instead
+        template<class Cfloat, class Cdouble>
+        struct AddFloatDouble
+        {
+            AddFloatDouble(const wchar_t * typeId)
+            {
+                // create the runtime info
+                ConfigurableRuntimeType rtInfo;
+                rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+                {
+                    wstring precision = (*config)[L"precision"];            // dispatch on ElemType
+                    if (precision == L"float")
+                        return MakeRuntimeObject<Cfloat>(config);
+                    else if (precision == L"double")
+                        return MakeRuntimeObject<Cdouble>(config);
+                    else
+                        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+                };
+                rtInfo.isConfigRecord = is_base_of<IConfigRecord, Cfloat>::value;
+                static_assert(is_base_of<IConfigRecord, Cfloat>::value == is_base_of<IConfigRecord, Cdouble>::value, "");   // we assume that both float and double have the same behavior
+                // insert it into the static table
+                Register(typeId, std::move(rtInfo));
+            }
+        };
+    };
+
 }}} // end namespaces
