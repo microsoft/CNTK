@@ -136,19 +136,20 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // startIndex, numRows, inputs /*one*/, needGradient=false
                     node = New<RowSliceNode<ElemType>>(deviceId, nodeName, (size_t)config[L"startIndex"], (size_t)config[L"numRows"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    // TODO: Why is this ^^ flag here? This node has no parameters.
                 }
                 else if (OpIs(RowRepeatNode)) // TODO: untested
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<RowRepeatNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRepeats"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
-                else if (OpIs(DiagonalNode))
+                else if (OpIs(DiagonalNode))        // TODO: seems this is no longer a special case (needGradient makes no sense here)
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
                 else if (OpIs(ReshapeNode))
                 {
