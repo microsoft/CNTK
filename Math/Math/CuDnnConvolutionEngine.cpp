@@ -10,7 +10,7 @@
 #ifdef USE_CUDNN
 #include <cudnn.h>
 
-template<> static const char* CudaErrString(cudnnStatus_t x)
+template<> const char* CudaErrString(cudnnStatus_t x)
 {
     return cudnnGetErrorString(x);
 }
@@ -202,12 +202,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
     {
     public:
-        using Tensor4D = ConvolutionTensor4D;
-        using Tensor4DPtr = std::unique_ptr<Tensor4D>;
-        using Filter = ConvolutionFilter;
-        using FilterPtr = std::unique_ptr<ConvolutionFilter>;
-        using ConvDesc = ConvolutionDescriptor;
-        using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
+    	using Base = ConvolutionEngine<ElemType>;
+        using typename Base::Mat;
+        using typename Base::Tensor4D;
+        using typename Base::Filter;
+        using typename Base::ConvDesc;
 
         CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
             : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0), m_tempC(deviceId)
@@ -496,6 +495,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class CuDnnPoolingEngine : public PoolingEngine<ElemType>
     {
     public:
+    	using Base = PoolingEngine<ElemType>;
+        using typename Base::Tensor4D;
+        using typename Base::PoolDesc;
+        using typename Base::Mat;
+
+    public:
         CuDnnPoolingEngine()
             : m_cudnn(nullptr)
         {
@@ -546,7 +551,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
     {
-        static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
+    	// REVIEW alexeyk: assert fires in GCC but not in VC++.
+        //static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
     }
     template<>
     typename CuDnnConvolutionEngineFactory<float>::Tensor4DPtr CuDnnConvolutionEngineFactory<float>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
@@ -562,7 +568,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
     {
-        static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
+    	// REVIEW alexeyk: assert fires in GCC but not in VC++.
+        //static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
     }
     template<>
     typename CuDnnConvolutionEngineFactory<float>::FilterPtr CuDnnConvolutionEngineFactory<float>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
@@ -586,7 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
-        PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad)
+        typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad)
     {
         return std::make_unique<CuDnnPoolingDescriptor>(kind, w, h, wStride, hStride, wPad, hPad);
     }

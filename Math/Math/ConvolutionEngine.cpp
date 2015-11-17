@@ -11,62 +11,15 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    class DefaultConvolutionEngineFactory : public ConvolutionEngineFactory<ElemType>
-    {
-    public:
-        DefaultConvolutionEngineFactory(DEVICEID_TYPE deviceId)
-            : ConvolutionEngineFactory<ElemType>(deviceId)
-        {
-        }
-
-    public:
-        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
-        {
-            return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
-        }
-
-        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override
-        {
-            return std::make_unique<Filter>(w, h, c, k);
-        }
-
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/, 
-            size_t wStride, size_t hStride, bool padding) override
-        {
-            return std::make_unique<ConvDesc>(wStride, hStride, padding);
-        }
-
-        PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override
-        {
-            return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
-        }
-
-        ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) override
-        {
-            return std::make_unique<DefaultConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
-        }
-
-        PoolEnginePtr CreatePoolEngine() override
-        {
-            return std::make_unique<DefaultPoolingEngine<ElemType>>();
-        }
-    };
-
-    template<class ElemType>
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
-    {
-        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
-            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
-        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
-    }
-
-    template class ConvolutionEngineFactory<float>;
-    template class ConvolutionEngineFactory<double>;
-
-    template<class ElemType>
     class DefaultConvolutionEngine : public ConvolutionEngine<ElemType>
     {
+    public:
+    	using Base = ConvolutionEngine<ElemType>;
+        using typename Base::Mat;
+        using typename Base::Tensor4D;
+        using typename Base::Filter;
+        using typename Base::ConvDesc;
+
     public:
         DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
             : m_tempMatrix(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
@@ -295,6 +248,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class DefaultPoolingEngine : public PoolingEngine<ElemType>
     {
     public:
+    	using Base = PoolingEngine<ElemType>;
+        using typename Base::Tensor4D;
+        using typename Base::PoolDesc;
+        using typename Base::Mat;
+
+    public:
         void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
         {
             assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
@@ -349,4 +308,75 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class PoolingEngine<float>;
     template class PoolingEngine<double>;
+
+    template<class ElemType>
+    class DefaultConvolutionEngineFactory : public ConvolutionEngineFactory<ElemType>
+    {
+    public:
+    	using Base = ConvolutionEngineFactory<ElemType>;
+        using typename Base::Tensor4D;
+        using typename Base::Tensor4DPtr;
+        using typename Base::Filter;
+        using typename Base::FilterPtr;
+        using typename Base::ConvDesc;
+        using typename Base::ConvDescPtr;
+        using typename Base::PoolDesc;
+        using typename Base::PoolDescPtr;
+
+        using typename Base::ConvEnginePtr;
+        using typename Base::PoolEnginePtr;
+
+        using Base::m_deviceId;
+
+    public:
+        DefaultConvolutionEngineFactory(DEVICEID_TYPE deviceId)
+            : ConvolutionEngineFactory<ElemType>(deviceId)
+        {
+        }
+
+    public:
+        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
+        {
+            return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
+        }
+
+        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override
+        {
+            return std::make_unique<Filter>(w, h, c, k);
+        }
+
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/,
+            size_t wStride, size_t hStride, bool padding) override
+        {
+            return std::make_unique<ConvDesc>(wStride, hStride, padding);
+        }
+
+        PoolDescPtr CreatePoolDescriptor(typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override
+        {
+            return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
+        }
+
+        ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) override
+        {
+            return std::make_unique<DefaultConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
+        }
+
+        PoolEnginePtr CreatePoolEngine() override
+        {
+            return std::make_unique<DefaultPoolingEngine<ElemType>>();
+        }
+    };
+
+    template<class ElemType>
+    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
+    {
+        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
+        //if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
+            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
+        //return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
+    }
+
+    template class ConvolutionEngineFactory<float>;
+    template class ConvolutionEngineFactory<double>;
+
 }}}
