@@ -6,12 +6,13 @@
 #pragma once
 #include "Basics.h"
 #include <vector>
-#include <string>
 #include <map>
 #include <stdexcept>
 #include <stdint.h>
 
 using namespace std;
+
+#pragma warning(disable : 4996) // Caused by the TODO below (line ~1280)
 
 // helper for numeric parameter arguments for multiple layers
 // This parses arguments of the form a:b*n:c where b gets duplicated n times and c unlimited times.
@@ -608,8 +609,7 @@ public:
                 tokenEnd++;
             }
             // While we have tokens to parse
-        }
-        while (tokenEnd != npos);
+        } while (tokenEnd != npos);
     }
 
     // StripComments - This method removes the section of a config line corresponding to a comment.
