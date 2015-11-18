@@ -208,7 +208,6 @@ MATH_SRC =\
 ifdef CUDA_PATH
 MATH_SRC +=\
 	Math/Math/GPUMatrix.cu \
-	Math/Math/GPUMatrixCUDAKernels.cu \
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
 	Math/Math/MatrixQuantizerGPU.cu \

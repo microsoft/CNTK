@@ -8,6 +8,7 @@
 
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -151,7 +152,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // others
     // -----------------------------------------------------------------------
 
-#if 0   // temporarily moved to NetworkBuilderFromConfig.cpp to make it emit something, for BrainScript reorg
     template<class ElemType>
     /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
     {
@@ -169,7 +169,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << wstring(L")");
         }
     }
-#endif
 
     // -----------------------------------------------------------------------
     // instantiate the core class templates
@@ -185,4 +184,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LearnableParameter<float>;
     template class LearnableParameter<double>;
+}}}
+
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+
+    using namespace Microsoft::MSR::CNTK;
+
+    // -----------------------------------------------------------------------
+    // register ComputationNode with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
 }}}

@@ -1,3 +1,4 @@
+#if 0   // This is no longer needed. Keeping it around for reference, but should simply be deleted after a few weeks.
 // NetworkBuilderFromConfig.cpp -- interface to node and network creation from glue languages through config record parameters  --fseide
 
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -320,3 +321,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 }}}
+#endif
