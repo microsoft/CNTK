@@ -323,13 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
                 cols = 0;
             m_imageLayout.LoadFromFile(fstream);
-
-            CreateMatrixIfNull(m_functionValues);
-            if (m_isSparse)
-                ConvertToSparseMatrix();
-
-            SetDims(rows, cols);
-            m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
+            Init(rows, cols, m_isSparse);
         }
 
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
