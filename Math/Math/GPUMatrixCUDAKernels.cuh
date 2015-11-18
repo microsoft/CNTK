@@ -2682,8 +2682,11 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     {
         int i = rowIndex[j] - (stepSize * stepIdx); // offset row index by the convolution step
 
-        if (i >= 0 && i < k)
+        if (i >= 0)
         {
+            if (i >= k)
+                break;
+
             s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
         }
     }
