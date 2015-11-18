@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 #endif
 
     // temporary code for BrainScript update (using register)
-#if 1
+#if 0
     template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr configp)
     {
         return DualPrecisionHelpers<float, ComputationNode<float>>::MakeRuntimeObject(configp);

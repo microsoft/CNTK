@@ -38,7 +38,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Convolution"; }
     public:
-        DeclareConstructorFromConfigWithNumInputs(ConvolutionNode);
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
@@ -46,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
             m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)
         {
-            m_imageLayout = ImageLayoutWHC(1, 1, 0);           // TODO: what is this magic #channels == 0?
+            m_imageLayout = ImageLayoutWHC(1, 1, 0);           // TODO: what is this magic #channels == 0? Can this even be initialized at this time, or only inferred?
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
             Base(deviceId, name),
@@ -55,6 +54,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
             m_imageLayout = ImageLayoutWHC(1, 1, outputChannels);
+        }
+        ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
+                            configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"),
+                            configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"))
+        {
+            // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
+            AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -411,6 +418,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
         { }
+        PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
+            PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"))
+        {
+            // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void SaveToFile(File& fstream) const override
         {
@@ -540,13 +553,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
         static const std::wstring TypeName() { return L"MaxPooling"; }
     public:
-        DeclareConstructorFromConfigWithNumInputs(MaxPoolingNode);
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
+        MaxPoolingNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
+        { }
 
-        /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
+        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
         {
             inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.GetNumChannels(),
                                                       m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -554,7 +569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                       m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
-        /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
+        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
         {
             functionValues.AssignMaxPoolingResult(input0, m_inputImageLayout.GetNumChannels(),
                                                   m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -576,13 +591,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
         static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
-        DeclareConstructorFromConfigWithNumInputs(AveragePoolingNode);
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
+        AveragePoolingNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
+        { }
 
-        /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/)
+        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
         {
             inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.GetNumChannels(),
                                                           m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -590,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                           m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
-        /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
+        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
         {
             functionValues.AssignAveragePoolingResult(input0, m_inputImageLayout.GetNumChannels(),
                                                       m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 

@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
             LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
         {
-            NumInputs::Check(configp);
+            AttachInputs(configp, this->GetExpectedNumInputs());
             // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
             // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
             SetParameterUpdateRequired(configp->Get(L"needGradient"));
@@ -248,7 +248,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = false;
         }
     public:
-        DeclareConstructorFromConfigWithNumInputs(InputValue);
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
@@ -268,7 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_imageLayout = ImageLayoutWHC(1, rows, 1);
+            m_imageLayout = ImageLayoutVector(rows);
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
@@ -283,6 +282,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_imageLayout = imageLayout;
 
             Init(rows, cols, isSparse);
+        }
+        InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            InputValue(configp->Get(L"deviceId"), L"<placeholder>")
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+            bool isSparse = configp->Get(L"isSparse"); // TODO: no, this must go into a separate type SparseInputValue
+            bool isImage  = configp->Get(L"isImage");
+            if (!isImage)
+            {
+                size_t rows = configp->Get(L"rows");
+                size_t cols = configp->Get(L"cols");
+                m_imageLayout = ImageLayoutVector(rows);    // no tensor, just a vector
+                Init(rows, cols, isSparse);
+            }
+            else
+            {
+                m_imageLayout = ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"));
+                size_t rows = m_imageLayout.GetNumElements();
+                size_t cols = configp->Get(L"numImages");         // this is actually the MB size
+                Init(rows, cols, isSparse);
+            }
         }
 
         virtual void SaveToFile(File& fstream) const override

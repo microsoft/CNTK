@@ -362,15 +362,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
         {
             vector<ComputationNodeBasePtr> inputs;
-            const auto inputsArg = configp->Get(L"inputs");
-            if (inputsArg.Is<ComputationNodeBase>())                // single arg
-                inputs.push_back(inputsArg);
-            else                                                    // a whole vector
+            const auto * inputsArg = configp->Find(L"inputs");
+            if (inputsArg)
             {
-                ScriptableObjects::ConfigArrayPtr inputsArray = inputsArg;
-                const auto range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
-                    inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
+                if (inputsArg->Is<ComputationNodeBase>())                // single arg
+                    inputs.push_back(*inputsArg);
+                else                                                    // a whole vector
+                {
+                    ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
+                    const auto range = inputsArray->GetIndexRange();
+                    for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
+                        inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
+                }
             }
             return inputs;
         }
@@ -742,13 +745,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // for testing number of inputs in constructor (where we don't yet have dynamic_cast), construct this object with the config record
         // It will verify the number of elements on the 'inputs' argument
         NumInputs(const ScriptableObjects::IConfigRecordPtr configp) { Check(configp); }
+#if 0
         ScriptableObjects::IConfigRecordPtr Check(const ScriptableObjects::IConfigRecordPtr configp) const
         {
-            auto * val = configp->Find(L"inputs");
-            size_t numInputs = val ? ComputationNodeBase::GetInputsFromConfig(configp).size() : 0;
+            size_t numInputs = ComputationNodeBase::GetInputsFromConfig(configp).size();
             if (numInputs != GetExpectedNumInputs())
             {
                 // print an error. For that, find at least one argument
+                auto * val = configp->Find(L"inputs");
                 if (!val)   // if there is no 'inputs' then get the first item of this config record for a Fail() function
                 {
                     auto members = configp->GetMemberIds();
@@ -762,6 +766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return configp;
         }
+#endif
         size_t GetExpectedNumInputs() const override final { return m_numInputs; }
     };
 
@@ -798,11 +803,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
         // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
 #define DeclareConstructorFromConfig(C)              C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp); }
-#ifdef _MSC_VER
-#define DeclareConstructorFromConfigWithNumInputs(C) C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(NumInputs::Check(configp)); }
-#else
-#define DeclareConstructorFromConfigWithNumInputs DeclareConstructorFromConfig  // standard C++ is too stupid to accept NumInputs without template arguments, which is the whole point here
-#endif
+#define DeclareConstructorFromConfigWithNumInputs(C) C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp, this->GetExpectedNumInputs()); }
 
         virtual ~ComputationNode()
         {
@@ -851,7 +852,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: Nodes with variable number of inputs will not derive from NumInputs<>, but instead check their inputs in Validate().
         void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
         {
-            wstring name = NodeName(); name;
+#ifdef _DEBUG
+            wstring name = NodeName(); name;    // (for easier debugging)
+#endif
             const auto * pNumInputs = dynamic_cast<INumInputs*>(this);    // if this class also derives from NumInputs<N> then N is the expected number of inputs
             if (pNumInputs && pNumInputs->GetExpectedNumInputs() != inputs.size())
                 RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int)pNumInputs->GetExpectedNumInputs(), (int)inputs.size());
@@ -865,9 +868,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
         // AttachInputs() from config
-        void AttachInputs(const ScriptableObjects::IConfigRecordPtr configp)
+        void AttachInputs(const ScriptableObjects::IConfigRecordPtr configp, size_t expectedNumInputs = SIZE_MAX)
         {
-            AttachInputs(GetInputsFromConfig(configp));
+            const auto inputs = GetInputsFromConfig(configp);
+            if (expectedNumInputs != SIZE_MAX)
+            {
+                if (inputs.size() != expectedNumInputs)
+                {
+                    // print an error. For that, find at least one argument
+                    auto * val = configp->Find(L"inputs");
+                    if (!val)   // if there is no 'inputs' then get the first item of this config record for a Fail() function
+                    {
+                        auto members = configp->GetMemberIds();
+                        if (members.size() > 0)
+                            val = configp->Find(members.front());
+                    }
+                    if (val)
+                        val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", (int)expectedNumInputs, (int)inputs.size()));
+                    else
+                        InvalidArgument("Expected %d inputs, but %d were given.", (int)expectedNumInputs, (int)inputs.size());
+                }
+            }
+            AttachInputs(inputs);
         }
     public:
 
@@ -1496,7 +1518,7 @@ protected: \
     using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
-    using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::Inputs; using Base::SetInput; \

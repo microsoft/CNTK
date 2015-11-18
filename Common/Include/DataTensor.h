@@ -82,5 +82,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return ImageLayout(std::vector<size_t> { channels, width, height });
     }
+    // and use this one when the data is a plain vector
+    static inline ImageLayout ImageLayoutVector(size_t n)
+    {
+        return ImageLayout(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
+    }
+    // TODO: we need a constructor from config; that will generalize
 
 }}}
