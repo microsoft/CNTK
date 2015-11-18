@@ -177,6 +177,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else
                 {
                     node = ComputationNetworkBuilder<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                    if (!node)
+                        config[L"operation"].Fail(L"Unknown operation " + operationName);
                 }
                 node->AttachInputs(inputs); // TODO: where to check the number of inputs? Should be a template parameter to ComputationNode!
             }
@@ -271,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 #endif
 
     // temporary code for BrainScript update (using register)
-
+#if 1
     template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr configp)
     {
         return DualPrecisionHelpers<float, ComputationNode<float>>::MakeRuntimeObject(configp);
@@ -283,6 +285,16 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     // register ComputationNetwork with the ScriptableObject system
     ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNode<float>, ComputationNode<double>> adderx(L"ComputationNode");
+#else
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
+#endif
 }}}
 
 // temporarily moved this function here, to force this compilation unit to emit something

@@ -38,6 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Convolution"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ConvolutionNode);
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
@@ -539,6 +540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
         static const std::wstring TypeName() { return L"MaxPooling"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(MaxPoolingNode);
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
@@ -574,6 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
         static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(AveragePoolingNode);
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)

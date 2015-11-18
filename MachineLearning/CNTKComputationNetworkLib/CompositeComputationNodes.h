@@ -38,6 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Parallel"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ParallelNode);
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -207,6 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //DeclareConstructorFromConfigWithNumInputs(PreComputedNode);
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_hasComputed(false)
@@ -293,6 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
         //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
     public:
+        //DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
         MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_numSamples(SIZE_MAX)
@@ -356,6 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"Mean"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(MeanNode);
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -417,6 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(InvStdDevNode);
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_mean(deviceId), m_var(deviceId), m_temp(deviceId)
@@ -530,6 +535,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PerDimMeanVarNormalizationNode);
         PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -639,6 +645,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarDeNormalization"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PerDimMeanVarDeNormalizationNode);
         PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -767,6 +774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //DeclareConstructorFromConfigWithNumInputs(BatchModeNode);
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_memory(deviceId)
@@ -835,6 +843,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
         static const std::wstring TypeName() { return L"TimeReverse"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(TimeReverseNode);
         TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
             BatchModeNode<ElemType>(deviceId, name)
         { }

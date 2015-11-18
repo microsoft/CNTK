@@ -358,6 +358,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DetachInputs() { m_children.clear(); }
 
+        // helper for the factory function for ComputationNodes
+        static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
+        {
+            vector<ComputationNodeBasePtr> inputs;
+            const auto inputsArg = configp->Get(L"inputs");
+            if (inputsArg.Is<ComputationNodeBase>())                // single arg
+                inputs.push_back(inputsArg);
+            else                                                    // a whole vector
+            {
+                ScriptableObjects::ConfigArrayPtr inputsArray = inputsArg;
+                const auto range = inputsArray->GetIndexRange();
+                for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
+                    inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
+            }
+            return inputs;
+        }
+
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
         ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
 
@@ -719,7 +736,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // little helper class to allow derived Node classes to specify how many inputs they expect
     struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
-    template<size_t m_numInputs> struct NumInputs : public INumInputs { size_t GetExpectedNumInputs() const override { return m_numInputs; } };  // e.g. derive from NumInputs<2>
+    template<size_t m_numInputs> struct NumInputs : public INumInputs  // e.g. derive from NumInputs<2>
+    {
+        NumInputs(){}
+        // for testing number of inputs in constructor (where we don't yet have dynamic_cast), construct this object with the config record
+        // It will verify the number of elements on the 'inputs' argument
+        NumInputs(const ScriptableObjects::IConfigRecordPtr configp) { Check(configp); }
+        ScriptableObjects::IConfigRecordPtr Check(const ScriptableObjects::IConfigRecordPtr configp) const
+        {
+            auto * val = configp->Find(L"inputs");
+            size_t numInputs = val ? ComputationNodeBase::GetInputsFromConfig(configp).size() : 0;
+            if (numInputs != GetExpectedNumInputs())
+            {
+                // print an error. For that, find at least one argument
+                if (!val)   // if there is no 'inputs' then get the first item of this config record for a Fail() function
+                {
+                    auto members = configp->GetMemberIds();
+                    if (members.size() > 0)
+                        val = configp->Find(members.front());
+                }
+                if (val)
+                    val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", m_numInputs, numInputs));
+                else
+                    InvalidArgument("Expected %d inputs, but %d were given.", m_numInputs, numInputs);
+            }
+            return configp;
+        }
+        size_t GetExpectedNumInputs() const override final { return m_numInputs; }
+    };
 
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase // abstract class that cannot be instantiated
@@ -741,11 +785,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
+#if 0
         // New() -- convenience wrapper around the constructor, which returns a shared_ptr, which is as this is always needed.
+        // TODO: we also have a global function. One of the two should go.
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             return make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
         }
+#endif
+
+        // creation from configuration
+        // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
+        // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
+#define DeclareConstructorFromConfig(C)              C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp); }
+#ifdef _MSC_VER
+#define DeclareConstructorFromConfigWithNumInputs(C) C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(NumInputs::Check(configp)); }
+#else
+#define DeclareConstructorFromConfigWithNumInputs DeclareConstructorFromConfig  // standard C++ is too stupid to accept NumInputs without template arguments, which is the whole point here
+#endif
 
         virtual ~ComputationNode()
         {
@@ -805,6 +862,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     m_children[i] = nullptr;                    // during network creation, nullpts are possible
         }
+
+    protected:
+        // AttachInputs() from config
+        void AttachInputs(const ScriptableObjects::IConfigRecordPtr configp)
+        {
+            AttachInputs(GetInputsFromConfig(configp));
+        }
+    public:
 
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
@@ -1292,9 +1357,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // convenience wrapper for ComputationNode::New()
-    template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args)
     {
-        return ComputationNode<typename C::OurElemType>::template New<C>(deviceId, name, forward<_Types>(_Args)...);
+        return make_shared<C>(forward<_Types>(_Args)...);
+        //return ComputationNode<typename C::OurElemType>::template New<C>(forward<_Types>(_Args)...);
     }
 
     // =======================================================================
@@ -1309,7 +1375,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base;
     public:
-        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1435,7 +1500,7 @@ protected: \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::Inputs; using Base::SetInput; \
-    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
+    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
     using Base::LoadFromFile; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::SaveToFile; using Base::UpdateFunctionMBSize; \
