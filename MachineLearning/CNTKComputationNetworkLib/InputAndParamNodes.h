@@ -220,21 +220,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SparseLearnableParameter<double>;
 
     // -----------------------------------------------------------------------
-    // InputValue (/*no input*/)
-    // an input value (typically fed by a DataReader)
+    // InputValueBase (/*no input*/)
+    // Base class for InputValue and SparseInputValue (typically fed by a DataReader)
     // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
-    // TODO: There is still debate whether an InputValue without layout makes sense.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class InputValue : public ComputationNode<ElemType>, public NumInputs<0>
+    class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        static const std::wstring TypeName() { return L"InputValue"; }
-        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
-        // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
-        //         This is bad. It should just write m_isSparse, or be a different type.
 
         void Init(size_t rows, size_t cols, bool isSparse)
         {
@@ -247,21 +241,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
         }
-    public:
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name)
-        {
-            m_imageLayout.Invalidate();
-            Init(0, 0, false);
-        }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
+    protected:
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
             m_imageLayout.Invalidate();
             Init(0, 0, isSparse);
         }
-        // ^^ TODO: merge the two above with optional arg
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
             Base(deviceId, name)
         {
             if (rows * cols == 0)
@@ -270,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_imageLayout = ImageLayoutVector(rows);
             Init(rows, cols, isSparse);
         }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse) :
             Base(deviceId, name)
         {
             size_t rows = imageLayout.GetNumElements();
@@ -283,11 +270,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Init(rows, cols, isSparse);
         }
-        InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
-            InputValue(configp->Get(L"deviceId"), L"<placeholder>")
+        InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
+            Base(configp->Get(L"deviceId"), L"<placeholder>")
         {
             AttachInputs(configp, this->GetExpectedNumInputs());
-            bool isSparse = configp->Get(L"isSparse"); // TODO: no, this must go into a separate type SparseInputValue
             bool isImage  = configp->Get(L"isImage");
             if (!isImage)
             {
@@ -304,6 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Init(rows, cols, isSparse);
             }
         }
+    public:
 
         virtual void SaveToFile(File& fstream) const override
         {
@@ -323,17 +310,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
                 cols = 0;
             m_imageLayout.LoadFromFile(fstream);
-
-            CreateMatrixIfNull(m_functionValues);
-            if (m_isSparse)
-                ConvertToSparseMatrix();
-
-            SetDims(rows, cols);
-            m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
+            Init(rows, cols, m_isSparse);
         }
-
-        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
-        virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
         virtual void UpdateFunctionMBSize() override
@@ -361,8 +339,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template class InputValue<float>; 
+    // -----------------------------------------------------------------------
+    // InputValue (/*no input*/)
+    // an input value (typically fed by a DataReader)
+    // this covers two types: (regular vs. image)
+    // TODO: There is still debate whether an InputValue without layout makes sense.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class InputValue : public InputValueBase<ElemType>
+    {
+        typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"InputValue"; }
+    public:
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name, false)
+        { }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            Base(deviceId, name, rows, cols, false)
+        { }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages) :
+            Base(deviceId, name, imageLayout, numImages, false)
+        { }
+        InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp, false)
+        { }
+    };
+
+    template class InputValue<float>;
     template class InputValue<double>;
+
+    // -----------------------------------------------------------------------
+    // SparseInputValue (/*no input*/)
+    // a sparse input value (typically fed by a DataReader)
+    // this covers two types: (regular vs. image)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class SparseInputValue : public InputValueBase<ElemType>
+    {
+        typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SparseInputValue"; }
+    public:
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name, true)
+        { }
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            Base(deviceId, name, rows, cols, true)
+        { }
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages) :
+            Base(deviceId, name, imageLayout, numImages, true)
+        { }
+        SparseInputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp, true)
+        { }
+    };
+
+    template class SparseInputValue<float>;
+    template class SparseInputValue<double>;
 
     // -----------------------------------------------------------------------
     // LookupTableNode (weight matrix, bag-of-word representation of the inputs)

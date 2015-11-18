@@ -564,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNodeBasePtr node = *nodeIter;
                 if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
-                    node->OperationName() == InputValue<float>::SparseTypeName())
+                    node->OperationName() == OperationNameOf(SparseInputValue) /*L"SparseInputValue"*/)
                 {
                     inputs.push_back(node);
                 }

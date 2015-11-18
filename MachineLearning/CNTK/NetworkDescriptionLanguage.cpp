@@ -150,7 +150,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
     if (EqualInsensitive(nodeType, OperationNameOf(InputValue), L"Input"))
         ret = true;   
-    else if (EqualInsensitive(nodeType, InputValue<ElemType>::SparseTypeName(), L"SparseInput"))
+    else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput"))
         ret = true; 
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter"))
         ret = true;   

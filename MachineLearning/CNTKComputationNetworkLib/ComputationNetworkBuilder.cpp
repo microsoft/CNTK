@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // check more types
         else if (nodeType == OperationNameOf(AveragePoolingNode))	return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ConvolutionNode))	        return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == InputValue<ElemType>::SparseTypeName())	LogicError("Node type 'SparseInputValue' temporarily not supported. Will come back as its own proper type.");//return New<InputValue<ElemType>>(forward<_Types>(_Args).../*, true*/);        // TODO: will go away; we will have a separate type SparseInputValue instead
+        else if (nodeType == OperationNameOf(SparseInputValue))	        return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(InputValue))	        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
@@ -179,21 +179,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, rows, cols, true));
+        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, rows, cols));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName,
                                                                                                                         const ImageLayout & imageLayout,
                                                                                                                         const size_t numImages)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages, false/*isSparse*/));
+        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName,
                                                                                                                               const ImageLayout & imageLayout,
                                                                                                                               const size_t numImages)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages, true/*isSparse*/));
+        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols)
