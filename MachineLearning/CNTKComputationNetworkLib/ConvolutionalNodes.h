@@ -247,7 +247,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
-            functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
+            // Reshaping is only necessary if we are going to use the unpacking trick
+            if (!is1DConvolutionOnGPUSparse)
+                functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
             size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
@@ -275,14 +277,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 }
 
-                Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
                 if (is1DConvolutionOnGPUSparse)
                 {
+                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
                     Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, inputSubBatch, 0, outputSubBatch,
-                        m_inputImageLayout.GetWidth(), m_kernelWidth, m_horizontalSubsample, m_zeroPadding);
+                        m_horizontalSubsample * m_inputImageLayout.GetNumChannels(), m_zeroPadding);
                 }
                 else
                 {
+                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
                     tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
                                                         m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputImageLayout.GetNumChannels(),
                                                         m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(),
@@ -292,7 +295,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
+            if (!is1DConvolutionOnGPUSparse)
+                functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
 
 #if NANCHECK
             functionValues.HasNan("Convolution");
