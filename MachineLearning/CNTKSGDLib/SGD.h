@@ -90,16 +90,24 @@ struct GradientUpdateInfo
     }
 };
 
+// ---------------------------------------------------------------------------
+// SGDParams -- parameters for SGD
+//
+// TODO: This should keep everything that is configured by the config.
+//       Currently it does not store which matrices are used.
+// ---------------------------------------------------------------------------
+
 struct SGDParams : public ScriptableObjects::Object
 {
     template<class ConfigRecord, class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ConfigRecord& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/);
+    SGDParams(const ConfigRecord& configSGD, ElemType exampleElemType/*for type deduction*/);
 
-    template<class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ScriptableObjects::IConfigRecordPtr configp, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/)
-        : SGDParams(*configp, fullEpochsOffset, fullTotalMaxEpochs, exampleElemType/*for type deduction*/)
+#if 0
+    SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
+        : SGDParams(*configp, 1.0f/*for type deduction  --FIX THIS*/)
     {
     }
+#endif
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
@@ -148,10 +156,6 @@ protected:
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
-
-    // This includes the total epochs across all training commands
-    size_t m_fullTotalMaxEpochs;
-    size_t m_fullEpochsOffset;
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -262,7 +266,7 @@ protected:
 
 public:
     SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
-    SGD(SGDParams&& sgdParams);
+    SGD(SGDParams&& sgdParams, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
@@ -456,6 +460,10 @@ public:
                        int npos);
 
 protected:
+
+    // This includes the total epochs across all training commands
+    size_t m_fullTotalMaxEpochs;
+    size_t m_fullEpochsOffset;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
