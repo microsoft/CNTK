@@ -739,36 +739,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // little helper class to allow derived Node classes to specify how many inputs they expect
     struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
-    template<size_t m_numInputs> struct NumInputs : public INumInputs  // e.g. derive from NumInputs<2>
-    {
-        NumInputs(){}
-        // for testing number of inputs in constructor (where we don't yet have dynamic_cast), construct this object with the config record
-        // It will verify the number of elements on the 'inputs' argument
-        NumInputs(const ScriptableObjects::IConfigRecordPtr configp) { Check(configp); }
-#if 0
-        ScriptableObjects::IConfigRecordPtr Check(const ScriptableObjects::IConfigRecordPtr configp) const
-        {
-            size_t numInputs = ComputationNodeBase::GetInputsFromConfig(configp).size();
-            if (numInputs != GetExpectedNumInputs())
-            {
-                // print an error. For that, find at least one argument
-                auto * val = configp->Find(L"inputs");
-                if (!val)   // if there is no 'inputs' then get the first item of this config record for a Fail() function
-                {
-                    auto members = configp->GetMemberIds();
-                    if (members.size() > 0)
-                        val = configp->Find(members.front());
-                }
-                if (val)
-                    val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", m_numInputs, numInputs));
-                else
-                    InvalidArgument("Expected %d inputs, but %d were given.", m_numInputs, numInputs);
-            }
-            return configp;
-        }
-#endif
-        size_t GetExpectedNumInputs() const override final { return m_numInputs; }
-    };
+    template<size_t m_numInputs> struct NumInputs : public INumInputs { size_t GetExpectedNumInputs() const override final { return m_numInputs; } };  // e.g. derive from NumInputs<2>
 
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase // abstract class that cannot be instantiated
