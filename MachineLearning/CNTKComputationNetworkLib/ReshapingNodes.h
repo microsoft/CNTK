@@ -35,6 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
+        //DeclareConstructorFromConfigWithNumInputs(ReinterpretNodeBase);
         ReinterpretNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -168,6 +169,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numTargetRows(numRows),
             m_targetImageLayout(imageLayout)
         { }
+        ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -426,6 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
         ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -485,6 +492,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_startIndex(startIndex),
             m_sliceHeight(numRows)
         { }
+        RowSliceNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            RowSliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"startIndex"), configp->Get(L"numRows"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -557,6 +569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowStack"; }
     public:
+        DeclareConstructorFromConfig(RowStackNode);
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -637,6 +650,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name),
             m_numRepeat(numRepeats)
         { }
+        RowRepeatNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            RowRepeatNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRepeats"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {

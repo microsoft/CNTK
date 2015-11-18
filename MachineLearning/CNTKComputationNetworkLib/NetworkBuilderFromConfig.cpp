@@ -1,3 +1,4 @@
+#if 0   // This is no longer needed. Keeping it around for reference, but should simply be deleted after a few weeks.
 // NetworkBuilderFromConfig.cpp -- interface to node and network creation from glue languages through config record parameters  --fseide
 
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -132,25 +133,26 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             {
                 let inputs = GetInputs(config);
                 // second group: nodes with special initializers
-                if (OpIs(RowSliceNode)) // TODO: untested
+                if (OpIs(RowSliceNode))
                 {
                     // startIndex, numRows, inputs /*one*/, needGradient=false
                     node = New<RowSliceNode<ElemType>>(deviceId, nodeName, (size_t)config[L"startIndex"], (size_t)config[L"numRows"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    // TODO: Why is this ^^ flag here? This node has no parameters.
                 }
                 else if (OpIs(RowRepeatNode)) // TODO: untested
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<RowRepeatNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRepeats"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
-                else if (OpIs(DiagonalNode))
+                else if (OpIs(DiagonalNode))        // TODO: seems this is no longer a special case (needGradient makes no sense here)
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
-                else if (OpIs(ReshapeNode)) // TODO: untested
+                else if (OpIs(ReshapeNode))
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayoutWHC(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
@@ -176,6 +178,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else
                 {
                     node = ComputationNetworkBuilder<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                    if (!node)
+                        config[L"operation"].Fail(L"Unknown operation " + operationName);
                 }
                 node->AttachInputs(inputs); // TODO: where to check the number of inputs? Should be a template parameter to ComputationNode!
             }
@@ -205,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
     };
 
-
+#if 0
     // creates the lambda for creating an object that can exist as 'float' or 'double'
     // Pass both types as the two template args.
     template<class Cfloat, class Cdouble>
@@ -267,5 +271,54 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             return &newIter->second;
         return nullptr; // not found
     }
+#endif
 
+    // temporary code for BrainScript update (using register)
+#if 0
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr configp)
+    {
+        return DualPrecisionHelpers<float, ComputationNode<float>>::MakeRuntimeObject(configp);
+    }
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<double>>(const IConfigRecordPtr configp)
+    {
+        return DualPrecisionHelpers<double, ComputationNode<double>>::MakeRuntimeObject(configp);
+    }
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNode<float>, ComputationNode<double>> adderx(L"ComputationNode");
+#else
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
+#endif
 }}}
+
+// temporarily moved this function here, to force this compilation unit to emit something
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace Microsoft::MSR;
+
+    template<class ElemType>
+    /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
+    {
+        fstream << L"\n" + NodeName() + L"=" + OperationName();
+
+        if (!IsLeaf())
+        {
+            fstream << wstring(L"(");
+            for (size_t i = 0; i<ChildrenSize(); i++)
+            {
+                if (i > 0)
+                    fstream << wstring(L",");
+                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+            }
+            fstream << wstring(L")");
+        }
+    }
+}}}
+#endif

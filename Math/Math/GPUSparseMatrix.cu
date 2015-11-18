@@ -14,7 +14,7 @@
 #include <cuda_runtime.h>
 #include <cusparse_v2.h>
 #include "cublas_v2.h"
-#include "GPUMatrixCUDAKernels.cu"
+#include "GPUMatrixCUDAKernels.cuh"
 #include <functional>
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
@@ -2062,18 +2062,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.m_computeDevice = m_computeDevice;
         slice.m_numRows = m_numRows;
         slice.m_numCols = numCols;
-        slice.m_nz = m_nz;
-        slice.m_elemSizeAllocated = m_elemSizeAllocated;
-        slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
-        slice.m_pArray = m_pArray;
-        slice.m_format = m_format;
-        slice.m_externalBuffer = true;
-        slice.m_nz = m_nz;
-        slice.m_elemSizeAllocated = m_elemSizeAllocated;
-        slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
-        slice.m_pArray = m_pArray;
-        slice.m_format = m_format;
-        slice.m_externalBuffer = true;
         slice.m_nz = m_nz;
         slice.m_elemSizeAllocated = m_elemSizeAllocated;
         slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;

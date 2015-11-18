@@ -12,6 +12,7 @@
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "IComputationNetBuilder.h"
+#include "ScriptableObjects.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -89,67 +90,18 @@ struct GradientUpdateInfo
     }
 };
 
-struct SGDParams
+struct SGDParams : public ScriptableObjects::Object
 {
+    template<class ConfigRecord, class ElemType>    // (needed for default value of m_gradientBits)
+    SGDParams(const ConfigRecord& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/);
+
     template<class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/);
+    SGDParams(const ScriptableObjects::IConfigRecordPtr configp, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/)
+        : SGDParams(*configp, fullEpochsOffset, fullTotalMaxEpochs, exampleElemType/*for type deduction*/)
+    {
+    }
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
-
-    //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    SGDParams(const floatargvector& learningRatesPerMB,
-              const floatargvector& learningRatesPerSample,
-              const intargvector& mbSize,
-              bool truncated,
-              const size_t fullEpochsOffset,
-              const size_t fullTotalMaxEpochs,
-              const size_t epochSize,
-              const size_t maxEpochs,
-              const wstring& modelPath,
-              const floatargvector& momentumPerMB,
-              const floatargvector& momentumPerSample,
-              const bool gradientClippingWithTruncation,
-              const double clippingThresholdPerSample,
-              const LearningRateSearchAlgorithm autoLearnRateSearchType,
-              const double increaseLearnRateIfImproveMoreThan,
-              const double learnRateIncreaseFactor,
-              const double reduceLearnRateIfImproveLessThan,
-              const bool continueReduce,
-              const double learnRateDecreaseFactor,
-              floatargvector dropoutRates,
-              const bool loadBestModel,
-              const intargvector& numMiniBatch4LRSearch,
-              const size_t numPrevLearnRates,
-              const size_t numBestSearchEpoch,
-              const int traceLevel,
-              const bool progressTracing,
-              const size_t numMBsToShowResult,
-              const size_t numMBsToCUDAProfile,
-              const size_t maxTempMemSizeInSamplesForCNN,
-              const GradientUpdateInfo gradUpdateType,
-              const bool keepCheckPointFiles,
-              const AdaptationRegType adaptationRegType,
-              const double adaptationRegWeight,
-              const wstring trainCriterionNodeName,
-              const wstring evalCriterionNodeName,
-              const bool doGradientCheck,
-              const double gradientCheckSigDigit,
-              const bool validateAfterModelReloading,
-              RMSPropInfo rpi,
-              size_t learnRateAdjustInterval,
-              const bool UsingAllDataForPreComputed,
-              const bool needAveMultiplier,
-              const double L2RegWeight,
-              const double L1RegWeight,
-              const bool autoAdjustMinibatch,
-              const size_t minibatchSizeTuningFrequency,
-              const size_t minibatchSizeTuningMax,
-              const bool useCVSetControlLRIfCVExists,
-              const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin,
-              const double hsmoothingWeight,
-              const double frameDropThresh,
-              const bool doreferencealign);
 
 protected:
     // learning rate per sample provided outside

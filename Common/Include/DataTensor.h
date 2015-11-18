@@ -9,9 +9,6 @@
 
 #include "Basics.h"
 #include <vector>
-#include <array>
-#include <numeric>
-#include <functional>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -42,6 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ImageLayout() : m_tensorDims(3, 1) { }
         template<class VEC>
         ImageLayout(const VEC & dims) { m_tensorDims.reserve(dims.size()); m_tensorDims.assign(dims.begin(), dims.end()); }
+        ImageLayout(std::vector<size_t> && dims) : m_tensorDims(std::move(dims)) { }
 
         void Invalidate() { m_tensorDims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
 
@@ -65,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // accessors
         size_t GetDim(size_t k) const { return m_tensorDims[k]; }
         size_t GetNumDims() const { return m_tensorDims.size(); }
-        size_t GetNumElements() const { return std::accumulate(m_tensorDims.begin(), m_tensorDims.end(), (size_t)1, std::multiplies<size_t>()); }
+        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_tensorDims) res *= dim; return res; }
 
         const std::vector<size_t> & GetDims() const { return m_tensorDims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
 
@@ -82,7 +80,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This will sort the three parameters into the correct order.
     static inline ImageLayout ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
-        return ImageLayout(std::array<size_t, 3> { channels, width, height });
+        return ImageLayout(std::vector<size_t> { channels, width, height });
     }
+    // and use this one when the data is a plain vector
+    static inline ImageLayout ImageLayoutVector(size_t n)
+    {
+        return ImageLayout(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
+    }
+    // TODO: we need a constructor from config; that will generalize
 
 }}}

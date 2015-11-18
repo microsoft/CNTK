@@ -8,6 +8,7 @@
 
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -183,4 +184,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LearnableParameter<float>;
     template class LearnableParameter<double>;
+}}}
+
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+
+    using namespace Microsoft::MSR::CNTK;
+
+    // -----------------------------------------------------------------------
+    // register ComputationNode with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
 }}}
