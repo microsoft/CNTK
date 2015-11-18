@@ -69,11 +69,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ConfigRecord, class ElemType>
     SGDParams::SGDParams(const ConfigRecord& configSGD, ElemType/*for type deduction*/)
     {
-        ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
-        floatargvector learningRatesPerMB = learningRatesPerMBStr;
+        floatargvector learningRatesPerMB = configSGD("learningRatesPerMB", "");
 
-        ConfigArray learningRatesPerSampleStr = configSGD("learningRatesPerSample", "");
-        floatargvector learningRatesPerSample = learningRatesPerSampleStr;
+        floatargvector learningRatesPerSample = configSGD("learningRatesPerSample", "");
 
         std::string executionEngineValue = configSGD("executionEngine", "synchronous");
 
@@ -96,8 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the number of minibatches used to search
         // the learning rate. Its typically set to 10-20% of
         // the total minibatches in an epoch.
-        ConfigArray minibatch4LRSearch = configAALR("numMiniBatch4LRSearch", "500");
-        intargvector numMiniBatch4LRSearch = minibatch4LRSearch;
+        intargvector numMiniBatch4LRSearch = configAALR("numMiniBatch4LRSearch", "500");
 
         size_t numPrevLearnRates = configAALR("numPrevLearnRates", "5");
         size_t numBestSearchEpoch = configAALR("numBestSearchEpoch", "1");
@@ -106,8 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool useEvalCriterionControlLR = configAALR("UseEvalCriterionControlLR", "false");
 
 
-        ConfigArray minibatchSize = configSGD("minibatchSize", "256");
-        intargvector mbSize = minibatchSize;
+        intargvector mbSize = configSGD("minibatchSize", "256");
         bool truncated = configSGD("Truncated", "false");
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
@@ -116,11 +112,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the total number of epochs to run.
         size_t maxEpochs = configSGD("maxEpochs");
 
-        ConfigArray momentumPerMBStr = configSGD("momentumPerMB", "");
-        floatargvector momentumPerMB = momentumPerMBStr;
+        floatargvector momentumPerMB = configSGD("momentumPerMB", "");
 
-        ConfigArray momentumPerSampleStr = configSGD("momentumPerSample", "");
-        floatargvector momentumPerSample = momentumPerSampleStr;
+        floatargvector momentumPerSample = configSGD("momentumPerSample", "");
 
         wstring modelPath = configSGD("modelPath");
         wstring trainCriterionNodeName = configSGD("trainCriterionNodeName", "");
@@ -142,8 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
         double frameDropThresh = configSGD("frameDropThresh", "1e-10");
         bool doReferenceAlign = configSGD("doReferenceAlign", "false");
-        ConfigArray dropoutRatesStr = configSGD("dropoutRate", "0.0");
-        floatargvector dropoutRates = dropoutRatesStr;
+        floatargvector dropoutRates = configSGD("dropoutRate", "0.0");
 
         GradientUpdateInfo gUpdateInfo;
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
