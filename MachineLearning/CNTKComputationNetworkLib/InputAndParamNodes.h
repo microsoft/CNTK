@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "ComputationNode.h"
+#include "ScriptableObjects.h"
+#include "Matrix.h"
+#include "File.h"   // for LoadMatrixFromTextFile()
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,11 +22,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "File.h"   // for LoadMatrixFromTextFile()
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -47,10 +47,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_parameterUpdateRequired = true;
             m_imageLayout = ImageLayoutWHC(1, rows, 1);
+            // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
             CreateMatrixIfNull(m_functionValues);
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
+        }
+        LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
+            LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+            // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+            // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
+            SetParameterUpdateRequired(configp->Get(L"needGradient"));
+            wstring initString = configp->Get(L"init");
+            if (initString == L"fixedValue")
+                FunctionValues().SetValue((ElemType)configp->Get(L"value"));
+            else if (initString == L"uniform" || initString == L"gaussian")
+            {
+                // TODO: add these options also to old NDL
+                static unsigned long randomSeed = 1;
+                int forcedRandomSeed = configp->Get(L"randomSeed");   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
+                InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
+            }
+            else if (initString == L"fromFile")
+            {
+                wstring initFromFilePath = configp->Get(L"initFromFilePath");
+                if (initFromFilePath.empty())
+                    RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                InitFromFile(initFromFilePath);
+            }
+            else
+                RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -165,6 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SparseLearnableParameter);
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
@@ -238,7 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_imageLayout = ImageLayoutWHC(1, rows, 1);
+            m_imageLayout = ImageLayoutVector(rows);
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
@@ -253,6 +282,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_imageLayout = imageLayout;
 
             Init(rows, cols, isSparse);
+        }
+        InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            InputValue(configp->Get(L"deviceId"), L"<placeholder>")
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+            bool isSparse = configp->Get(L"isSparse"); // TODO: no, this must go into a separate type SparseInputValue
+            bool isImage  = configp->Get(L"isImage");
+            if (!isImage)
+            {
+                size_t rows = configp->Get(L"rows");
+                size_t cols = configp->Get(L"cols");
+                m_imageLayout = ImageLayoutVector(rows);    // no tensor, just a vector
+                Init(rows, cols, isSparse);
+            }
+            else
+            {
+                m_imageLayout = ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"));
+                size_t rows = m_imageLayout.GetNumElements();
+                size_t cols = configp->Get(L"numImages");         // this is actually the MB size
+                Init(rows, cols, isSparse);
+            }
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -326,6 +376,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LookupTable"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LookupTableNode);
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -549,6 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateFunctionValuesSize();
         }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PairNetworkNode);
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
             Base(deviceId, name)
         {

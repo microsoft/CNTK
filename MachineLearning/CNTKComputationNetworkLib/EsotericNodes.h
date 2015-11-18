@@ -37,6 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"DummyCriterion"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(DummyCriterionNode);
         DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
           Base(deviceId, name)
         { }
@@ -129,6 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
+        DeclareConstructorFromConfigWithNumInputs(SequenceDecoderNode);
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
@@ -325,6 +327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_stride = input1.GetNumCols();
         }
     public:
+        DeclareConstructorFromConfigWithNumInputs(StrideTimesNode);
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_stride(1)

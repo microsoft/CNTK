@@ -337,9 +337,25 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     struct IConfigRecord   // any class that exposes config can derive from this
     {
-        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;    // e.g. confRec[L"message"]
-        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;          // returns nullptr if not found
-        virtual vector<wstring> GetMemberIds() const = 0;                           // returns the names of all members in this record (but not including parent scopes)
+        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;                    // e.g. confRec[L"message"]
+        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;                          // returns nullptr if not found
+        virtual vector<wstring> GetMemberIds() const = 0;                                           // returns the names of all members in this record (but not including parent scopes)
+        // prettier access if config record is a pointer
+        const ConfigValuePtr & Get(const wstring & id) const { return operator[](id); }             // e.g. confRecPtr->Get(L"message")
+
+        // emulation of old CNTK config/NL
+        const ConfigValuePtr & operator()(const char * id) const { wstring wid(id, id + strlen(id)); return operator[](wid); }     // e.g. confRec("message")
+        // TODO: how to deal with defaults? Just MakePrimitiveConfigValuePtr()?
+        template<class ValueType>
+        ConfigValuePtr operator()(const char * id, const ValueType & defaultValue) const            // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
+        {
+            wstring wid(id, id + strlen(id));
+            auto * val = Find(wid);
+            if (val)
+                return *val;        // exists
+            else                    // does not exist: return default value instead
+                return MakePrimitiveConfigValuePtr(defaultValue, [](const wstring & msg) { InvalidArgument(L"%ls", msg.c_str()); }, L"(default value)");
+        }
     };
     typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
 
@@ -511,5 +527,83 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     // scriptable runtime types must be exposed by this function
     // TODO: should this be a static member of above class?
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId);
+
+    // -----------------------------------------------------------------------
+    // static table of all configurable runtime types
+    // -----------------------------------------------------------------------
+
+    class ConfigurableRuntimeTypeRegister
+    {
+        // we wrap the static variable in a function so that we don't need a CPP file
+        static map<wstring, ConfigurableRuntimeType> & GetTheRegister()
+        {
+            // the one static variable that contains all configurable runtime types
+            static map<wstring, ConfigurableRuntimeType> reg;
+            return reg;
+        }
+
+        static void Register(const wchar_t * typeId, ConfigurableRuntimeType && rtInfo)
+        {
+            auto & reg = GetTheRegister();
+            auto res = reg.insert(std::make_pair((std::wstring)typeId, std::move(rtInfo)));
+            if (!res.second)
+                LogicError("RegisterConfigurableRuntimeType: Attempted to register type '%ls' twice.", typeId);
+        }
+    public:
+
+        // to instantiate a ConfigurableRuntimeType object, use this function to find its constructor
+        static const ConfigurableRuntimeType * Find(const wstring & typeId)
+        {
+            auto & reg = GetTheRegister();
+            auto iter = reg.find(typeId);
+            if (iter == reg.end())
+                return nullptr;
+            else
+                return &iter->second;
+        }
+
+        // to register a runtime type, use an instance of this class in each library
+        // ConfigurableRuntimeTypeRegister::Add<ClassName> registerClassName(L"ClassName")l
+        template<class C>
+        struct Add
+        {
+            Add(const wchar_t * typeId)
+            {
+                // create the runtime info
+                ConfigurableRuntimeType rtInfo;
+                rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+                {
+                    return MakeRuntimeObject<C>(config);
+                };
+                rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
+                // insert it into the static table
+                Register(typeId, std::move(rtInfo));
+            }
+        };
+        // to register a class that exists in dual precisions (Something<ElemType>>, use this one instead
+        template<class Cfloat, class Cdouble>
+        struct AddFloatDouble
+        {
+            AddFloatDouble(const wchar_t * typeId)
+            {
+                // create the runtime info
+                ConfigurableRuntimeType rtInfo;
+                rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+                {
+                    wstring precision = (*config)[L"precision"];            // dispatch on ElemType
+                    if (precision == L"float")
+                        return MakeRuntimeObject<Cfloat>(config);
+                    else if (precision == L"double")
+                        return MakeRuntimeObject<Cdouble>(config);
+                    else
+                        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+                };
+                rtInfo.isConfigRecord = is_base_of<IConfigRecord, Cfloat>::value;
+                static_assert(is_base_of<IConfigRecord, Cfloat>::value == is_base_of<IConfigRecord, Cdouble>::value, "");   // we assume that both float and double have the same behavior
+                // insert it into the static table
+                Register(typeId, std::move(rtInfo));
+            }
+        };
+    };
 
 }}} // end namespaces

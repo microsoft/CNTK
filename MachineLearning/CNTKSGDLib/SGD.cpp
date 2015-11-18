@@ -66,8 +66,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-    template<class ElemType>
-    SGDParams::SGDParams(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType/*for type deduction*/)
+    template<class ConfigRecord, class ElemType>
+    SGDParams::SGDParams(const ConfigRecord& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType/*for type deduction*/)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
         floatargvector learningRatesPerMB = learningRatesPerMBStr;
@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // AutoAdjust Parameters
         ConfigParameters configAALR(configSGD("AutoAdjust", ""));
-        LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
+        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
         double reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
         bool continueReduce = (bool) configAALR("continueReduce", "false");
         size_t learnRateAdjustInterval = (size_t) configAALR("learnRateAdjustInterval", "1");
@@ -188,153 +188,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: the number of parameters of this function is waaay to little!
         // TODO: it may be easier to write the values directly into the members
-        *this = SGDParams(learningRatesPerMB,
-                          learningRatesPerSample,
-                          mbSize,
-                          truncated,
-                          fullEpochsOffset,
-                          fullTotalMaxEpochs,
-                          epochSize,
-                          maxEpochs,
-                          modelPath,
-                          momentumPerMB,
-                          momentumPerSample,
-                          gradientClippingWithTruncation,
-                          clippingThresholdPerSample,
-                          autoAdjustLRType,
-                          increaseLearnRateIfImproveMoreThan,
-                          learnRateIncreaseFactor,
-                          reduceLearnRateIfImproveLessThan,
-                          continueReduce,
-                          learnRateDecreaseFactor,
-                          dropoutRates,
-                          loadBestModel,
-                          numMiniBatch4LRSearch,
-                          numPrevLearnRates,
-                          numBestSearchEpoch,
-                          traceLevel,
-                          progressTracing,
-                          numMBsToShowResult,
-                          numMBsToCUDAProfile,
-                          maxTempMemSizeInSamplesForCNN,
-                          gUpdateInfo,
-                          keepCheckPointFiles,
-                          adaptationRegType,
-                          adaptationRegWeight,
-                          trainCriterionNodeName,
-                          evalCriterionNodeName,
-                          doGradientCheck,
-                          gradientCheckSigDigit,
-                          validateAfterModelReloading,
-                          rpi,
-                          learnRateAdjustInterval,
-                          UsingAllDataForPreComputedNode,
-                          needAveMultiplier,
-                          L2RegWeight,
-                          L1RegWeight,
-                          autoAdjustMinibatch,
-                          minibatchSizeTuningFrequency,
-                          minibatchSizeTuningMax,
-                          useCVSetControlLRIfCVExists,
-                          useEvalCriterionControlLR,
-                          minibatchSearchCriterionErrorMargin,
-                          hsmoothingWeight, frameDropThresh, doReferenceAlign);
-
-        // BUGBUG: these are not passed to Init()
-        m_doUnitTest = configSGD("unittest", "false");
-
-        // Parallel training
-        m_parallelizationMethod = ParallelizationMethod::None;
-        m_numGradientBits = 32;
-        m_zeroThresholdFor1Bit = true;
-        m_enableDistributedMBReading = false;
-        m_parallelizationStartEpochNum = 0;
-        m_nFramesBetweenMASync = 40000; // default 40k frames 
-
-        if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
-        {
-            ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
-            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
-            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", "1");
-            m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
-            m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
-
-            if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
-            {
-                ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
-                const char* defaultGradientBitsStr = (sizeof(ElemType) == sizeof(float)) ? "32" : "64";
-                m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBitsStr);
-                m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
-                if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
-                {
-                    InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
-                }
-            }
-
-            if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
-            {
-                ConfigParameters configMASGD(configParallelTrain("ModelAveragingSGD", "")); 
-                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
-                m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
-            }
-        }
-    }
-
-    //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    SGDParams::SGDParams(const floatargvector& learningRatesPerMB,
-                         const floatargvector& learningRatesPerSample,
-                         const intargvector& mbSize,
-                         bool truncated,
-                         const size_t fullEpochsOffset,
-                         const size_t fullTotalMaxEpochs,
-                         const size_t epochSize,
-                         const size_t maxEpochs,
-                         const wstring& modelPath,
-                         const floatargvector& momentumPerMB,
-                         const floatargvector& momentumPerSample,
-                         const bool gradientClippingWithTruncation,
-                         const double clippingThresholdPerSample,
-                         const LearningRateSearchAlgorithm autoLearnRateSearchType,
-                         const double increaseLearnRateIfImproveMoreThan,
-                         const double learnRateIncreaseFactor,
-                         const double reduceLearnRateIfImproveLessThan,
-                         const bool continueReduce,
-                         const double learnRateDecreaseFactor,
-                         floatargvector dropoutRates,
-                         const bool loadBestModel,
-                         const intargvector& numMiniBatch4LRSearch,
-                         const size_t numPrevLearnRates,
-                         const size_t numBestSearchEpoch,
-                         const int traceLevel,
-                         const bool progressTracing,
-                         const size_t numMBsToShowResult,
-                         const size_t numMBsToCUDAProfile,
-                         const size_t maxTempMemSizeInSamplesForCNN,
-                         const GradientUpdateInfo gradUpdateType,
-                         const bool keepCheckPointFiles,
-                         const AdaptationRegType adaptationRegType,
-                         const double adaptationRegWeight,
-                         const wstring trainCriterionNodeName,
-                         const wstring evalCriterionNodeName,
-                         const bool doGradientCheck,
-                         const double gradientCheckSigDigit,
-                         const bool validateAfterModelReloading,
-                         RMSPropInfo rpi,
-                         size_t learnRateAdjustInterval,
-                         const bool UsingAllDataForPreComputed,
-                         const bool needAveMultiplier,
-                         const double L2RegWeight,
-                         const double L1RegWeight,
-                         const bool autoAdjustMinibatch,
-                         const size_t minibatchSizeTuningFrequency,
-                         const size_t minibatchSizeTuningMax,
-                         const bool useCVSetControlLRIfCVExists,
-                         const bool useEvalCriterionControlLR,
-                         const size_t minibatchSearchCriterionErrorMargin,
-                         const double hsmoothingWeight,
-                         const double frameDropThresh,
-                         const bool doreferencealign)
-    {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
         m_autoAdjustMinibatch = autoAdjustMinibatch;
@@ -378,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_continueReduce = continueReduce;
 
         //minimum interval is 1 epoch
-        m_learnRateAdjustInterval = max((size_t) 1, learnRateAdjustInterval);
+        m_learnRateAdjustInterval = max((size_t)1, learnRateAdjustInterval);
 
         m_learnRateDecreaseFactor = learnRateDecreaseFactor;
         m_clippingThresholdPerSample = abs(clippingThresholdPerSample);
@@ -388,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numMBsToCUDAProfile = int(numMBsToCUDAProfile);
         m_numBestSearchEpoch = numBestSearchEpoch;
         m_maxTempMemSizeInSamplesForCNN = maxTempMemSizeInSamplesForCNN;
-        m_gradType = gradUpdateType;
+        m_gradType = gUpdateInfo;
         m_rpi = rpi;
         m_keepCheckPointFiles = keepCheckPointFiles;
 
@@ -397,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_trainCriterionNodeName = trainCriterionNodeName;
         m_evalCriterionNodeName = evalCriterionNodeName;
-        m_useAllDataForPreComputedNode = UsingAllDataForPreComputed;
+        m_useAllDataForPreComputedNode = UsingAllDataForPreComputedNode;
 
         m_needAveMultiplier = needAveMultiplier;
         m_L2RegWeight = L2RegWeight;
@@ -406,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //sequence training parameters
         m_hsmoothingWeight = hsmoothingWeight;
         m_frameDropThresh = frameDropThresh;
-        m_doreferencealign = doreferencealign;
+        m_doreferencealign = doReferenceAlign;
         for (size_t i = 0; i < m_mbSize.size(); i++)
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -419,15 +272,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
         {
             InvalidArgument("If autoLearnRateSearchType is false "
-                                        "you must specify the learningRatesPerSample "
-                                        "or learningRatesPerMB parameter.");
+                "you must specify the learningRatesPerSample "
+                "or learningRatesPerMB parameter.");
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
         {
             InvalidArgument("You specified both learningRatesPerSample "
-                                        "and learningRatesPerMB. Please comment "
-                                        "out one of them.");
+                "and learningRatesPerMB. Please comment "
+                "out one of them.");
         }
         else if (learningRatesPerSample.size() > 0)
         {
@@ -443,8 +296,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
         {
             InvalidArgument("You specified both momentumPerSample "
-                                        "and momentumPerMB. Please comment "
-                                        "out one of them.");
+                "and momentumPerMB. Please comment "
+                "out one of them.");
         }
         else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
         {
@@ -487,6 +340,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
+
+        // BUGBUG: these are not passed to Init()
+        m_doUnitTest = configSGD("unittest", "false");
+
+        // Parallel training
+        m_parallelizationMethod = ParallelizationMethod::None;
+        m_numGradientBits = 32;
+        m_zeroThresholdFor1Bit = true;
+        m_enableDistributedMBReading = false;
+        m_parallelizationStartEpochNum = 0;
+        m_nFramesBetweenMASync = 40000; // default 40k frames 
+
+        if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
+        {
+            ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
+            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", "1");
+            m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
+            m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
+
+            if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
+            {
+                ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
+                const char* defaultGradientBitsStr = (sizeof(ElemType) == sizeof(float)) ? "32" : "64";
+                m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBitsStr);
+                m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
+                if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
+                {
+                    InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
+                }
+            }
+
+            if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
+            {
+                ConfigParameters configMASGD(configParallelTrain("ModelAveragingSGD", "")); 
+                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
+                m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
+            }
+        }
     }
 
     template<class ElemType>

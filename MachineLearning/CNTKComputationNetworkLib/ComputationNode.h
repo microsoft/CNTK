@@ -358,6 +358,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DetachInputs() { m_children.clear(); }
 
+        // helper for the factory function for ComputationNodes
+        static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
+        {
+            vector<ComputationNodeBasePtr> inputs;
+            const auto * inputsArg = configp->Find(L"inputs");
+            if (inputsArg)
+            {
+                if (inputsArg->Is<ComputationNodeBase>())                // single arg
+                    inputs.push_back(*inputsArg);
+                else                                                    // a whole vector
+                {
+                    ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
+                    const auto range = inputsArray->GetIndexRange();
+                    for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
+                        inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
+                }
+            }
+            return inputs;
+        }
+
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
         ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
 
@@ -719,7 +739,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // little helper class to allow derived Node classes to specify how many inputs they expect
     struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
-    template<size_t m_numInputs> struct NumInputs : public INumInputs { size_t GetExpectedNumInputs() const override { return m_numInputs; } };  // e.g. derive from NumInputs<2>
+    template<size_t m_numInputs> struct NumInputs : public INumInputs { size_t GetExpectedNumInputs() const override final { return m_numInputs; } };  // e.g. derive from NumInputs<2>
 
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase // abstract class that cannot be instantiated
@@ -741,11 +761,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
+#if 0
         // New() -- convenience wrapper around the constructor, which returns a shared_ptr, which is as this is always needed.
+        // TODO: we also have a global function. One of the two should go.
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             return make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
         }
+#endif
+
+        // creation from configuration
+        // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
+        // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
+#define DeclareConstructorFromConfig(C)              C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp); }
+#define DeclareConstructorFromConfigWithNumInputs(C) C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp, this->GetExpectedNumInputs()); }
 
         virtual ~ComputationNode()
         {
@@ -794,7 +823,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: Nodes with variable number of inputs will not derive from NumInputs<>, but instead check their inputs in Validate().
         void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
         {
-            wstring name = NodeName(); name;
+#ifdef _DEBUG
+            wstring name = NodeName(); name;    // (for easier debugging)
+#endif
             const auto * pNumInputs = dynamic_cast<INumInputs*>(this);    // if this class also derives from NumInputs<N> then N is the expected number of inputs
             if (pNumInputs && pNumInputs->GetExpectedNumInputs() != inputs.size())
                 RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int)pNumInputs->GetExpectedNumInputs(), (int)inputs.size());
@@ -805,6 +836,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     m_children[i] = nullptr;                    // during network creation, nullpts are possible
         }
+
+    protected:
+        // AttachInputs() from config
+        void AttachInputs(const ScriptableObjects::IConfigRecordPtr configp, size_t expectedNumInputs = SIZE_MAX)
+        {
+            const auto inputs = GetInputsFromConfig(configp);
+            if (expectedNumInputs != SIZE_MAX)
+            {
+                if (inputs.size() != expectedNumInputs)
+                {
+                    // print an error. For that, find at least one argument
+                    auto * val = configp->Find(L"inputs");
+                    if (!val)   // if there is no 'inputs' then get the first item of this config record for a Fail() function
+                    {
+                        auto members = configp->GetMemberIds();
+                        if (members.size() > 0)
+                            val = configp->Find(members.front());
+                    }
+                    if (val)
+                        val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", (int)expectedNumInputs, (int)inputs.size()));
+                    else
+                        InvalidArgument("Expected %d inputs, but %d were given.", (int)expectedNumInputs, (int)inputs.size());
+                }
+            }
+            AttachInputs(inputs);
+        }
+    public:
 
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
@@ -1292,9 +1350,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // convenience wrapper for ComputationNode::New()
-    template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args)
     {
-        return ComputationNode<typename C::OurElemType>::template New<C>(deviceId, name, forward<_Types>(_Args)...);
+        return make_shared<C>(forward<_Types>(_Args)...);
+        //return ComputationNode<typename C::OurElemType>::template New<C>(forward<_Types>(_Args)...);
     }
 
     // =======================================================================
@@ -1309,7 +1368,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base;
     public:
-        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1431,11 +1489,11 @@ protected: \
     using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
-    using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::Inputs; using Base::SetInput; \
-    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
+    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
     using Base::LoadFromFile; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::SaveToFile; using Base::UpdateFunctionMBSize; \

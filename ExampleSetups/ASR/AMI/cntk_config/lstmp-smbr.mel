@@ -1,0 +1,22 @@
+m1 = LoadModel($oldModel$, format=cntk)
+SetDefaultModel(m1)
+
+# Deletes cross entropy training criteria
+DeleteNode(cr)
+
+# Adds cross entropy criteria node as a normal node
+CR1 = CrossEntropyWithSoftmax(labels, LSTMoutputW)
+SetProperty(CR1, MultiSeq, true) 
+scaledCR1 = Scale(Constant($scaleFactor$), CR1)
+
+# Adds dummy criteria node as a normal node
+labelDim=$labelDim$
+objectives=Input(1, tag=feature)
+derivatives=Input(labelDim, tag=feature)
+CR2 = DummyCriterion(objectives, derivatives, LSTMoutputW)
+
+# Smoothed criteria
+CR = Plus(CR2, scaledCR1, tag=Criteria)
+
+SaveModel(m1, $newModel$, format=cntk)
+Dump(m1, $newModel$.dump.txt)

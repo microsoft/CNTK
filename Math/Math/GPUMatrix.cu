@@ -18,7 +18,7 @@
 #include <curand_kernel.h>
 #include "device_launch_parameters.h"
 #include "GPUMatrix.h"
-#include "GPUMatrixCUDAKernels.cu"
+#include "GPUMatrixCUDAKernels.cuh"
 #include "GPUSparseMatrix.h"
 #include <iostream> // for cout
 
