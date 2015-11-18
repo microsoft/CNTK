@@ -1399,6 +1399,10 @@ public:
         }
     }
 
+    // constructor from ConfigValue to convert from config array to constant array
+    argvector(const ConfigValue& configValue) : argvector((ConfigArray)configValue)
+    { }
+
     // operator[] repeats last value infinitely
     T operator[](size_t i) const
     {
