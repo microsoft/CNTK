@@ -199,7 +199,17 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         labels = labelEntry->second;
         if (labels != nullptr)
         {
-            useLabels = true;
+            size_t labelRows = (*labels).GetNumRows();
+
+            if (labelRows > 0)
+            {
+                if (labelRows != 1)
+                {
+                    RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", labelRows);
+                }
+
+                useLabels = true;
+            }
         }
     }
     
@@ -274,17 +284,9 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
     if (useLabels)
     {
-        size_t labelRows = (*labels).GetNumRows();
-        size_t labelCols = (*labels).GetNumCols();
-
-        if (labelRows != 1)
-        {
-            RuntimeError("SparsePCReader only supports single label value per column.");
-        }
-
         (*labels).Resize(1, j);
         (*labels).SetValue((ElemType)0);
-        (*labels).SetValue(labelRows, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
+        (*labels).SetValue(1, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
     }
 
     return true;
