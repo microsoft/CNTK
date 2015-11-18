@@ -4282,14 +4282,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
     void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b,
-        ElemType beta, Matrix<ElemType>& c, size_t colStep, bool padding)
+        ElemType beta, Matrix<ElemType>& c, size_t stepSize, bool padding)
     {
         DecideAndMoveToRightDevice(a, b, c);
         
         if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE
             && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
         {
-            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUSparseMatrix, beta, *c.m_GPUMatrix, colStep, padding);
+            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUSparseMatrix, beta, *c.m_GPUMatrix, stepSize, padding);
         }
         else
         {
