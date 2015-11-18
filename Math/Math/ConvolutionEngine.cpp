@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_tempMatrix(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+            : m_tempMatrix(deviceId), m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
         }
 
@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
             assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c());
-            out.Resize(outT.c(), outputSizePerChannel * batchSize);
+            out.Reshape(outT.c(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
@@ -201,14 +201,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
         {
-            UNUSED(outT); UNUSED(out); UNUSED(biasT); UNUSED(bias); UNUSED(dst);
-            RuntimeError("Not yet implemented.");
+            assert(biasT.c() == outT.c());
+            assert(biasT.w() == 1);
+            assert(biasT.h() == 1);
+            assert(biasT.n() == 1);
+            assert(bias.GetNumRows() == biasT.c());
+            assert(bias.GetNumCols() == 1);
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+            assert(outT.n() == out.GetNumCols());
+
+            Mat o = out.ColumnSlice(0, out.GetNumCols());
+            Mat d = dst.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n());
+            d.AssignSumOf(o.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n()), bias);
         }
 
         void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
         {
-            UNUSED(srcGradT); UNUSED(srcGrad); UNUSED(biasT); UNUSED(biasGrad);
-            RuntimeError("Not yet implemented.");
+            assert(biasT.c() == srcGradT.c());
+            assert(biasT.w() == 1);
+            assert(biasT.h() == 1);
+            assert(biasT.n() == 1);
+            assert(biasGrad.GetNumRows() == biasT.c());
+            assert(biasGrad.GetNumCols() == 1);
+
+            Mat sg = srcGrad.ColumnSlice(0, srcGrad.GetNumCols());
+            size_t ccol = srcGradT.w() * srcGradT.h() * srcGradT.n();
+            // REVIEW alexeyk: should be replaced by ConstOnes eventually.
+            m_ones.Resize(ccol, 1);
+            m_ones.SetValue(1);
+            Mat::MultiplyAndAdd(sg.Reshaped(biasT.c(), ccol), false, m_ones, false, biasGrad);
         }
 
         void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, 
@@ -239,6 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         size_t m_maxTempMemSizeInSamples;
         Mat m_tempMatrix;
+        Mat m_ones;
     };
 
     template class ConvolutionEngine<float>;
@@ -267,7 +289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
                     poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
             }
-            if (poolDesc.kind() == PoolDesc::PoolKind::Average)
+            else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
             {
                 out.AssignAveragePoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
                     outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
@@ -295,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
                     poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
             }
-            if (poolDesc.kind() == PoolDesc::PoolKind::Average)
+            else if (poolDesc.kind() == PoolDesc::PoolKind::Average)
             {
                 grad.AddAveragePoolingGradient(srcGrad, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
                     outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
@@ -371,9 +393,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
     {
         // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        //if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
+        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
             return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
-        //return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
+        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
     }
 
     template class ConvolutionEngineFactory<float>;
