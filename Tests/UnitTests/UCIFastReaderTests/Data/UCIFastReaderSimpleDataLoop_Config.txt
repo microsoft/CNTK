@@ -1,0 +1,43 @@
+RootDir=.
+ModelDir=models
+command=Simple_Test
+
+# deviceId=-1 for CPU, >=0 for GPU devices
+DeviceNumber=-1
+
+precision=float
+
+modelPath=$ModelDir$/UCIFastReaderSimpleDataLoop_Model.dnn
+deviceId=$DeviceNumber$
+
+outputNodeNames=ScaledLogLikelihood
+traceLevel=1
+
+#######################################
+#  CONFIG (Simple, Fixed LR)          #
+#######################################
+
+Simple_Test=[
+    # Parameter values for the reader
+    reader=[
+        # reader to use
+        readerType=UCIFastReader
+        file=$RootDir$/UCIFastReaderSimpleDataLoop_Train.txt
+
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=1
+
+        features=[
+            dim=2      # two-dimensional input data
+            start=0    # Start with first element on line
+        ]
+
+        labels=[
+            start=2      # Skip two elements
+            dim=1        # One label dimension
+            labelDim=2   # Two labels possible
+            labelMappingFile=$RootDir$/UCIFastReaderSimpleDataLoop_Mapping.txt
+        ]
+    ]
+]
