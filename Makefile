@@ -421,6 +421,10 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
+	MachineLearning/CNTKActionsLib/TrainActions.cpp \
+	MachineLearning/CNTKActionsLib/EvalActions.cpp \
+	MachineLearning/CNTKActionsLib/OtherActions.cpp \
+	MachineLearning/CNTKActionsLib/EsotericActions.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
