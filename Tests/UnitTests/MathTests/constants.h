@@ -10,3 +10,4 @@ extern const int c_deviceIdZero;
 extern const float c_epsilonFloatE5;
 extern const float c_epsilonFloatE4;
 extern const float c_epsilonFloatE3;
+extern const float c_epsilonFloatE2;
