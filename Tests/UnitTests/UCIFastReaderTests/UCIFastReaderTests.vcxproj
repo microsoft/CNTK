@@ -154,7 +154,7 @@
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(ProjectDir)Data\*" />
+      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;$(ProjectDir)Data/*.txt;" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
