@@ -20,11 +20,8 @@ DNN=[
     hStride1 = 1
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * inputChannels]
-    conv1W = Parameter(cMap1, 25, init = Uniform, initValueScale = 10)
-    conv1 = Convolution(conv1W, featScaled, kW1, kH1, cMap1, hStride1, vStride1, zeroPadding = false)
-    conv1bias = Parameter(cMap1, 1)
-    conv1plusbias = Plus(conv1, conv1bias);
-    conv1_act = Sigmoid(conv1plusbias);
+    # ConvReLULayer is defined in Macros.ndl
+    conv1_act = ConvReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10, 1)
 
     # pool1
     pool1W = 2
@@ -40,11 +37,8 @@ DNN=[
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    conv2W = Parameter(cMap2, 400, initValueScale = 10)
-    conv2 = Convolution(conv2W, pool1, kW2, kH2, cMap2, hStride2, vStride2, zeroPadding = false)
-    conv2bias = Parameter(cMap2, 1)
-    conv2plusbias = Plus(conv2, conv2bias);
-    conv2_act = Sigmoid(conv2plusbias);
+    # ConvReLULayer is defined in Macros.ndl
+    conv2_act = ConvReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, 10, 1)
 
     # pool2
     pool2W = 2
@@ -53,8 +47,10 @@ DNN=[
     pool2vStride = 2
     pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
 
-    h1 = DNNLayer(512, 128, pool2, 1)
-    ol = DNNLastLayer(labelDim, 128, h1, 1)
+    h1Dim = 128
+    # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
+    h1 = DNNSigmoidLayer(512, h1Dim, pool2, 1)
+    ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)
