@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // check more types
         else if (nodeType == OperationNameOf(AveragePoolingNode))	return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ConvolutionNode))	        return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == InputValue<ElemType>::SparseTypeName())	return New<InputValue<ElemType>>(forward<_Types>(_Args).../*, true*/);        // TODO: will go away; we will have a separate type SparseInputValue instead
+        else if (nodeType == InputValue<ElemType>::SparseTypeName())	LogicError("Node type 'SparseInputValue' temporarily not supported. Will come back as its own proper type.");//return New<InputValue<ElemType>>(forward<_Types>(_Args).../*, true*/);        // TODO: will go away; we will have a separate type SparseInputValue instead
         else if (nodeType == OperationNameOf(InputValue))	        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
@@ -136,12 +136,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         wstring precision = configp->Get(L"precision");            // dispatch on ElemType
         wstring operationName = configp->Get(L"operation");
+        ComputationNodeBasePtr node;
         if (precision == L"float")
-            return CreateNode<float>(operationName, configp);
+            node = CreateNode<float>(operationName, configp);
         else if (precision == L"double")
-            return CreateNode<double>(operationName, configp);
+            node = CreateNode<double>(operationName, configp);
         else
             RuntimeError("NewStandardNode: Invalid value '%ls' for 'precision' parameter. Must be 'float' or 'double'.", precision.c_str());
+        // add a tag
+        // Tags are used to declare special node types tp ComputationNetwork.
+        const auto nodeWithTag = dynamic_pointer_cast<ScriptableObjects::WithTag>(node);
+        if (nodeWithTag)
+            nodeWithTag->SetTag(configp->Get(L"tag"));
+        return node;
     }
 
     // -----------------------------------------------------------------------
