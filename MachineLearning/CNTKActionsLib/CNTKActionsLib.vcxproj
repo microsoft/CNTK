@@ -171,6 +171,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
+    <ClCompile Include="EsotericActions.cpp" />
+    <ClCompile Include="EvalActions.cpp" />
+    <ClCompile Include="OtherActions.cpp" />
     <ClCompile Include="TrainActions.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -3,7 +3,6 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#pragma once
 
 #include "Actions.h"
 #include "ScriptableObjects.h"
@@ -17,6 +16,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // TODO: MakeRuntimeObject will just call procedures, and return a dummy 'bool = true'
     class TrainAction : public ActionsBase
     {
         void Do()
