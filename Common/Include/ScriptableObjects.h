@@ -337,9 +337,25 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     struct IConfigRecord   // any class that exposes config can derive from this
     {
-        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;    // e.g. confRec[L"message"]
-        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;          // returns nullptr if not found
-        virtual vector<wstring> GetMemberIds() const = 0;                           // returns the names of all members in this record (but not including parent scopes)
+        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;                    // e.g. confRec[L"message"]
+        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;                          // returns nullptr if not found
+        virtual vector<wstring> GetMemberIds() const = 0;                                           // returns the names of all members in this record (but not including parent scopes)
+        // prettier access if config record is a pointer
+        const ConfigValuePtr & Get(const wstring & id) const { return operator[](id); }             // e.g. confRecPtr->Get(L"message")
+
+        // emulation of old CNTK config/NL
+        const ConfigValuePtr & operator()(const char * id) const { wstring wid(id, id + strlen(id)); return operator[](wid); }     // e.g. confRec("message")
+        // TODO: how to deal with defaults? Just MakePrimitiveConfigValuePtr()?
+        template<class ValueType>
+        ConfigValuePtr operator()(const char * id, const ValueType & defaultValue) const            // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
+        {
+            wstring wid(id, id + strlen(id));
+            auto * val = Find(wid);
+            if (val)
+                return *val;        // exists
+            else                    // does not exist: return default value instead
+                return MakePrimitiveConfigValuePtr(defaultValue, [](const wstring & msg) { InvalidArgument(L"%ls", msg.c_str()); }, L"(default value)");
+        }
     };
     typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
 

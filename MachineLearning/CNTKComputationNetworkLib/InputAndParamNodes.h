@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "ComputationNode.h"
+#include "ScriptableObjects.h"
+#include "Matrix.h"
+#include "File.h"   // for LoadMatrixFromTextFile()
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,11 +22,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "File.h"   // for LoadMatrixFromTextFile()
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -53,27 +53,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateFunctionValuesSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
         }
-#if 0
-        LearnableParameter(const IConfigValuePtr configp) :
-            LearnableParameter((DEVICEID_TYPE)(int)(*config)[L"deviceId"], L"<placeholder>", (*config)[L"rows"], (config*)[L"cols"]))
+        LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
+            LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
         {
+            NumInputs::Check(configp);
             // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
             // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
-            SetParameterUpdateRequired(config[L"needGradient"]);
-            static int randomSeed = 1;
-            wstring initString = config[L"init"];
+            SetParameterUpdateRequired(configp->Get(L"needGradient"));
+            wstring initString = configp->Get(L"init");
             if (initString == L"fixedValue")
-                FunctionValues().SetValue((ElemType)config[L"value"]);
+                FunctionValues().SetValue((ElemType)configp->Get(L"value"));
             else if (initString == L"uniform" || initString == L"gaussian")
             {
                 // TODO: add these options also to old NDL
-                int forcedRandomSeed = config[L"randomSeed"];   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
-                static unsigned long m_randomSeedOffset = 0;    // TODO: this is held in the ComputationNetwork, but we don't have one yet
-                InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? (randomSeed++ + m_randomSeedOffset) : (unsigned long)forcedRandomSeed, config[L"initValueScale"], config[L"initOnCPUOnly"]);
+                static unsigned long randomSeed = 1;
+                int forcedRandomSeed = configp->Get(L"randomSeed");   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
+                InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
             }
             else if (initString == L"fromFile")
             {
-                wstring initFromFilePath = config[L"initFromFilePath"];
+                wstring initFromFilePath = configp->Get(L"initFromFilePath");
                 if (initFromFilePath.empty())
                     RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
                 InitFromFile(initFromFilePath);
@@ -81,7 +80,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
         }
-#endif
 
         virtual void SaveToFile(File& fstream) const override
         {
@@ -195,6 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SparseLearnableParameter);
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
@@ -249,6 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = false;
         }
     public:
+        DeclareConstructorFromConfigWithNumInputs(InputValue);
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
@@ -356,6 +356,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LookupTable"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LookupTableNode);
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -579,6 +580,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateFunctionValuesSize();
         }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PairNetworkNode);
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
             Base(deviceId, name)
         {

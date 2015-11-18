@@ -47,6 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //DeclareConstructorFromConfigWithNumInputs(DelayedValueNodeBase);
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
@@ -371,6 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"PastValue"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PastValueNode);
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -394,6 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"FutureValue"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(FutureValueNode);
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -430,6 +433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LSTM"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LSTMNode);
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),

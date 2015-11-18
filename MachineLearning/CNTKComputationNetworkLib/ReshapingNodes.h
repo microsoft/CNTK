@@ -35,6 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
+        //DeclareConstructorFromConfigWithNumInputs(ReinterpretNodeBase);
         ReinterpretNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -163,6 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ReinterpretNodeBase<ElemType> Base; UsingReinterpretNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ReshapeNode);
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayoutWHC(0,0,0)) :
             Base(deviceId, name),
             m_numTargetRows(numRows),
@@ -426,6 +428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
         ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -480,6 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowSlice"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(RowSliceNode);
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
             Base(deviceId, name),
             m_startIndex(startIndex),
@@ -557,6 +561,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowStack"; }
     public:
+        DeclareConstructorFromConfig(RowStackNode);
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -633,6 +638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowRepeat"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(RowRepeatNode);
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats = 1) :
             Base(deviceId, name),
             m_numRepeat(numRepeats)
