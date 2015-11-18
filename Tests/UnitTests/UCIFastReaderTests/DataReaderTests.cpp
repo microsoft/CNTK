@@ -30,14 +30,16 @@ namespace Microsoft
                         BOOST_TEST_MESSAGE("UCIFastReaderTests --> Current working directory:");
                         BOOST_TEST_MESSAGE(boost::filesystem::current_path());
 
-                        // Get the path to the data files
                         boost::filesystem::path path(boost::unit_test::framework::master_test_suite().argv[0]);
                         wstring parent_path = path.parent_path().c_str();
-                        if (boost::filesystem::exists(parent_path + L"/Tests/UnitTests/"))  // Jenkins or command line at enlistment
-                        {
-                            dataPath = path.parent_path().c_str();
-                            dataPath += L"/Tests/UnitTests/UCIFastReaderTests/Data/";
-                        }
+
+                        BOOST_TEST_MESSAGE("Setting current path to:");
+                        BOOST_TEST_MESSAGE(parent_path.c_str());
+
+                        boost::filesystem::current_path(parent_path);
+
+                        BOOST_TEST_MESSAGE("UCIFastReaderTests --> Current working directory is now:");
+                        BOOST_TEST_MESSAGE(boost::filesystem::current_path());
                     }
 
                     ~F()
@@ -114,9 +116,9 @@ namespace Microsoft
                     const size_t epochs = 2;
 
                     ConfigParameters config;
-                    std::wstring configFilePath(L"configFile=" + dataPath + L"UCIFastReaderSimpleDataLoop_Config.txt");
-                    const std::wstring controlDataFilePath(dataPath + L"UCIFastReaderSimpleDataLoop_Control.txt");
-                    const std::wstring testDataFilePath(dataPath + L"UCIFastReaderSimpleDataLoop_Data.txt");
+                    std::wstring configFilePath(L"configFile=UCIFastReaderSimpleDataLoop_Config.txt");
+                    const std::wstring controlDataFilePath(L"UCIFastReaderSimpleDataLoop_Control.txt");
+                    const std::wstring testDataFilePath(L"UCIFastReaderSimpleDataLoop_Data.txt");
 
                     wchar_t* arg[2] { L"CNTK", &configFilePath[0] };
                     const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
