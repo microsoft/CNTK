@@ -110,7 +110,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GPUWatcherTests.cpp" />
-    <ClCompile Include="MatrixBLASTests.cpp" />
     <ClCompile Include="MatrixDataSynchronizationTests.cpp" />
     <ClCompile Include="MatrixQuantizerTests.cpp" />
     <ClCompile Include="MatrixSparseDenseInteractionsTests.cpp" />
