@@ -343,7 +343,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // prettier access if config record is a pointer
         const ConfigValuePtr & Get(const wstring & id) const { return operator[](id); }             // e.g. confRecPtr->Get(L"message")
 
-        // emulation of old CNTK config/NL
+        // emulation of old CNTK config/NL:
         const ConfigValuePtr & operator()(const char * id) const { wstring wid(id, id + strlen(id)); return operator[](wid); }     // e.g. confRec("message")
         // TODO: how to deal with defaults? Just MakePrimitiveConfigValuePtr()?
         template<class ValueType>
@@ -355,6 +355,14 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 return *val;        // exists
             else                    // does not exist: return default value instead
                 return MakePrimitiveConfigValuePtr(defaultValue, [](const wstring & msg) { InvalidArgument(L"%ls", msg.c_str()); }, L"(default value)");
+        }
+        bool ExistsCurrent(const char * id) const // this is highly inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
+        {
+            wstring wid(id, id + strlen(id));
+            for (const auto & idIter : GetMemberIds())  // linear scan. Not using STL algorithm to avoid pulling in a big header at this level
+                if (idIter == wid)
+                    return true;
+            return false;
         }
     };
     typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
