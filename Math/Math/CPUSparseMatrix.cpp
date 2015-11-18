@@ -315,6 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.m_unCompIndex = m_unCompIndex;
         slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
         slice.m_externalBuffer = true;
+        slice.m_nz = m_nz;
 
         return slice;
     }
