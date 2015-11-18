@@ -891,7 +891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeA && !transposeB)
             {
-                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, 1, 1, false);
+                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, false);
             }
             else if (!transposeA && transposeB)
             {
@@ -940,7 +940,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs,
-        ElemType beta, GPUMatrix<ElemType>& c, size_t imageWidth, size_t kernelWidth, size_t stepSize, bool padding)
+        ElemType beta, GPUMatrix<ElemType>& c, size_t stepSize, bool padding)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("ConvolveAndWeightedAdd: All matrices must be on the same GPU");
@@ -954,22 +954,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int n = (int)rhs.GetNumCols();
 
         assert(m > 0 && k > 0 && l > 0 && n > 0);  //converting from size_t to int may cause overflow
-        if (k != l * kernelWidth)
-        {
-            InvalidArgument("GPUSparseMatrix::ConvolveAndWeightedAdd: lhs.GetNumCols() != kernelWidth * rhs.GetNumRows().");
-        }
 
         int numSteps = 0;
         if (padding)
-            numSteps = (int)ceil(1.0 * imageWidth / stepSize);
-        else if (imageWidth >= kernelWidth)
-            numSteps = 1 + (imageWidth - kernelWidth) / stepSize;
+            numSteps = (int)ceil(1.0 * l / stepSize);
+        else if (l >= k)
+            numSteps = 1 + (l - k) / stepSize;
 
         if (numSteps == 0)
             LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
 
-        int cRows = m;
-        int cCols = n * numSteps / imageWidth;
+        int cRows = m * numSteps;
+        int cCols = n;
 
         if (c.GetNumRows() != cRows || c.GetNumCols() != cCols)
         {
@@ -984,10 +980,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
                 m,          // rowDense
-                l,          // rowSparse
+                k,          // colDense
                 n,          // colSparse
-                (int)imageWidth,
-                (int)kernelWidth,
                 numSteps,   // convolution num steps
                 stepSize,   // convolution step size
                 alpha,
