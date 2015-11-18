@@ -248,7 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType> & weightMatrix = input0;
             assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_imageLayout.GetNumChannels());
             functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
-            functionValues.Resize(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
+            functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
             size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
