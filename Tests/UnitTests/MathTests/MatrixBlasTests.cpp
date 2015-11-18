@@ -3,8 +3,6 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// GPUMatrix Unit tests should go here
-//
 #include "stdafx.h"
 #include <math.h>
 #include <crtdefs.h>
@@ -25,7 +23,7 @@ namespace Microsoft
 				const size_t c_value_2 = 2;
 				const size_t c_value_3 = 3;
 
-				BOOST_AUTO_TEST_SUITE(MatrixSuite)
+				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
 					BOOST_AUTO_TEST_CASE(MatrixMultiplyTest)
 				{
