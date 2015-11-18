@@ -869,10 +869,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
-            RuntimeError("ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+            RuntimeError("GPUSparseMatrix::MultiplyAndWeightedAdd: All matrices must be on the same GPU");
 
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            LogicError("GPUSparseMatrix::MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
         int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
