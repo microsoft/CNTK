@@ -37,7 +37,6 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(12, matrixA2.GetNumCols());
                     BOOST_CHECK_EQUAL(13, matrixA2.GetNumRows());
 
-                    //float* arr = new float[225];
                     float arr[255];
                     SingleMatrix matrixA3(5, 45, arr, matrixFlagNormal);
                     BOOST_CHECK(CurrentDataLocation::GPU == matrixA3.GetCurrentMatrixLocation());
