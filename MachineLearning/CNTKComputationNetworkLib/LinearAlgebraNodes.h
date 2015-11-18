@@ -70,6 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsc == 1 && colsp != 1)                      // child is a broadcasting column vector
             {
+                MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
                 // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
                 auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
                 if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
@@ -77,7 +78,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     size_t colspExpand = rowsp*colsp / rowsc;
-                    MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
                     Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
                 }
             }
@@ -154,19 +154,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     // None of the input nodes are convolutional.
-                    if (rows1 % rows0 == 0)
-                        functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
+                    if (cols0 == 1)
+                        functionValues.AssignSumOf(inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0), inputFunctionValues0);
                     else
+                    {
+                        functionValues.Reshape(rows1, rows0 * cols0 / rows1);
                         functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
+                    }
                 }
                 functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
             }
-            else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
-            {
-                functionValues.Reshape(rows1, rows0 * cols0 / rows1);
-                functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
-                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
-            }       
             else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  // first summand is a matrix with number of columns that is a multiple of the column number of the second matrix
             {
                 if (m_pMBLayout)
