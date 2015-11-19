@@ -60,7 +60,7 @@ namespace CNTKMathTest
             Matrix<float> Ad;
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024,2048,-3,0.1,0),0);
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
             Matrix<float> B = Matrix<float>::RandomGaussian(2048,1024,1,4);
             Matrix<float> C = Matrix<float>::RandomGaussian(2048,2048,1,2);
