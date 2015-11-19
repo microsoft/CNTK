@@ -347,13 +347,13 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         const ConfigValuePtr & operator()(const char * id) const { wstring wid(id, id + strlen(id)); return operator[](wid); }     // e.g. confRec("message")
         // TODO: how to deal with defaults? Just MakePrimitiveConfigValuePtr()?
         template<class ValueType>
-        ConfigValuePtr operator()(const char * id, const ValueType & defaultValue) const            // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
+        ValueType operator()(const char * id, const ValueType & defaultValue) const            // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
         {
             wstring wid(id, id + strlen(id));
             auto * val = Find(wid);
             if (val)
-                return *val;        // exists
-            else                    // does not exist: return default value instead
+                return (ValueType)*val; // exists
+            else                        // does not exist: return default value instead
                 return MakePrimitiveConfigValuePtr(defaultValue, [](const wstring & msg) { InvalidArgument(L"%ls", msg.c_str()); }, L"(default value)");
         }
         bool ExistsCurrent(const char * id) const // this is highly inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
