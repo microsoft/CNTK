@@ -6,12 +6,13 @@
 #pragma once
 #include "Basics.h"
 #include <vector>
-#include <string>
 #include <map>
 #include <stdexcept>
 #include <stdint.h>
 
 using namespace std;
+
+#pragma warning(disable : 4996) // Caused by the TODO below (line ~1280)
 
 // helper for numeric parameter arguments for multiple layers
 // This parses arguments of the form a:b*n:c where b gets duplicated n times and c unlimited times.
@@ -608,8 +609,7 @@ public:
                 tokenEnd++;
             }
             // While we have tokens to parse
-        }
-        while (tokenEnd != npos);
+        } while (tokenEnd != npos);
     }
 
     // StripComments - This method removes the section of a config line corresponding to a comment.
@@ -740,6 +740,11 @@ public:
     {
         return NULL;
     }
+
+    // used as default argument to operator(id, default) to retrieve ConfigParameters
+    static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }
+    // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
+    template<class V> static const V & Array(const V & vec) { return vec; }
 
 public:
     // explicit copy function. Only to be used when a copy must be made.
@@ -923,6 +928,27 @@ public:
         return value;
     }
 
+    // version for defaults with types
+    template<typename Type>
+    Type operator()(const char * name,
+                    const Type & defaultValue) const
+    {
+        // find the value
+        // TODO: unify with the Find() function below
+        for (auto * dict = this; dict; dict = dict->m_parent)
+        {
+            auto iter = dict->find(name);
+            if (iter != dict->end())
+            {
+                if (iter->second == "default")
+                    break;  // use the default value
+                return (Type)iter->second;
+            }
+        }
+        // we get here if no dict in the chain contains the entry, or if the entry's string value says "default"
+        return defaultValue;
+    }
+
     ConfigValue Find(const std::string& name,
                      const char* defaultvalue = NULL) const
     {
@@ -930,6 +956,7 @@ public:
         ConfigValue result;
 
         // if we aren't found, or they want the default value
+        // TODO: What the hell is this?
         if (iter == end() || iter->second == "default")
         {
             // not found but the parent exists, check there
@@ -1398,6 +1425,14 @@ public:
             push_back(val);
         }
     }
+
+    // constructor from ConfigValue to convert from config array to constant array
+    argvector(const ConfigValue& configValue) : argvector((ConfigArray)configValue)
+    { }
+
+    // constructor from std::vector
+    argvector(const std::vector<T> configVector) : std::vector<T>(configVector)
+    { }
 
     // operator[] repeats last value infinitely
     T operator[](size_t i) const

@@ -55,10 +55,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
         L"Parameter = LearnableParameter // deprecated \n"
         // ^^ already works; vv untested
-        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = false ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
-        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = false /*plus the function args*/ ]\n"
-        L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
-        L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
+        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
+        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = false /*plus the function args*/ ]\n"
+        L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]\n"
+        L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]\n"
         L"Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue', value = val) \n"
         L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
         L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"

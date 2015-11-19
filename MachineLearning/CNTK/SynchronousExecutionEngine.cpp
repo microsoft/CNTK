@@ -77,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     nodePtr = builder.CreateInputNode(name, rows, cols);
             }
         }
-        else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
+        else if (OperationNameOf(SparseInputValue) == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
                 RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());

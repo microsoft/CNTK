@@ -31,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
-    class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    class DelayedValueNodeBase : public ComputationNode<ElemType>, public ILateAttachingNode, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"DelayedValue"; }
@@ -46,7 +46,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
     protected:
-        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
@@ -66,6 +65,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //m_gradientValues->Resize(row_size, col_size);
             //m_gradientValues->SetValue(0.0f);
+        }
+        DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
+            DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"rows"), configp->Get(L"cols"), configp->Get(L"timeStep"))
+        {
+            // We do NOT attach the inputs, as we cannot resolve them without causing a circular reference.
+            // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
+            // This is a contract between ComputationNetwork and this specific node type.
+            m_attachInputsFn = [this, configp]()   // This is the lambda to complete the process. Note that config captured as a shared_ptr.
+            {
+                AttachInputs(GetInputsFromConfig(configp));    // this is executed by network builder while iterating the nodes
+            };
+        }
+        virtual void /*ILateAttachingNode::*/LateAttachInputs() override final
+        {
+            m_attachInputsFn();
+            m_attachInputsFn = [](){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
         }
     public:
         void SaveToFile(File& fstream) const
@@ -352,7 +367,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
         int      m_timeStep;                        // delay in frames (typ. 1)
         MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
-        bool m_isHistoryCarryOverManagedExternally;                   // for PastValueNode only
+        bool m_isHistoryCarryOverManagedExternally; // for PastValueNode only
+        function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
@@ -377,6 +393,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
+        PastValueNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
+        { }
     };
 
     template class PastValueNode<float>; 
@@ -399,6 +418,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
+        { }
+        FutureValueNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
         { }
     };
 
@@ -430,6 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LSTM"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LSTMNode);
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),

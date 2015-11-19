@@ -35,6 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using Base::ValueSliceToDense;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PlusNode);
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -120,6 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
             {
+                functionValues.Reshape(rows1, rows0 * cols0 / rows1);
                 functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
                 functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
             }       
@@ -183,6 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Minus"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(MinusNode);
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -294,6 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Scale"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ScaleNode);
         ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -352,6 +356,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Negate"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(NegateNode);
         NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -391,6 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // matrix for the times node added during SVD decomposition. Since ValidateSubNetwork is called after addition
         // of the times node, the validation crashes if the function values matrix has not yet been allocated
         // This can be removed after the  Validation has been fixed to not access the function values matrix at all
+        DeclareConstructorFromConfigWithNumInputs(TimesNode);
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name, bool createOutputMatrix = false) :
             Base(deviceId, name)
         {
@@ -499,6 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"TransposeTimes"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
         TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -611,6 +618,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ElementTimes"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
         ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -664,6 +672,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowElementTimes"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(RowElementTimesNode);
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -805,6 +814,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ColumnElementTimes"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ColumnElementTimesNode);
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -953,6 +963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"DiagTimes"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(DiagTimesNode);
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1072,6 +1083,7 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SumElements"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SumElementsNode);
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1118,6 +1130,7 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SumColumnElements"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SumColumnElementsNode);
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1170,6 +1183,7 @@ private:
         static const std::wstring TypeName() { return L"Transpose"; }
 
     public:
+        DeclareConstructorFromConfigWithNumInputs(TransposeNode);
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1239,6 +1253,7 @@ private:
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Diagonal"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
         DiagonalNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1348,6 +1363,7 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CosDistance"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CosDistanceNode);
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1477,6 +1493,7 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"KhatriRaoProduct"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(KhatriRaoProductNode);
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -1552,6 +1569,7 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CosDistanceWithNegativeSamplesNode);
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }

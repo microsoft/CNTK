@@ -26,6 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ErrorPrediction"; }
     public:
+        DeclareConstructorFromConfig(ErrorPredictionNode);
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
