@@ -923,6 +923,27 @@ public:
         return value;
     }
 
+    // version for defaults with types
+    template<typename Type>
+    Type operator()(const char * name,
+                    const Type & defaultValue) const
+    {
+        // find the value
+        // TODO: unify with the Find() function below
+        for (auto * dict = this; dict; dict = dict->m_parent)
+        {
+            auto iter = dict->find(name);
+            if (iter != dict->end())
+            {
+                if (iter->second == "default")
+                    break;  // use the default value
+                return (Type)iter->second;
+            }
+        }
+        // we get here if no dict in the chain contains the entry, or if the entry's string value says "default"
+        return defaultValue;
+    }
+
     ConfigValue Find(const std::string& name,
                      const char* defaultvalue = NULL) const
     {
@@ -930,6 +951,7 @@ public:
         ConfigValue result;
 
         // if we aren't found, or they want the default value
+        // TODO: What the hell is this?
         if (iter == end() || iter->second == "default")
         {
             // not found but the parent exists, check there
