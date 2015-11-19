@@ -37,6 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DeclareConstructorFromConfigWithNumInputs(NonlinearityNodeBase);
         NonlinearityNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -105,6 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(RectifiedLinearNode);
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -146,6 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -201,6 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Tanh"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(TanhNode);
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -258,6 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Log"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LogNode);
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -314,6 +319,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Exp"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ExpNode);
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -353,6 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Cosine"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CosineNode);
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -410,6 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Softmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SoftmaxNode);
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -499,6 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LogSoftmaxNode);
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -588,6 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(GMMLogLikelihoodNode);
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNode<ElemType>(deviceId, name)
         { }
@@ -986,6 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Dropout"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(DropoutNode);
         DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_dropoutRate(0)
@@ -1152,6 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"Hardmax"; }
 
     public:
+        DeclareConstructorFromConfigWithNumInputs(HardmaxNode);
         HardmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }

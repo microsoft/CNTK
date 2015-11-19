@@ -35,6 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
+        //DeclareConstructorFromConfigWithNumInputs(ReinterpretNodeBase);
         ReinterpretNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -168,6 +169,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numTargetRows(numRows),
             m_targetImageLayout(imageLayout)
         { }
+        ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -281,7 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numTargetRows);
-                if (weStack())
+                if (weStack() || factor() == 1)
                 {
                     // going from many samples to one: layout entry will get no flags
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
@@ -426,6 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ReconcileMBLayoutNode);
         ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -456,7 +463,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             if (isFinalValidationPass && (!Inputs(0)->HasMBLayout() || !Inputs(1)->HasMBLayout()))
-                RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.");
+                RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
             // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
@@ -485,6 +492,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_startIndex(startIndex),
             m_sliceHeight(numRows)
         { }
+        RowSliceNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            RowSliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"startIndex"), configp->Get(L"numRows"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -557,6 +569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowStack"; }
     public:
+        DeclareConstructorFromConfig(RowStackNode);
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -637,6 +650,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name),
             m_numRepeat(numRepeats)
         { }
+        RowRepeatNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            RowRepeatNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRepeats"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {

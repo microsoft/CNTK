@@ -1,3 +1,4 @@
+#if 0   // This is no longer needed. Keeping it around for reference, but should simply be deleted after a few weeks.
 // NetworkBuilderFromConfig.cpp -- interface to node and network creation from glue languages through config record parameters  --fseide
 
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -136,19 +137,20 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // startIndex, numRows, inputs /*one*/, needGradient=false
                     node = New<RowSliceNode<ElemType>>(deviceId, nodeName, (size_t)config[L"startIndex"], (size_t)config[L"numRows"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    // TODO: Why is this ^^ flag here? This node has no parameters.
                 }
                 else if (OpIs(RowRepeatNode)) // TODO: untested
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<RowRepeatNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRepeats"]);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
-                else if (OpIs(DiagonalNode))
+                else if (OpIs(DiagonalNode))        // TODO: seems this is no longer a special case (needGradient makes no sense here)
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
+                    //node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
                 else if (OpIs(ReshapeNode))
                 {
@@ -176,6 +178,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else
                 {
                     node = ComputationNetworkBuilder<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                    if (!node)
+                        config[L"operation"].Fail(L"Unknown operation " + operationName);
                 }
                 node->AttachInputs(inputs); // TODO: where to check the number of inputs? Should be a template parameter to ComputationNode!
             }
@@ -270,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 #endif
 
     // temporary code for BrainScript update (using register)
-
+#if 0
     template<> shared_ptr<Object> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr configp)
     {
         return DualPrecisionHelpers<float, ComputationNode<float>>::MakeRuntimeObject(configp);
@@ -282,6 +286,16 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     // register ComputationNetwork with the ScriptableObject system
     ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<ComputationNode<float>, ComputationNode<double>> adderx(L"ComputationNode");
+#else
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
+#endif
 }}}
 
 // temporarily moved this function here, to force this compilation unit to emit something
@@ -307,3 +321,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 }}}
+#endif

@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SquareError"; }
     public:
-
+        DeclareConstructorFromConfigWithNumInputs(SquareErrorNode);
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -120,6 +120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CrossEntropyWithSoftmaxNode);
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -244,6 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CrossEntropy"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CrossEntropyNode);
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -368,7 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"MatrixL1Reg"; }
     public:
-
+        DeclareConstructorFromConfigWithNumInputs(MatrixL1RegNode);
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -457,7 +459,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"MatrixL2Reg"; }
     public:
-
+        DeclareConstructorFromConfigWithNumInputs(MatrixL2RegNode);
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -518,7 +520,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
     public:
-
+        DeclareConstructorFromConfigWithNumInputs(NoiseContrastiveEstimationNode);
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_logSoftmax(deviceId),
@@ -709,6 +711,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ClassBasedCrossEntropyWithSoftmaxNode);
         ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
@@ -1006,6 +1009,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CRF"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CRFNode);
         CRFNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
@@ -1272,6 +1276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
         SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name), m_gammaCalcInitialized(false)
         {
@@ -1507,6 +1512,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Logistic"; }
     public:
+        DeclareConstructorFromConfig(LogisticNode);
         LogisticNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }

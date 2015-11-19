@@ -19,9 +19,6 @@ template<class ElemType>
 class SparsePCReader : public IDataReader<ElemType>
 {
 private:
-    size_t SPARSENESS_FACTOR_DEFAULT = 50; // We don't expect more than one in 50 input positions to have non-zero values
-    int32_t VERIFICATION_CODE = 131313; // for data integrity check
-    
     ConfigParameters m_readerConfig;
     std::wstring m_file;
     size_t m_featureCount;
@@ -34,6 +31,7 @@ private:
     bool m_doGradientCheck;
     bool m_returnDense;
     size_t m_sparsenessFactor;
+    int32_t m_verificationCode;
     std::vector<ElemType*> m_values;
     std::vector<int32_t*> m_rowIndices;
     std::vector<int32_t*> m_colIndices;
