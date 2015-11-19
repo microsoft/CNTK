@@ -121,6 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
             {
+                functionValues.Reshape(rows1, rows0 * cols0 / rows1);
                 functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
                 functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
             }       

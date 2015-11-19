@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // caller must call BuildAndValidateSubNetwork() before
         // TODO: Some places are hard to fix, e.g. encoder-decoder best-path functions. Those may be broken; this message will tell you.
         if (!BuiltAndValidatedSubNetwork(rootNode))
-            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.");
+            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
         // traverse all nodes in the pre-determined evaluation order
         GetOuterLoopNode(rootNode)->EvaluateThisNode(FrameRange(nullptr));
