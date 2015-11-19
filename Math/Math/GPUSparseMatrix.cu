@@ -886,6 +886,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
+        if (c.GetNumRows() != m || c.GetNumCols() != n)
+        {
+            c.Resize(m, n);
+        }
+
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
         {
