@@ -369,25 +369,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             else                        // does not exist: return default value instead
                 return defaultValue;
         }
-        template<class T> std::vector<T> operator()(const char * id, const std::vector<T> & defaultValue) const       // retrieve an argvector (which derives from std::vector)
-        {
-            const auto * valp = Find(id);
-            if (!valp)
-                return defaultValue;                // default value
-            else if (!valp->Is<ConfigArray>())
-                return std::vector<T>(1, *valp);    // scalar value
-            else                                    // actual array
-            {
-                const ConfigArray & arr = *valp;
-                const auto range = arr.GetIndexRange();
-                if (range.first != 0)
-                    valp->Fail(L"This array is expected to begin with index 0.");
-                std::vector<T> res(range.second+1);
-                for (int i = range.first; i <= range.second; i++)
-                    res[i] = arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
-                return res;
-            }
-        }
+        template<class T> std::vector<T> operator()(const char * id, const std::vector<T> & defaultValue) const;       // retrieve an argvector (which derives from std::vector)
         std::string operator()(const char * id, const char * defaultValue) const             // special case for narrow strings
         {
             return msra::strfun::utf8(operator()(id, (std::wstring)msra::strfun::utf16(defaultValue)));
@@ -405,7 +387,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             return false;
         }
         static const IConfigRecord & Record();
-        template<class V> static const std::vector<typename V::value_type> & Array(const V & vec) { return static_cast<const std::vector<V::value_type> &>(vec); }  // use this specifically for XXXargvector
+        template<class V> static const std::vector<typename V::value_type> & Array(const V & vec) { return static_cast<const std::vector<typename V::value_type> &>(vec); }  // use this specifically for XXXargvector
     };
 
     /*static*/ inline const IConfigRecord & IConfigRecord::Record()   // part of emulation of old CNTK config mechanism: empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
@@ -516,6 +498,26 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
+
+    template<class T> inline std::vector<T> IConfigRecord::operator()(const char * id, const std::vector<T> & defaultValue) const       // this is part of old CNTK ConfigParameters emulation
+    {
+        const auto * valp = Find(id);
+        if (!valp)
+            return defaultValue;                // default value
+        else if (!valp->Is<ConfigArray>())
+            return std::vector<T>(1, (T)*valp); // scalar value
+        else                                    // actual array
+        {
+            const ConfigArray & arr = *valp;
+            const auto range = arr.GetIndexRange();
+            if (range.first != 0)
+                valp->Fail(L"This array is expected to begin with index 0.");
+            std::vector<T> res(range.second + 1);
+            for (int i = range.first; i <= range.second; i++)
+                res[i] = arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
+            return res;
+        }
+    }
 
     // -----------------------------------------------------------------------
     // ConfigLambda -- a lambda
