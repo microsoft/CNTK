@@ -109,6 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConfigArray minibatchSize = configSGD("minibatchSize", "256");
         intargvector mbSize = minibatchSize;
         bool truncated = configSGD("Truncated", "false");
+        ConfigArray numSubMinibatch = configSGD("NumSubMinibatch", "0");
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         size_t epochSize = configSGD("epochSize", "0");
@@ -183,7 +184,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Gradient check needs to use precision = double");
 
         bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
-
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
         // TODO: the number of parameters of this function is waaay to little!
@@ -191,6 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         *this = SGDParams(learningRatesPerMB,
                           learningRatesPerSample,
                           mbSize,
+                          numSubMinibatch,
                           truncated,
                           fullEpochsOffset,
                           fullTotalMaxEpochs,
@@ -284,6 +285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     SGDParams::SGDParams(const floatargvector& learningRatesPerMB,
                          const floatargvector& learningRatesPerSample,
                          const intargvector& mbSize,
+                         const intargvector& subMBSize, 
                          bool truncated,
                          const size_t fullEpochsOffset,
                          const size_t fullTotalMaxEpochs,
@@ -343,6 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_minibatchSearchCriterionErrorMargin = minibatchSearchCriterionErrorMargin;
 
         m_mbSize = mbSize;
+        m_numSubMinibatch = subMBSize;
         m_truncated = truncated;
 
         m_fullTotalMaxEpochs = fullTotalMaxEpochs;
@@ -1838,6 +1841,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             refNet.StartEvaluateMinibatchLoop(refNode);
         }
 
+        SubminibatchDispatcher<ElemType> smbhelper; 
+        size_t numSubminibatchRequested = m_numSubMinibatch[epochNumber]; 
+        if (numSubminibatchRequested > 0)
+        {
+            smbhelper.Init(net, learnableNodes, criterionNodes, evaluationNodes);
+        }
+        size_t actualNumSubminibatch=0;
+
         // Attemps to compute the error signal for the whole utterance, which will
         // be fed to the neural network as features. Currently it is a workaround
         // for the two-forward-pass sequence and ctc training, which allows
@@ -1851,15 +1862,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
                     (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
         }
-
         if (useDistributedMBReading)
         {
             fprintf(stderr, ", Distributed reading is ENABLED");
+        }
+        if (numSubminibatchRequested > 0)
+        {
+            fprintf(stderr, ", Dispatched to %d subminibatch", numSubminibatchRequested);
         }
         fprintf(stderr, ".\n");
 
         Timer timer;
         timer.Start();
+
+
 
         // --- MAIN MINIBATCH LOOP
 
@@ -1872,9 +1888,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                                               useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
-
+            
+            // for MA use only 
             nSamplesSinceLastModelSync += actualMBSize;
 
+            if (numSubminibatchRequested > 0)
+            {
+                actualNumSubminibatch = smbhelper.GetMinibatchIntoCache(*trainSetDataReader, net, *inputMatrices, numSubminibatchRequested); 
+            }
+            else
+            {
+                actualNumSubminibatch = 0;
+            }
+            
             // node data was changed
             // TODO: move this to that function as well--just tired to pass everything as arguments
             // TODO: We should do this right after the GetMinibatch() call, since that's where these changed.
@@ -1912,26 +1938,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //compute eval node first since when gradient is computed the forward function values
                 //may be changed and need to be recomputed when gradient and function value share the same matrix
-                net.Evaluate(evaluationNodes);
+                if (actualNumSubminibatch > 0)
+                {
+                    for (size_t ismb = 0; ismb < actualNumSubminibatch; ismb++)
+                    {
+                        smbhelper.GetSubMinibatchToNet(ismb);
+#ifdef SMB_DEBUG
+                        //smbhelper.WriteInputMatriceAndMBLayout(numMBsRun, ismb);
+#endif 
+                        ComputationNetwork::UpdateEvalTimeStamps(featureNodes); 
+                        ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                        ForwardBackward(net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate); 
+                        smbhelper.DoneWithCurrentSubMinibatch(ismb); 
+                    }
+#ifdef SMB_DEBUG
+                    //smbhelper.WriteGradient(numMBsRun);
+#endif 
+                    smbhelper.DoneWithCurrentMinibatch(); 
 
-                // only compute gradient when learning rate is large enough
-                if (learnRatePerSample > m_minLearnRate * 0.01)
-                {
-                    // use only the first criterion. Is there any possibility to use more?
-                    // ==============================
-                    // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
-                    // ==============================
-                    net.ComputeGradient<ElemType>(criterionNodes[0]);
-                    // TODO: we should split Evaluate() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
                 }
-                else
+                else 
                 {
-                    // use only the first criterion. Is there any possibility to use more?
-                    // ==============================
-                    // forward prop
-                    // ==============================
-                    net.Evaluate(criterionNodes[0]);
+                    ForwardBackward(net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate);
                 }
+
             } // if (actualMBSize > 0)
 
             // Some labels may be missing (e.g. forced alignment failed, or being gaps due to packing parallel sequences).
@@ -2017,9 +2047,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                      GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
-                                      m_L2RegWeight, m_L1RegWeight,
-                                      m_needAveMultiplier);
+                            GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                            m_L2RegWeight, m_L1RegWeight,
+                            m_needAveMultiplier);
+
+#ifdef SMB_DEBUG
+                       
+                        wstring nodename = node->GetName(); 
+                        ComputationNodePtr pNode = dynamic_pointer_cast<ComputationNode<ElemType>> (node);
+                        wstring filename = actualNumSubminibatch != 0 ? 
+                                    msra::strfun::wstrprintf(L"tmp/smb/%ls.%d", nodename.c_str(),  numMBsRun) : 
+                                    msra::strfun::wstrprintf(L"tmp/nosmb/%ls.%d", nodename.c_str(), numMBsRun);
+                        smbhelper.WriteMatrix<Matrix<ElemType>, ElemType>(pNode->FunctionValues(), msra::strfun::wcstombs(filename));
+#endif 
+
+
 #ifdef _DEBUG
                         if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues().HasNan("TrainOneEpoch/UpdateWeights(): "))
                             LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());

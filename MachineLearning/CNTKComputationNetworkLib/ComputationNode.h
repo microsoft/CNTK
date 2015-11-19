@@ -128,6 +128,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
+    //  This provide a interface for stateful node (e.g., DelayNodeBase) and definition of state
+    //  This interface allows to Export and Import state from elsewhere 
+    //  It is needed when doing sub-minibatch implementation 
+    // =======================================================================
+    class INodeState: public std::enable_shared_from_this<INodeState>{  
+    public:
+        virtual ~INodeState() {} 
+    };
+
+    struct /*interface*/ IStateFulNode{
+        typedef std::shared_ptr<INodeState>     NodeStatePtr;
+        virtual NodeStatePtr ExportState() = 0;
+        virtual void ImportState(const NodeStatePtr& pImportedState) = 0;
+    };
+
+
+    // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
     // These members are only to be set, changed, and read by ComputationNetwork code.
     // TODO: We could go much further and move all network-level evaluation routines into here as well.
@@ -1385,6 +1402,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelfBeforeValidation() const { }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const { }
     };
+
+
 
     // =======================================================================
     // helper macro to ease access to base members in presence of C++ two-phase name lookup

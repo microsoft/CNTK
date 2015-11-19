@@ -100,6 +100,7 @@ struct SGDParams
     SGDParams(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
+              const intargvector& subMBSize, 
               bool truncated,
               const size_t fullEpochsOffset,
               const size_t fullTotalMaxEpochs,
@@ -191,6 +192,7 @@ protected:
     //bool m_needToNormalizeMomentumByParallUtterance;
 
     intargvector m_mbSize;
+    intargvector m_numSubMinibatch; 
     bool m_truncated;           // do BPTT
     // BUGBUG: The 'Truncated' option is duplicated in the reader and must be set to the same there (e.g. by defining in the config on an outer enclosing level, like current samples).
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
@@ -271,6 +273,7 @@ protected:
     bool m_validateAfterModelReloading;
 
     bool m_useAllDataForPreComputedNode;
+
 
     // Parallel training
     ParallelizationMethod m_parallelizationMethod;
@@ -510,6 +513,28 @@ protected:
 
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
+    void ForwardBackward(ComputationNetwork& net, const std::vector<ComputationNodeBasePtr>& evalNodes,  shared_ptr<ComputationNodeBase> criterionNode, bool dobackpropogate=true)
+    {
+        net.Evaluate(evalNodes);
+        // only compute gradient when learning rate is large enough
+        if (dobackpropogate)
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
+            // ==============================
+            net.ComputeGradient<ElemType>(criterionNode);
+            // TODO: we should split Evaluate() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
+        }
+        else
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop
+            // ==============================
+            net.Evaluate(criterionNode);
+        }
+    }
 };
 
 }}}
