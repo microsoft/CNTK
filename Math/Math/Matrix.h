@@ -179,9 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         void VerifySize(size_t rows, size_t cols)
         {
-            if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
-                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+            m_baseMatrix->VerifySize(rows, cols);
         }
         Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
         void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()

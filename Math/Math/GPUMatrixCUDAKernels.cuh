@@ -2649,7 +2649,7 @@ __global__ void _sparseCSRElemMulDense(
 
 
 //c = alpha * op(a) * op(b) + beta*c
-//this function can be further improved by using shared memory
+// TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     int m,  // rowDense

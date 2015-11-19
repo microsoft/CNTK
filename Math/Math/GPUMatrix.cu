@@ -3439,7 +3439,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int n = int(transposeB ? b.m_numRows : b.m_numCols);
         int k = int(transposeA ? a.m_numRows : a.m_numCols);
         int l = int(transposeB ? b.m_numCols : b.m_numRows);
-        c.Resize(m,n);
+
+        if (beta == 0)
+            c.Resize(m,n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
 
         if (!(m>0 && k>0 && l>0 && n>0)) 
         {

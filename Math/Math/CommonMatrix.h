@@ -113,7 +113,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         wchar_t* GetMatrixName() const { return m_matrixName; }
         size_t NzCount() const {return m_nz;}
         void SetNzCount(const size_t nz) { m_nz = nz; }
-        size_t GetSizeAllocated() const {return m_elemSizeAllocated; }
+        size_t GetSizeAllocated() const { return m_elemSizeAllocated; }
+        void VerifySize(size_t rows, size_t cols)
+        {
+            if (rows != GetNumRows() || cols != GetNumCols())
+                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
         void SetMatrixName(const wchar_t* s) 
         { 
             Clear();
