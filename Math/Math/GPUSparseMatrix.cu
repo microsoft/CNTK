@@ -886,10 +886,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
-        if (c.GetNumRows() != m || c.GetNumCols() != n)
-        {
+        if (beta == 0)
             c.Resize(m, n);
-        }
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
 
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
@@ -948,10 +948,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, GPUMatrix<ElemType>& c, size_t stepSize, bool padding)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
-            RuntimeError("ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+            RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
 
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            LogicError("ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+            LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = (int)lhs.GetNumRows();
         int k = (int)lhs.GetNumCols();
@@ -972,10 +972,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int cRows = m * numSteps;
         int cCols = n;
 
-        if (c.GetNumRows() != cRows || c.GetNumCols() != cCols)
-        {
-            c.Resize(cRows, cCols);
-        }
+        if (beta == 0)
+            c.Resize(m, n);
+        else
+            c.VerifySize(cRows, cCols); // Can't resize if beta != 0
 
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
