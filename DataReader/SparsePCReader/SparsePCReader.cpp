@@ -191,23 +191,14 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         return false;
     }
 
-    Matrix<ElemType>* labels = nullptr;
+    Matrix<ElemType>* labels = nullptr;     // labels to return, or NULL if no labels in matrix set
     auto labelEntry = matrices.find(m_labelName);
-    bool useLabels = false;
     if (labelEntry != matrices.end())
     {
         labels = labelEntry->second;
-        if (labels != nullptr)
-        {
-            size_t labelRows = (*labels).GetNumRows();
 
-            if (labelRows != 1)
-            {
-                RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", labelRows);
-            }
-
-            useLabels = true;
-        }
+        if (labels->GetNumRows() != 1)
+            RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int)labels->GetNumRows());
     }
     
     std::vector<int32_t> currIndex = std::vector<int32_t>(m_featureCount);
@@ -279,11 +270,11 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         (*matrices[m_featureNames[1]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
     }
 
-    if (useLabels)
+    if (labels)
     {
-        (*labels).Resize(1, j);
-        (*labels).SetValue((ElemType)0);
-        (*labels).SetValue(1, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
+        labels->Resize(1, j);
+        labels->SetValue((ElemType)0);
+        labels->SetValue(1, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
     }
 
     return true;
