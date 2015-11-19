@@ -2369,8 +2369,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                const bool needAveMultiplier)
     {
         // we use simple linear (instead of log linear) scaling here
-        //const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
-        double momentum = sgd->GetMomentumCTC(momentumPerSample);
+        const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 #if DUMPOUTPUT
         fprintf(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
                 learnRatePerSample, momentum, actualMBSize);
@@ -2494,11 +2493,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType>
-    double SGD<ElemType>::GetMomentumCTC(double momentumPerSample) const
-    {
-        return pow(momentumPerSample, m_momentumSpecifiedForMBSize[0]);
-    }
     template<class ElemType>
     void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const double learnRatePerSample,
