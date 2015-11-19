@@ -799,7 +799,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void NotifyFunctionValuesMBSizeModified() override final
         {
             if (m_numRows != FunctionValues().GetNumRows())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension changed by the reader.", NodeName().c_str(), OperationName().c_str());
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)m_numRows, (int)FunctionValues().GetNumRows());
             m_numCols = FunctionValues().GetNumCols();
         }
         virtual double Get00Element() const override final { return FunctionValues().Get00Element(); }
