@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             return p != nullptr;
         }
         template<class C>
-        const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
+        const C & AsRef() const     // returns reference to the 'value' member. Configs are considered immutable, so return a const&
         {
             // TODO: factor these lines into a separate function
             // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
@@ -343,20 +343,60 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // prettier access if config record is a pointer
         const ConfigValuePtr & Get(const wstring & id) const { return operator[](id); }             // e.g. confRecPtr->Get(L"message")
 
-        // emulation of old CNTK config/NL:
+        // -----------------------------------------------------------------------
+        // emulation of old CNTK config/NL
+        // This allows code written for CNTK config to simply turn ConfigParameters into a template parameter and accept an IConfigRecord.
+        // -----------------------------------------------------------------------
+
         const ConfigValuePtr & operator()(const char * id) const { wstring wid(id, id + strlen(id)); return operator[](wid); }     // e.g. confRec("message")
-        // TODO: how to deal with defaults? Just MakePrimitiveConfigValuePtr()?
+    private:
+        const ConfigValuePtr * Find(const char * id) const { return Find(wstring(id, id + strlen(id))); }
+    public:
         template<class ValueType>
-        ValueType operator()(const char * id, const ValueType & defaultValue) const            // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
+        ValueType operator()(const char * id, const ValueType & defaultValue) const                 // e.g. confRec("message"). This version copies the ConfigValuePtr, so that we can return a new one for the default value.
         {
-            wstring wid(id, id + strlen(id));
-            auto * val = Find(wid);
-            if (val)
-                return (ValueType)*val; // exists
+            const auto * valp = Find(id);
+            if (valp)
+                return *valp;
             else                        // does not exist: return default value instead
-                return MakePrimitiveConfigValuePtr(defaultValue, [](const wstring & msg) { InvalidArgument(L"%ls", msg.c_str()); }, L"(default value)");
+                return defaultValue;
         }
-        bool ExistsCurrent(const char * id) const // this is highly inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
+        const IConfigRecord & operator()(const char * id, const IConfigRecord & defaultValue) const // retrieve a nested ConfigRecord
+        {
+            const auto * valp = Find(id);
+            if (valp)
+                return valp->AsRef<IConfigRecord>();
+            else                        // does not exist: return default value instead
+                return defaultValue;
+        }
+        template<class T> std::vector<T> operator()(const char * id, const std::vector<T> & defaultValue) const       // retrieve an argvector (which derives from std::vector)
+        {
+            const auto * valp = Find(id);
+            if (!valp)
+                return defaultValue;                // default value
+            else if (!valp->Is<ConfigArray>())
+                return std::vector<T>(1, *valp);    // scalar value
+            else                                    // actual array
+            {
+                const ConfigArray & arr = *valp;
+                const auto range = arr.GetIndexRange();
+                if (range.first != 0)
+                    valp->Fail(L"This array is expected to begin with index 0.");
+                std::vector<T> res(range.second+1);
+                for (int i = range.first; i <= range.second; i++)
+                    res[i] = arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
+                return res;
+            }
+        }
+        std::string operator()(const char * id, const char * defaultValue) const             // special case for narrow strings
+        {
+            return msra::strfun::utf8(operator()(id, (std::wstring)msra::strfun::utf16(defaultValue)));
+        }
+        std::wstring operator()(const char * id, const wchar_t * defaultValue) const             // special case for narrow strings
+        {
+            return operator()(id, wstring(defaultValue));
+        }
+        bool ExistsCurrent(const char * id) const // this is inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
         {
             wstring wid(id, id + strlen(id));
             for (const auto & idIter : GetMemberIds())  // linear scan. Not using STL algorithm to avoid pulling in a big header at this level
@@ -364,7 +404,21 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     return true;
             return false;
         }
+        static const IConfigRecord & Record();
+        template<class V> static const std::vector<typename V::value_type> & Array(const V & vec) { return static_cast<const std::vector<V::value_type> &>(vec); }  // use this specifically for XXXargvector
     };
+
+    /*static*/ inline const IConfigRecord & IConfigRecord::Record()   // part of emulation of old CNTK config mechanism: empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
+    {
+        static struct EmptyConfigRecord : public ScriptableObjects::IConfigRecord
+        {
+            virtual const ScriptableObjects::ConfigValuePtr & operator[](const wstring &) const override final { InvalidArgument("EmptyConfigRecord: Attempted to return a value from the empty record."); }
+            virtual const ScriptableObjects::ConfigValuePtr * Find(const wstring &) const override final { return nullptr; }
+            virtual vector<wstring> GetMemberIds() const { return vector<wstring>(); }
+        } emptyParameters;
+        return emptyParameters;
+    }
+
     typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
 
 
