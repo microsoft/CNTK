@@ -741,6 +741,11 @@ public:
         return NULL;
     }
 
+    // used as default argument to operator(id, default) to retrieve ConfigParameters
+    static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }
+    // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
+    template<class V> static const V & Array(const V & vec) { return vec; }
+
 public:
     // explicit copy function. Only to be used when a copy must be made.
     // this also clears out the parent pointer, so only local configs can be used
@@ -1423,6 +1428,10 @@ public:
 
     // constructor from ConfigValue to convert from config array to constant array
     argvector(const ConfigValue& configValue) : argvector((ConfigArray)configValue)
+    { }
+
+    // constructor from std::vector
+    argvector(const std::vector<T> configVector) : std::vector<T>(configVector)
     { }
 
     // operator[] repeats last value infinitely

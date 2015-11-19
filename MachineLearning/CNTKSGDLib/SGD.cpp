@@ -69,15 +69,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ConfigRecordType, class ElemType>
     SGDParams::SGDParams(const ConfigRecordType& configSGD, ElemType/*for type deduction*/)
     {
-        floatargvector learningRatesPerMB = configSGD("learningRatesPerMB", floatargvector());
+        floatargvector learningRatesPerMB = configSGD("learningRatesPerMB", ConfigRecordType::Array(floatargvector()));
 
-        floatargvector learningRatesPerSample = configSGD("learningRatesPerSample", floatargvector());
+        floatargvector learningRatesPerSample = configSGD("learningRatesPerSample", ConfigRecordType::Array(floatargvector()));
 
         string executionEngineValue = configSGD("executionEngine", "synchronous");
 
         // AutoAdjust Parameters
-        ConfigRecordType configAALR(configSGD("AutoAdjust", ConfigRecordType()));
-        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
+        const ConfigRecordType & configAALR(configSGD("AutoAdjust", ConfigRecordType::Record()));
+        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", L"None"));
         double reduceLearnRateIfImproveLessThan =   configAALR("reduceLearnRateIfImproveLessThan",   0.0);
         bool continueReduce =                       configAALR("continueReduce",                     false);
         size_t learnRateAdjustInterval =            configAALR("learnRateAdjustInterval",            (size_t)1);
@@ -94,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the number of minibatches used to search
         // the learning rate. Its typically set to 10-20% of
         // the total minibatches in an epoch.
-        intargvector numMiniBatch4LRSearch = configAALR("numMiniBatch4LRSearch", intargvector("500"));
+        intargvector numMiniBatch4LRSearch = configAALR("numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{ 500 })));
 
         size_t numPrevLearnRates =          configAALR("numPrevLearnRates",           (size_t)5);
         size_t numBestSearchEpoch =         configAALR("numBestSearchEpoch",          (size_t)1);
@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: mbSize and truncated should be specified differently for truncated BPTT:
         //       mbSize = total number of samples after which a model update should happen
         //       truncated = truncation length
-        intargvector mbSize = configSGD("minibatchSize", intargvector("256"));
+        intargvector mbSize = configSGD("minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         bool truncated = configSGD("Truncated", false);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
@@ -114,9 +114,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the total number of epochs to run.
         size_t maxEpochs = configSGD("maxEpochs");
 
-        floatargvector momentumPerMB = configSGD("momentumPerMB", floatargvector());
+        floatargvector momentumPerMB = configSGD("momentumPerMB", ConfigRecordType::Array(floatargvector()));
 
-        floatargvector momentumPerSample = configSGD("momentumPerSample", floatargvector());
+        floatargvector momentumPerSample = configSGD("momentumPerSample", ConfigRecordType::Array(floatargvector()));
 
         wstring modelPath = configSGD("modelPath");
         wstring trainCriterionNodeName = configSGD("trainCriterionNodeName", L"");
@@ -139,10 +139,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double frameDropThresh =        configSGD("frameDropThresh",  1e-10);
         bool doReferenceAlign =         configSGD("doReferenceAlign", false);
 
-        floatargvector dropoutRates =   configSGD("dropoutRate", floatargvector("0.0"));
+        floatargvector dropoutRates = configSGD("dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 
         GradientUpdateInfo gUpdateInfo;
-        GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
+        GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", L"None"));
         double gaussianNoiseInjecStd = configSGD("gaussianNoiseInjectStd", 0.0);
         gUpdateInfo.mType = gradUpdateType;
         gUpdateInfo.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gUpdateInfo.mType = gradUpdateType;
         }
 
-        AdaptationRegType adaptationRegType = ParseAdaptationRegType(configSGD("adaptationRegType", "None"));
+        AdaptationRegType adaptationRegType = ParseAdaptationRegType(configSGD("adaptationRegType", L"None"));
         double adaptationRegWeight = configSGD("adaptationRegWeight", 0.0);
 
         /// gradient check setup
@@ -182,8 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", true);
 
-        // TODO: the number of parameters of this function is waaay to little!
-        // TODO: it may be easier to write the values directly into the members
+        // TODO: At this point we are copying local vars into members of the same name. This is a left-over of refactoring. We should just write to the members directly.
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
         m_autoAdjustMinibatch = autoAdjustMinibatch;
@@ -329,7 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
 
         // BUGBUG: these are not passed to Init()
-        m_doUnitTest = configSGD("unittest", "false");
+        m_doUnitTest = configSGD("unittest", false);
 
         // Parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
@@ -341,14 +340,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
         {
-            ConfigRecordType configParallelTrain(configSGD("ParallelTrain", ConfigRecordType()));
-            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
+            const ConfigRecordType & configParallelTrain(configSGD("ParallelTrain", ConfigRecordType::Record()));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", L"None"));
             m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain("distributedMBReading", false);
 
             if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
             {
-                ConfigRecordType configDataParallelSGD(configParallelTrain("DataParallelSGD", ConfigRecordType()));
+                const ConfigRecordType & configDataParallelSGD(configParallelTrain("DataParallelSGD", ConfigRecordType::Record()));
                 size_t defaultGradientBits = 8 * sizeof(ElemType);
                 m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBits);
                 m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", true);
@@ -360,7 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
             {
-                ConfigRecordType configMASGD(configParallelTrain("ModelAveragingSGD", ConfigRecordType()));
+                const ConfigRecordType & configMASGD(configParallelTrain("ModelAveragingSGD", ConfigRecordType::Record()));
                 m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", (size_t)40000);
                 m_iMASyncStatsTrace = configMASGD("MAPerfStats", (int)0);
             }
@@ -2610,6 +2609,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SGD<double>;
 
     // register ComputationNode with the ScriptableObject system
-    //ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<SGDParams> registerComputationNode(L"SGDParams");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<SGDParams> registerComputationNode(L"SGDParams");
 
 }}}

@@ -102,12 +102,10 @@ struct SGDParams : public ScriptableObjects::Object
     template<class ConfigRecord, class ElemType>    // (needed for default value of m_gradientBits)
     SGDParams(const ConfigRecord& configSGD, ElemType exampleElemType/*for type deduction*/);
 
-#if 0
     SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
         : SGDParams(*configp, 1.0f/*for type deduction  --FIX THIS*/)
     {
     }
-#endif
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
