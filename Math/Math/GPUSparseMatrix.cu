@@ -894,42 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
         {
-            if (!transposeA && !transposeB)
-            {
-                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, 1, false, false);
-            }
-            else if (!transposeA && transposeB)
-            {
-                if (beta != 1.0)
-                {
-                    RuntimeError("Only support c += alpha * a operation");
-                }
-                int blocksPerGrid = (int)ceil(1.0*m / threadsPerBlock);
-                cudaEvent_t done = nullptr;
-                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-                for (int colInc = 0; colInc < l; colInc++)
-                {
-                    _denseMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
-                        m, //rowDense
-                        n,   //colSparse
-                        colInc,
-                        alpha,
-                        reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
-                        reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
-                        rhs.RowLocation(),
-                        rhs.ColLocation(),
-                        reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                        );
-                }
-
-                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-            }
-            else
-            {
-                NOT_IMPLEMENTED;
-            }
+            ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
         }
         else if (rhs.m_format == matrixFormatSparseCSR)
         {
@@ -944,8 +909,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs,
-        ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+    void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
+        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
@@ -953,10 +918,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (lhs.IsEmpty() || rhs.IsEmpty())
             LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
 
-        int m = (int)lhs.GetNumRows();
-        int k = (int)lhs.GetNumCols();
-        int l = (int)rhs.GetNumRows();
-        int n = (int)rhs.GetNumCols();
+        int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
+        int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
+        int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows();
+        int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols();
 
         assert(m > 0 && k > 0 && l > 0 && n > 0);  //converting from size_t to int may cause overflow
 
@@ -980,29 +945,69 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
         {
-            int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
-                m,          // rowDense
-                k,          // colDense
-                n,          // colSparse
-                numChannels,// number of input channels
-                numSteps,   // convolution num steps
-                horizontalSubsample,   // convolution step size
-                channelwise,// channelwise or pixelwise multiplication
-                alpha,
-                reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
-                reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
-                rhs.RowLocation(),
-                rhs.ColLocation(),
-                beta,
-                reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                );
+            if (!transposeA && !transposeB)
+            {
+                int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                    m,          // rowDense
+                    k,          // colDense
+                    n,          // colSparse
+                    numChannels,// number of input channels
+                    numSteps,   // convolution num steps
+                    horizontalSubsample,   // convolution step size
+                    channelwise,// channelwise or pixelwise multiplication
+                    alpha,
+                    reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                    reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    beta,
+                    reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                    );
 
-            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else if (!transposeA && transposeB)
+            {
+                if (beta != 1.0)
+                {
+                    RuntimeError("Only support c += alpha * a operation");
+                }
+                int blocksPerGrid = (int)ceil(1.0*cRows / threadsPerBlock);
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                for (int rowInB = 0; rowInB < l; rowInB++)
+                {
+                    _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                        m,          //rowDense
+                        k,          // colDense
+                        n,          // colSparse
+                        numChannels,// number of input channels
+                        numSteps,   // convolution num steps
+                        horizontalSubsample,   // convolution step size
+                        channelwise,// channelwise or pixelwise multiplication
+                        rowInB,
+                        alpha,
+                        reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                        reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                        rhs.RowLocation(),
+                        rhs.ColLocation(),
+                        reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                        );
+                }
+
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
         }
         else
         {
