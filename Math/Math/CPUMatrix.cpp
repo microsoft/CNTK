@@ -5505,6 +5505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    // note: this function does not depend on the <ElemType> parameter
     template<class ElemType>
     int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     {
