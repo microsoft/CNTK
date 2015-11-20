@@ -18,7 +18,7 @@ def runBoostUnitTests(testDir, outputDir):
         if test.lower().endswith(".exe"):
             outputFile = os.path.join(outputDir, test + ".xml")
             print "Running test executable %s with result in %s" % (test, outputFile)
-            subprocess.check_call([os.path.join(testDir, test), "--log_format=XML", "--log_sink=%s" % outputFile, "--log_level=error", "--report_level=no"])
+            subprocess.check_call([os.path.join(testDir, test), "--log_format=XML", "--log_sink=%s" % outputFile, "--log_level=test_suite", "--report_level=no"])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Runs all boost unit tests in the directory")

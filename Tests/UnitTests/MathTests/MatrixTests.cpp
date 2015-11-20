@@ -164,7 +164,7 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(MatrixInitGaussianRand)
                 {
-                    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, 0.0f, 2.0f, (unsigned long)-1);
+                    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, 0.0f, 2.0f, static_cast<unsigned long>(-1));
                     BOOST_CHECK_EQUAL(a.GetNumRows(), 640);
                     BOOST_CHECK_EQUAL(a.GetNumCols(), 230);
 
@@ -182,8 +182,8 @@ namespace Microsoft
                     }
                     std = sqrt (std / (640 * 230));
 
-                    BOOST_CHECK_LE(fabs(avg), c_epsilonFloatE2);
-                    BOOST_CHECK_LE(fabs(std - 2), c_epsilonFloatE2);
+                    BOOST_CHECK_LE(fabs(avg), c_epsilonFloatE1);
+                    BOOST_CHECK_LE(fabs(std - 2), c_epsilonFloatE1);
                 }
 
                 BOOST_AUTO_TEST_CASE(MatrixInitRandomUniform)
