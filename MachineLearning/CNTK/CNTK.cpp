@@ -779,7 +779,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 }
 
 template <typename ElemType>
-void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoTrain(const ConfigParameters& config)
 {
     ConfigParameters configSGD(config("SGD"));
     bool makeMode = config("makeMode", "true");
@@ -821,13 +821,13 @@ void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t ful
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 template <typename ElemType>
-void DoAdapt(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoAdapt(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -851,7 +851,7 @@ void DoAdapt(const ConfigParameters& config, size_t fullEpochsOffset, size_t ful
     wstring origModelFileName = config("origModelFileName", L"");
     wstring refNodeName = config("refNodeName", L"");
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.Adapt(origModelFileName, refNodeName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -865,7 +865,7 @@ http://arxiv.org/pdf/1409.3215.pdf
 
 */
 template <typename ElemType>
-void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoEncoderDecoder(const ConfigParameters& config)
 {
     vector<IComputationNetBuilder<ElemType>*> netBuilders;
     vector<IDataReader<ElemType>*> trainDataReader;
@@ -910,7 +910,7 @@ void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, s
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    MultiNetworksSGD<ElemType> sgd(configSGD);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -933,7 +933,7 @@ void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, s
 DoBidirecionEncoderDecoder
 */
 template <typename ElemType>
-void DoBidirectionEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoBidirectionEncoderDecoder(const ConfigParameters& config)
 {
 
     ConfigParameters configSGD = config("SGD");
@@ -993,7 +993,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config, size_t fullEpoc
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    MultiNetworksSGD<ElemType> sgd(configSGD);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -1159,7 +1159,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
 }
 
 template <typename ElemType>
-void DoSequenceTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoSequenceTrain(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -1198,7 +1198,7 @@ void DoSequenceTrain(const ConfigParameters& config, size_t fullEpochsOffset, si
 
     wstring origModelFileName = config("origModelFileName", L"");
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -1389,20 +1389,20 @@ void DoCommand(const ConfigParameters& config)
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoSequenceTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoSequenceTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "adapt")
             {
-                DoAdapt<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoAdapt<ElemType>(commandParams);
             }
             else if (action[j] == "test" || action[j] == "eval")
             {
@@ -1454,7 +1454,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainEncoderDecoder")
             {
-                DoEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoEncoderDecoder<ElemType>(commandParams);
             }
             else if (action[j] == "testEncoderDecoder")
             {
@@ -1462,7 +1462,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainBidirectionEncoderDecoder")
             {
-                DoBidirectionEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoBidirectionEncoderDecoder<ElemType>(commandParams);
             }
             else if (action[j] == "beamSearch")
             {
