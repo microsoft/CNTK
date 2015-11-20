@@ -344,12 +344,12 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         const ConfigValuePtr & Get(const wstring & id) const { return operator[](id); }             // e.g. confRecPtr->Get(L"message")
 
         // access with default values
-        template<class ValueType> ValueType operator()(const wstring & id, const ValueType & defaultValue) const     // e.g. confRec("message", "hello)
+        template<class ValueType> ValueType operator()(const wstring & id, const ValueType & defaultValue) const    // e.g. confRec("message", "hello)
         {
             const auto * valp = Find(id);
             return valp ? *valp : defaultValue;
         }
-        inline const IConfigRecord & IConfigRecord::operator()(const wstring & id, const IConfigRecord & defaultValue) const               // retrieve a nested ConfigRecord
+        inline const IConfigRecord & operator()(const wstring & id, const IConfigRecord & defaultValue) const       // retrieve a nested ConfigRecord
         {
             const auto * valp = Find(id);
             return valp ? valp->AsRef<IConfigRecord>() : defaultValue;
