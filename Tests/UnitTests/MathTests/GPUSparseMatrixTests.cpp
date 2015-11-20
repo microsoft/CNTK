@@ -395,6 +395,99 @@ namespace Microsoft
 					BOOST_CHECK(!sliceColumn2.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 				}
 
+                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit)
+                {
+                    const bool zeroPadding = true;
+                    const int horizontalSubsample = 1;
+                    const int verticalSubsample = 1;
+                    const int inputWidth = 6;
+                    const int inputHeight = 1;
+                    const int inputChannels = 1;
+                    const int kernelWidth = 2;
+                    const int kernelHeight = inputHeight;
+                    const int outputWidth = zeroPadding ? inputWidth : (inputWidth >= kernelWidth ? 1 + (inputWidth - kernelWidth) / horizontalSubsample : 0);
+                    const int outputHeight = inputHeight;
+                    const int outputChannels = 3;
+                    const int batchSize = 1;
+                    const int m = outputChannels;
+                    const int k = kernelWidth * inputChannels;
+                    const int l = inputWidth * inputChannels;
+                    const int n = batchSize;
+                    const float alpha = 1.0f;
+                    const float beta = 0.0f;
+
+                    float weights[9] = { 1, 1, 1, 1, 1, 1 };
+                    float values[9] = { 1, 2, 3, 4, 5, 6 };
+                    GPUMatrix<float> denseMatrixA(m, k, 0, weights, matrixFlagNormal);;
+                    GPUMatrix<float> denseMatrixB(l, n, 0, values, matrixFlagNormal);;
+                    GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
+                    GPUMatrix<float> denseMatrixTemp(1, 1, c_deviceIdZero);     // this should get resized automatically
+                    GPUMatrix<float> resultMatrixBase(1, 1, c_deviceIdZero);    // this should get resized automatically
+                    GPUMatrix<float> resultMatrixExp(1, 1, c_deviceIdZero);     // this should get resized automatically
+
+                    sparseMatrixB.SetValue(denseMatrixB);
+
+                    denseMatrixTemp.AssignPackedConvolutionInput(denseMatrixB,
+                        inputWidth, inputHeight, inputChannels,
+                        outputWidth, outputHeight, outputChannels,
+                        kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
+
+                    GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, denseMatrixA, false, denseMatrixTemp, false, beta, resultMatrixBase);
+                    resultMatrixBase.Reshape(outputWidth * outputChannels, batchSize);
+
+                    GPUSparseMatrix<float>::ConvolveAndWeightedAdd(alpha, denseMatrixA, sparseMatrixB, beta, resultMatrixExp, inputChannels, horizontalSubsample, zeroPadding, true);
+
+                    BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE5));
+                }
+
+                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit)
+                {
+                    for (auto zeroPadding : { true, false })
+                    {
+                        for (auto inputChannels : { 1, 10 })
+                        {
+                            for (auto horizontalSubsample : { 1, 2, 3 })
+                            {
+                                const int verticalSubsample = 1;
+                                const int inputWidth = 10;
+                                const int inputHeight = 1;
+                                const int kernelWidth = 3;
+                                const int kernelHeight = inputHeight;
+                                const int outputWidth = zeroPadding ? inputWidth : (inputWidth >= kernelWidth ? 1 + (inputWidth - kernelWidth) / horizontalSubsample : 0);
+                                const int outputHeight = inputHeight;
+                                const int outputChannels = 100;
+                                const int batchSize = 10;
+                                const int m = outputChannels;
+                                const int k = kernelWidth * inputChannels;
+                                const int l = inputWidth * inputChannels;
+                                const int n = batchSize;
+                                const float alpha = 0.53f;
+                                const float beta = 0.0f;
+                                GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(m, k, c_deviceIdZero, -1, 1);
+                                GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(l, n, c_deviceIdZero, -5, 5);
+                                GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
+                                GPUMatrix<float> denseMatrixTemp(1, 1, c_deviceIdZero);     // this should get resized automatically
+                                GPUMatrix<float> resultMatrixBase(1, 1, c_deviceIdZero);    // this should get resized automatically
+                                GPUMatrix<float> resultMatrixExp(1, 1, c_deviceIdZero);     // this should get resized automatically
+
+                                sparseMatrixB.SetValue(denseMatrixB);
+
+                                denseMatrixTemp.AssignPackedConvolutionInput(denseMatrixB,
+                                    inputWidth, inputHeight, inputChannels,
+                                    outputWidth, outputHeight, outputChannels,
+                                    kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
+
+                                GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, denseMatrixA, false, denseMatrixTemp, false, beta, resultMatrixBase);
+                                resultMatrixBase.Reshape(outputWidth * outputChannels, batchSize);
+
+                                GPUSparseMatrix<float>::ConvolveAndWeightedAdd(alpha, denseMatrixA, sparseMatrixB, beta, resultMatrixExp, inputChannels, horizontalSubsample, zeroPadding, true);
+
+                                BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE5));
+                            }
+                        }
+                    }
+                }
+
 				BOOST_AUTO_TEST_SUITE_END()
 			}
 		}
