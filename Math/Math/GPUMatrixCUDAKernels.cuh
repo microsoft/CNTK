@@ -2652,15 +2652,15 @@ __global__ void _sparseCSRElemMulDense(
 // TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    int m,  // rowDense
-    int k,  // colDense
-    int n,  // colSparse
-    int numChannels,
-    int numSteps,   // convolution num steps
-    int horizontalSubsample,   // convolution step size
-    bool channelwise,
+    int m,                  // rowDense
+    int k,                  // colDense
+    int n,                  // colSparse
+    int numChannels,        // input num channels
+    int numSteps,           // convolution num steps
+    int horizontalSubsample,// convolution step size
+    bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
     ElemType alpha,
-    const ElemType* a,  //dense
+    const ElemType* a,      //dense
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
@@ -2708,35 +2708,56 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
 
 /// c += alpha * a * b^T
 template<class ElemType>
-__global__ void _denseMultSparseCSCTransposeAndAddToDense(
-    int m, //rowDense
-    int n,   //number of columns in sparse matrix
-    int colInC, /// column index of the sparse matrix
+__global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
+    int m,                      //rowDense
+    int k,                      // colDense
+    int n,                      // colSparse
+    int numChannels,            // input num channels
+    int numSteps,               // convolution num steps
+    int horizontalSubsample,    // convolution step size
+    bool channelwise,           // pixelwise for normal multiplication and channelwise for convolution operation
+    int rowInB,                 // row index of the sparse matrix
     ElemType alpha,
-    const ElemType* a,  //dense
+    const ElemType* a,          //dense
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType* c  //dense target
+    ElemType* c                 //dense target
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m)
+    if (id >= m*numSteps)
         return;
 
     int rowInC = id;
-    int start = colCSCIndex[colInC];
-    int end = colCSCIndex[colInC + 1];
+    int stepIdx = rowInC / m;
+    int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
+
+    if (i < 0 || i >= k)
+        return;
+
+    // Convert to channelwise index.
+    // This is similar to rowwise to columnwise conversion
+    if (channelwise)
+    {
+        int pixel = i / numChannels;
+        int channel = i % numChannels;
+        int numPixels = k / numChannels;
+        i = channel * numPixels + pixel;
+    }
+
+    int start = colCSCIndex[rowInB];
+    int end = colCSCIndex[rowInB + 1];
 
     ElemType s = 0;
-    ElemType val = 0;
     for (int j = start; j<end; j++)  //j points to the value that are in the same row
     {
-        int i = rowIndex[j];  /// actually the column index because of transpose
-        val = bnzValues[j];   /// the b[][j] value
-        s = a[IDX2C(rowInC, colInC, m)] * val;
+        int colInC = rowIndex[j];  // the column index because of transpose
+        
+        // bnzValues[j] = the b[][j] value
+        s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
 
-        atomicAdd(&c[IDX2C(rowInC, i, m)], alpha * s);
+        atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
     }
 }
 
