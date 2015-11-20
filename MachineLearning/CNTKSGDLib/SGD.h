@@ -260,8 +260,8 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
-    SGD(SGDParams&& sgdParams, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
+    SGD(const ConfigParameters& configSGD);
+    SGD(SGDParams&& sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
@@ -455,10 +455,6 @@ public:
                        int npos);
 
 protected:
-
-    // This includes the total epochs across all training commands
-    size_t m_fullTotalMaxEpochs;
-    size_t m_fullEpochsOffset;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;

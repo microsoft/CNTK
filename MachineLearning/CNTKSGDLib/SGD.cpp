@@ -362,9 +362,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    SGD<ElemType>::SGD(SGDParams&& sgdParams, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) :
+    SGD<ElemType>::SGD(SGDParams&& sgdParams) :
         SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
-        m_fullTotalMaxEpochs(fullTotalMaxEpochs), m_fullEpochsOffset(fullEpochsOffset),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr)
     {
@@ -375,8 +374,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    SGD<ElemType>::SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) :
-        SGD(SGDParams(configSGD, ElemType(0)), fullEpochsOffset, fullTotalMaxEpochs)
+    SGD<ElemType>::SGD(const ConfigParameters& configSGD) :
+        SGD(SGDParams(configSGD, ElemType(0)))
     { }
 
     template<class ElemType>
