@@ -898,6 +898,7 @@ public:
     {
         return (find(name) != end());
     }
+    bool ExistsCurrent(const wchar_t * name) const { return ExistsCurrent(string(name, name + wcslen(name))); }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
@@ -930,14 +931,14 @@ public:
 
     // version for defaults with types
     template<typename Type>
-    Type operator()(const char * name,
+    Type operator()(const wchar_t * name,
                     const Type & defaultValue) const
     {
         // find the value
         // TODO: unify with the Find() function below
         for (auto * dict = this; dict; dict = dict->m_parent)
         {
-            auto iter = dict->find(name);
+            auto iter = dict->find(string(name, name + wcslen(name)));
             if (iter != dict->end())
             {
                 if (iter->second == "default")

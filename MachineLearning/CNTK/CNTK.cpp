@@ -48,9 +48,15 @@
 #include "SimpleOutputWriter.h"
 #include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
-#include "ScriptableObjects.h"
 #include "ProgressTracing.h"
 #include "fileutil.h"
+#include "ScriptableObjects.h"
+#include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
+
+#ifndef let
+#define let const auto
+#endif
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
@@ -95,12 +101,12 @@ std::string WCharToString(const wchar_t* wst)
 template <typename ElemType>
 void DumpNodeInfo(const ConfigParameters& config)
 {
-    wstring modelPath = config("modelPath");
-    wstring nodeName = config("nodeName", L"__AllNodes__");
-	wstring nodeNameRegexStr = config("nodeNameRegex", L"");
+    wstring modelPath = config(L"modelPath");
+    wstring nodeName = config(L"nodeName", L"__AllNodes__");
+	wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config("outputFile", defOutFilePath);
-    bool printValues = config("printValues", true);
+    wstring outputFile = config(L"outputFile", defOutFilePath);
+    bool printValues = config(L"printValues", true);
 
     ComputationNetwork net(-1);  //always use CPU
     net.LoadFromFile<ElemType>(modelPath);
@@ -111,19 +117,19 @@ template <typename ElemType>
 void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config("minibatchSize", "40960");
-    size_t epochSize = config("epochSize", "0");
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
-    wstring modelPath = config("modelPath");
+    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config("traceLevel", "0");
-    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+    int traceLevel = config(L"traceLevel", "0");
+    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
-    ConfigArray evalNodeNames = config("evalNodeNames", "");
+    ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
     {
@@ -142,8 +148,8 @@ template <typename ElemType>
 void DoEval(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType> testDataReader(readerConfig);
 
@@ -158,21 +164,21 @@ template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType> testDataReader(readerConfig);
 
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config("minibatchSize", "40960");
-    size_t epochSize = config("epochSize", "0");
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
-    wstring modelPath = config("modelPath");
+    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
-    wstring path2EvalResults = config("path2EvalResults", L"");
+    wstring path2EvalResults = config(L"path2EvalResults", L"");
 
     ComputationNetwork net(deviceId);
     net.LoadFromFile<ElemType>(modelPath);
@@ -187,28 +193,28 @@ template <typename ElemType>
 void DoCrossValidate(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config("minibatchSize", "40960");
-    size_t epochSize = config("epochSize", "0");
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
-    wstring modelPath = config("modelPath");
+    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    ConfigArray cvIntervalConfig = config("crossValidationInterval");
+    ConfigArray cvIntervalConfig = config(L"crossValidationInterval");
     intargvector cvInterval = cvIntervalConfig;
 
-    size_t sleepSecondsBetweenRuns = config("sleepTimeBetweenRuns", "0");
+    size_t sleepSecondsBetweenRuns = config(L"sleepTimeBetweenRuns", "0");
 
-    int traceLevel = config("traceLevel", "0");
-    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+    int traceLevel = config(L"traceLevel", "0");
+    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
-    ConfigArray evalNodeNames = config("evalNodeNames", "");
+    ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
     {
@@ -290,24 +296,24 @@ void DoCrossValidate(const ConfigParameters& config)
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
     readerConfig.Insert("randomize", "None");  //we don't want randomization when output results
 
     DataReader<ElemType> testDataReader(readerConfig);
 
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config("minibatchSize", "2048");
-    wstring modelPath = config("modelPath");
+    ConfigArray minibatchSize = config(L"minibatchSize", "2048");
+    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    size_t epochSize = config("epochSize", "0");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
 
-    ConfigArray outputNodeNames = config("outputNodeNames", "");
+    ConfigArray outputNodeNames = config(L"outputNodeNames", "");
     vector<wstring> outputNodeNamesVector;
     for (int i = 0; i < outputNodeNames.size(); ++i)
     {
@@ -322,14 +328,14 @@ void DoWriteOutput(const ConfigParameters& config)
 
     if (config.Exists("writer"))
     {
-        ConfigParameters writerConfig(config("writer"));
-        bool bWriterUnittest = writerConfig("unittest", "false");
+        ConfigParameters writerConfig(config(L"writer"));
+        bool bWriterUnittest = writerConfig(L"unittest", "false");
         DataWriter<ElemType> testDataWriter(writerConfig);
         writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
     }
     else if (config.Exists("outputPath"))
     {
-        wstring outputPath = config("outputPath"); // crashes if no default given? 
+        wstring outputPath = config(L"outputPath"); // crashes if no default given? 
         writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
     }
     //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
@@ -381,14 +387,14 @@ template <typename ElemType>
 void DoCreateLabelMap(const ConfigParameters& config)
 {
     // this gets the section name we are interested in
-    std::string section = config("section");
+    std::string section = config(L"section");
     // get that section (probably a peer config section, which works thanks to heirarchal symbol resolution)
     ConfigParameters configSection(config(section));
     ConfigParameters readerConfig(configSection("reader"));
     readerConfig.Insert("allowMapCreation", "true");
     DEVICEID_TYPE deviceId = CPUDEVICE;
-    size_t minibatchSize = config("minibatchSize", "2048");
-    int traceLevel = config("traceLevel", "0");
+    size_t minibatchSize = config(L"minibatchSize", "2048");
+    int traceLevel = config(L"traceLevel", "0");
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
     GetFileConfigNames(readerConfig, featureNames, labelNames);
@@ -413,11 +419,11 @@ void DoCreateLabelMap(const ConfigParameters& config)
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent("labelMappingFile"))
         {
-            labelMappingFile = labelConfig("labelMappingFile");
+            labelMappingFile = labelConfig(L"labelMappingFile");
         }
         else if (readerConfig.ExistsCurrent("labelMappingFile"))
         {
-            labelMappingFile = labelConfig("labelMappingFile");
+            labelMappingFile = labelConfig(L"labelMappingFile");
         }
         else
         {
@@ -504,13 +510,13 @@ template<class ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
-    wstring modelPath = config("modelPath");
-    wstring outputmodelPath = config("outputmodelPath");
+    wstring modelPath = config(L"modelPath");
+    wstring outputmodelPath = config(L"outputmodelPath");
     map<wstring, float>     svdconfig;
 
-    float keepratio = config("KeepRatio", "0.4");
-	size_t AlignedSize = config("AlignedSize", "8");
-    wstring svdnodeRegex = config("NodeNameRegex", L"");
+    float keepratio = config(L"KeepRatio", "0.4");
+	size_t AlignedSize = config(L"AlignedSize", "8");
+    wstring svdnodeRegex = config(L"NodeNameRegex", L"");
     if (!svdnodeRegex.empty())
     {
         svdconfig[svdnodeRegex] = keepratio;
@@ -518,7 +524,7 @@ void  DoParameterSVD(const ConfigParameters& config)
     else
     {
         // alternatively, user can also use a config to specify KeepRatios for different groups of nodes 
-        wstring svdnodeConfigFile = config("SVDConfig", L"");
+        wstring svdnodeConfigFile = config(L"SVDConfig", L"");
         if (!ParseSVDConfigFile(svdnodeConfigFile, svdconfig))
         {
             SVDConfigFileUsage();
@@ -569,13 +575,13 @@ void  DoParameterSVD(const ConfigParameters& config)
 template <typename ElemType>
 void DoWriteWordAndClassInfo(const ConfigParameters& config)
 {
-    string inputFile = config("inputFile"); // training text file without <unk>
-    string outputWord2Cls = config("outputWord2Cls");
-    string outputVocabFile = config("outputVocabFile");
-    string outputCls2Index = config("outputCls2Index");
-    size_t  vocabSize = config("vocabSize");
-    int  nbrCls = config("nbrClass", "0");
-    int  cutoff = config("cutoff", "1");
+    string inputFile = config(L"inputFile"); // training text file without <unk>
+    string outputWord2Cls = config(L"outputWord2Cls");
+    string outputVocabFile = config(L"outputVocabFile");
+    string outputCls2Index = config(L"outputCls2Index");
+    size_t  vocabSize = config(L"vocabSize");
+    int  nbrCls = config(L"nbrClass", "0");
+    int  cutoff = config(L"cutoff", "1");
 
     DEVICEID_TYPE deviceId = CPUDEVICE;
     Matrix<ElemType> wrd2cls(deviceId);
@@ -781,28 +787,28 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 template <typename ElemType>
 void DoTrain(const ConfigParameters& config)
 {
-    ConfigParameters configSGD(config("SGD"));
-    bool makeMode = config("makeMode", "true");
+    ConfigParameters configSGD(config(L"SGD"));
+    bool makeMode = config(L"makeMode", "true");
 
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     unique_ptr<IComputationNetBuilder<ElemType>> netBuilder;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters ndlNetworkBuilderConfig(config("NDLNetworkBuilder"));
+        ConfigParameters ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
         netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(ndlNetworkBuilderConfig));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters simpleNetworkBuilderConfig(config("SimpleNetworkBuilder"));
+        ConfigParameters simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
         netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(simpleNetworkBuilderConfig));
     }
     else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
     {
         DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-        string sourceCode(config("ExperimentalNetworkBuilder"));
+        string sourceCode(config(L"ExperimentalNetworkBuilder"));
         netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new ExperimentalNetworkBuilder<ElemType>(msra::strfun::utf16(sourceCode), deviceId));
     }
     else
@@ -813,11 +819,11 @@ void DoTrain(const ConfigParameters& config)
     unique_ptr<DataReader<ElemType>> dataReader { new DataReader<ElemType>(readerConfig) };
 
     unique_ptr<DataReader<ElemType>> cvDataReader;
-    ConfigParameters cvReaderConfig(config("cvReader", L""));
+    ConfigParameters cvReaderConfig(config(L"cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
-        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
@@ -831,25 +837,25 @@ void DoAdapt(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    ConfigParameters configSGD(config("SGD"));
-    bool makeMode = config("makeMode", "true");
+    ConfigParameters configSGD(config(L"SGD"));
+    bool makeMode = config(L"makeMode", "true");
 
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
 
     DataReader<ElemType>* cvDataReader = nullptr;
-    ConfigParameters cvReaderConfig(config("cvReader", L""));
+    ConfigParameters cvReaderConfig(config(L"cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
-        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
         cvDataReader = new DataReader<ElemType>(cvReaderConfig);
     }
 
-    wstring origModelFileName = config("origModelFileName", L"");
-    wstring refNodeName = config("refNodeName", L"");
+    wstring origModelFileName = config(L"origModelFileName", L"");
+    wstring refNodeName = config(L"refNodeName", L"");
 
     SGD<ElemType> sgd(configSGD);
 
@@ -871,28 +877,28 @@ void DoEncoderDecoder(const ConfigParameters& config)
     vector<IDataReader<ElemType>*> trainDataReader;
     vector<IDataReader<ElemType>*> validationDataReader;
 
-    ConfigParameters configSGD = config("SGD");
-    bool makeMode = config("makeMode", "true");
+    ConfigParameters configSGD = config(L"SGD");
+    bool makeMode = config(L"makeMode", "true");
     IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
     IComputationNetBuilder<ElemType>* decoderNetBuilder = NULL;
 
-    ConfigParameters readerConfig = config("encoderReader");
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig = config(L"encoderReader");
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
 
-    ConfigParameters decoderReaderConfig = config("decoderReader");
+    ConfigParameters decoderReaderConfig = config(L"decoderReader");
     DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
 
-    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    ConfigParameters cvEncoderReaderConfig = config(L"encoderCVReader");
     DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
 
-    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    ConfigParameters cvDecoderReaderConfig = config(L"decoderCVReader");
     DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
 
     if (config.Exists("EncoderNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        ConfigParameters configSNB = config(L"EncoderNetworkBuilder");
         encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -902,7 +908,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
 
     if (config.Exists("DecoderNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        ConfigParameters configSNB = config(L"DecoderNetworkBuilder");
         decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -936,8 +942,8 @@ template <typename ElemType>
 void DoBidirectionEncoderDecoder(const ConfigParameters& config)
 {
 
-    ConfigParameters configSGD = config("SGD");
-    bool makeMode = config("makeMode", "true");
+    ConfigParameters configSGD = config(L"SGD");
+    bool makeMode = config(L"makeMode", "true");
     IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
     IComputationNetBuilder<ElemType>* forwardDecoderNetBuilder = NULL;
     IComputationNetBuilder<ElemType>* backwardDecoderNetBuilder = NULL;
@@ -945,29 +951,29 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     vector<IDataReader<ElemType>*> trainDataReader;
     vector<IDataReader<ElemType>*> validationDataReader;
 
-    ConfigParameters readerConfig = config("encoderReader");
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig = config(L"encoderReader");
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
 
-    ConfigParameters decoderReaderConfig = config("decoderReader");
+    ConfigParameters decoderReaderConfig = config(L"decoderReader");
     DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
 
-    ConfigParameters backwardDecoderReaderConfig = config("backwardDecoderReader");
+    ConfigParameters backwardDecoderReaderConfig = config(L"backwardDecoderReader");
     DataReader<ElemType>* backwardDecoderDataReader = new DataReader<ElemType>(backwardDecoderReaderConfig);
 
-    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    ConfigParameters cvEncoderReaderConfig = config(L"encoderCVReader");
     DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
 
-    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    ConfigParameters cvDecoderReaderConfig = config(L"decoderCVReader");
     DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
 
-    ConfigParameters cvBackwardDecoderReaderConfig = config("BackwardDecoderCVReader");
+    ConfigParameters cvBackwardDecoderReaderConfig = config(L"BackwardDecoderCVReader");
     DataReader<ElemType>* cvBackwardDecoderDataReader = new DataReader<ElemType>(cvBackwardDecoderReaderConfig);
 
     if (config.Exists("EncoderNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        ConfigParameters configSNB = config(L"EncoderNetworkBuilder");
         encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -975,7 +981,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
 
     if (config.Exists("DecoderNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        ConfigParameters configSNB = config(L"DecoderNetworkBuilder");
         forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -985,7 +991,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
 
     if (config.Exists("BackwardDecoderNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("BackwardDecoderNetworkBuilder");
+        ConfigParameters configSNB = config(L"BackwardDecoderNetworkBuilder");
         backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -1028,33 +1034,33 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
     vector<IDataReader<ElemType>*> readers;
-    ConfigParameters readerConfig = config("encoderReader");
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig = config(L"encoderReader");
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType> encoderReader(readerConfig);
 
-    ConfigParameters decoderReaderConfig = config("decoderReader");
-    decoderReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters decoderReaderConfig = config(L"decoderReader");
+    decoderReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType> decoderReader(decoderReaderConfig);
 
     readers.push_back(&encoderReader);
     readers.push_back(&decoderReader);
 
-    ConfigArray minibatchSize = config("minibatchSize", "40960");
-    size_t epochSize = config("epochSize", "0");
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
 
-    wstring encoderModelPath = config("encoderModelPath");
-    wstring decoderModelPath = config("decoderModelPath");
+    wstring encoderModelPath = config(L"encoderModelPath");
+    wstring decoderModelPath = config(L"decoderModelPath");
 
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config("traceLevel", "0");
-    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+    int traceLevel = config(L"traceLevel", "0");
+    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
     vector<ComputationNetwork*> nets;
     ComputationNetwork encoderNet(deviceId);
@@ -1067,23 +1073,23 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
 
     nets.push_back(&encoderNet);
     nets.push_back(&decoderNet);
-    ConfigArray evalNodeNames = config("evalNodeNames");
+    ConfigArray evalNodeNames = config(L"evalNodeNames");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
     {
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    ConfigArray outputNodeNames = config("outputNodeNames");
+    ConfigArray outputNodeNames = config(L"outputNodeNames");
     vector<wstring> outputNodeNamesVector;
     for (int i = 0; i < outputNodeNames.size(); ++i)
     {
         outputNodeNamesVector.push_back(outputNodeNames[i]);
     }
 
-    ElemType beamWidth = config("beamWidth", "1");
+    ElemType beamWidth = config(L"beamWidth", "1");
 
-    ConfigParameters writerConfig = config("writer");
+    ConfigParameters writerConfig = config(L"writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
     MultiNetworksEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
@@ -1107,8 +1113,8 @@ template <typename ElemType>
 void DoBeamSearchDecoding(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig = config("reader");
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig = config(L"reader");
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     DataReader<ElemType> testDataReader(readerConfig);
 
@@ -1119,39 +1125,39 @@ template <typename ElemType>
 void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& reader)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config("minibatchSize", "40960");
-    size_t epochSize = config("epochSize", "0");
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
-    wstring modelPath = config("modelPath");
+    wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config("traceLevel", "0");
-    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+    int traceLevel = config(L"traceLevel", "0");
+    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
     ComputationNetwork net(deviceId);
     net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
-    ConfigArray evalNodeNames = config("evalNodeNames");
+    ConfigArray evalNodeNames = config(L"evalNodeNames");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
     {
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    ConfigArray outputNodeNames = config("outputNodeNames");
+    ConfigArray outputNodeNames = config(L"outputNodeNames");
     vector<wstring> outputNodeNamesVector;
     for (int i = 0; i < outputNodeNames.size(); ++i)
     {
         outputNodeNamesVector.push_back(outputNodeNames[i]);
     }
 
-    ElemType beamWidth = config("beamWidth", "1");
+    ElemType beamWidth = config(L"beamWidth", "1");
 
-    ConfigParameters writerConfig = config("writer");
+    ConfigParameters writerConfig = config(L"writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
     MultiNetworksEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
@@ -1163,21 +1169,21 @@ void DoSequenceTrain(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    ConfigParameters configSGD(config("SGD"));
-    bool makeMode = config("makeMode", "true");
+    ConfigParameters configSGD(config(L"SGD"));
+    bool makeMode = config(L"makeMode", "true");
 
-    ConfigParameters readerConfig(config("reader"));
-    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
     IComputationNetBuilder<ElemType>* netBuilder = NULL;
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters configNDL(config("NDLNetworkBuilder"));
+        ConfigParameters configNDL(config(L"NDLNetworkBuilder"));
         netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
+        ConfigParameters configSNB(config(L"SimpleNetworkBuilder"));
         netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -1188,15 +1194,15 @@ void DoSequenceTrain(const ConfigParameters& config)
     DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
 
     DataReader<ElemType>* cvDataReader = nullptr;
-    ConfigParameters cvReaderConfig(config("cvReader", L""));
+    ConfigParameters cvReaderConfig(config(L"cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
-        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
         cvDataReader = new DataReader<ElemType>(cvReaderConfig);
     }
 
-    wstring origModelFileName = config("origModelFileName", L"");
+    wstring origModelFileName = config(L"origModelFileName", L"");
 
     SGD<ElemType> sgd(configSGD);
 
@@ -1209,8 +1215,8 @@ void DoSequenceTrain(const ConfigParameters& config)
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
-    wstring editPath = config("editPath");
-    wstring ndlMacros = config("ndlMacros", "");
+    wstring editPath = config(L"editPath");
+    wstring ndlMacros = config(L"ndlMacros", "");
     NDLScript<ElemType> ndlScript;
     if (!ndlMacros.empty())
     {
@@ -1225,8 +1231,8 @@ void DoConvertFromDbn(const ConfigParameters& config)
 {
     //config.Insert("deviceId","-1"); //force using CPU
 
-    wstring modelPath = config("modelPath");
-    wstring dbnModelPath = config("dbnModelPath");
+    wstring modelPath = config(L"modelPath");
+    wstring dbnModelPath = config(L"dbnModelPath");
 
     IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
     ComputationNetwork* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
@@ -1238,12 +1244,12 @@ void DoConvertFromDbn(const ConfigParameters& config)
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-    wstring modelPath = config("modelPath");
-    wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outRending = config("outputFile");      // filename for the rendered topology plot
+    wstring modelPath = config(L"modelPath");
+    wstring outdot = config(L"outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outRending = config(L"outputFile");      // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
     // or if this is set, renderCmd must be set, so CNTK will call re       
-    wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    wstring RenderCmd = config(L"RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
@@ -1299,16 +1305,15 @@ static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConf
     }
 
     // if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
-    ConfigArray actions = commandConfig("action");
+    ConfigArray actions = commandConfig(L"action");
     for (size_t i = 0; i < actions.size(); i++)
     {
         if (actions[i] == "train" || actions[i] == "trainRNN")
         {
-
-            ConfigParameters sgd = ConfigParameters(commandConfig("SGD"));
-            ConfigParameters reader = ConfigParameters(commandConfig("reader"));
+            ConfigParameters sgd = ConfigParameters(commandConfig(L"SGD"));
+            ConfigParameters reader = ConfigParameters(commandConfig(L"reader"));
             // reader and SGD sections are two must-have sections in train/trainRNN 
-            if (reader.ExistsCurrent("Truncated") && !sgd.ExistsCurrent("Truncated"))
+            if (reader.ExistsCurrent(L"Truncated") && !sgd.ExistsCurrent(L"Truncated"))
             {
                 InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
             }
@@ -1326,11 +1331,11 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // process the command
 template <typename ElemType>
-void DoCommand(const ConfigParameters& config)
+void DoCommands(const ConfigParameters& config)
 {
-    ConfigArray command = config("command", "train");
+    ConfigArray command = config(L"command", "train");
 
-    int numCPUThreads = config("numCPUThreads", "0");
+    int numCPUThreads = config(L"numCPUThreads", "0");
     numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
 
     if (numCPUThreads>0)
@@ -1338,7 +1343,7 @@ void DoCommand(const ConfigParameters& config)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
 
-    bool progressTracing = config("progressTracing", false);
+    bool progressTracing = config(L"progressTracing", false);
 
     // temporary hack to prevent users from failling for a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
     DisableLegacyUsage(config, command);
@@ -1524,116 +1529,273 @@ void PrintUsageInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
 }
 
+// ---------------------------------------------------------------------------
+// main() for use with BrainScript
+// ---------------------------------------------------------------------------
+
+wstring ConsumeArg(vector<wstring> & args)
+{
+    if (args.empty())
+        InvalidArgument("Unexpected end of command line.");
+    wstring arg = args.front();
+    args.erase(args.begin());
+    return arg;
+}
+template<class WHAT>
+static void Append(vector<wstring> & toWhat, const WHAT & what) { toWhat.insert(toWhat.end(), what.begin(), what.end()); }
+static wstring PathToBSStringLiteral(const wstring & path)  // quote a pathname for BS
+{
+    let hasSingleQuote = path.find(path, L'\'') != wstring::npos;
+    let hasDoubleQuote = path.find(path, L'"')  != wstring::npos;
+    if (hasSingleQuote && hasDoubleQuote)
+        InvalidArgument("Pathname cannot contain both single (') and double (\") quote at the same time: %ls", path.c_str());
+    else if (hasSingleQuote)
+        return L"\"" + path + L"\"";
+    else
+        return L'"' + path + L'"';
+}
+
+// TODO: decide where these should go. Also, do we need three variables?
+extern wstring standardFunctions;
+extern wstring commonMacros;
+extern wstring computationNodes;
+
+int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & reports Win32 exceptions
+{
+    vector<wstring> args(argv, argv+argc);
+    let exePath = ConsumeArg(args);
+
+    vector<wstring> sourceFiles;
+    vector<wstring> includePaths;
+    vector<wstring> overrides;
+    while (!args.empty())
+    {
+        let option = ConsumeArg(args);
+        if (option == L"-f" || option == L"--file")
+            Append(sourceFiles, msra::strfun::split(ConsumeArg(args), L";"));
+        else if (option == L"-I")
+            Append(includePaths, msra::strfun::split(ConsumeArg(args), L";"));
+        else if (option == L"-e" || option == L"--expression")
+            overrides.push_back(ConsumeArg(args));
+        else
+            InvalidArgument("Invalid option '%ls'.", option.c_str());
+    }
+
+    // compile the BrainScript
+    wstring bs = L"[ ";
+    bs += standardFunctions + computationNodes + commonMacros;   // start with standard macros
+    for (const auto & sourceFile : sourceFiles)
+        bs += L"include " + PathToBSStringLiteral(sourceFile);
+    for (const auto & over : overrides)
+        bs += L"with [ " + over + L" ]";
+    bs += L" ]";
+
+    let expr = BS::ParseConfigString(bs);                           // parse
+    let valp = BS::Evaluate(expr);                                  // evaluate parse into a dictionary
+    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();  // this is the dictionary
+
+    // legacy parameters that have changed spelling
+    if (config.Find(L"DoneFile"))       // variables follow camel case (start with lower-case letters)
+        InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
+    if (config.Find(L"command"))        // spelling error, should be plural. Using 'actions' instead to match the data type.
+        InvalidArgument("Legacy spelling of 'command' no longer allowed. Use 'actions'.");
+    if (config.Find(L"type"))
+        InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
+
+    // parallel training
+    g_mpi = nullptr;
+    bool paralleltrain = config(L"parallelTrain", false);
+    if (paralleltrain)
+        g_mpi = new MPIWrapper();
+
+    // logging
+    wstring logpath = config(L"stderr", L"");
+    if (logpath != L"")
+    {
+        logpath += L"_actions"; // TODO: for old CNTK, this was a concatenation of all action names, which we no longer know
+        logpath += L".log";     // TODO: why do we need to append this here?
+
+        if (paralleltrain)
+            logpath += msra::strfun::wstrprintf(L"rank%d", (int)g_mpi->CurrentNodeRank());
+
+        RedirectStdErr(logpath);
+    }
+
+    // echo config info to log
+#ifdef _WIN32
+    PrintBuiltInfo();
+#endif
+    std::string timestamp = TimeDateStamp();
+
+    fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+    fprintf(stderr, "command line: %ls", exePath.c_str());
+    for (const auto & arg : args)
+        fprintf(stderr, "%ls", arg.c_str());
+
+    // execute the actions
+    //std::string type = config(L"precision", "float");
+    int numCPUThreads = config(L"numCPUThreads", 0);
+    numCPUThreads = CPUMatrix<float/*any will do*/>::SetNumThreads(numCPUThreads);
+    if (numCPUThreads > 0)
+        fprintf(stderr, "Using %d CPU threads.\n", numCPUThreads);
+
+    bool progressTracing = config(L"progressTracing", false);
+    size_t fullTotalMaxEpochs = 1;              // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
+    // set up progress tracing for compute cluster management
+    if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+
+    // MAIN LOOP that executes the actions
+    const ScriptableObjects::ConfigArray & actions = config[L"actions"];
+    for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+    {
+        actions.At(i, [](const wstring &){});  // this will evaluate and thus execute the action
+    }
+
+    // write a doneFile if requested
+    wstring doneFile = config(L"doneFile", L"");
+    if (doneFile != L"")
+    {
+        FILE* fp = fopenOrDie(doneFile.c_str(), L"w");
+        fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
+        fcloseOrDie(fp);
+    }
+    fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+
+    delete g_mpi;
+    return EXIT_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// main() for old CNTK config language
+// ---------------------------------------------------------------------------
+
+int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
+{
+    ConfigParameters config;
+    std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
+
+    // get the command param set they want
+    wstring logpath = config(L"stderr", L"");
+
+    //  [1/26/2015 erw, add done file so that it can be used on HPC]
+    wstring DoneFile = config(L"DoneFile", L"");
+    ConfigArray command = config(L"command", "train");
+
+    // paralleltrain training
+    g_mpi = nullptr;
+    bool paralleltrain = config(L"parallelTrain", "false");
+    if (paralleltrain)
+    {
+        g_mpi = new MPIWrapper();
+    }
+
+    if (logpath != L"")
+    {
+        for (int i = 0; i < command.size(); i++)
+        {
+            logpath += L"_";
+            logpath += (wstring)command[i];
+        }
+        logpath += L".log";
+
+        if (paralleltrain)
+        {
+            std::wostringstream oss;
+            oss << g_mpi->CurrentNodeRank();
+            logpath += L"rank" + oss.str();
+        }
+        RedirectStdErr(logpath);
+    }
+
+#ifdef _WIN32
+    PrintBuiltInfo();
+#endif
+    std::string timestamp = TimeDateStamp();
+
+    //dump config info
+    fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+    fprintf(stderr, "command line: \n");
+    for (int i = 0; i < argc; i++)
+    {
+        fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+    }
+
+    // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+    // and prints it.
+    fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "%s\n", rawConfigString.c_str());
+    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+
+    // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+    // All of these assignments will appear, even though only the last assignment matters.
+    fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+
+    // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+    // value it is set to will appear).
+    fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    config.dumpWithResolvedVariables();
+    fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+
+    fprintf(stderr, "command: ");
+    for (int i = 0; i < command.size(); i++)
+    {
+        fprintf(stderr, "%s ", command[i].c_str());
+    }
+
+    //run commands
+    std::string type = config(L"precision", "float");
+    // accept old precision key for backward compatibility
+    if (config.Exists("type"))
+    {
+        type = config(L"type", "float");
+    }
+
+    fprintf(stderr, "\nprecision = %s\n", type.c_str());
+    if (type == "float")
+    {
+        DoCommands<float>(config);
+    }
+    else if (type == "double")
+    {
+        DoCommands<double>(config);
+    }
+    else
+    {
+        RuntimeError("invalid precision specified: %s", type.c_str());
+    }
+
+    // still here , write a DoneFile if necessary 
+    if (!DoneFile.empty())
+    {
+        FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
+        fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
+        fcloseOrDie(fp);
+    }
+    fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+
+    delete g_mpi;
+    return EXIT_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// main wrapper that catches C++ exceptions and prints them
+// ---------------------------------------------------------------------------
+
 int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
 {
     try
     {
-
-        ConfigParameters config;
-        std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
-
-        // get the command param set they want
-        wstring logpath = config("stderr", L"");
-
-        //  [1/26/2015 erw, add done file so that it can be used on HPC]
-        wstring DoneFile = config("DoneFile", L"");
-        ConfigArray command = config("command", "train");
-
-        // paralleltrain training
-        g_mpi = nullptr;
-        bool paralleltrain = config("parallelTrain", "false");
-        if (paralleltrain)
-        {
-            g_mpi = new MPIWrapper();
-        }
-
-        if (logpath != L"")
-        {
-            for (int i = 0; i < command.size(); i++)
-            {
-                logpath += L"_";
-                logpath += (wstring)command[i];
-            }
-            logpath += L".log";
-
-            if (paralleltrain)
-            {
-                std::wostringstream oss;
-                oss << g_mpi->CurrentNodeRank();
-                logpath += L"rank" + oss.str();
-            }
-            RedirectStdErr(logpath);
-        }
-
-#ifdef _WIN32
-        PrintBuiltInfo();
-#endif
-        std::string timestamp = TimeDateStamp();
-
-        //dump config info
-        fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-        fprintf(stderr, "command line: \n");
-        for (int i = 0; i < argc; i++)
-        {
-            fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
-        }
-
-        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-        // and prints it.
-        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-        fprintf(stderr, "%s\n", rawConfigString.c_str());
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
-
-        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-        // All of these assignments will appear, even though only the last assignment matters.
-        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-
-        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-        // value it is set to will appear).
-        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-        config.dumpWithResolvedVariables();
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-
-        fprintf(stderr, "command: ");
-        for (int i = 0; i < command.size(); i++)
-        {
-            fprintf(stderr, "%s ", command[i].c_str());
-        }
-
-        //run commands
-        std::string type = config("precision", "float");
-        // accept old precision key for backward compatibility
-        if (config.Exists("type"))
-        {
-            type = config("type", "float");
-        }
-
-        fprintf(stderr, "\nprecision = %s\n", type.c_str());
-        if (type == "float")
-        {
-            DoCommand<float>(config);
-        }
-        else if (type == "double")
-        {
-            DoCommand<double>(config);
-        }
-        else
-        {
-            RuntimeError("invalid precision specified: %s", type.c_str());
-        }
-
-        // still here , write a DoneFile if necessary 
-        if (!DoneFile.empty())
-        {
-            FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
-            fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
-            fcloseOrDie(fp);
-        }
-        fprintf(stderr, "COMPLETED\n"), fflush(stderr);
-
-        delete g_mpi;
+        // detect legacy CNTK configuration
+        bool isOldCNTKConfig = false;
+        for (int i = 0; i < argc && !isOldCNTKConfig; i++)
+            isOldCNTKConfig |= !_wcsnicmp(L"configFile=", argv[i], 11);
+        if (isOldCNTKConfig)
+            return wmainOldCNTKConfig(argc, argv);
+        // run from BrainScript
+        return wmainWithBS(argc, argv);
     }
     catch (const ScriptableObjects::ScriptingException &err)
     {
@@ -1653,7 +1815,6 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
         PrintUsageInfo();
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
 }
 
 #ifdef __WINDOWS__
