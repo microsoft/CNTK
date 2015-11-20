@@ -6,6 +6,7 @@
 #include "SGD.h"
 #include "DataReaderHelpers.h"
 #include "AllReduceDistGradAggregator.h"
+#include "ProgressTracing.h"
 
 #include <map>
 
@@ -125,7 +126,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t maxTempMemSizeInSamplesForCNN = configSGD("maxTempMemSizeInSamplesForCNN", (size_t)0);
 
         int traceLevel =                configSGD("traceLevel",          (int)0);
-        bool progressTracing =          configSGD("progressTracing",     false);
         size_t numMBsToShowResult =     configSGD("numMBsToShowResult",  (size_t)10);
         size_t numMBsToCUDAProfile =    configSGD("numMBsToCUDAProfile", (size_t)0);
 
@@ -208,12 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_modelPath = modelPath;
         m_autoLearnRateSearchType = autoLearnRateSearchType;
         m_traceLevel = traceLevel;
-        m_progressTracing = progressTracing;
 
-        if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
-        {
-            m_progressTracingTimer.Start();
-        }
         m_lastFinishedEpochEvalErr = 0.0;
 
         m_loadBestModel = loadBestModel;
@@ -1062,12 +1057,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             g_mpi->WaitAll();
         }
 
-        if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
-        {
-            m_progressTracingTimer.Stop();
-            printf("PROGRESS: %.2f%%\n", (float) (100 * (m_fullEpochsOffset + m_maxEpochs)) / (float) m_fullTotalMaxEpochs);
-            printf("EVALERR: %.2f%%\n", round(m_lastFinishedEpochEvalErr * 100.0));
-        }
+        // progress tracing for compute cluster management
+        ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0);
+        ProgressTracing::TraceObjectivePercentage(m_lastFinishedEpochEvalErr);
 
         // since we linked feature nodes. we need to remove it from the deletion
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -1742,6 +1734,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- MAIN MINIBATCH LOOP
 
+        size_t totalSamplesProcessed = 0; // for progress printing   --TODO: is it different from nSamplesSinceLastModelSync?
         for (;;)
         {
             // get minibatch
@@ -1818,6 +1811,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
             size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
+
+            totalSamplesProcessed += numSamplesWithLabel;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
@@ -1966,18 +1961,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (epochNumber > 0 || (int) epochSize > 0)
                 {
-                    if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing && m_progressTracingTimer.ElapsedSeconds() > 10)
-                    {
-                        // this must go to stdout, not stderr
-                        float epochProg = ((100.0f * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
-                        float mbProg = ((float) numMBsRun / ((float) m_maxComputedEpochSize / (float) tunedMBSize));
-                        mbProg = (mbProg * 100.0f) / (float) m_fullTotalMaxEpochs;
+                    // progress tracing for compute cluster management
+                    double mbProg = (double)totalSamplesProcessed / (double)m_maxComputedEpochSize;
+                    wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg);
 
-                        printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
-                        wasProgressPrinted = true;
-                        m_progressTracingTimer.Restart();
-                    }
-
+                    // progress tracing for regular log
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
@@ -2009,9 +1997,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                          totalTimeInMBs, totalTimePerSample,
                          static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
 
-                if (wasProgressPrinted && ((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
+                // progress tracing for compute cluster management
+                if (wasProgressPrinted)
                 {
-                    printf("EVALERR: %.2f%%\n", round(evalError * 100.0));
+                    ProgressTracing::TraceObjectivePercentage(evalError);
                 }
 
                 if (m_traceLevel > 0)

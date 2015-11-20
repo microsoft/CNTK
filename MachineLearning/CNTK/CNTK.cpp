@@ -49,7 +49,8 @@
 #include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
-#include <fileutil.h>
+#include "ProgressTracing.h"
+#include "fileutil.h"
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
@@ -1337,6 +1338,8 @@ void DoCommand(const ConfigParameters& config)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
 
+    bool progressTracing = config("progressTracing", false);
+
     // temporary hack to prevent users from failling for a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
     DisableLegacyUsage(config, command);
 
@@ -1363,6 +1366,11 @@ void DoCommand(const ConfigParameters& config)
         }
     }
     std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
+
+    // set up progress tracing for compute cluster management
+    if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+
     size_t fullEpochsOffset = 0;
 
     // execute the commands
@@ -1371,6 +1379,9 @@ void DoCommand(const ConfigParameters& config)
         //get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
+
+        if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+            ProgressTracing::SetStepOffset(fullEpochsOffset);   // this is the epoch number that SGD will log relative to
 
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
