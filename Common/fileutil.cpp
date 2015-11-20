@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <glob.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -196,12 +197,13 @@ void freadOrDie (void * ptr, size_t size, size_t count, FILE * f)
     }
 }
 
+#ifdef _WIN32
 void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
 {
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min (count * size, 15*1024*1024);  
+        size_t chunkn = min (count * size, (size_t)15*1024*1024);  
         DWORD n ;
         ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
         if (n != chunkn)
@@ -210,6 +212,7 @@ void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
         ptr = n + (char*) ptr;
     }
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // fwriteOrDie(): like fwrite() but terminate with err msg in case of error;
@@ -243,6 +246,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
     }
 }
 
+#ifdef _WIN32
 void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f)
 {
     const char * p1 = (const char *) ptr;
@@ -268,7 +272,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f)
         p1 += wantWrite;
     }
 }
-
+#endif
 
 long fseekOrDie (FILE * f, long offset, int mode)
 {
@@ -1279,6 +1283,9 @@ double fgetdouble (FILE * f)
     freadOrDie (&v, sizeof (v), 1, f);
     return v;
 }
+
+#ifdef _WIN32
+
 // ----------------------------------------------------------------------------
 // fgetwav(): read an entire .wav file
 // ----------------------------------------------------------------------------
@@ -1640,6 +1647,7 @@ void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int
     fflushOrDie (f);    // after this, fclose() (in destructor of f) cannot fail
 }
 #endif
+#endif
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value
@@ -1902,6 +1910,7 @@ void setfiletime (const wstring & path, const FILETIME & time)
 // expand_wildcards -- wildcard expansion of a path, including directories.
 // ----------------------------------------------------------------------------
 
+#ifdef _WIN32
 // Win32-style variant of this function (in case we want to use it some day)
 // Returns 0 in case of failure. May throw in case of bad_alloc.
 static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
@@ -1967,12 +1976,29 @@ static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
     } while (::FindNextFileW(hFind, &ffdata) != 0);
     return TRUE;
 }
+#endif
 
 void expand_wildcards (const wstring & path, vector<wstring> & paths)
 {
+#ifdef _WIN32
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
         RuntimeError ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
+#else
+    // On Linux we have just the function for the job: glob
+    glob_t globResult;
+    if (glob(charpath(path), GLOB_TILDE, NULL, &globResult) != 0)
+    {
+        RuntimeError("error in expanding wild cards '%S': %S", path.c_str(), strerror(errno));
+    }
+    
+    for(unsigned int i = 0; i < globResult.gl_pathc; ++i)
+    {
+        paths.push_back(msra::strfun::utf16(globResult.gl_pathv[i]));
+    }
+    globfree(&globResult);
+#endif
+    
 }
 
 // ----------------------------------------------------------------------------
