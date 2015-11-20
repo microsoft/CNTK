@@ -6,6 +6,7 @@
 #include "SGD.h"
 #include "DataReaderHelpers.h"
 #include "AllReduceDistGradAggregator.h"
+#include "ProgressTracing.h"
 
 #include <map>
 
@@ -66,121 +67,122 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-    template<class ConfigRecord, class ElemType>
-    SGDParams::SGDParams(const ConfigRecord& configSGD, ElemType/*for type deduction*/)
+    template<class ConfigRecordType, class ElemType>
+    SGDParams::SGDParams(const ConfigRecordType& configSGD, ElemType/*for type deduction*/)
     {
-        floatargvector learningRatesPerMB = configSGD("learningRatesPerMB", "");
+        floatargvector learningRatesPerMB = configSGD("learningRatesPerMB", ConfigRecordType::Array(floatargvector()));
 
-        floatargvector learningRatesPerSample = configSGD("learningRatesPerSample", "");
+        floatargvector learningRatesPerSample = configSGD("learningRatesPerSample", ConfigRecordType::Array(floatargvector()));
 
-        std::string executionEngineValue = configSGD("executionEngine", "synchronous");
+        string executionEngineValue = configSGD("executionEngine", "synchronous");
 
         // AutoAdjust Parameters
-        ConfigParameters configAALR(configSGD("AutoAdjust", ""));
-        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
-        double reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
-        bool continueReduce = (bool) configAALR("continueReduce", "false");
-        size_t learnRateAdjustInterval = (size_t) configAALR("learnRateAdjustInterval", "1");
-        double learnRateDecreaseFactor = configAALR("learnRateDecreaseFactor", "0.618");
-        double increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", "1#INF");
-        double learnRateIncreaseFactor = configAALR("learnRateIncreaseFactor", "1.382");
+        const ConfigRecordType & configAALR(configSGD("AutoAdjust", ConfigRecordType::Record()));
+        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR("autoAdjustLR", L"None"));
+        double reduceLearnRateIfImproveLessThan =   configAALR("reduceLearnRateIfImproveLessThan",   0.0);
+        bool continueReduce =                       configAALR("continueReduce",                     false);
+        size_t learnRateAdjustInterval =            configAALR("learnRateAdjustInterval",            (size_t)1);
+        double learnRateDecreaseFactor =            configAALR("learnRateDecreaseFactor",            0.618);
+        double increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", numeric_limits<double>::infinity());
+        double learnRateIncreaseFactor =            configAALR("learnRateIncreaseFactor",            1.382);
 
         // AutoAdjust Auto Adjust Minibatch Parameters
-        bool autoAdjustMinibatch = (bool) configAALR("autoAdjustMinibatch", "false");
-        size_t minibatchSizeTuningFrequency = configAALR("minibatchSizeTuningFrequency", "1");
-        size_t minibatchSizeTuningMax = configAALR("minibatchSizeTuningMax", "1048576");
-        size_t minibatchSearchCriterionErrorMargin = configAALR("minibatchSearchCriterionErrorMargin", "1");
+        bool autoAdjustMinibatch =                   configAALR("autoAdjustMinibatch",                 false);
+        size_t minibatchSizeTuningFrequency =        configAALR("minibatchSizeTuningFrequency",        (size_t)1);
+        size_t minibatchSizeTuningMax =              configAALR("minibatchSizeTuningMax",              (size_t)1048576);
+        size_t minibatchSearchCriterionErrorMargin = configAALR("minibatchSearchCriterionErrorMargin", (size_t)1);
 
         // the number of minibatches used to search
         // the learning rate. Its typically set to 10-20% of
         // the total minibatches in an epoch.
-        intargvector numMiniBatch4LRSearch = configAALR("numMiniBatch4LRSearch", "500");
+        intargvector numMiniBatch4LRSearch = configAALR("numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{ 500 })));
 
-        size_t numPrevLearnRates = configAALR("numPrevLearnRates", "5");
-        size_t numBestSearchEpoch = configAALR("numBestSearchEpoch", "1");
-        bool loadBestModel = configAALR("loadBestModel", "true");
-        bool useCVSetControlLRIfCVExists = configAALR("UseCVSetControlLRIfCVExists", "true");
-        bool useEvalCriterionControlLR = configAALR("UseEvalCriterionControlLR", "false");
+        size_t numPrevLearnRates =          configAALR("numPrevLearnRates",           (size_t)5);
+        size_t numBestSearchEpoch =         configAALR("numBestSearchEpoch",          (size_t)1);
+        bool loadBestModel =                configAALR("loadBestModel",               true);
+        bool useCVSetControlLRIfCVExists =  configAALR("UseCVSetControlLRIfCVExists", true);
+        bool useEvalCriterionControlLR =    configAALR("UseEvalCriterionControlLR",   false);
 
-
-        intargvector mbSize = configSGD("minibatchSize", "256");
-        bool truncated = configSGD("Truncated", "false");
+        // TODO: mbSize and truncated should be specified differently for truncated BPTT:
+        //       mbSize = total number of samples after which a model update should happen
+        //       truncated = truncation length
+        intargvector mbSize = configSGD("minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
+        bool truncated = configSGD("Truncated", false);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
-        size_t epochSize = configSGD("epochSize", "0");
+        size_t epochSize = configSGD("epochSize", (size_t)0);
 
         // the total number of epochs to run.
         size_t maxEpochs = configSGD("maxEpochs");
 
-        floatargvector momentumPerMB = configSGD("momentumPerMB", "");
+        floatargvector momentumPerMB = configSGD("momentumPerMB", ConfigRecordType::Array(floatargvector()));
 
-        floatargvector momentumPerSample = configSGD("momentumPerSample", "");
+        floatargvector momentumPerSample = configSGD("momentumPerSample", ConfigRecordType::Array(floatargvector()));
 
         wstring modelPath = configSGD("modelPath");
-        wstring trainCriterionNodeName = configSGD("trainCriterionNodeName", "");
-        wstring evalCriterionNodeName = configSGD("evalCriterionNodeName", "");
+        wstring trainCriterionNodeName = configSGD("trainCriterionNodeName", L"");
+        wstring evalCriterionNodeName = configSGD("evalCriterionNodeName", L"");
 
-        size_t maxTempMemSizeInSamplesForCNN = configSGD("maxTempMemSizeInSamplesForCNN", "0");
+        size_t maxTempMemSizeInSamplesForCNN = configSGD("maxTempMemSizeInSamplesForCNN", (size_t)0);
 
-        int traceLevel = configSGD("traceLevel", "0");
-        bool progressTracing = configSGD("progressTracing", "false");
-        size_t numMBsToShowResult = configSGD("numMBsToShowResult", "10");
-        size_t numMBsToCUDAProfile = configSGD("numMBsToCUDAProfile", "0");
+        int traceLevel =                configSGD("traceLevel",          (int)0);
+        size_t numMBsToShowResult =     configSGD("numMBsToShowResult",  (size_t)10);
+        size_t numMBsToCUDAProfile =    configSGD("numMBsToCUDAProfile", (size_t)0);
 
-        bool keepCheckPointFiles = configSGD("keepCheckPointFiles", "false");
+        bool keepCheckPointFiles = configSGD("keepCheckPointFiles", false);
 
-        bool gradientClippingWithTruncation = configSGD("gradientClippingWithTruncation", "true");
-        double clippingThresholdPerSample = configSGD("clippingThresholdPerSample", "1#INF");
+        bool gradientClippingWithTruncation =   configSGD("gradientClippingWithTruncation", true);
+        double clippingThresholdPerSample =     configSGD("clippingThresholdPerSample",     numeric_limits<double>::infinity());
 
         // sequence training
-        double hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
-        double frameDropThresh = configSGD("frameDropThresh", "1e-10");
-        bool doReferenceAlign = configSGD("doReferenceAlign", "false");
-        floatargvector dropoutRates = configSGD("dropoutRate", "0.0");
+        double hsmoothingWeight =       configSGD("hsmoothingWeight", 0.95);
+        double frameDropThresh =        configSGD("frameDropThresh",  1e-10);
+        bool doReferenceAlign =         configSGD("doReferenceAlign", false);
+
+        floatargvector dropoutRates = configSGD("dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 
         GradientUpdateInfo gUpdateInfo;
-        GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
-        double gaussianNoiseInjecStd = configSGD("gaussianNoiseInjectStd", "0");
+        GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", L"None"));
+        double gaussianNoiseInjecStd = configSGD("gaussianNoiseInjectStd", 0.0);
         gUpdateInfo.mType = gradUpdateType;
         gUpdateInfo.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
 
         // extract RMSProp parameters from config, if they exist. Default to reasonable values.
         RMSPropInfo rpi;
-        rpi.dec = (double) configSGD("rms_wgt_dec", "0.75");
-        rpi.inc = (double) configSGD("rms_wgt_inc", "1.2");
-        rpi.min = (double) configSGD("rms_wgt_min", "0.1");
-        rpi.max = (double) configSGD("rms_wgt_max", "10.0");
-        rpi.gamma = (double) configSGD("rms_gamma", "0.99");
+        rpi.dec =   configSGD("rms_wgt_dec", 0.75);
+        rpi.inc =   configSGD("rms_wgt_inc", 1.2);
+        rpi.min =   configSGD("rms_wgt_min", 0.1);
+        rpi.max =   configSGD("rms_wgt_max", 10.0);
+        rpi.gamma = configSGD("rms_gamma",   0.99);
 
-        bool needAveMultiplier = (bool) configSGD("normWithAveMultiplier", "true");
-        double L2RegWeight = (double) configSGD("L2RegWeight", "0");
-        double L1RegWeight = (double) configSGD("L1RegWeight", "0");
+        bool needAveMultiplier = (bool) configSGD("normWithAveMultiplier", true);
+        double L2RegWeight = (double) configSGD("L2RegWeight", 0.0);
+        double L1RegWeight = (double) configSGD("L1RegWeight", 0.0);
 
         /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
         /// useAdagrad=true
-        bool useAdagrad = configSGD("useAdagrad", "false");
+        bool useAdagrad = configSGD("useAdagrad", false);
         if (useAdagrad)
         {
             gradUpdateType = GradientsUpdateType::AdaGrad;
             gUpdateInfo.mType = gradUpdateType;
         }
 
-        AdaptationRegType adaptationRegType = ParseAdaptationRegType(configSGD("adaptationRegType", "None"));
-        double adaptationRegWeight = configSGD("adaptationRegWeight", "0");
+        AdaptationRegType adaptationRegType = ParseAdaptationRegType(configSGD("adaptationRegType", L"None"));
+        double adaptationRegWeight = configSGD("adaptationRegWeight", 0.0);
 
         /// gradient check setup
-        bool doGradientCheck = configSGD("gradientcheck", "false");
-        double gradientCheckSigDigit = configSGD("sigFigs", "6");
+        bool doGradientCheck =         configSGD("gradientcheck", false);
+        double gradientCheckSigDigit = configSGD("sigFigs",       6.0); // TODO: why is this a double?
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
             LogicError("Gradient check needs to use precision = double");
 
-        bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
+        bool validateAfterModelReloading = configSGD("validateAfterModelReloading", true);
 
-        bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
+        bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", true);
 
-        // TODO: the number of parameters of this function is waaay to little!
-        // TODO: it may be easier to write the values directly into the members
+        // TODO: At this point we are copying local vars into members of the same name. This is a left-over of refactoring. We should just write to the members directly.
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
         m_autoAdjustMinibatch = autoAdjustMinibatch;
@@ -206,12 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_modelPath = modelPath;
         m_autoLearnRateSearchType = autoLearnRateSearchType;
         m_traceLevel = traceLevel;
-        m_progressTracing = progressTracing;
 
-        if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
-        {
-            m_progressTracingTimer.Start();
-        }
         m_lastFinishedEpochEvalErr = 0.0;
 
         m_loadBestModel = loadBestModel;
@@ -261,16 +258,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None &&
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
         {
-            InvalidArgument("If autoLearnRateSearchType is false "
-                "you must specify the learningRatesPerSample "
-                "or learningRatesPerMB parameter.");
+            InvalidArgument("If autoLearnRateSearchType is false you must specify the learningRatesPerSample or learningRatesPerMB parameter.");
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
         {
-            InvalidArgument("You specified both learningRatesPerSample "
-                "and learningRatesPerMB. Please comment "
-                "out one of them.");
+            InvalidArgument("You specified both learningRatesPerSample and learningRatesPerMB. Please comment out one of them.");
         }
         else if (learningRatesPerSample.size() > 0)
         {
@@ -285,9 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
         {
-            InvalidArgument("You specified both momentumPerSample "
-                "and momentumPerMB. Please comment "
-                "out one of them.");
+            InvalidArgument("You specified both momentumPerSample and momentumPerMB. Please comment out one of them.");
         }
         else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
         {
@@ -332,7 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
 
         // BUGBUG: these are not passed to Init()
-        m_doUnitTest = configSGD("unittest", "false");
+        m_doUnitTest = configSGD("unittest", false);
 
         // Parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
@@ -344,18 +335,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
         {
-            ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
-            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
-            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", "1");
-            m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
-            m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
+            const ConfigRecordType & configParallelTrain(configSGD("ParallelTrain", ConfigRecordType::Record()));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", L"None"));
+            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
+            m_enableDistributedMBReading = configParallelTrain("distributedMBReading", false);
 
             if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
             {
-                ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
-                const char* defaultGradientBitsStr = (sizeof(ElemType) == sizeof(float)) ? "32" : "64";
-                m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBitsStr);
-                m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
+                const ConfigRecordType & configDataParallelSGD(configParallelTrain("DataParallelSGD", ConfigRecordType::Record()));
+                size_t defaultGradientBits = 8 * sizeof(ElemType);
+                m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBits);
+                m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", true);
                 if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
                 {
                     InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
@@ -364,17 +354,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
             {
-                ConfigParameters configMASGD(configParallelTrain("ModelAveragingSGD", "")); 
-                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
-                m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
+                const ConfigRecordType & configMASGD(configParallelTrain("ModelAveragingSGD", ConfigRecordType::Record()));
+                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", (size_t)40000);
+                m_iMASyncStatsTrace = configMASGD("MAPerfStats", (int)0);
             }
         }
     }
 
     template<class ElemType>
-    SGD<ElemType>::SGD(SGDParams&& sgdParams, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) :
+    SGD<ElemType>::SGD(SGDParams&& sgdParams) :
         SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
-        m_fullTotalMaxEpochs(fullTotalMaxEpochs), m_fullEpochsOffset(fullEpochsOffset),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr)
     {
@@ -385,8 +374,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    SGD<ElemType>::SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) :
-        SGD(SGDParams(configSGD, ElemType(0)), fullEpochsOffset, fullTotalMaxEpochs)
+    SGD<ElemType>::SGD(const ConfigParameters& configSGD) :
+        SGD(SGDParams(configSGD, ElemType(0)))
     { }
 
     template<class ElemType>
@@ -1067,12 +1056,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             g_mpi->WaitAll();
         }
 
-        if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
-        {
-            m_progressTracingTimer.Stop();
-            printf("PROGRESS: %.2f%%\n", (float) (100 * (m_fullEpochsOffset + m_maxEpochs)) / (float) m_fullTotalMaxEpochs);
-            printf("EVALERR: %.2f%%\n", round(m_lastFinishedEpochEvalErr * 100.0));
-        }
+        // progress tracing for compute cluster management
+        ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0);
+        ProgressTracing::TraceObjectivePercentage(m_lastFinishedEpochEvalErr);
 
         // since we linked feature nodes. we need to remove it from the deletion
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -1747,6 +1733,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- MAIN MINIBATCH LOOP
 
+        size_t totalSamplesProcessed = 0; // for progress printing   --TODO: is it different from nSamplesSinceLastModelSync?
         for (;;)
         {
             // get minibatch
@@ -1823,6 +1810,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
             size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
+
+            totalSamplesProcessed += numSamplesWithLabel;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
@@ -1971,18 +1960,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (epochNumber > 0 || (int) epochSize > 0)
                 {
-                    if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing && m_progressTracingTimer.ElapsedSeconds() > 10)
-                    {
-                        // this must go to stdout, not stderr
-                        float epochProg = ((100.0f * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
-                        float mbProg = ((float) numMBsRun / ((float) m_maxComputedEpochSize / (float) tunedMBSize));
-                        mbProg = (mbProg * 100.0f) / (float) m_fullTotalMaxEpochs;
+                    // progress tracing for compute cluster management
+                    double mbProg = (double)totalSamplesProcessed / (double)m_maxComputedEpochSize;
+                    wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg);
 
-                        printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
-                        wasProgressPrinted = true;
-                        m_progressTracingTimer.Restart();
-                    }
-
+                    // progress tracing for regular log
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
@@ -2014,9 +1996,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                          totalTimeInMBs, totalTimePerSample,
                          static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
 
-                if (wasProgressPrinted && ((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
+                // progress tracing for compute cluster management
+                if (wasProgressPrinted)
                 {
-                    printf("EVALERR: %.2f%%\n", round(evalError * 100.0));
+                    ProgressTracing::TraceObjectivePercentage(evalError);
                 }
 
                 if (m_traceLevel > 0)
@@ -2614,6 +2597,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SGD<double>;
 
     // register ComputationNode with the ScriptableObject system
-    //ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<SGDParams> registerComputationNode(L"SGDParams");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<SGDParams> registerComputationNode(L"SGDParams");
 
 }}}
