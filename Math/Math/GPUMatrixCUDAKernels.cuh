@@ -2655,8 +2655,10 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     int m,  // rowDense
     int k,  // colDense
     int n,  // colSparse
+    int numChannels,
     int numSteps,   // convolution num steps
-    int stepSize,   // convolution step size
+    int horizontalSubsample,   // convolution step size
+    bool channelwise,
     ElemType alpha,
     const ElemType* a,  //dense
     const ElemType* bnzValues,  //sparse nz values
@@ -2680,12 +2682,22 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     ElemType s = 0;
     for (int j = start; j < end; j++)  //j points to the value
     {
-        int i = rowIndex[j] - (stepSize * stepIdx); // offset row index by the convolution step
+        int i = rowIndex[j] - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
         if (i >= 0)
         {
             if (i >= k)
                 break;
+
+            // Convert to channelwise index.
+            // This is similar to rowwise to columnwise conversion
+            if (channelwise)
+            {
+                int pixel = i / numChannels;
+                int channel = i % numChannels;
+                int numPixels = k / numChannels;
+                i = channel * numPixels + pixel;
+            }
 
             s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
         }

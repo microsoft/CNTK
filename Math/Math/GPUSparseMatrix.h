@@ -282,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool transposeB, GPUSparseMatrix<ElemType>& c);
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
         static void ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs, 
-            ElemType beta, GPUMatrix<ElemType>& c, size_t colStep, bool padding);
+            ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);
         ElemType Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier);
