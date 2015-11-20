@@ -20,10 +20,9 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
-#include "TimerUtility.h"
 #include "Profiler.h"
 
-using namespace std;
+using namespace std;    // ugh! TODO: get rid of this from .h files!!!
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -178,8 +177,6 @@ protected:
     AdaptationRegType m_adaptationRegType;
     double m_adaptationRegWeight;
     bool m_needAdaptRegularization;
-    bool m_progressTracing;
-    Timer m_progressTracingTimer;
 
     bool m_loadBestModel;
     double m_reduceLearnRateIfImproveLessThan;
