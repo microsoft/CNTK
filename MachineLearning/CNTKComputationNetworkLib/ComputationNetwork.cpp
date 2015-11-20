@@ -922,7 +922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
     {
-        BuildAndValidateSubNetwork(m_evalNodes[0]);
+        ValidateNetwork(false, true);
 
         //////////////////////////////////////////////////////////////////////////
         //    step 1.        get all the arcs in the network
