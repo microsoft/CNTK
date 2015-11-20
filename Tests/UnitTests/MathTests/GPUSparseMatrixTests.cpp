@@ -397,7 +397,7 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit)
                 {
-                    const bool zeroPadding = true;
+                    const bool zeroPadding = false;
                     const int horizontalSubsample = 1;
                     const int verticalSubsample = 1;
                     const int inputWidth = 6;
