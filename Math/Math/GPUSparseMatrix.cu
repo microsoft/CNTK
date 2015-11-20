@@ -896,7 +896,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeA && !transposeB)
             {
-                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, false);
+                ConvolveAndWeightedAdd(alpha, lhs, rhs, beta, c, 1, 1, false, false);
             }
             else if (!transposeA && transposeB)
             {
@@ -945,7 +945,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs,
-        ElemType beta, GPUMatrix<ElemType>& c, size_t stepSize, bool padding)
+        ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
@@ -962,9 +962,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int numSteps = 0;
         if (padding)
-            numSteps = (int)ceil(1.0 * l / stepSize);
+            numSteps = (int)ceil(1.0 * l / (horizontalSubsample * numChannels));
         else if (l >= k)
-            numSteps = 1 + (l - k) / stepSize;
+            numSteps = 1 + (l - k) / (horizontalSubsample * numChannels);
 
         if (numSteps == 0)
             LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
@@ -973,7 +973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int cCols = n;
 
         if (beta == 0)
-            c.Resize(m, n);
+            c.Resize(cRows, cCols);
         else
             c.VerifySize(cRows, cCols); // Can't resize if beta != 0
 
@@ -987,8 +987,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m,          // rowDense
                 k,          // colDense
                 n,          // colSparse
+                numChannels,// number of input channels
                 numSteps,   // convolution num steps
-                stepSize,   // convolution step size
+                horizontalSubsample,   // convolution step size
+                channelwise,// channelwise or pixelwise multiplication
                 alpha,
                 reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                 reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values

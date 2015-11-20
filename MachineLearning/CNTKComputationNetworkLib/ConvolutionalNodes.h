@@ -290,7 +290,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
                     Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, inputSubBatch, 0, outputSubBatch,
-                        m_horizontalSubsample * m_inputImageLayout.GetNumChannels(), m_zeroPadding);
+                        m_inputImageLayout.GetNumChannels(), m_horizontalSubsample,
+                        m_zeroPadding, true);
                 }
                 else
                 {
