@@ -844,6 +844,7 @@ void DoTrain(const ConfigRecordType & config)
     if (config.Exists(L"createNetwork"))
     {
         netBuilder = make_shared<BrainScriptNetworkBuilder<ElemType>>(config);
+        //netBuilder->BuildNetworkFromDescription();
     }
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
@@ -865,6 +866,7 @@ void DoTrain(const ConfigRecordType & config)
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
+    // BUGBUG: inconsistency with BrainScript: old config passes a config dict, whereas BrainScript creates the object right away
     const ConfigRecordType & readerConfig(config(L"reader", ConfigRecordType::Record()));
     //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by making this an optional arg; or if this should not be inherited, then by disabling it
     auto dataReader = make_shared<DataReader<ElemType>>(readerConfig);
