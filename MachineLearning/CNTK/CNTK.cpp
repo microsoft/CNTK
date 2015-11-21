@@ -1678,6 +1678,16 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     vector<wstring> args(argv, argv+argc);
     let exePath = ConsumeArg(args);
 
+    // startup message
+    // In case of a redirect of stderr, this will be printed twice, once upfront, and once again after the redirect so that it goes into the log file
+    wstring startupMessage = msra::strfun::wstrprintf(L"running on %ls at %ls\n", msra::strfun::utf16(GetHostName()).c_str(), msra::strfun::utf16(TimeDateStamp()).c_str());
+    startupMessage += msra::strfun::wstrprintf(L"command line: %ls", exePath.c_str());
+    for (const auto & arg : args)
+        startupMessage += L" " + arg;
+
+    fprintf(stderr, "%ls\n", startupMessage.c_str());
+
+    // parse command-line options
     vector<wstring> sourceFiles;
     vector<wstring> includePaths;
     vector<wstring> overrides;
@@ -1741,18 +1751,13 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
             logpath += msra::strfun::wstrprintf(L"rank%d", (int)g_mpi->CurrentNodeRank());
 
         RedirectStdErr(logpath);
+        fprintf(stderr, "%ls\n", startupMessage.c_str());
     }
 
     // echo config info to log
 #ifdef _WIN32
     PrintBuiltInfo();
 #endif
-    std::string timestamp = TimeDateStamp();
-
-    fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-    fprintf(stderr, "command line: %ls", exePath.c_str());
-    for (const auto & arg : args)
-        fprintf(stderr, "%ls", arg.c_str());
 
     // execute the actions
     //std::string type = config(L"precision", "float");
