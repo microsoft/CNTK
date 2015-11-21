@@ -3,18 +3,11 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "Basics.h"
-#include "ExperimentalNetworkBuilder.h"
-#include "ScriptableObjects.h"
-#include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
-
 #include <string>
 
-#ifndef let
-#define let const auto
-#endif
+using namespace std;
 
+// TODO: decide where these should go.
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
@@ -125,47 +118,3 @@
         UnaryStandardNode(Transpose, matrix)
         //BinaryStandardNode(TransposeTimesNode)
     ;
-
-#if 0   // no longer needed
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-    using namespace Microsoft::MSR;
-
-    // helper that returns 'float' or 'double' depending on ElemType
-    template<class ElemType> static const wchar_t * ElemTypeName();
-    template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
-    template<> /*static*/ const wchar_t * ElemTypeName<double>() { return L"double"; }
-
-    // build a ComputationNetwork from BrainScript source code
-    template<class ElemType>
-    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetworkPtr ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork*)
-    {
-        if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
-        {
-            // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
-            // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
-            // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
-            let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
-                + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
-                + m_sourceCode, vector<wstring>());    // source code has the form [ ... ]
-            // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
-            let object = EvaluateField(expr, L"network");                                // this comes back as a BS::Object
-            let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
-            // This should not really fail since we constructed the source code above such that this is the right type.
-            // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
-            // In that case, the network might come back with a different element type. We need a runtime check for that.
-            if (!network)
-                RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
-            // success
-            m_net = network;
-            // TODO: old CNTK code seems to be able to load the network in-place--is that important; is it OK to just replace the pointer?
-        }
-        m_net->ResetEvalTimeStamp();
-        return m_net;
-    }
-
-    template class ExperimentalNetworkBuilder<float>;
-    template class ExperimentalNetworkBuilder<double>;
-
-}}}
-#endif

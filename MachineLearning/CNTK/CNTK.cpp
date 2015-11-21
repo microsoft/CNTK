@@ -36,7 +36,6 @@
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
-#include "ExperimentalNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h"  // used for SetNumThreads()

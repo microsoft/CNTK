@@ -248,38 +248,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        static bool CheckDbnTag(File &fstream, const std::string expectedTag)
-        {
-            char tag[5];
-            for (int i = 0; i<4; i++)
-                fstream >> tag[i];
-            tag[4] = 0;
-            return std::string(tag) == expectedTag;
-        }
-
-        // this load function allows an alternative file format of an early internal predecessor of CNTK, internally called DBN.exe
-        virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr) override
-        {
-            if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-            {
-                bool isDBN = false;
-
-                {  //force fstream to close when out of range
-                    File fstream(modelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-                    isDBN = CheckDbnTag(fstream, "DBN\n");
-                }
-
-                if (isDBN)
-                    BuildNetworkFromDbnFile(modelFileName);
-                else
-                    m_net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion, anotherNetwork);
-            }
-
-            m_net->ResetEvalTimeStamp();
-            return m_net.get();
-        }
-
         ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr) override;
 
         ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // support for fseide's Microsoft-internal legacy tool "DBN.exe"
