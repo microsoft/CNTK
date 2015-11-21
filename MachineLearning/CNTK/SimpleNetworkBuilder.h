@@ -298,6 +298,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
         ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr);
 
+        static bool CheckDbnTag(File &fstream, const std::string expectedTag)
+        {
+            char tag[5];
+            for (int i = 0; i<4; i++)
+                fstream >> tag[i];
+            tag[4] = 0;
+            return std::string(tag) == expectedTag;
+        }
+
         Matrix<ElemType> ReadMatrixFromDbnFile(File &fstream, const std::string expectedName)
         {
             int numRows, numCols;
