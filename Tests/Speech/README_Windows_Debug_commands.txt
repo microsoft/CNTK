@@ -14,6 +14,10 @@ COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(Solu
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=.  DeviceId=Auto  makeMode=false
 
+Using full BrainScript configuration
+
+COMMAND:    --cd $(SolutionDir)Tests\Speech\Data  -f $(SolutionDir)Tests\Speech\LSTM\lstm.bs  -D stderr='$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log'  -D RunDir='$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated'  -D DataDir='.'  -D DeviceId='auto'  -D makeMode=false
+
 --- Speech\LSTM\FullUtterance:
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=.  DeviceId=Auto  Truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  makeMode=false
