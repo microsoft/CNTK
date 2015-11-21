@@ -107,14 +107,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: callers of this often do ComputationNetwork::UpdateEvalTimeStamps(featureNodes) and also for labels; we should eliminate the need for this.
         template<class ElemType>
         static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
-                                            ComputationNetwork& net,
+                                            ComputationNetworkPtr net,
                                             ComputationNodeBasePtr criterionNode,
                                             bool useDistributedMBReading,
                                             bool useParallelTrain,
                                             std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
                                             size_t & actualMBSize)
         {
-            auto pMBLayout = net.GetMBLayoutPtr();
+            auto pMBLayout = net->GetMBLayoutPtr();
             // Reading consists of a sequence of Reader API calls:
             //  - GetMinibatch() --fills the inputMatrices
             //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
@@ -127,15 +127,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // no data is read. When it does, 'wasDataRead' can be removed
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
-            net.NotifyInputNodesFunctionValuesMBSizeModified();
-            size_t readMBSize = net.DetermineActualMBSizeFromFeatures();
+            net->NotifyInputNodesFunctionValuesMBSizeModified();
+            size_t readMBSize = net->DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
                 wasDataRead = false;
 
             trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
-            net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
+            net->VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
             //assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
 
             if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
@@ -174,8 +174,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
             {
-                DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                net.NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
+                DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
+                net->NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: This will go away, as we will do resizing inside EvaluateThisNode(FrameRange()).
             actualMBSize = 0;
             if (wasDataRead)    // TODO: what if we call it always?
-                actualMBSize = net.DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
+                actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
 
             return true;
         }

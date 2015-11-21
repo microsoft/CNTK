@@ -126,6 +126,7 @@
         //BinaryStandardNode(TransposeTimesNode)
     ;
 
+#if 0   // no longer needed
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace Microsoft::MSR;
@@ -137,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // build a ComputationNetwork from BrainScript source code
     template<class ElemType>
-    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork*)
+    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetworkPtr ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
         {
@@ -160,10 +161,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: old CNTK code seems to be able to load the network in-place--is that important; is it OK to just replace the pointer?
         }
         m_net->ResetEvalTimeStamp();
-        return m_net.get();
+        return m_net;
     }
 
     template class ExperimentalNetworkBuilder<float>;
     template class ExperimentalNetworkBuilder<double>;
 
 }}}
+#endif

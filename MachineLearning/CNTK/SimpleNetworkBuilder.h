@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
-            m_net = new ComputationNetwork(m_deviceId);
+            m_net = make_shared<ComputationNetwork>(m_deviceId);
 
             m_outputLayerSize = outputLayerSize;
             m_layerSizes = layerSizes;
@@ -248,11 +248,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        virtual ~SimpleNetworkBuilder()
-        {
-            delete m_net;
-        }
-
         static bool CheckDbnTag(File &fstream, const std::string expectedTag)
         {
             char tag[5];
@@ -264,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this load function allows an alternative file format of an early internal predecessor of CNTK, internally called DBN.exe
         virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
+                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr) override
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -282,20 +277,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_net->ResetEvalTimeStamp();
-            return m_net;
+            return m_net.get();
         }
 
-        ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* encoderNet);
+        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr) override;
+
+        ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // support for fseide's Microsoft-internal legacy tool "DBN.exe"
 
         RNNTYPE RnnType(){ return m_rnnType; }
 
     protected:
 
-        ComputationNetwork* BuildSimpleDNN();
+        ComputationNetworkPtr BuildSimpleDNN();
 
-        ComputationNetwork* BuildSimpleRNN(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSimpleRNN(size_t mbSize = 1);
 
-        ComputationNetwork* BuildClassEntropyNetwork(size_t mbSize = 1);
+        ComputationNetworkPtr BuildClassEntropyNetwork(size_t mbSize = 1);
 
         ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
@@ -305,31 +302,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
-        ComputationNetwork* BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildNeuralProbNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNeuralProbNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
+        ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
 
-        ComputationNetwork* BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
-
-        ComputationNetwork* BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);
+        ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
 
         //layer is 0 based
         ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
@@ -377,7 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
 
-        ComputationNetwork* m_net;
+        ComputationNetworkPtr m_net;
 
         int m_outputLayerSize;
         intargvector m_layerSizes;

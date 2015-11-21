@@ -1,3 +1,4 @@
+#if 0   // no longer needed
 // ExperimentalNetworkBuilder.h -- interface to new version of NDL (and config) parser  --fseide
 
 #pragma once
@@ -29,12 +30,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // build a ComputationNetwork from description language
         // TODO: change return type of these interfaces to shared_ptrs
-        virtual /*IComputationNetBuilder::*/ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr);
+        virtual /*IComputationNetBuilder::*/ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override;
         // TODO: that function argument is related to PairNetworkNode, which will go away (we don't support it here)
 
         // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
         virtual /*IComputationNetBuilder::*/ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                                                              bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+                                                                                    bool bAllowNoCriterionNode = false,
+                                                                                    ComputationNetwork* anotherNetwork = nullptr) override
         {
             if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -48,3 +50,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 }}}
+#endif

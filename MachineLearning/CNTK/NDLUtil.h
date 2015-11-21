@@ -23,14 +23,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     private:
-        ComputationNetwork* m_net;
+        ComputationNetworkPtr m_net;
 
     public:
-        NDLUtil(ComputationNetwork * net) : m_net(net)
-        {
-        }
-
-        ~NDLUtil()
+        NDLUtil(ComputationNetworkPtr net) : m_net(net)
         {
         }
 
@@ -106,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_net->DumpAllNodesToFile(false, dumpFileName, false);
                 m_net->ValidateNetwork(!fullValidate);
             }
-            SynchronousNodeEvaluator<ElemType> ndlEvaluator(*m_net);
+            SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
             NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
             if (ndlPass == ndlPassResolve)
             {

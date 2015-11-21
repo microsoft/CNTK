@@ -282,26 +282,26 @@ public:
                        const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
-    std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetwork& net);
-    std::vector<ComputationNodeBasePtr> & GetEvalCriterionNodes(ComputationNetwork& net);
+    std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetworkPtr net);
+    std::vector<ComputationNodeBasePtr> & GetEvalCriterionNodes(ComputationNetworkPtr net);
 
-    void TrainOrAdaptModel(int startEpoch, ComputationNetwork& net,
-                           ComputationNetwork& refNet,
+    void TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
+                           ComputationNetworkPtr refNet,
                            ComputationNodeBasePtr refNode,
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader);
 
 protected:
     // return true if precomputation is executed.
-    bool PreCompute(ComputationNetwork& net,
+    bool PreCompute(ComputationNetworkPtr net,
                     IDataReader<ElemType>* trainSetDataReader,
                     std::vector<ComputationNodeBasePtr> & featureNodes,
                     std::vector<ComputationNodeBasePtr> & labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
 
     // return a reasonable initial learning rate based on the initial mbsize
-    double SearchForBestLearnRate(ComputationNetwork& net,
-                                  ComputationNetwork& refNet,
+    double SearchForBestLearnRate(ComputationNetworkPtr net,
+                                  ComputationNetworkPtr refNet,
                                   const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
                                   IDataReader<ElemType>* trainSetDataReader,
@@ -315,8 +315,8 @@ protected:
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
-    void TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
-                                         ComputationNetwork& refNet,
+    void TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
+                                         ComputationNetworkPtr refNet,
                                          const ComputationNodeBasePtr& refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const double learnRatePerSample,
@@ -333,8 +333,8 @@ protected:
                                          /*out*/ size_t& totalSamplesSeen,
                                          std::string prefixMsg = "");
 
-    size_t AdaptiveMinibatchSizing(ComputationNetwork& net,
-                                   ComputationNetwork& refNet,
+    size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
+                                   ComputationNetworkPtr refNet,
                                    const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
@@ -352,8 +352,8 @@ protected:
 
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
-    size_t SearchForBestMinibatchSize(ComputationNetwork& net,
-                                      ComputationNetwork& refNet,
+    size_t SearchForBestMinibatchSize(ComputationNetworkPtr net,
+                                      ComputationNetworkPtr refNet,
                                       const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
@@ -373,13 +373,13 @@ protected:
     // for the two-forward-pass sequence and ctc training, which allows
     // processing more utterances at the same time. Only used in Kaldi2Reader.
     // TODO: move the two-forward-pass support out of the reader.
-    void AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
+    void AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr> & featureNodes,
                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices);
 
-    size_t TrainOneEpoch(ComputationNetwork& net,
-                         ComputationNetwork& refNet,
+    size_t TrainOneEpoch(ComputationNetworkPtr net,
+                         ComputationNetworkPtr refNet,
                          const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
@@ -455,7 +455,7 @@ public:
 
 #define EPSILON 1e-5
 
-    bool GradientCheck(ComputationNetwork& net,
+    bool GradientCheck(ComputationNetworkPtr net,
                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
                        const std::list<ComputationNodeBasePtr> & learnableNodes,
                        int npos);

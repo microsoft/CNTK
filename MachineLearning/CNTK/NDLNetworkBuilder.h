@@ -32,13 +32,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const ConfigParameters* m_baseConfig; // NOTE: the lifetime of the parent MUST exist from the call to Init to the BuildNetworkFromDescription() call for stringize
 
     public:
-        NDLBuilder() : m_net(nullptr)
+        NDLBuilder()
         {
             m_executionEngine = NULL;
             m_baseConfig = NULL;
         } // empty constructor, call Init immediately hereafter
 
-        NDLBuilder(const ConfigParameters& config) : m_net(nullptr)
+        NDLBuilder(const ConfigParameters& config)
         {
             m_baseConfig = config.GetParent();
             Init(config);
@@ -57,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_dumpFileName = dumpFileName;
             m_initialConfig = configParams;
             m_deviceId = deviceId;
-            m_net = &(executionEngine->GetComputationNetwork());
+            m_net = executionEngine->GetComputationNetwork();
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
             m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
@@ -158,16 +158,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+                                                        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
                 m_net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
 
             m_net->ResetEvalTimeStamp();
-            return m_net;
+            return m_net.get();
         }
 
-        ComputationNetwork* LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
+        ComputationNetworkPtr LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
                 LoadFromConfig(configFilePaths);
@@ -214,7 +214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ndlUtil.ProcessNDLConfig(config, true);
         }
 
-        virtual ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr)
+        virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
         {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
@@ -226,7 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        ComputationNetwork* m_net;
+        ComputationNetworkPtr m_net;
         IExecutionEngine<ElemType>* m_executionEngine;
         std::wstring m_networkConfig;
         std::wstring m_dumpFileName;

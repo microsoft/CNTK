@@ -13,10 +13,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class IComputationNetBuilder //Abstract Class that cannot be instantiated
     {
-    public:
+    protected:
         virtual ComputationNetwork* LoadNetworkFromFile(const std::wstring& modelFileName, bool forceLoad = true,
                                                                   bool bAllowNoCriterion = false, ComputationNetwork* = nullptr) = 0;
-        virtual ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr) = 0;
+    public:
+        virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) = 0;
         virtual ~IComputationNetBuilder() {};
     };
 
