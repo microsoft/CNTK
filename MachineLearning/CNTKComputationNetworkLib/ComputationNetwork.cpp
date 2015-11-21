@@ -398,8 +398,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
-        //some internal values in the nodes are computed during validation
+        // some internal values in the nodes are computed during validation
         ValidateNetwork(false, bAllowNoCriterionNode);
+        ResetEvalTimeStamp();
     }
 
     // -----------------------------------------------------------------------

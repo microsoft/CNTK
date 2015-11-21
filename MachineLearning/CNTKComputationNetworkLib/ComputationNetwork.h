@@ -984,5 +984,6 @@ private:    // TODO: make all private that can be made private
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
 };
+typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
 
 }}}

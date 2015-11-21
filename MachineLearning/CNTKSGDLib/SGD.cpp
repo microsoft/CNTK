@@ -513,12 +513,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void SGD<ElemType>::Train(IComputationNetBuilder<ElemType>* netBuilder,
+    void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const bool makeMode)
     {
-        if (netBuilder == nullptr || trainSetDataReader == nullptr)
+        if (trainSetDataReader == nullptr)
         {
             InvalidArgument("netBuilder and trainSetDataReader should not be null.\n");
         }
@@ -533,8 +533,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (startEpoch >= 0)
             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
 
-        ComputationNetwork* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
-                                                             netBuilder->LoadNetworkFromFile(modelFileName);
+        shared_ptr<ComputationNetwork> net;
+        if (startEpoch < 0)
+            net = createNetworkFn(deviceId);
+        else
+        {
+            net = make_shared<ComputationNetwork>(deviceId);
+            net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, false/*bAllowNoCriterionNode*/, nullptr/*anotherNetwork*/);
+        }
+
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
 
