@@ -29,8 +29,10 @@ using namespace Microsoft::MSR::CNTK;
 
 // SourceFile constructors
 SourceFile::SourceFile(wstring location, wstring text) : path(location), lines(split(text, L"\r\n")) { }  // from string, e.g. command line
-SourceFile::SourceFile(wstring path) : path(path)       // from file
+SourceFile::SourceFile(wstring path, const vector<wstring> & includePaths) : path(path)       // from file
 {
+    // ... scan paths
+    includePaths;
     File(path, fileOptionsRead).GetLines(lines);
 }
 
@@ -233,8 +235,9 @@ class Lexer : public CodeSource
 {
     set<wstring> keywords;
     set<wstring> punctuations;
+    vector<wstring> includePaths;
 public:
-    Lexer() : CodeSource(), currentToken(TextLocation())
+    Lexer(vector<wstring> && includePaths) : CodeSource(), includePaths(includePaths), currentToken(TextLocation())
     {
         keywords = set<wstring>
         {
@@ -371,7 +374,7 @@ private:
                 let nameTok = NextToken();       // must be followed by a string literal
                 if (nameTok.kind != stringliteral) Fail(L"'include' must be followed by a quoted string", nameTok);
                 let path = nameTok.symbol;          // TODO: some massaging of the path
-                PushSourceFile(SourceFile(path));   // current cursor is right after the pathname; that's where we will pick up later
+                PushSourceFile(SourceFile(path, includePaths));   // current cursor is right after the pathname; that's where we will pick up later
                 return NextToken();
             }
         }
@@ -527,7 +530,7 @@ class Parser : public Lexer
 
     map<wstring, int> infixPrecedence;      // precedence level of infix operators
 public:
-    Parser(SourceFile && sourceFile) : Lexer()
+    Parser(SourceFile && sourceFile, vector<wstring> && includePaths) : Lexer(move(includePaths))
     {
         infixPrecedence = map<wstring, int>
         {
@@ -694,25 +697,28 @@ public:
     {
         ConsumePunctuation(L"(");
         auto macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
-        for (;;)
+        if (GotToken().symbol != L")")              // x() defines an empty argument list
         {
-            let expr = ParseExpression(0, false);   // this could be an optional arg (var = val)
-            if (defining && expr->op != L"id")      // when defining we only allow a single identifier
-                Fail(L"argument identifier expected", expr->location);
-            if (expr->op == L"id" && GotToken().symbol == L"=")
+            for (;;)
             {
-                let id = expr->id;                  // 'expr' gets resolved (to 'id') and forgotten
+                let expr = ParseExpression(0, false);   // this could be an optional arg (var = val)
+                if (defining && expr->op != L"id")      // when defining we only allow a single identifier
+                    Fail(L"argument identifier expected", expr->location);
+                if (expr->op == L"id" && GotToken().symbol == L"=")
+                {
+                    let id = expr->id;                  // 'expr' gets resolved (to 'id') and forgotten
+                    ConsumeToken();
+                    let defValueExpr = ParseExpression(0, false);  // default value
+                    let res = macroArgs->namedArgs.insert(make_pair(id, make_pair(expr->location, defValueExpr)));
+                    if (!res.second)
+                        Fail(L"duplicate optional parameter '" + id + L"'", expr->location);
+                }
+                else
+                    macroArgs->args.push_back(expr);    // [0..]: position args
+                if (GotToken().symbol != L",")
+                    break;
                 ConsumeToken();
-                let defValueExpr = ParseExpression(0, false);  // default value
-                let res = macroArgs->namedArgs.insert(make_pair(id, make_pair(expr->location, defValueExpr)));
-                if (!res.second)
-                    Fail(L"duplicate optional parameter '" + id + L"'", expr->location);
             }
-            else
-                macroArgs->args.push_back(expr);    // [0..]: position args
-            if (GotToken().symbol != L",")
-                break;
-            ConsumeToken();
         }
         ConsumePunctuation(L")");
         return macroArgs;
@@ -783,8 +789,8 @@ public:
         }
         return members;
     }
-    // top-level parse function parses dictonary members
-    ExpressionPtr Parse()
+    // top-level parse function parses dictonary members without enclosing [ ... ] and returns it as a dictionary
+    ExpressionPtr ParseRecordMembersToDict()
     {
         let topMembers = ParseRecordMembers();
         if (GotToken().kind != eof)
@@ -797,13 +803,14 @@ public:
     static void Test()
     {
         let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        ParseConfigString(parserTest)->Dump();
+        ParseConfigDictFromString(parserTest, vector<wstring>())->Dump();
     }
 };
 
 // globally exported functions to execute the parser
-static ExpressionPtr Parse(SourceFile && sourceFile) { return Parser(move(sourceFile)).Parse(); }
-ExpressionPtr ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
-ExpressionPtr ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
+static ExpressionPtr Parse(SourceFile && sourceFile, vector<wstring> && includePaths) { return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict(); }
+ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring> && includePaths) { return Parse(SourceFile(L"(command line)", text), move(includePaths)); }
+ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> && includePaths) { auto sourceFile = SourceFile(path, includePaths); return Parse(move(sourceFile), move(includePaths)); }
+ExpressionPtr ParseConfigExpression(const wstring & sourceText, vector<wstring> && includePaths) { return Parser(SourceFile(L"(command line)", sourceText), move(includePaths)).ParseExpression(0, true/*can end at newline*/); }
 
 }}}     // namespaces

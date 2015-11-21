@@ -144,11 +144,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
             // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
             // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
-            let expr = BS::ParseConfigString(standardFunctions + computationNodes + commonMacros
+            let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
-                + m_sourceCode);    // source code has the form [ ... ]
+                + m_sourceCode, vector<wstring>());    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
-            let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
+            let object = EvaluateField(expr, L"network");                                // this comes back as a BS::Object
             let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
             // This should not really fail since we constructed the source code above such that this is the right type.
             // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.

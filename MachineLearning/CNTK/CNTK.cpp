@@ -1568,31 +1568,41 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     vector<wstring> sourceFiles;
     vector<wstring> includePaths;
     vector<wstring> overrides;
+    wstring workingDir;
     while (!args.empty())
     {
         let option = ConsumeArg(args);
-        if (option == L"-f" || option == L"--file")
+        if (option == L"-f" || option == L"--file")                                 // -f defines source files
             Append(sourceFiles, msra::strfun::split(ConsumeArg(args), L";"));
-        else if (option == L"-I")
+        else if (option == L"-I")                                                   // -I declares an include search path
             Append(includePaths, msra::strfun::split(ConsumeArg(args), L";"));
-        else if (option == L"-e" || option == L"--expression")
+        else if (option == L"-D")                                                   // -D defines variables inline on the command line (which may override BS)
             overrides.push_back(ConsumeArg(args));
+        else if (option == L"--cd")                                                 // --cd sets the working directory
+            workingDir = ConsumeArg(args);
         else
-            InvalidArgument("Invalid option '%ls'.", option.c_str());
+            InvalidArgument("Invalid command-line option '%ls'.", option.c_str());
     }
 
-    // compile the BrainScript
-    wstring bs = L"[ ";
-    bs += standardFunctions + computationNodes + commonMacros;   // start with standard macros
-    for (const auto & sourceFile : sourceFiles)
-        bs += L"include " + PathToBSStringLiteral(sourceFile);
-    for (const auto & over : overrides)
-        bs += L"with [ " + over + L" ]";
-    bs += L" ]";
+    // change working directory
+    if (workingDir != L"")
+        _wchdir(workingDir.c_str());
 
-    let expr = BS::ParseConfigString(bs);                           // parse
-    let valp = BS::Evaluate(expr);                                  // evaluate parse into a dictionary
-    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();  // this is the dictionary
+    // compile the BrainScript
+    wstring bs;
+    bs += standardFunctions + computationNodes + commonMacros + L"\n";   // start with standard macros
+    for (const auto & sourceFile : sourceFiles)
+        bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
+#if 0
+    for (const auto & over : overrides)
+        bs += L"with [ " + over + L" ]\n";
+#endif
+
+    fprintf(stderr, "\n\nBrainScript -->\n\n%ls\n\n", bs.c_str());
+
+    let expr = BS::ParseConfigDictFromString(bs, move(includePaths));   // parse   --TODO: support include path
+    let valp = BS::Evaluate(expr);                                      // evaluate parse into a dictionary
+    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();      // this is the dictionary
 
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile"))       // variables follow camel case (start with lower-case letters)

@@ -22,6 +22,10 @@ Using parallel sequences (difference to above: nbruttsineachrecurrentiter=4). No
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=.  DeviceId=Auto  Truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=4]]  speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[learningRatesPerMB=0.125]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  makeMode=false
 
+Using full BrainScript configuration
+
+COMMAND:     --cd $(SolutionDir)Tests\Speech\Data  -f $(SolutionDir)Tests\Speech\LSTM\lstm.bs  -D stderr='$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log'  -D RunDir='$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance'  -D NdlDir='$(SolutionDir)Tests\Speech\LSTM'  -D DataDir='.'  -D DeviceId='Auto'  -D Truncated=false  -D speechTrain=[reader=[nbruttsineachrecurrentiter=1];SGD=[epochSize=2560;maxEpochs=2;numMBsToShowResult=1]]  -D makeMode=false
+
 --- Speech\DiscriminativePreTraining:
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=..\DNN\DiscriminativePreTraining\cntk_dpt.config  stderr=..\RunDir\DNN\DiscriminativePreTraining\models\cntkSpeech.dnn.log  RunDir=..\RunDir\DNN\DiscriminativePreTraining  DataDir=.  DeviceId=Auto

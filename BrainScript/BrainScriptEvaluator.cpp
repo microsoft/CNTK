@@ -669,7 +669,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
-    // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
+    // Evaluation converts a parse tree from ParseConfigDictFromString/File() into a graph of live C++ objects.
     // =======================================================================
 
     // -----------------------------------------------------------------------
