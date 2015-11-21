@@ -268,17 +268,18 @@ public:
 
     SGD(SGDParams&& sgdParams);
 
-    void Adapt(wstring origModelFileName, wstring refNodeName,
-               IDataReader<ElemType>* trainSetDataReader,
-               IDataReader<ElemType>* validationSetDataReader,
-               const DEVICEID_TYPE deviceID, const bool makeMode = true);
-    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
-                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
-                       const DEVICEID_TYPE deviceID, const bool makeMode = true);
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const bool makeMode = true);
+    void Adapt(wstring origModelFileName, wstring refNodeName,
+               IDataReader<ElemType>* trainSetDataReader,
+               IDataReader<ElemType>* validationSetDataReader,
+               const DEVICEID_TYPE deviceID, const bool makeMode = true);
+    // TODO: remove the netBuilder from here as well
+    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
+                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
+                       const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
     std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetwork& net);

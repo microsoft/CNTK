@@ -832,45 +832,89 @@ public:
     }
 };
 
+// helper that returns 'float' or 'double' depending on ElemType
+template<class ElemType> static const wchar_t * ElemTypeName();
+template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
+template<> /*static*/ const wchar_t * ElemTypeName<double>() { return L"double"; }
+
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord & config)
+{
+    // createNetwork() is a BrainScript lambda that creates the model
+    // We create a C++ wrapper around it, which we then pass to Train().
+    auto createNetworkConfigLambda = config[L"createNetwork"].AsPtr<ScriptableObjects::ConfigLambda>();
+    return [createNetworkConfigLambda](DEVICEID_TYPE /*deviceId*/)
+    {
+        // execute the lambda
+        vector<ScriptableObjects::ConfigValuePtr> args;    // this lambda has no arguments
+        ScriptableObjects::ConfigLambda::NamedParams namedArgs;
+        let netValue = createNetworkConfigLambda->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
+        // typecast the result to the desired type
+        return netValue.AsPtr<ComputationNetwork>();
+    };
+}
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ConfigParameters &) { NOT_IMPLEMENTED; }  // old CNTK config does not support lambdas
+
 template <class ConfigRecordType, typename ElemType>
 void DoTrain(const ConfigRecordType & config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    shared_ptr<IComputationNetBuilder<ElemType>> netBuilder;
+    // determine the network-creation function
+    // We have several ways to create that network.
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
 
     if (config.Exists(L"createNetwork"))
     {
-        netBuilder = make_shared<BrainScriptNetworkBuilder<ElemType>>(config);
-        //netBuilder->BuildNetworkFromDescription();
+        createNetworkFn = GetCreateNetworkFn(config); // (we need a separate function needed due to template code)
     }
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
         const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder", ConfigRecordType::Record()));
-        netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
+        shared_ptr<IComputationNetBuilder<ElemType>> netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
+        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
+        {
+            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+        };
     }
     // legacy versions
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
         const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder", ConfigRecordType::Record()));
-        netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
+        shared_ptr<IComputationNetBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
+        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
+        {
+            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+        };
     }
-    else if (config.Exists(L"ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
+    else if (config.Exists(L"ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions. Will go away once we fully integrate with BS.
     {
-        netBuilder = make_shared<ExperimentalNetworkBuilder<ElemType>>(config);
+        // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
+        // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
+        // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
+        wstring sourceCode = config(L"ExperimentalNetworkBuilder");
+        let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
+            + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
+            + sourceCode, vector<wstring>());    // source code has the form [ ... ]
+        createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
+        {
+            // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
+            let object = EvaluateField(expr, L"network");                                // this comes back as a BS::Object
+            let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
+            // This should not really fail since we constructed the source code above such that this is the right type.
+            // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
+            // In that case, the network might come back with a different element type. We need a runtime check for that.
+            if (!network)
+                RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
+            // success
+            network->ResetEvalTimeStamp();
+            return network;
+        };
     }
     else
     {
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
-
-    // network creation is handled by a lambda, which we define here
-    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
-    {
-        ComputationNetwork * net = netBuilder->BuildNetworkFromDescription();
-        return shared_ptr<ComputationNetwork>(net);
-    };
 
     // BUGBUG: inconsistency with BrainScript: old config passes a config dict, whereas BrainScript creates the object right away
     const ConfigRecordType & readerConfig(config(L"reader", ConfigRecordType::Record()));
