@@ -196,7 +196,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
-		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
+		C:\work\cntk-public\Tests\Speech\LSTM\lstm.bs = C:\work\cntk-public\Tests\Speech\LSTM\lstm.bs
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
