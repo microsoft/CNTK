@@ -54,7 +54,7 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKActionsLib MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -111,7 +111,7 @@ endif
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml -lm -lpthread
+  LIBS += -lacml_mp -liomp5 -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 
@@ -208,7 +208,6 @@ MATH_SRC =\
 ifdef CUDA_PATH
 MATH_SRC +=\
 	Math/Math/GPUMatrix.cu \
-	Math/Math/GPUMatrixCUDAKernels.cu \
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
 	Math/Math/MatrixQuantizerGPU.cu \
@@ -418,9 +417,14 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
+	MachineLearning/CNTKActionsLib/TrainActions.cpp \
+	MachineLearning/CNTKActionsLib/EvalActions.cpp \
+	MachineLearning/CNTKActionsLib/OtherActions.cpp \
+	MachineLearning/CNTKActionsLib/EsotericActions.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \

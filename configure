@@ -41,7 +41,7 @@ mathlib=
 default_path_list="/usr /usr/local /opt /opt/local"
 
 # List from best to worst choice
-default_acmls="acml5.3.1/ifort64"
+default_acmls="acml5.3.1/ifort64_mp"
 default_mkls=""
 
 # NOTE: Will get compilation errors with cuda-6.0

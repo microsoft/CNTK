@@ -38,6 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Parallel"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ParallelNode);
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -107,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
-            Resize(rows, cols);
+            SetDims(rows, cols);
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInput(0);
@@ -132,18 +133,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f1 = Inputs(1)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->Resize(nInput0, nT);
+            Inputs(0)->SetDims(nInput0, nT);
+            Inputs(0)->UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
 
-            Inputs(1)->Resize(nInput1, nT);
+            Inputs(1)->SetDims(nInput1, nT);
+            Inputs(1)->UpdateFunctionValuesSize();
             Inputs(1)->FunctionValues().SetValue(0);
             Inputs(1)->FunctionValues()(0, 0) = 4;
             Inputs(1)->FunctionValues()(0, 1) = 5;
             Inputs(1)->FunctionValues()(0, 2) = 6;
-            Resize(nInput0 + nInput1, nT);
+            SetDims(nInput0 + nInput1, nT);
+            UpdateFunctionValuesSize();
 
             EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -204,6 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //DeclareConstructorFromConfigWithNumInputs(PreComputedNode);
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_hasComputed(false)
@@ -235,9 +240,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            CreateMatrixIfNull(m_functionValues);
-            fstream >> FunctionValues();
-        }
+            LoadFunctionValues(fstream);
+         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
@@ -260,9 +264,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-                Resize(Inputs(0)->GetNumRows(), 1);
+                SetDims(Inputs(0)->GetNumRows(), 1);
             else
-                VerifySize(Inputs(0)->GetNumRows(), 1);
+                VerifyDims(Inputs(0)->GetNumRows(), 1);
             InferImageDimsFromInputs();
         }
 
@@ -291,6 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
         //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
     public:
+        //DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
         MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_numSamples(SIZE_MAX)
@@ -323,7 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
-            LogicError("Mean operation should not be involved in the gradient calculation.");
+            //LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -354,6 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"Mean"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(MeanNode);
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -362,7 +368,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::MarkComputed(hasComputed);
             if (!m_hasComputed)     // initialize accumulation
+            {
+                UpdateFunctionValuesSize();
                 FunctionValues().SetValue(0);
+            }
             // no else branch because EvaluateThisNodeNonLooping() already leaves a valid mean in m_functionValues
         }
 
@@ -412,6 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(InvStdDevNode);
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_mean(deviceId), m_var(deviceId), m_temp(deviceId)
@@ -429,6 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_var.Resize(inputDim, 1);
                 m_mean.SetValue(0);
                 m_var.SetValue(0);
+                UpdateFunctionValuesSize();
                 FunctionValues().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
             }
             else                // finalize
@@ -508,7 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         Matrix<ElemType> m_mean;
         Matrix<ElemType> m_var;
-        Matrix<ElemType>  m_temp;
+        Matrix<ElemType> m_temp;
     };
 
     template class InvStdDevNode<float>;
@@ -524,30 +535,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PerDimMeanVarNormalizationNode);
         PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        //void ComputeInputPartialMap(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
-        //{
-        //    InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");   // TODO: don't we have a base class for this?
-        //}
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        //(feature-mean).*InvStdDev
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
-                              Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
-        }
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -558,25 +557,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
-    #if DUMPOUTPUT
+#if DUMPOUTPUT
             //input0.Print("PerDimMeanVarNormalization-input0");
             //input1.Print("PerDimMeanVarNormalization-input1");
             //input2.Print("PerDimMeanVarNormalization-input2");
-    #endif
+#endif
 
-    #if NANCHECK
+#if NANCHECK
             input0.HasNan("PerDimMeanVarNormalization-input0");
             input1.HasNan("PerDimMeanVarNormalization-input1");
             input2.HasNan("PerDimMeanVarNormalization-input2");
-    #endif
+#endif
             functionValues.AssignDifferenceOf(input0, input1);
             functionValues.ColumnElementMultiplyWith(input2);
-    #if NANCHECK
+#if NANCHECK
             functionValues.HasNan("PerDimMeanVarNormalization");
-    #endif
-    #if DUMPOUTPUT
+#endif
+#if DUMPOUTPUT
             functionValues.Print("PerDimMeanVarNormalizationNode");
-    #endif
+#endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -627,7 +626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
             Inputs(1)->SetParameterUpdateRequired(false);
             Inputs(2)->SetParameterUpdateRequired(false);  //prevent learning
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -646,14 +645,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarDeNormalization"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PerDimMeanVarDeNormalizationNode);
         PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        //void ComputeInputPartialMap(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
-        //{
-        //    InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
-        //}
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
         {
@@ -661,15 +656,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
-                              Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
-        }
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -759,7 +747,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->SetParameterUpdateRequired(false);
             Inputs(2)->SetParameterUpdateRequired(false);
 
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -786,6 +774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //DeclareConstructorFromConfigWithNumInputs(BatchModeNode);
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_memory(deviceId)
@@ -805,7 +794,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            fstream >> FunctionValues();
+            LoadFunctionValues(fstream);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -854,6 +843,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
         static const std::wstring TypeName() { return L"TimeReverse"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(TimeReverseNode);
         TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
             BatchModeNode<ElemType>(deviceId, name)
         { }
@@ -875,7 +865,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             assert(inputIndex == 0); inputIndex;
-            VerifySize(Inputs(0));
+            VerifyDims(Inputs(0));
 
             size_t nT = GetNumTimeSteps();
             for (size_t t = 0; t < nT; t++)
@@ -890,11 +880,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // BUGBUG: We must flip the layout, too.
             if (GetNumParallelSequences() != 1)
-                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.");
+                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.", NodeName().c_str(), OperationName().c_str());
             if (!m_hasComputed)
             {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
-                Resize(Inputs(0));
+                SetDims(Inputs(0));
+                UpdateFunctionValuesSize();
 
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
@@ -921,7 +912,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
-            Resize(Inputs(0));
+            SetDims(Inputs(0));
             InferImageDimsFromInput(0);
         }
 
@@ -937,12 +928,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f0 = Inputs(0)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->Resize(nInput, nT);
+            Inputs(0)->SetDims(nInput, nT);
+            Inputs(0)->UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
-            Resize(nOutput, nT);
+            SetDims(nOutput, nT);
+            UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
             EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -980,13 +973,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return true;
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() 
-        { 
-           return true; 
-        }
-
     };
 
     template class TimeReverseNode<float>;

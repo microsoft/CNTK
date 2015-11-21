@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     // -----------------------------------------------------------------------
-    // ErrorPredictionNode (label, prediction)    --TODO: is that correct?
+    // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -26,6 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ErrorPrediction"; }
     public:
+        DeclareConstructorFromConfig(ErrorPredictionNode);
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -95,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -127,8 +128,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);
         }
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;

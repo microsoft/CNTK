@@ -153,6 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numRows;  
         size_t m_numCols;
         size_t m_elemSizeAllocated;
+        size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format
         MatrixFormat m_format;
         bool m_externalBuffer; // is the buffer used by this matrix, 
         ElemType *m_pArray;

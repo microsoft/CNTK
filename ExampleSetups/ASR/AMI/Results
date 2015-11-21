@@ -1,0 +1,20 @@
+System          			WER(eval)
+
+exp/ihm/tri2a    			43.7
+exp/ihm/tri3a    			40.8
+exp/ihm/tri4a    			34.8
+exp/ihm/tri4a_mmi_b0.1			31.7
+exp/ihm/dnn5b_pretrain-dbn_dnn  	27.0
+	+ realign			26.5
+exp_cntk/ihm/dnn 			26.9
+exp_cntk/ihm/dnn(train_cntk2.sh)        26.8
+exp_cntk/ihm/dnn_smbr 25.8  (initial results)
+
+
+exp/sdm1/tri2a				71.8
+exp/sdm1/tri3a				69.6
+exp/sdm1/tri4a				68.0
+exp/sdm1/tri4a_mmi_b0.1			65.9
+exp/sdm1/dnn5b_pretrain-dbn_dnn		58.0
+	+ realign			56.6
+exp_cntk/sdm1/dnn			56.0

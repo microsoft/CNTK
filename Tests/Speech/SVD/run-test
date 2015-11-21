@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.config || exit $?

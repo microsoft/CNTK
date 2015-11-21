@@ -18,7 +18,7 @@
 #include <curand_kernel.h>
 #include "device_launch_parameters.h"
 #include "GPUMatrix.h"
-#include "GPUMatrixCUDAKernels.cu"
+#include "GPUMatrixCUDAKernels.cuh"
 #include "GPUSparseMatrix.h"
 #include <iostream> // for cout
 
@@ -1503,6 +1503,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_numRows==numRows && m_numCols==numCols)
             return;   
+        if (!OwnBuffer())
+            InvalidArgument("Can't resize a externally managed matrix");
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1516,11 +1518,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pArray = NULL;
             }
             else
-            {            
-                if (!OwnBuffer())
-                    InvalidArgument("Can't resize a externally managed matrix");
+            {
+                //if (!OwnBuffer())
+                //    InvalidArgument("Can't resize a externally managed matrix");
                 PrepareDevice();
-                if (m_pArray!=NULL)
+                if (m_pArray)
                     CUDA_CALL(cudaFree(m_pArray)); //delete and reallocate                            
                 m_elemSizeAllocated = numElements;
                 CUDA_CALL(cudaMalloc((void**)&m_pArray,sizeof(ElemType)*m_elemSizeAllocated));
@@ -2222,6 +2224,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             _assignColumnwiseLogSoftmaxOf<<<N,512,0,t_stream>>>(a.m_pArray,m_pArray,N,M);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
             if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        Resize(a.GetNumRows(), a.GetNumCols());
+        if (isColWise)
+        {
+            PrepareDevice();
+            CUDA_LONG N = (CUDA_LONG)GetNumCols();
+            CUDA_LONG M = (CUDA_LONG)GetNumRows();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _assignColumnwiseHardmaxOf << <N, 512, 0, t_stream >> >(a.m_pArray, m_pArray, N, M);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
             if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         }
         else
@@ -4553,4 +4585,3 @@ int _ConvertSMVer2Cores(int major, int minor)
 
 
 #endif // CPUONLY
-

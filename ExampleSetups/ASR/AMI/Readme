@@ -1,0 +1,14 @@
+
+1) To train Kaldi GMM systems
+  run_ihm.sh  
+  run_mdm.sh  
+  run_sdm.sh
+
+2) To train Kaldi DNN systems
+  run_dnn.sh
+
+3) To train CNTK DNN systems
+  train_dnn_cntk.sh
+
+4) The new version of CNTK recipe, that read Kaldi features and labels directly
+  train_cntk2.sh 

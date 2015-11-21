@@ -179,7 +179,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
             CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
             CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
-            CheckOutputNodes(script, "NodesReqMultiSeqHandling", m_net->RequestNodesMultiSeqHandling());
             CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
             CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
         }
