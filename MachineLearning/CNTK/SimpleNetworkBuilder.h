@@ -89,6 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Init(config);
         }
+        SimpleNetworkBuilder(const ScriptableObjects::IConfigRecord &) { NOT_IMPLEMENTED; }
 
         // full parameter Init routine
         void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion,

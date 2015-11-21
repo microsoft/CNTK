@@ -14,11 +14,14 @@
 #include "DataReader.h"
 #include "Matrix.h"
 #include "NDLUtil.h"
+#include "ScriptableObjects.h"
 #include <stdexcept>
 
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace Microsoft::MSR;
 
     template<class ElemType>
     class NDLBuilder : public IComputationNetBuilder<ElemType>
@@ -40,6 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_baseConfig = config.GetParent();
             Init(config);
         }
+        NDLBuilder(const ScriptableObjects::IConfigRecord &) { NOT_IMPLEMENTED; }
 
         void Init(
             IExecutionEngine<ElemType>* executionEngine,

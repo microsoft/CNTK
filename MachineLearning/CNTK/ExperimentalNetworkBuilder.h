@@ -4,6 +4,7 @@
 
 #include "Basics.h"
 #include "IComputationNetBuilder.h"
+#include "BestGpu.h"    // for DeviceFromConfig(), which will go away soon
 #include <stdio.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -17,13 +18,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_sourceCode;
     public:
         // the constructor expects the entire source code as a wstring; if you want to read it from a file, use 'include "file"' inside
-        ExperimentalNetworkBuilder(const wstring & sourceCode, DEVICEID_TYPE deviceId) : m_sourceCode(sourceCode), m_deviceId(deviceId)
+        ExperimentalNetworkBuilder(const ConfigParameters & config) : m_sourceCode(config(L"ExperimentalNetworkBuilder")), m_deviceId(DeviceFromConfig(config))
         {
             if (m_deviceId < 0)
                 fprintf(stderr, "ExperimentalNetworkBuilder using CPU\n");
             else
                 fprintf(stderr, "ExperimentalNetworkBuilder using GPU %d\n", (int)m_deviceId);
         }
+        ExperimentalNetworkBuilder(const ScriptableObjects::IConfigRecord &) { NOT_IMPLEMENTED; }
 
         // build a ComputationNetwork from description language
         // TODO: change return type of these interfaces to shared_ptrs

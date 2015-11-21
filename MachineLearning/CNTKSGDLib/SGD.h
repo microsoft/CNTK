@@ -260,7 +260,12 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    SGD(const ConfigParameters& configSGD);
+    template<class ConfigRecordType>
+    SGD(const ConfigRecordType & configSGD) :
+        SGD(SGDParams(configSGD, ElemType(0)))
+    { }
+    // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
+
     SGD(SGDParams&& sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
