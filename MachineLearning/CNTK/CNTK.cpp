@@ -832,6 +832,11 @@ public:
     }
 };
 
+// TODO: decide where these should go. Also, do we need three variables?
+extern wstring standardFunctions;
+extern wstring commonMacros;
+extern wstring computationNodes;
+
 // helper that returns 'float' or 'double' depending on ElemType
 template<class ElemType> static const wchar_t * ElemTypeName();
 template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
@@ -877,7 +882,7 @@ void DoTrain(const ConfigRecordType & config)
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
         };
     }
-    // legacy versions
+    // legacy NDL
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
         const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder", ConfigRecordType::Record()));
@@ -887,7 +892,8 @@ void DoTrain(const ConfigRecordType & config)
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
         };
     }
-    else if (config.Exists(L"ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions. Will go away once we fully integrate with BS.
+    // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
+    else if (config.Exists(L"ExperimentalNetworkBuilder"))
     {
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
@@ -1684,11 +1690,6 @@ static wstring PathToBSStringLiteral(const wstring & path)  // quote a pathname 
     else
         return L'"' + path + L'"';
 }
-
-// TODO: decide where these should go. Also, do we need three variables?
-extern wstring standardFunctions;
-extern wstring commonMacros;
-extern wstring computationNodes;
 
 int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
