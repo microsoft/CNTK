@@ -541,6 +541,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             net = make_shared<ComputationNetwork>(deviceId);
             net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, false/*bAllowNoCriterionNode*/, nullptr/*anotherNetwork*/);
         }
+        // log the device
+        if (net->GetDeviceId() < 0)
+            fprintf(stderr, "SGD using CPU.\n");
+        else
+            fprintf(stderr, "SGD using GPU %d.\n", (int)net->GetDeviceId());
 
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
