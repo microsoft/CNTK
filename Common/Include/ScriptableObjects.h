@@ -453,9 +453,11 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     public:
         ConfigArray() : firstIndex(0) { }
         ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(move(values)) { }
-        pair<int, int> GetIndexRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
+        //ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(vector<ConfigValuePtr>{ move(val) }) { }
+        pair<int, int> GetIndexRange() const { return make_pair(firstIndex, firstIndex + (int)values.size() - 1); }
         // building the array from expressions: append an element or an array
-        void Append(ConfigValuePtr value) { values.push_back(value); }
+        void Append(const ConfigValuePtr & value) { values.push_back(value); }
+        void Append(ConfigValuePtr && value) { values.push_back(move(value)); } // this appends an unresolved ConfigValuePtr
         void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }
         // get element at index, including bounds check
         template<typename FAILFN>

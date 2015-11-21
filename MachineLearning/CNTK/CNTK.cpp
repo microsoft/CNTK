@@ -1589,20 +1589,19 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
         _wchdir(workingDir.c_str());
 
     // compile the BrainScript
-    wstring bs;
+    wstring bs = L"[\n";
     bs += standardFunctions + computationNodes + commonMacros + L"\n";   // start with standard macros
     for (const auto & sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
-#if 0
+    bs += L"\n]\n";
     for (const auto & over : overrides)
         bs += L"with [ " + over + L" ]\n";
-#endif
 
     fprintf(stderr, "\n\nBrainScript -->\n\n%ls\n\n", bs.c_str());
 
-    let expr = BS::ParseConfigDictFromString(bs, move(includePaths));   // parse   --TODO: support include path
-    let valp = BS::Evaluate(expr);                                      // evaluate parse into a dictionary
-    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();      // this is the dictionary
+    let expr = BS::ParseConfigExpression(bs, move(includePaths));   // parse
+    let valp = BS::Evaluate(expr);                                  // evaluate parse into a dictionary
+    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();  // this is the dictionary
 
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile"))       // variables follow camel case (start with lower-case letters)
@@ -1656,11 +1655,20 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
 
     // MAIN LOOP that executes the actions
-    const ScriptableObjects::ConfigArray & actions = config[L"actions"];
-    for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+    auto actionsVal = config[L"actions"];
+    // Note: weird behavior. If 'actions' is a single value (rather than an array) then it will have been resolved already. That means, it has already completed the action.
+    //       Not pretty, but a direct consequence of the lazy evaluation. The only good solution would be to have a syntax for arrays including length 0 and 1.
+    //       Since this in the end behaves indistinguishable from the array loop below, we will keep it for now.
+    if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
-        actions.At(i, [](const wstring &){});  // this will evaluate and thus execute the action
+        const ScriptableObjects::ConfigArray & actions = actionsVal.AsRef<ScriptableObjects::ConfigArray>();
+        // Note: We must use AsRef<>() here. Just assigning (using the auto-typecast) will make a copy, which will ^^ not work since the elements are not yet resolved.
+        for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+        {
+            actions.At(i, [](const wstring &){});  // this will evaluate and thus execute the action
+        }
     }
+    // else action has already been executed, see comment above
 
     // write a doneFile if requested
     wstring doneFile = config(L"doneFile", L"");
