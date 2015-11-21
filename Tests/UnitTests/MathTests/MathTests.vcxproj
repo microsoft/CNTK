@@ -126,6 +126,7 @@
     <ClCompile Include="MatrixBlasTests.cpp" />
     <ClCompile Include="MatrixDataSynchronizationTests.cpp" />
     <ClCompile Include="MatrixFileWriteReadTests.cpp" />
+    <ClCompile Include="MatrixQuantizerTests.cpp" />
     <ClCompile Include="MatrixTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
