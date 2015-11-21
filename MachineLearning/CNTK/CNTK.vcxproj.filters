@@ -145,9 +145,6 @@
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="ExperimentalNetworkBuilder.h">
-      <Filter>BrainScript</Filter>
-    </ClInclude>
     <ClInclude Include="AllReduceDistGradAggregator.h">
       <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
     </ClInclude>

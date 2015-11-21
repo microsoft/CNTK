@@ -157,16 +157,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_executionEngine;
         }
 
-        virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
-        {
-            if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-                m_net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
-
-            m_net->ResetEvalTimeStamp();
-            return m_net.get();
-        }
-
         ComputationNetworkPtr LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
