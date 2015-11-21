@@ -60,7 +60,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         operator const T&() const { return value; }
         operator T&() { return value; }
         Wrapped(T value) : value(value) { }
-        T & operator=(const T & newValue) { value = newValue; }
+        T & operator=(const T & newValue) { value = newValue; return *this; }
     };
     typedef Wrapped<double> Double;
     typedef Wrapped<bool> Bool;
@@ -253,7 +253,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             double val = AsRef<Double>();
             INT ival = (INT)val;
             const wchar_t * type = L"size_t";
-            const char * t = typeid(INT).name(); t;
             // TODO: there is some duplication of type checking; can we unify that?
             if (ival != val)
                 Fail(wstrprintf(L"expected expression of type %ls instead of floating-point value %f", type, val));
@@ -366,6 +365,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         const ConfigValuePtr & operator()(const wstring & id) const;
         template<class T> std::vector<T> operator()(const wstring & id, const std::vector<T> & defaultValue) const;
         bool ExistsCurrent(const wstring & id) const;
+        bool Exists(const wstring & id) const { return Find(id) != nullptr; }
         static const IConfigRecord & Record();
         template<class V> static const std::vector<typename V::value_type> & Array(const V & vec);
 
@@ -389,8 +389,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // --- creation phase
 
         ConfigRecord(IConfigRecordPtr parentScope, const function<void(const wstring &)> & failfn) : parentScope(parentScope), failfn(failfn) { }
-        void Add(const wstring & id, const function<void(const wstring &)> & failfn, const ConfigValuePtr & value) { members[id] = value; failfn; }
-        void Add(const wstring & id, const function<void(const wstring &)> & failfn, ConfigValuePtr && value) { members[id] = move(value); failfn; } // use this for unresolved ConfigPtrs
+        void Add(const wstring & id, const function<void(const wstring &)> & /*failfn*/, const ConfigValuePtr & value) { members[id] = value; }
+        void Add(const wstring & id, const function<void(const wstring &)> & /*failfn*/, ConfigValuePtr && value) { members[id] = move(value); } // use this for unresolved ConfigPtrs
         // TODO: Add() does not yet correctly handle the failfn. It is meant to flag the location of the variable identifier
 
         // --- usage phase

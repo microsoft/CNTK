@@ -109,10 +109,12 @@ public:
 
     // it auto-casts to the common types
     // Note: This is meant to read out a parameter once to assign it, instead of over again.
+#if 0
     operator std::string() const
     {
         return *this;
     } // TODO: does not seem to work
+#endif
 
     operator const char *() const
     {
@@ -735,11 +737,10 @@ public:
         return *this;
     }
 
-    // hide new so only stack allocated
-    void * operator new(size_t /*size*/)
-    {
-        return NULL;
-    }
+private:
+    // hide new so only stack allocated   --TODO: Why do we care?
+    void * operator new(size_t /*size*/);
+public:
 
     // used as default argument to operator(id, default) to retrieve ConfigParameters
     static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }

@@ -27,6 +27,7 @@
 #include "Matrix.h"
 #include "Sequences.h"
 #include "commandArgUtil.h" // for ConfigParameters
+#include "ScriptableObjects.h"
 #include <map>
 #include <string>
 #include "simplesenonehmm.h"
@@ -184,6 +185,7 @@ public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader 
     DataReader(const ConfigParameters& config);
+    DataReader(const ScriptableObjects::IConfigRecord &);
     virtual ~DataReader();
 
     //StartMinibatchLoop - Startup a minibatch loop 

@@ -373,10 +373,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs(m_modelPath);
     }
 
-    template<class ElemType>
-    SGD<ElemType>::SGD(const ConfigParameters& configSGD) :
-        SGD(SGDParams(configSGD, ElemType(0)))
-    { }
+    template SGD<float >::SGD(const ConfigParameters &);
+    template SGD<double>::SGD(const ConfigParameters &);
+    template SGD<float >::SGD(const ScriptableObjects::IConfigRecord &);
+    template SGD<double>::SGD(const ScriptableObjects::IConfigRecord &);
 
     template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,

@@ -784,53 +784,130 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     }
 }
 
-template <typename ElemType>
-void DoTrain(const ConfigParameters& config)
+template<class ElemType>
+class BrainScriptNetworkBuilder : public IComputationNetBuilder<ElemType>
 {
-    ConfigParameters configSGD(config(L"SGD"));
-    bool makeMode = config(L"makeMode", "true");
-
-    ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-
-    unique_ptr<IComputationNetBuilder<ElemType>> netBuilder;
-
-    if (config.Exists("NDLNetworkBuilder"))
+    typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
+    ComputationNetworkPtr m_net;
+    ScriptableObjects::ConfigLambdaPtr m_createNetworkFn;
+    DEVICEID_TYPE m_deviceId;
+public:
+    // the constructor remembers the config lambda
+    // TODO: Really this should just take the lambda itself, or rather, this class should just be replaced by a lambda. But we need the IConfigRecord for templates to be compile-compatible with old CNTK config.
+    BrainScriptNetworkBuilder(const ScriptableObjects::IConfigRecord & config)
     {
-        ConfigParameters ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(ndlNetworkBuilderConfig));
+        m_deviceId = config[L"deviceId"];   // TODO: only needed for LoadNetworkFromFile() which should go away anyway
+        m_createNetworkFn = config[L"createNetwork"].AsPtr<ScriptableObjects::ConfigLambda>();
     }
-    else if (config.Exists("SimpleNetworkBuilder"))
+    // not supported for old CNTK
+    BrainScriptNetworkBuilder(const ConfigParameters & config) { NOT_IMPLEMENTED; }
+
+    // build a ComputationNetwork from description language
+    virtual /*IComputationNetBuilder::*/ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
     {
-        ConfigParameters simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(simpleNetworkBuilderConfig));
+        vector<ScriptableObjects::ConfigValuePtr> args;    // this lambda has no arguments
+        ScriptableObjects::ConfigLambda::NamedParams namedArgs;
+        let netValue = m_createNetworkFn->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
+        m_net = netValue.AsPtr<ComputationNetwork>();
+        if (m_net->GetDeviceId() < 0)
+            fprintf(stderr, "BrainScriptNetworkBuilder using CPU\n");
+        else
+            fprintf(stderr, "BrainScriptNetworkBuilder using GPU %d\n", (int)m_net->GetDeviceId());
+        return m_net.get();
     }
-    else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
+
+    // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
+    // TODO: This does not belong into NetworkBuilder, since the code is the same for all. Just create the network and load the darn thing.
+    virtual /*IComputationNetBuilder::*/ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
     {
-        DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-        string sourceCode(config(L"ExperimentalNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new ExperimentalNetworkBuilder<ElemType>(msra::strfun::utf16(sourceCode), deviceId));
+        if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load   --TODO: why all these options?
+        {
+            auto net = make_shared<ComputationNetwork>(m_deviceId);
+            net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+            m_net = net;
+        }
+        m_net->ResetEvalTimeStamp();
+        return m_net.get();
+    }
+};
+
+template <class ConfigRecordType, typename ElemType>
+void DoTrain(const ConfigRecordType & config)
+{
+    const ConfigRecordType & configSGD(config(L"SGD", ConfigRecordType::Record()));
+    bool makeMode = config(L"makeMode", true);
+
+    shared_ptr<IComputationNetBuilder<ElemType>> netBuilder;// = GetCreateNetworkFunction(config);
+
+    // TODO: turn the netBuilder into a lambda
+    if (config.Exists(L"createNetwork"))
+    {
+        netBuilder = make_shared<BrainScriptNetworkBuilder<ElemType>>(config);
+    }
+    else if (config.Exists(L"SimpleNetworkBuilder"))
+    {
+        const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder", ConfigRecordType::Record()));
+        netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
+    }
+    // legacy versions
+    else if (config.Exists(L"NDLNetworkBuilder"))
+    {
+        const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder", ConfigRecordType::Record()));
+        netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
+    }
+    else if (config.Exists(L"ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
+    {
+        netBuilder = make_shared<ExperimentalNetworkBuilder<ElemType>>(config);
     }
     else
     {
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    unique_ptr<DataReader<ElemType>> dataReader { new DataReader<ElemType>(readerConfig) };
+    const ConfigRecordType & readerConfig(config(L"reader", ConfigRecordType::Record()));
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by making this an optional arg; or if this should not be inherited, then by disabling it
+    auto dataReader = make_shared<DataReader<ElemType>>(readerConfig);
 
-    unique_ptr<DataReader<ElemType>> cvDataReader;
-    ConfigParameters cvReaderConfig(config(L"cvReader", L""));
-
-    if (cvReaderConfig.size() != 0)
+    shared_ptr<DataReader<ElemType>> cvDataReader;
+    if (config.Exists(L"cvReader"))
     {
-        cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+        const ConfigRecordType & cvReaderConfig(config(L"cvReader", ConfigRecordType::Record()));
+        //cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
-    SGD<ElemType> sgd(configSGD);
+    SGD<ElemType> sgd(SGDParams(configSGD, (ElemType)0));
 
     sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
+
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+
+    using namespace Microsoft::MSR::CNTK;
+
+    // -----------------------------------------------------------------------
+    // register ComputationNode with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    class TrainAction { };
+    template<> shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp)
+    {
+        const IConfigRecord & config = *configp;
+        wstring precision = config[L"precision"];            // dispatch on ElemType
+        if (precision == L"float")
+            DoTrain<IConfigRecord, float>(config);
+        else if (precision == L"double")
+            DoTrain<IConfigRecord, double>(config);
+        else
+            RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+
+        return make_shared<Object>();   // return a dummy object
+    }
+
+    // register ComputationNode with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<TrainAction> registerTrainAction(L"TrainAction");
+}}}
 
 template <typename ElemType>
 void DoAdapt(const ConfigParameters& config)
@@ -1394,7 +1471,7 @@ void DoCommands(const ConfigParameters& config)
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoTrain<ElemType>(commandParams);
+                DoTrain<ConfigParameters, ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }

@@ -97,9 +97,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // std::string version of 'less' function
         // return false for equivalent, true for different
-        bool operator()(const string& left, const string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
+        bool operator()(const string& left, const string& right) const { return _stricmp(left.c_str(), right.c_str()) < 0; }
         // std::wstring version of 'less' function, used in non-config classes
-        bool operator()(const wstring& left, const wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
+        bool operator()(const wstring& left, const wstring& right) const { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
     };
 
     // ----------------------------------------------------------------------------
