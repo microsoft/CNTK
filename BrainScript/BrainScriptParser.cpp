@@ -242,7 +242,7 @@ public:
         keywords = set<wstring>
         {
             L"include",
-            L"new", L"true", L"false",
+            L"new", L"with", L"true", L"false",
             L"if", L"then", L"else",
             L"array",
         };
@@ -537,6 +537,7 @@ public:
             { L".", 100 }, { L"[", 100 }, { L"(", 100 },     // also sort-of infix operands...
             { L"*", 10 }, { L"/", 10 }, { L".*", 10 }, { L"**", 10 }, { L"%", 10 },
             { L"+", 9 }, { L"-", 9 },
+            { L"with", 9 },
             { L"==", 8 }, { L"!=", 8 }, { L"<", 8 }, { L"<=", 8 }, { L">", 8 }, { L">=", 8 },
             { L"&&", 7 },
             { L"||", 6 },
@@ -633,8 +634,13 @@ public:
         for (;;)
         {
             let & opTok = GotToken();
-            if (stopAtNewline && opTok.isLineInitial)
-                break;
+            // BUGBUG: 'stopAtNewline' is broken.
+            // It does not prevent "a = 13 b = 42" from being accepted.
+            // On the other hand, it would prevent the totally valid "dict \n with dict2".
+            // A correct solution should require "a = 13 ; b = 42", i.e. a semicolon or newline,
+            // while continuing to parse across newlines when syntactically meaningful (there is no ambiguity in BrainScript).
+            //if (stopAtNewline && opTok.isLineInitial)
+            //    break;
             let opIter = infixPrecedence.find(opTok.symbol);
             if (opIter == infixPrecedence.end())    // not an infix operator: we are done here, 'left' is our expression
                 break;
@@ -674,6 +680,18 @@ public:
                 ConsumeToken();
                 operation->args.push_back(ParseExpression(0, false));    // [1]: index
                 ConsumePunctuation(L"]");
+            }
+            else if (op == L":")
+            {
+                // special case: (a : b : c) gets flattened into :(a,b,c) i.e. an operation with possibly >2 operands
+                ConsumeToken();
+                let right = ParseExpression(opPrecedence + 1, stopAtNewline);   // get right operand, or entire multi-operand expression with higher precedence
+                if (left->op == L":")                       // appending to a list: flatten it
+                {
+                    operation->args = left->args;
+                    operation->location = left->location;   // location of first ':' (we need to choose some location)
+                }
+                operation->args.push_back(right);           // form a list of multiple operands (not just two)
             }
             else                                            // === regular infix operator
             {
@@ -789,12 +807,16 @@ public:
         }
         return members;
     }
+    void VerifyAtEnd()
+    {
+        if (GotToken().kind != eof)
+            Fail(L"junk at end of source", GetCursor());
+    }
     // top-level parse function parses dictonary members without enclosing [ ... ] and returns it as a dictionary
     ExpressionPtr ParseRecordMembersToDict()
     {
         let topMembers = ParseRecordMembers();
-        if (GotToken().kind != eof)
-            Fail(L"junk at end of source", GetCursor());
+        VerifyAtEnd();
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
         return topDict;
@@ -811,6 +833,12 @@ public:
 static ExpressionPtr Parse(SourceFile && sourceFile, vector<wstring> && includePaths) { return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict(); }
 ExpressionPtr ParseConfigDictFromString(wstring text, vector<wstring> && includePaths) { return Parse(SourceFile(L"(command line)", text), move(includePaths)); }
 ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> && includePaths) { auto sourceFile = SourceFile(path, includePaths); return Parse(move(sourceFile), move(includePaths)); }
-ExpressionPtr ParseConfigExpression(const wstring & sourceText, vector<wstring> && includePaths) { return Parser(SourceFile(L"(command line)", sourceText), move(includePaths)).ParseExpression(0, true/*can end at newline*/); }
+ExpressionPtr ParseConfigExpression(const wstring & sourceText, vector<wstring> && includePaths)
+{
+    auto parser = Parser(SourceFile(L"(command line)", sourceText), move(includePaths));
+    auto expr = parser.ParseExpression(0, true/*can end at newline*/);
+    parser.VerifyAtEnd();
+    return expr;
+}
 
 }}}     // namespaces
