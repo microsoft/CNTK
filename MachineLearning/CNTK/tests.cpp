@@ -212,7 +212,7 @@ template <typename ElemType>
 void TestMacros(const ConfigParameters& configBase)
 {
     NDLScript<ElemType> script = configBase("ndlFull");
-    ComputationNetwork net;
+    ComputationNetworkPtr net = make_shared<ComputationNetwork>();
     SynchronousNodeEvaluator<ElemType> nodeEvaluator(net);
     script.Evaluate(nodeEvaluator, L"", ndlPassInitial);
 }

@@ -136,9 +136,7 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    ComputationNetwork net(deviceId);
-    net.LoadFromFile<ElemType>(modelPath);
-    net.ResetEvalTimeStamp();
+    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
@@ -180,9 +178,7 @@ void DoEvalUnroll(const ConfigParameters& config)
     intargvector mbSize = minibatchSize;
     wstring path2EvalResults = config(L"path2EvalResults", L"");
 
-    ComputationNetwork net(deviceId);
-    net.LoadFromFile<ElemType>(modelPath);
-    net.ResetEvalTimeStamp();
+    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
 
     MultiNetworksEvaluator<ElemType> eval(net);
     double evalEntropy;
@@ -244,9 +240,7 @@ void DoCrossValidate(const ConfigParameters& config)
         }
 
         cvModels.push_back(cvModelPath);
-        ComputationNetwork net(deviceId);
-        net.LoadFromFile<ElemType>(cvModelPath);
-        net.ResetEvalTimeStamp();
+        auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
 
         SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
 
@@ -320,9 +314,7 @@ void DoWriteOutput(const ConfigParameters& config)
         outputNodeNamesVector.push_back(outputNodeNames[i]);
     }
 
-    ComputationNetwork net(deviceId);
-    net.LoadFromFile<ElemType>(modelPath);
-    net.ResetEvalTimeStamp();
+    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
@@ -803,7 +795,7 @@ public:
     BrainScriptNetworkBuilder(const ConfigParameters & config) { NOT_IMPLEMENTED; }
 
     // build a ComputationNetwork from description language
-    virtual /*IComputationNetBuilder::*/ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
+    virtual /*IComputationNetBuilder::*/ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
     {
         vector<ScriptableObjects::ConfigValuePtr> args;    // this lambda has no arguments
         ScriptableObjects::ConfigLambda::NamedParams namedArgs;
@@ -813,7 +805,7 @@ public:
             fprintf(stderr, "BrainScriptNetworkBuilder using CPU\n");
         else
             fprintf(stderr, "BrainScriptNetworkBuilder using GPU %d\n", (int)m_net->GetDeviceId());
-        return m_net.get();
+        return m_net;
     }
 
     // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
@@ -876,7 +868,7 @@ void DoTrain(const ConfigRecordType & config)
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
         const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder", ConfigRecordType::Record()));
-        shared_ptr<IComputationNetBuilder<ElemType>> netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
+        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
@@ -886,7 +878,7 @@ void DoTrain(const ConfigRecordType & config)
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
         const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder", ConfigRecordType::Record()));
-        shared_ptr<IComputationNetBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
+        shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
             return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
@@ -1063,7 +1055,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
     validationDataReader.push_back(cvEncoderDataReader);
     validationDataReader.push_back(cvDecoderDataReader);
 
-    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
+    sgd.EncoderDecoder(netBuilders, (int)config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
@@ -1149,7 +1141,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     validationDataReader.push_back(cvDecoderDataReader);
     validationDataReader.push_back(cvBackwardDecoderDataReader);
 
-    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
+    sgd.EncoderDecoder(netBuilders, (int)config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
@@ -1198,17 +1190,13 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
-    vector<ComputationNetwork*> nets;
-    ComputationNetwork encoderNet(deviceId);
-    encoderNet.LoadFromFile<ElemType>(encoderModelPath, FileOptions::fileOptionsBinary, true);
-    encoderNet.ResetEvalTimeStamp();
+    vector<ComputationNetworkPtr> nets;
+    auto encoderNet = ComputationNetwork::CreateFromFile<ElemType>(deviceId, encoderModelPath, FileOptions::fileOptionsBinary, true);
 
-    ComputationNetwork decoderNet(deviceId);
-    decoderNet.LoadFromFile<ElemType>(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
-    decoderNet.ResetEvalTimeStamp();
+    auto decoderNet = ComputationNetwork::CreateFromFile<ElemType>(deviceId, decoderModelPath, FileOptions::fileOptionsBinary, false, encoderNet.get());
 
-    nets.push_back(&encoderNet);
-    nets.push_back(&decoderNet);
+    nets.push_back(encoderNet);
+    nets.push_back(decoderNet);
     ConfigArray evalNodeNames = config(L"evalNodeNames");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
@@ -1273,9 +1261,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     int traceLevel = config(L"traceLevel", "0");
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
 
-    ComputationNetwork net(deviceId);
-    net.LoadFromFile<ElemType>(modelPath);
-    net.ResetEvalTimeStamp();
+    auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelPath);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames");
     vector<wstring> evalNodeNamesVector;
@@ -1365,15 +1351,12 @@ void DoEdit(const ConfigParameters& config)
 template <typename ElemType>
 void DoConvertFromDbn(const ConfigParameters& config)
 {
-    //config.Insert("deviceId","-1"); //force using CPU
-
     wstring modelPath = config(L"modelPath");
     wstring dbnModelPath = config(L"dbnModelPath");
 
-    IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
+    auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(config);
+    ComputationNetworkPtr net = netBuilder->BuildNetworkFromDbnFile(dbnModelPath);
     net->SaveToFile(modelPath);
-    delete (netBuilder);
 }
 
 // do topological plot of computation network 
