@@ -12,6 +12,7 @@
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include "IComputationNetBuilder.h"
+#include "ScriptableObjects.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -19,10 +20,9 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
-#include "TimerUtility.h"
 #include "Profiler.h"
 
-using namespace std;
+using namespace std;    // ugh! TODO: get rid of this from .h files!!!
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -89,10 +89,22 @@ struct GradientUpdateInfo
     }
 };
 
-struct SGDParams
+// ---------------------------------------------------------------------------
+// SGDParams -- parameters for SGD
+//
+// TODO: This should keep everything that is configured by the config.
+//       Currently it does not store which matrices are used.
+// ---------------------------------------------------------------------------
+
+struct SGDParams : public ScriptableObjects::Object
 {
-    template<class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs, ElemType exampleElemType/*for type deduction*/);
+    template<class ConfigRecord, class ElemType>    // (needed for default value of m_gradientBits)
+    SGDParams(const ConfigRecord& configSGD, ElemType exampleElemType/*for type deduction*/);
+
+    SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
+        : SGDParams(*configp, 1.0f/*for type deduction  --FIX THIS*/)
+    {
+    }
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
@@ -199,10 +211,6 @@ protected:
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
 
-    // This includes the total epochs across all training commands
-    size_t m_fullTotalMaxEpochs;
-    size_t m_fullEpochsOffset;
-
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
     size_t m_maxComputedEpochSize;
@@ -226,8 +234,6 @@ protected:
     AdaptationRegType m_adaptationRegType;
     double m_adaptationRegWeight;
     bool m_needAdaptRegularization;
-    bool m_progressTracing;
-    Timer m_progressTracingTimer;
 
     bool m_loadBestModel;
     double m_reduceLearnRateIfImproveLessThan;
@@ -312,7 +318,7 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
+    SGD(const ConfigParameters& configSGD);
     SGD(SGDParams&& sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,

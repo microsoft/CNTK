@@ -88,6 +88,14 @@ cntkrun()
   return $?
 }
 
+# Given number of instances, return number of hardware threads we can use per
+# instance
+threadsPerInstance()
+{
+  local threads=$((`nproc` / $1))
+  [[ $threads -eq 0 ]] && echo 1 || echo $threads
+}
+
 # Function for launching a parallel CNTK run with MPI
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
 cntkmpirun()

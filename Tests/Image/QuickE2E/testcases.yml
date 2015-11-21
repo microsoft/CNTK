@@ -1,0 +1,32 @@
+dataDir: ../Data
+tags:
+     # running on every BVT job in 'I' (Image) leg:
+     - bvt-i  flavor=='debug' and os=='windows'
+     # running unconditionally on every Nightly job in 'I' leg
+     - nightly-i flavor=='debug' and os=='windows'
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - ^Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - ^Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = {{float,tolerance=5%}}
+      - EvalErrPerSample = {{float,tolerance=5%}}
+      - Ave LearnRatePerSample = {{float,tolerance=0%}}
+
+  Per-minibatch training results must match:
+    patterns:
+      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=5%}}
+      - EvalErr[0]PerSample = {{float,tolerance=5%}}
+

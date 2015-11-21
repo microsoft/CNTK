@@ -109,16 +109,9 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GPUMatrixcuBLASTests.cpp" />
-    <ClCompile Include="GPUMatrixUnitTests.cpp" />
-    <ClCompile Include="GPUSparseMatrixUnitTests.cpp" />
     <ClCompile Include="GPUWatcherTests.cpp" />
-    <ClCompile Include="MatrixBLASTests.cpp" />
-    <ClCompile Include="MatrixDataSynchronizationTests.cpp" />
-    <ClCompile Include="MatrixFileWriteAndRead.cpp" />
     <ClCompile Include="MatrixQuantizerTests.cpp" />
     <ClCompile Include="MatrixSparseDenseInteractionsTests.cpp" />
-    <ClCompile Include="MatrixUnitTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>

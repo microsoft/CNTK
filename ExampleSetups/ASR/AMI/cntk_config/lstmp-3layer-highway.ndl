@@ -1,0 +1,190 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork_LSTMP_c1024_p256_x3
+
+ndlMacroDefine=[
+    # Macro definitions
+    MeanVarNorm(x)=[
+        xMean = Mean(x);
+        xStdDev = InvStdDev(x)
+        xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    ]
+
+    LogPrior(labels)
+    {
+        Prior=Mean(labels)
+        LogPrior=Log(Prior)
+    }
+
+
+    LSTMPComponent(inputDim, outputDim, cellDim, inputx)
+    {
+        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+
+        bo = Parameter(cellDim, init=fixedValue, value=0.0);
+        bc = Parameter(cellDim, init=fixedValue, value=0.0);
+        bi = Parameter(cellDim, init=fixedValue, value=0.0);
+        bf = Parameter(cellDim, init=fixedValue, value=0.0);
+
+        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        Wci = Parameter(cellDim, init=uniform, initValueScale=1);
+
+
+        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=1);
+        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=1);
+        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        dh = PastValue(outputDim, output, timeStep=1);
+        dc = PastValue(cellDim, ct, timeStep=1);
+
+
+        Wxix = Times(Wxi, inputx);
+        Whidh = Times(Whi, dh);
+        Wcidc = DiagTimes(Wci, dc);
+
+        it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+
+        Wxcx = Times(Wxc, inputx);
+        Whcdh = Times(Whc, dh);
+        bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+
+        Wxfx = Times(Wxf, inputx);
+        Whfdh = Times(Whf, dh);
+        Wcfdc = DiagTimes(Wcf, dc);
+
+        ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+
+        bft = ElementTimes(ft, dc);
+
+        ct = Plus(bft, bit);
+
+        Wxox  = Times(Wxo, inputx);
+        Whodh = Times(Who, dh);
+        Wcoct = DiagTimes(Wco, ct);
+
+        ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+
+        mt = ElementTimes(ot, Tanh(ct));
+
+        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1);
+        output = Times(Wmr, mt);
+
+    }
+
+    LSTMPComponentWithLayerBelow(inputDim, outputDim, cellDim, inputx, inputc)
+    {
+        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+
+        bo = Parameter(cellDim, init=fixedValue, value=0.0);
+        bc = Parameter(cellDim, init=fixedValue, value=0.0);
+        bi = Parameter(cellDim, init=fixedValue, value=0.0);
+        bf = Parameter(cellDim, init=fixedValue, value=0.0);
+
+        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        Wci = Parameter(cellDim, init=uniform, initValueScale=1);
+
+
+        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=1);
+        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=1);
+        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        #for direct links from previous layer's internal state (p)
+        Wpp = Parameter(cellDim, init=uniform, initValueScale=1);
+        Wcp = Parameter(cellDim, init=uniform, initValueScale=1);
+        Wxp = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        bp = Parameter(cellDim, init=fixedValue, value=0.0);
+
+
+        dh = PastValue(outputDim, output, timeStep=1);
+        dc = PastValue(cellDim, ct, timeStep=1);
+
+        Wxix = Times(Wxi, inputx);
+        Whidh = Times(Whi, dh);
+        Wcidc = DiagTimes(Wci, dc);
+
+        it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+
+        Wxcx = Times(Wxc, inputx);
+        Whcdh = Times(Whc, dh);
+        bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+
+        Wxfx = Times(Wxf, inputx);
+        Whfdh = Times(Whf, dh);
+        Wcfdc = DiagTimes(Wcf, dc);
+
+        ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+
+        bft = ElementTimes(ft, dc);
+
+        #for direct links from previous layer's internal state (p)
+        Wxpx = Times(Wxp, inputx);
+        Wcpdc = DiagTimes(Wcp, dc);
+        Wppic = DiagTimes(Wpp, inputc);
+        pt = Sigmoid( Plus (Plus (Plus(Wxpx, bp), Wcpdc), Wppic));
+        bpt = ElementTimes(pt, inputc);
+
+        ct = Plus(Plus(bft, bit), bpt);
+
+        Wxox  = Times(Wxo, inputx);
+        Whodh = Times(Who, dh);
+        Wcoct = DiagTimes(Wco, ct);
+
+        ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+
+        mt = ElementTimes(ot, Tanh(ct));
+
+        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1);
+        output = Times(Wmr, mt);
+
+    }
+]
+
+ndlCreateNetwork_LSTMP_c1024_p256_x3=[
+
+    #define basic i/o
+    baseFeatDim=$baseFeatDim$
+    RowSliceStart=$RowSliceStart$
+    FeatDim=$featDim$
+    labelDim=$labelDim$
+    cellDim=1024
+    hiddenDim=512
+
+    features=Input(FeatDim, tag=feature)
+    labels=Input(labelDim, tag=label)
+    feashift=RowSlice(RowSliceStart, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} )
+
+
+    featNorm = MeanVarNorm(feashift)
+
+
+    # layer 1
+    LSTMoutput1 = LSTMPComponent(baseFeatDim, hiddenDim, cellDim, featNorm);
+    # layer 2
+    LSTMoutput2 = LSTMPComponentWithLayerBelow(hiddenDim, hiddenDim, cellDim, LSTMoutput1, LSTMoutput1.ct);
+    # layer 3
+    LSTMoutput3 = LSTMPComponentWithLayerBelow(hiddenDim, hiddenDim, cellDim, LSTMoutput2, LSTMoutput2.ct);
+
+
+    W = Parameter(labelDim, hiddenDim, init=uniform, initValueScale=1);
+    b = Parameter(labelDim, init=fixedvalue, value=0);
+    LSTMoutputW = Plus(Times(W, LSTMoutput3), b);
+
+
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag=Criteria);
+    Err = ErrorPrediction(labels,LSTMoutputW,tag=Eval);
+
+    logPrior = LogPrior(labels)
+    ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag=Output)
+]
+

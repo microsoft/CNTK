@@ -762,7 +762,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
 
     // Debug is a special class that just dumps its argument's value to log and then returns that value
-    struct Debug { };   // fake class type to get the template below trigger
+    struct Debug : public Object { Debug(const IConfigRecordPtr) { } };   // fake class type to get the template below trigger
     template<>
     /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
     {
@@ -789,6 +789,9 @@ namespace Microsoft { namespace MSR { namespace BS {
     // get information about configurable runtime types
     static const ConfigurableRuntimeType * FindRuntimeTypeInfo(const wstring & typeId)
     {
+#if 1
+        return ConfigurableRuntimeTypeRegister::Find(typeId);
+#else
         // lookup table for "new" expression
         // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
         static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
@@ -810,7 +813,18 @@ namespace Microsoft { namespace MSR { namespace BS {
 
         // not our own type: check external types
         return FindExternalRuntimeTypeInfo(typeId);
+#endif
     }
+
+    // register ComputationNetwork with the ScriptableObject system
+    // Functions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
+    // Actions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
+    // Special
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
 
     // -----------------------------------------------------------------------
     // name lookup

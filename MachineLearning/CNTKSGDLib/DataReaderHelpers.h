@@ -87,9 +87,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Inpace decimation 
         // We sub-sample the parallel utterances.
         template<class ElemType> 
-        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,   // matrix to be decimated
-                                                   int numprocs, int rank,             // rank info
-                                                   MBLayoutPtr pMBLayout)              // gets decimated as well
+        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
+                                      int numprocs, int rank,                           // rank info
+                                      MBLayoutPtr pMBLayout)                            // gets decimated as well
         {
             if (numprocs == 1)
                 return;
@@ -193,6 +193,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: The reader does not always resize the input matrices to zero when 
             // no data is read. When it does, 'wasDataRead' can be removed
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
+            // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
+            net.NotifyInputNodesFunctionValuesMBSizeModified();
             size_t readMBSize = net.DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
                 wasDataRead = false;
@@ -238,7 +240,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
+            {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                net.NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
+            }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames.
@@ -297,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrices                                            m_CachedGraident; 
         // we also need to remember where to put into the net
         MBLayoutPtr                                         m_NetMBLayoutPtr;
-        std::map<wstring, shared_ptr<LearnableParameter<ElemType>> >    m_LearnableNodePtr;  
+        std::map<wstring, shared_ptr<ComputationNode<ElemType>>>    m_LearnableNodePtr;  
         // followings are lattice-related 
         Matrices                                            m_NetInputMatrixPtr;
         LatticePtr                                          m_NetLatticePtr; 
@@ -363,9 +368,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // remember ptr to  learnableNode 
             for (auto x : learnableNodes)
             {
-                shared_ptr<LearnableParameter<ElemType>> pLearnableNode = dynamic_pointer_cast<LearnableParameter<ElemType>> (x); 
-                wstring nodename = pLearnableNode->NodeName(); 
-                m_LearnableNodePtr[nodename] = pLearnableNode; 
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(x); 
+                wstring nodename = x->NodeName(); 
+                m_LearnableNodePtr[nodename] = pLearnableNode;
             }
             for (auto& x : criterionNodes)
             {
@@ -451,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (node->IsParameterUpdateRequired())
                 {
                     wstring nodeName = node->GetName(); 
-                    shared_ptr<ComputationNode<ElemType>>  pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>> (node); 
+                    shared_ptr<ComputationNode<ElemType>>  pLearnableNode = node;
                     auto funvalue = pLearnableNode->FunctionValues();   // gradient may not be allocated when this function is first called 
                     size_t nrow = funvalue.GetNumRows(); 
                     size_t ncol = funvalue.GetNumCols();
@@ -515,8 +520,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LeanrableNode", nodename.c_str());
                 }
-                m_CachedGraident[nodename]->operator+=(m_LearnableNodePtr[nodename]->GradientValues()); 
-                m_LearnableNodePtr[nodename]->GradientValues().SetValue((ElemType)0);
+                shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
+                m_CachedGraident[nodename]->operator+=(pNode->GradientValues()); 
+                pNode->GradientValues().SetValue((ElemType)0);
             }
             // accumulate criterion value 
             Matrix<ElemType>::AddElementToElement(

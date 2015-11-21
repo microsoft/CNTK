@@ -6,7 +6,7 @@
 
 #ifdef __CUDA_ARCH__         // we are compiling under CUDA
 #define ON_CUDA 1
-#ifdef __device__ 
+#ifdef __device__
 #define cudacode __device__
 #define cudasharedcode __device__ __host__
 #else

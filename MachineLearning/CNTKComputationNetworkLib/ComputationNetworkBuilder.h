@@ -6,6 +6,7 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "TrainingCriterionNodes.h" // for NCEEvalMode
+#include "ScriptableObjects.h"
 #include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -25,6 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // node creation
         // -----------------------------------------------------------------------
 
+        // TODO: can these be changed to ComputationNodeBasePtr?
         static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
         static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
 
@@ -103,6 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
+        ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"");
@@ -131,5 +134,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"");
         ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"");
     };
+
+    // create a new from config
+    shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp);
 
 }}}

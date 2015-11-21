@@ -8,6 +8,7 @@
 
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -38,10 +39,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ;
             else if (!pMBLayout)                // first non-NULL layout: just copy it
                 pMBLayout = child->m_pMBLayout;
-            else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
 #if 0
+            else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
+//#if 0
                 fprintf(stderr, "InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
-#else
+//#else
                 RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
 #endif
         }
@@ -55,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
+        SetDims(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus
@@ -81,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        Resize(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
+        SetDims(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
         InferImageDimsFromInputs();
     }
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
@@ -90,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-        Resize(1, 1);
+        SetDims(1, 1);
         InferImageDimsFromInputs();
     }
     // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -106,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
               (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-        Resize(1, 1);
+        SetDims(1, 1);
         InferImageDimsFromInputs();
     }
     // helper function for validation
@@ -117,8 +119,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
-        assert(m_children.size() == 2);
-        for (size_t index = 0; index < m_children.size(); index++)
+        // NOTE: The assert is set to check if >= 2 since this is called from nodes which have more than two children.
+        //      The number of children is formally verified elsewhere, so this will not break consistency. 
+        assert(m_children.size() >= 2);
+        for (size_t index = 0; index < 2; index++)
         {
             auto in = Inputs(index);
             auto other = Inputs(1 - index);
@@ -135,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (rows == 0 || cols == 0)
                 LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
-            Inputs(i)->Resize(rows, cols);
+            Inputs(i)->SetDims(rows, cols);
             Inputs(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
@@ -173,11 +177,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    atomic_ullong ComputationNetworkOwnedNodeState::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+    atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
 
     template class LearnableParameter<float>;
     template class LearnableParameter<double>;
+}}}
+
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+
+    using namespace Microsoft::MSR::CNTK;
+
+    // -----------------------------------------------------------------------
+    // register ComputationNode with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    template<> shared_ptr<Object> MakeRuntimeObject<ComputationNodeBase>(const IConfigRecordPtr configp)
+    {
+        return NewComputationNodeFromConfig(configp);
+    }
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
 }}}

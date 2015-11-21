@@ -11,6 +11,7 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
+#include "Actions.h"
 #include <string>
 #include <chrono>
 #include <algorithm>
@@ -48,7 +49,8 @@
 #include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
-#include <fileutil.h>
+#include "ProgressTracing.h"
+#include "fileutil.h"
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
@@ -57,40 +59,6 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
-// The following section is to explicitly disable some legacy usage to avoid implicit configuration errors 
-
-void DisableLegcyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
-{
-	if (TopLevelConfig.ExistsCurrent("Truncated"))
-	{
-		return; 
-	}
-
-	// if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
-	ConfigArray actions = commandConfig("action");
-	for (size_t i = 0; i < actions.size(); i++)
-	{
-		if (actions[i] == "train" || actions[i] == "trainRNN")
-		{
-			
-			ConfigParameters sgd = ConfigParameters(commandConfig("SGD"));
-			ConfigParameters reader = ConfigParameters(commandConfig("reader"));
-			// reader and SGD sections are two must-have sections in train/trainRNN 
-			if (reader.ExistsCurrent("Truncated") && !sgd.ExistsCurrent("Truncated"))
-			{
-				InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
-			}
-		}
-	}
-}
-void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const ConfigArray& commands)
-{
-	for (size_t i = 0; i < commands.size(); i++)
-	{
-		ConfigParameters cfgParameters(TopLevelConfig(commands[i]));
-		DisableLegcyTruncationSettings(TopLevelConfig, cfgParameters);
-	}
-}
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
@@ -131,9 +99,8 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring nodeName = config("nodeName", L"__AllNodes__");
 	wstring nodeNameRegexStr = config("nodeNameRegex", L"");
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config("outputFile", WCharToString(defOutFilePath.c_str()).c_str());
-    bool printValues = config("printValues", "true");
-	
+    wstring outputFile = config("outputFile", defOutFilePath);
+    bool printValues = config("printValues", true);
 
     ComputationNetwork net(-1);  //always use CPU
     net.LoadFromFile<ElemType>(modelPath);
@@ -812,7 +779,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 }
 
 template <typename ElemType>
-void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoTrain(const ConfigParameters& config)
 {
     ConfigParameters configSGD(config("SGD"));
     bool makeMode = config("makeMode", "true");
@@ -854,13 +821,13 @@ void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t ful
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 template <typename ElemType>
-void DoAdapt(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoAdapt(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -884,7 +851,7 @@ void DoAdapt(const ConfigParameters& config, size_t fullEpochsOffset, size_t ful
     wstring origModelFileName = config("origModelFileName", L"");
     wstring refNodeName = config("refNodeName", L"");
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.Adapt(origModelFileName, refNodeName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -898,7 +865,7 @@ http://arxiv.org/pdf/1409.3215.pdf
 
 */
 template <typename ElemType>
-void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoEncoderDecoder(const ConfigParameters& config)
 {
     vector<IComputationNetBuilder<ElemType>*> netBuilders;
     vector<IDataReader<ElemType>*> trainDataReader;
@@ -943,7 +910,7 @@ void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, s
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    MultiNetworksSGD<ElemType> sgd(configSGD);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -966,7 +933,7 @@ void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, s
 DoBidirecionEncoderDecoder
 */
 template <typename ElemType>
-void DoBidirectionEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoBidirectionEncoderDecoder(const ConfigParameters& config)
 {
 
     ConfigParameters configSGD = config("SGD");
@@ -1026,7 +993,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config, size_t fullEpoc
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    MultiNetworksSGD<ElemType> sgd(configSGD);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -1192,7 +1159,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
 }
 
 template <typename ElemType>
-void DoSequenceTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
+void DoSequenceTrain(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -1231,7 +1198,7 @@ void DoSequenceTrain(const ConfigParameters& config, size_t fullEpochsOffset, si
 
     wstring origModelFileName = config("origModelFileName", L"");
 
-    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
+    SGD<ElemType> sgd(configSGD);
 
     sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -1323,6 +1290,40 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
     return maxEpochs;
 }
 
+// special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
+static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
+{
+    if (TopLevelConfig.ExistsCurrent("Truncated"))
+    {
+        return;
+    }
+
+    // if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
+    ConfigArray actions = commandConfig("action");
+    for (size_t i = 0; i < actions.size(); i++)
+    {
+        if (actions[i] == "train" || actions[i] == "trainRNN")
+        {
+
+            ConfigParameters sgd = ConfigParameters(commandConfig("SGD"));
+            ConfigParameters reader = ConfigParameters(commandConfig("reader"));
+            // reader and SGD sections are two must-have sections in train/trainRNN 
+            if (reader.ExistsCurrent("Truncated") && !sgd.ExistsCurrent("Truncated"))
+            {
+                InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
+            }
+        }
+    }
+}
+static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const ConfigArray& commands)
+{
+    for (size_t i = 0; i < commands.size(); i++)
+    {
+        ConfigParameters cfgParameters(TopLevelConfig(commands[i]));
+        DisableLegacyTruncationSettings(TopLevelConfig, cfgParameters);
+    }
+}
+
 // process the command
 template <typename ElemType>
 void DoCommand(const ConfigParameters& config)
@@ -1337,7 +1338,10 @@ void DoCommand(const ConfigParameters& config)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
 
-	DisableLegacyUsage(config, command);
+    bool progressTracing = config("progressTracing", false);
+
+    // temporary hack to prevent users from failling for a small breaking change related to the "truncated" flag (will be redone bigger and better some day)
+    DisableLegacyUsage(config, command);
 
     // summarize command info upfront in the log and stdout
     size_t fullTotalMaxEpochs = 0;
@@ -1362,6 +1366,11 @@ void DoCommand(const ConfigParameters& config)
         }
     }
     std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
+
+    // set up progress tracing for compute cluster management
+    if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+
     size_t fullEpochsOffset = 0;
 
     // execute the commands
@@ -1371,26 +1380,29 @@ void DoCommand(const ConfigParameters& config)
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
+        if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+            ProgressTracing::SetStepOffset(fullEpochsOffset);   // this is the epoch number that SGD will log relative to
+
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoSequenceTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoSequenceTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "adapt")
             {
-                DoAdapt<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoAdapt<ElemType>(commandParams);
             }
             else if (action[j] == "test" || action[j] == "eval")
             {
@@ -1442,7 +1454,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainEncoderDecoder")
             {
-                DoEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoEncoderDecoder<ElemType>(commandParams);
             }
             else if (action[j] == "testEncoderDecoder")
             {
@@ -1450,7 +1462,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainBidirectionEncoderDecoder")
             {
-                DoBidirectionEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                DoBidirectionEncoderDecoder<ElemType>(commandParams);
             }
             else if (action[j] == "beamSearch")
             {
