@@ -835,12 +835,11 @@ public:
 template <class ConfigRecordType, typename ElemType>
 void DoTrain(const ConfigRecordType & config)
 {
-    const ConfigRecordType & configSGD(config(L"SGD", ConfigRecordType::Record()));
     bool makeMode = config(L"makeMode", true);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    shared_ptr<IComputationNetBuilder<ElemType>> netBuilder;// = GetCreateNetworkFunction(config);
+    shared_ptr<IComputationNetBuilder<ElemType>> netBuilder;
 
-    // TODO: turn the netBuilder into a lambda
     if (config.Exists(L"createNetwork"))
     {
         netBuilder = make_shared<BrainScriptNetworkBuilder<ElemType>>(config);
@@ -866,6 +865,13 @@ void DoTrain(const ConfigRecordType & config)
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
+    // network creation is handled by a lambda, which we define here
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
+    {
+        ComputationNetwork * net = netBuilder->BuildNetworkFromDescription();
+        return shared_ptr<ComputationNetwork>(net);
+    };
+
     // BUGBUG: inconsistency with BrainScript: old config passes a config dict, whereas BrainScript creates the object right away
     const ConfigRecordType & readerConfig(config(L"reader", ConfigRecordType::Record()));
     //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by making this an optional arg; or if this should not be inherited, then by disabling it
@@ -879,9 +885,10 @@ void DoTrain(const ConfigRecordType & config)
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
+    const ConfigRecordType & configSGD(config(L"SGD", ConfigRecordType::Record()));
     SGD<ElemType> sgd(SGDParams(configSGD, (ElemType)0));
 
-    sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
+    sgd.Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {

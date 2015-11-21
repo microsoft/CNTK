@@ -275,7 +275,7 @@ public:
     void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
                        IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
                        const DEVICEID_TYPE deviceID, const bool makeMode = true);
-    void Train(IComputationNetBuilder<ElemType>* netBuilder,
+    void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const bool makeMode = true);
