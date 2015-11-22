@@ -624,6 +624,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Start of new GPU Sparse Matrix code 
     //-------------------------------------------------------------------------
     template<class ElemType>
+    void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
+    {
+        if (!OwnBuffer())
+            LogicError("GPUSparseMatrix::Reshape: Cannot Reshape since the buffer is managed externally.");
+        
+        if (m_numRows == numRows && m_numCols == numCols)
+            return;
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        if (m_numRows * m_numCols != numRows * numCols)
+            LogicError("GPUSparseMatrix::Reshape: new matrix size does not match current size, can't be reshaped. Did you mean to resize?");
+
+        size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, m_elemSizeAllocated, m_format);
+
+        PrepareDevice();
+
+        ElemType * pArray = nullptr;
+        CUDA_CALL(cudaMalloc((void **)&pArray, bufferSizeNeeded));
+
+        if (m_pArray != nullptr)
+        {
+            CUDA_CALL(cudaMemcpy(pArray, NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+
+            GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + m_elemSizeAllocated);
+            GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_elemSizeAllocated, m_format);
+
+            int blocksPerGrid = (int)ceil(1.0*numCols/ threadsPerBlock);
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _reshape<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                m_numRows,                  // old row count
+                m_numCols,                  // old col count
+                numRows,                    // new row count
+                numCols,                    // new col count
+                MajorIndexLocation(),       // old row index array
+                SecondaryIndexLocation(),   // old column index array
+                majorIndexInNewBuffer,      // new row index array
+                secondaryIndexInNewBuffer   // new column index array
+                );
+
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+            CUDA_CALL(cudaFree(m_pArray));
+        }
+
+        m_pArray = pArray;
+        m_numRows = numRows;
+        m_numCols = numCols;
+        m_totalBufferSizeAllocated = bufferSizeNeeded;
+
+        //following are generated dynamically and no need to save
+        if (m_rowToId != nullptr)
+            CUDA_CALL(cudaFree(m_rowToId));
+
+        CUDA_CALL(cudaMalloc((void **)&m_rowToId, sizeof(GPUSPARSE_INDEX_TYPE)*m_elemSizeAllocated));
+    }
+
+    template<class ElemType>
     void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
     {
         Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);

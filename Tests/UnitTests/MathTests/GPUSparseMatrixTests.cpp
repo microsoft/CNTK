@@ -500,6 +500,27 @@ namespace Microsoft
                     }
                 }
 
+                BOOST_AUTO_TEST_CASE(GPUSSparseMatrixReshape)
+                {
+                    const int oldRowCount = 10;
+                    const int oldColCount = 3;
+                    const int newRowCount = 5;
+                    const int newColCount = 6;
+                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(oldRowCount, oldColCount, c_deviceIdZero, -1, 1);
+                    GPUMatrix<float> denseMatrixB(denseMatrixA);
+                    GPUMatrix<float> denseMatrixC(newRowCount, newColCount, c_deviceIdZero);
+                    GPUSparseMatrix<float> sparseMatrix(matrixFormatSparseCSC, c_deviceIdZero);
+
+                    denseMatrixB.Reshape(newRowCount, newColCount);
+
+                    sparseMatrix.SetValue(denseMatrixA);
+                    sparseMatrix.Reshape(newRowCount, newColCount);
+                    sparseMatrix.CopyToDenseMatrix(denseMatrixC);
+
+                    BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
+                    BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
+                }
+
 				BOOST_AUTO_TEST_SUITE_END()
 			}
 		}
