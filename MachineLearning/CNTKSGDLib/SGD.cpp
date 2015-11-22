@@ -14,6 +14,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
 
+    // -----------------------------------------------------------------------
+    // class SGDParams
+    // -----------------------------------------------------------------------
+
     static AdaptationRegType ParseAdaptationRegType(wstring s)
     {
         msra::strfun::tolower_ascii(s);
@@ -119,7 +123,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
 
-        wstring modelPath = configSGD(L"modelPath");
         wstring trainCriterionNodeName = configSGD(L"trainCriterionNodeName", L"");
         wstring evalCriterionNodeName = configSGD(L"evalCriterionNodeName", L"");
 
@@ -205,7 +208,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_maxEpochs = maxEpochs;
 
         m_gradientClippingWithTruncation = gradientClippingWithTruncation;
-        m_modelPath = modelPath;
         m_autoLearnRateSearchType = autoLearnRateSearchType;
         m_traceLevel = traceLevel;
 
@@ -376,6 +378,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SGDParams(*configp, GetSizeOfPrecision(configp))
     { }
 
+    // -----------------------------------------------------------------------
+    // class SGD
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     SGD<ElemType>::SGD(SGDParams&& sgdParams) :
         SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
@@ -384,8 +390,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_doGradientCheck && sizeof(ElemType) != sizeof(double))
             InvalidArgument("Gradient check needs to use precision = double");
-
-        msra::files::make_intermediate_dirs(m_modelPath);
     }
 
     template SGD<float >::SGD(const ConfigParameters &);
