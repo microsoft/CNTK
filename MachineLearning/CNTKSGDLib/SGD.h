@@ -263,6 +263,10 @@ public:
     { }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
+    SGD(const ScriptableObjects::IConfigRecordPtr configp) :
+        SGD(*configp)
+    { }
+
     SGD(SGDParams&& sgdParams);
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,

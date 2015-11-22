@@ -373,7 +373,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         bool Exists(const wstring & id) const { return Find(id) != nullptr; }
         static const IConfigRecord & Record();
         template<class V> static const std::vector<typename V::value_type> & Array(const V & vec);
-
     };
     typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
 
