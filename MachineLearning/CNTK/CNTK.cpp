@@ -866,17 +866,17 @@ void DoTrain(const ConfigRecordType & config)
     }
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
-        const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder", ConfigRecordType::Record()));
-        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);
+        const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
+        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);  // parses the configuration and stores it in the SimpleNetworkBuilder object
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());       // this operates based on the configuration saved above
         };
     }
     // legacy NDL
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
-        const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder", ConfigRecordType::Record()));
+        const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
         shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
@@ -914,19 +914,19 @@ void DoTrain(const ConfigRecordType & config)
     }
 
     // BUGBUG: inconsistency with BrainScript: old config passes a config dict, whereas BrainScript creates the object right away
-    const ConfigRecordType & readerConfig(config(L"reader", ConfigRecordType::Record()));
-    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by making this an optional arg; or if this should not be inherited, then by disabling it
+    const ConfigRecordType & readerConfig(config(L"reader"));
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
     auto dataReader = make_shared<DataReader<ElemType>>(readerConfig);
 
     shared_ptr<DataReader<ElemType>> cvDataReader;
     if (config.Exists(L"cvReader"))
     {
-        const ConfigRecordType & cvReaderConfig(config(L"cvReader", ConfigRecordType::Record()));
+        const ConfigRecordType & cvReaderConfig(config(L"cvReader"));
         //cvReaderConfig.Insert("traceLevel", config(L"traceLevel", "0"));
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
-    const ConfigRecordType & configSGD(config(L"SGD", ConfigRecordType::Record()));
+    const ConfigRecordType & configSGD(config(L"SGD"));
     SGD<ElemType> sgd(SGDParams(configSGD, (ElemType)0));
 
     sgd.Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);

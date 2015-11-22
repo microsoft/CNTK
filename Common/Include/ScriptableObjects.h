@@ -180,6 +180,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     //     - ConfigArrays elements
     //     - ConfigLambdas (default values of named arguments)
 
+    struct IConfigRecord;
+
     // TODO: separate this out from BrainScript to an interface that still does type casts--possible?
     class ConfigValuePtr : public shared_ptr<Object>
     {
@@ -245,6 +247,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         template<typename T> operator T() const { return AsRef<T>(); }
         // Linux gcc barfs on this ^^ for 'us = (double)((wstring)arg).size();' due to some ambiguity error (while it works fine with Visual Studio).
         // If you encounter this, instead say 'us = (double)((const wstring&)arg).size();' with a &. Don't forget the const (I have seen broken typecasts without).
+        operator const IConfigRecord &() const { return AsRef<IConfigRecord>(); }
         operator double() const { return AsRef<Double>(); }
         operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }

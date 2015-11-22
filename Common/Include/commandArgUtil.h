@@ -319,7 +319,7 @@ public:
     ConfigParser(char separator, const std::wstring& configname)
         : m_separator(separator)
     {
-        m_configName = msra::strfun::utf8(configname);
+        m_configName = string(configname.begin(), configname.end());
     }
 
     ConfigParser(char separator)
@@ -658,7 +658,7 @@ public:
 
     void SetName(const std::wstring& name)
     {
-        m_configName = msra::strfun::utf8(name);
+        m_configName = string(name.begin(), name.end());
     }
 
     void SetName(const std::string& name)
@@ -950,15 +950,6 @@ public:
         // we get here if no dict in the chain contains the entry, or if the entry's string value says "default"
         return defaultValue;
     }
-    // special version for ConfigParameters
-    template<>
-    ConfigParameters operator()<ConfigParameters>(const wchar_t * name,
-        const ConfigParameters & defaultValue) const
-    {
-        if (!defaultValue.empty())
-            LogicError("ConfigParameters::operator() for ConfigParameters can only accept an empty default value.");
-        return Find(string(name, name + wcslen(name)), "");
-    }
 
     ConfigValue Find(const std::string& name,
                      const char* defaultvalue = NULL) const
@@ -1106,7 +1097,7 @@ public:
     // dict(name): read out a mandatory parameter value
     ConfigValue operator()(const std::wstring& name) const
     {
-        return operator()(msra::strfun::utf8(name));
+        return operator()(string(name.begin(), name.end()));
     }
 
     // dict(name): read out a mandatory parameter value
