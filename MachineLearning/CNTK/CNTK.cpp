@@ -1301,6 +1301,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 
+#if 0
 // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
 template <typename ElemType>
 void DoSequenceTrain(const ConfigParameters& config)
@@ -1349,6 +1350,7 @@ void DoSequenceTrain(const ConfigParameters& config)
     delete dataReader;
     delete cvDataReader;
 }
+#endif
 
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
@@ -1494,8 +1496,11 @@ void DoCommands(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train"               || action[j] == "trainRNN" ||
-                action[j] == "trainSequence"       || action[j] == "trainSequenceRNN")
+            if (action[j] == "train"            || action[j] == "trainRNN"
+#if 0
+                || action[j] == "trainSequence" || action[j] == "trainSequenceRNN"
+#endif
+                )
             {
                 wstring modelPath = commandParams("modelPath");
                 std::wcerr << "CNTKModelPath: " << modelPath << endl;
@@ -1533,6 +1538,7 @@ void DoCommands(const ConfigParameters& config)
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
+#if 0
             else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
@@ -1540,6 +1546,7 @@ void DoCommands(const ConfigParameters& config)
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
                 fullEpochsOffset += GetMaxEpochs(commandParams);
             }
+#endif
             else if (action[j] == "adapt")
             {
                 DoAdapt<ElemType>(commandParams);
