@@ -2661,6 +2661,7 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
     ElemType alpha,
     const ElemType* a,      //dense
+    bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
@@ -2699,7 +2700,10 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
                 i = channel * numPixels + pixel;
             }
 
-            s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+            if (!transposeA)
+                s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+            else
+                s += a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
         }
     }
 
@@ -2709,7 +2713,7 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
 /// c += alpha * a * b^T
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
-    int m,                      //rowDense
+    int m,                      // rowDense
     int k,                      // colDense
     int n,                      // colSparse
     int numChannels,            // input num channels
@@ -2719,6 +2723,7 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     int rowInB,                 // row index of the sparse matrix
     ElemType alpha,
     const ElemType* a,          //dense
+    bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
@@ -2755,7 +2760,10 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
         int colInC = rowIndex[j];  // the column index because of transpose
         
         // bnzValues[j] = the b[][j] value
-        s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+        if (!transposeA)
+            s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+        else
+            s = a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
 
         atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
     }

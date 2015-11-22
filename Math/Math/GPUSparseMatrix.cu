@@ -1007,7 +1007,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
         {
-            if (!transposeA && !transposeB)
+            if (!transposeB)
             {
                 int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
                 cudaEvent_t done = nullptr;
@@ -1022,6 +1022,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     channelwise,// channelwise or pixelwise multiplication
                     alpha,
                     reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                    transposeA,
                     reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
                     rhs.RowLocation(),
                     rhs.ColLocation(),
@@ -1033,7 +1034,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
             }
-            else if (!transposeA && transposeB)
+            else
             {
                 if (beta != 1.0)
                 {
@@ -1045,7 +1046,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int rowInB = 0; rowInB < l; rowInB++)
                 {
                     _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
-                        m,          //rowDense
+                        m,          // rowDense
                         k,          // colDense
                         n,          // colSparse
                         numChannels,// number of input channels
@@ -1055,6 +1056,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         rowInB,
                         alpha,
                         reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                        transposeA,
                         reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
                         rhs.RowLocation(),
                         rhs.ColLocation(),
@@ -1065,10 +1067,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-            }
-            else
-            {
-                NOT_IMPLEMENTED;
             }
         }
         else
