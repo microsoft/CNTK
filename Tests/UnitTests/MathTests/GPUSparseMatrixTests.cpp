@@ -442,58 +442,67 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit)
                 {
-                    for (auto transposeB : { false, true })
+                    for (auto transposeA : { false, true })
                     {
-                        for (auto zeroPadding : { false }) // TODO: There's a discrepancy w.r.t. padding - needs to be fixed!!!
+                        for (auto transposeB : { false, true })
                         {
-                            for (auto inputChannels : { 1, 10 })
+                            for (auto zeroPadding : { false }) // TODO: There's a discrepancy w.r.t. padding - needs to be fixed!!!
                             {
-                                for (auto horizontalSubsample : { 1, 2, 3 })
+                                for (auto inputChannels : { 1, 10 })
                                 {
-                                    const int verticalSubsample = 1;
-                                    const int inputWidth = 10;
-                                    const int inputHeight = 1;
-                                    const int kernelWidth = 3;
-                                    const int kernelHeight = inputHeight;
-                                    const int outputWidth = zeroPadding ? inputWidth : (inputWidth >= kernelWidth ? 1 + (inputWidth - kernelWidth) / horizontalSubsample : 0);
-                                    const int outputHeight = inputHeight;
-                                    const int outputChannels = 100;
-                                    const int batchSize = 10;
-                                    const int m = outputChannels;
-                                    const int k = kernelWidth * inputChannels;
-                                    const int l = inputWidth * inputChannels;
-                                    const int n = batchSize;
-                                    const float alpha = 0.53f;
-                                    const float beta = transposeB ? 1.0f : 0.0f;
-                                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(m, k, c_deviceIdZero, -1, 1);
-                                    GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(l, n, c_deviceIdZero, -5, 5);
-                                    GPUMatrix<float> denseMatrixBT(l, n, c_deviceIdZero);
-                                    GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
-                                    GPUMatrix<float> denseMatrixTemp(1, 1, c_deviceIdZero);     // this should get resized automatically
-                                    GPUMatrix<float> resultMatrixBase(outputChannels, batchSize * outputWidth * outputHeight, c_deviceIdZero);
-                                    GPUMatrix<float> resultMatrixExp(outputWidth * outputHeight * outputChannels, batchSize, c_deviceIdZero);
-
-                                    if (transposeB)
+                                    for (auto horizontalSubsample : { 1, 2, 3 })
                                     {
-                                        denseMatrixBT.AssignTransposeOf(denseMatrixB);
-                                        sparseMatrixB.SetValue(denseMatrixBT);
+                                        const int verticalSubsample = 1;
+                                        const int inputWidth = 10;
+                                        const int inputHeight = 1;
+                                        const int kernelWidth = 3;
+                                        const int kernelHeight = inputHeight;
+                                        const int outputWidth = zeroPadding ? inputWidth : (inputWidth >= kernelWidth ? 1 + (inputWidth - kernelWidth) / horizontalSubsample : 0);
+                                        const int outputHeight = inputHeight;
+                                        const int outputChannels = 100;
+                                        const int batchSize = 10;
+                                        const int m = outputChannels;
+                                        const int k = kernelWidth * inputChannels;
+                                        const int l = inputWidth * inputChannels;
+                                        const int n = batchSize;
+                                        const float alpha = 0.53f;
+                                        const float beta = transposeB ? 1.0f : 0.0f;
+                                        GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(m, k, c_deviceIdZero, -1, 1);
+                                        GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(l, n, c_deviceIdZero, -5, 5);
+                                        GPUMatrix<float> denseMatrixAT(k, m, c_deviceIdZero);
+                                        GPUMatrix<float> denseMatrixBT(l, n, c_deviceIdZero);
+                                        GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
+                                        GPUMatrix<float> denseMatrixTemp(1, 1, c_deviceIdZero);     // this should get resized automatically
+                                        GPUMatrix<float> resultMatrixBase(outputChannels, batchSize * outputWidth * outputHeight, c_deviceIdZero);
+                                        GPUMatrix<float> resultMatrixExp(outputWidth * outputHeight * outputChannels, batchSize, c_deviceIdZero);
+
+                                        if (transposeA)
+                                        {
+                                            denseMatrixAT.AssignTransposeOf(denseMatrixA);
+                                        }
+
+                                        if (transposeB)
+                                        {
+                                            denseMatrixBT.AssignTransposeOf(denseMatrixB);
+                                            sparseMatrixB.SetValue(denseMatrixBT);
+                                        }
+                                        else
+                                        {
+                                            sparseMatrixB.SetValue(denseMatrixB);
+                                        }
+
+                                        denseMatrixTemp.AssignPackedConvolutionInput(denseMatrixB,
+                                            inputWidth, inputHeight, inputChannels,
+                                            outputWidth, outputHeight, outputChannels,
+                                            kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
+
+                                        GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, denseMatrixA, false, denseMatrixTemp, false, beta, resultMatrixBase);
+                                        resultMatrixBase.Reshape(outputWidth * outputChannels, batchSize);
+
+                                        GPUSparseMatrix<float>::ConvolveAndWeightedAdd(alpha, (transposeA ? denseMatrixAT : denseMatrixA), transposeA, sparseMatrixB, transposeB, beta, resultMatrixExp, inputChannels, horizontalSubsample, zeroPadding, true);
+
+                                        BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE2));
                                     }
-                                    else
-                                    {
-                                        sparseMatrixB.SetValue(denseMatrixB);
-                                    }
-
-                                    denseMatrixTemp.AssignPackedConvolutionInput(denseMatrixB,
-                                        inputWidth, inputHeight, inputChannels,
-                                        outputWidth, outputHeight, outputChannels,
-                                        kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
-
-                                    GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, denseMatrixA, false, denseMatrixTemp, false, beta, resultMatrixBase);
-                                    resultMatrixBase.Reshape(outputWidth * outputChannels, batchSize);
-
-                                    GPUSparseMatrix<float>::ConvolveAndWeightedAdd(alpha, denseMatrixA, false, sparseMatrixB, transposeB, beta, resultMatrixExp, inputChannels, horizontalSubsample, zeroPadding, true);
-
-                                    BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE5));
                                 }
                             }
                         }
