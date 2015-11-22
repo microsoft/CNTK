@@ -283,10 +283,12 @@ public:
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
-    // TODO: remove the netBuilder from here as well
+#if 0
+    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
     void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
                        IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
                        const DEVICEID_TYPE deviceID, const bool makeMode = true);
+#endif
 
 protected:
     std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetworkPtr net);

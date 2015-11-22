@@ -364,6 +364,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
     }
 
+#if 0
     // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
     template<class ElemType>
     void SGD<ElemType>::SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
@@ -444,6 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), replacedCriterionNodes[0]);
         }
     }
+#endif
 
     static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     {
