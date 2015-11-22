@@ -162,7 +162,6 @@ protected:
     double m_clippingThresholdPerSample;
     double m_lastFinishedEpochEvalErr;
 
-    wstring m_modelPath;
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
@@ -247,6 +246,10 @@ protected:
 
 template<class ElemType> class IDistGradAggregator;
 
+// -----------------------------------------------------------------------
+// class SGD
+// -----------------------------------------------------------------------
+
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 // TODO: why is this a class, and not just a procedure? Then we wouldn't have to include the massive header
 template<class ElemType>
@@ -257,12 +260,18 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
+    // constructor from old CNTK config. Function template that is also used to get the config from Scripting.
     template<class ConfigRecordType>
     SGD(const ConfigRecordType & configSGD) :
         SGD(SGDParams(configSGD, sizeof(ElemType)))
-    { }
+    {
+        // TODO: This does not belong into SGD any more than the network or reader we operate on. Either move them in here, or move this out.
+        m_modelPath = (wstring)configSGD(L"modelPath"); // TODO: why is this explicit typecast needed? (compiler complains about an ambiguity, which it does not complain about elsewhere)
+        msra::files::make_intermediate_dirs(m_modelPath);
+    }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
+    // constructor from Scripting
     SGD(const ScriptableObjects::IConfigRecordPtr configp) :
         SGD(*configp)
     { }
@@ -463,6 +472,7 @@ public:
 
 protected:
 
+    wstring m_modelPath;
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
 
