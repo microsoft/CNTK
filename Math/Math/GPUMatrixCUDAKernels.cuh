@@ -2761,6 +2761,54 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     }
 }
 
+template<class ElemType>
+__global__ void _reshape(
+    int oldNumRows,                             // old row count
+    int oldNumCols,                             // old col count
+    int newNumRows,                             // new row count
+    int newNumCols,                             // new col count
+    const GPUSPARSE_INDEX_TYPE* oldRowIndex,    // old row index array
+    const GPUSPARSE_INDEX_TYPE* oldColumnIndex, // old column index array
+    GPUSPARSE_INDEX_TYPE* newRowIndex,          // new row index array
+    GPUSPARSE_INDEX_TYPE* newColumnIndex        // new column index array
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= newNumCols)
+        return;
+
+    int currentCol = id;
+    int oldColLower = (newNumRows * currentCol) / oldNumRows;
+    int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
+
+    // initialize to the end and then scan in the right direction in the for-loop
+    int currentColStart = oldColumnIndex[oldNumCols];
+
+    for (int oldCol = oldColLower; oldCol <= oldColUpper; oldCol++)
+    {
+        int start = oldColumnIndex[oldCol];
+        int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldCol] + 1;
+
+        for (int j = start; j < end; j++)  //j points to the value
+        {
+            int oldRow = oldRowIndex[j];
+            int index = (oldCol * oldNumRows + oldRow);
+            int newCol = index / newNumRows;
+            int newRow = index % newNumRows;
+
+            newRowIndex[j] = newRow;
+
+            if (newCol >= currentCol && currentColStart > j)
+                currentColStart = j;
+        }
+    }
+
+    newColumnIndex[currentCol] = currentColStart;
+
+    if (currentCol == (newNumCols - 1))
+        newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
+}
+
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
