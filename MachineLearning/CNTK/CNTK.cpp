@@ -942,7 +942,7 @@ void DoTrain(const ConfigRecordType & config)
     else // legacy CNTK config syntax: needs a record called 'SGD'
     {
         const ConfigRecordType & configSGD(config(L"SGD"));
-        optimizer = make_shared<SGD<ElemType>>(SGDParams(configSGD, sizeof(ElemType)));
+        optimizer = make_shared<SGD<ElemType>>(configSGD);
     }
 
     optimizer->Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);

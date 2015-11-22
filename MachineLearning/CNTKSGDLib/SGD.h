@@ -160,10 +160,6 @@ protected:
 
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
-    double m_lastFinishedEpochEvalErr;
-
-    wstring m_trainCriterionNodeName;
-    wstring m_evalCriterionNodeName;
 
     intargvector m_numMiniBatch4LRSearch;
     size_t m_numBestSearchEpoch;
@@ -187,7 +183,6 @@ protected:
     double m_increaseLearnRateIfImproveMoreThan;
     double m_learnRateIncreaseFactor;
     double m_learnRateDecreaseFactor;
-    size_t m_prevChosenMinibatchSize;
     bool m_autoAdjustMinibatch;
     size_t m_minibatchSearchCriterionErrorMargin;
     size_t m_minibatchSizeTuningFrequency;
@@ -205,8 +200,6 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
 
-    bool m_keepCheckPointFiles;
-
     int m_numMBsToShowResult;
     int m_numMBsToCUDAProfile;
 
@@ -214,8 +207,6 @@ protected:
     double m_gradientCheckSigDigit;
 
     bool m_doUnitTest;
-
-    bool m_validateAfterModelReloading;
 
     bool m_useAllDataForPreComputedNode;
 
@@ -239,9 +230,9 @@ protected:
     double m_L1RegWeight;
 
     //sequence trainning
-    double m_hsmoothingWeight;
+    double m_hSmoothingWeight;
     double m_frameDropThresh;
-    bool m_doreferencealign;
+    bool m_doReferenceAlign;
 };
 
 template<class ElemType> class IDistGradAggregator;
@@ -260,13 +251,21 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    // constructor from old CNTK config. Function template that is also used to get the config from Scripting.
+    // constructor from old CNTK config. This is a function template that is also used to get the config from Scripting.
     template<class ConfigRecordType>
     SGD(const ConfigRecordType & configSGD) :
-        SGD(SGDParams(configSGD, sizeof(ElemType)))
+        SGDParams(configSGD, sizeof(ElemType)),
+        // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
+        m_modelPath(configSGD(L"modelPath")),
+        m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
+        m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
+        m_trainCriterionNodeName(configSGD(L"trainCriterionNodeName", L"")),
+        m_evalCriterionNodeName(configSGD(L"evalCriterionNodeName", L"")),
+        m_prevChosenMinibatchSize(0),
+        m_lastFinishedEpochEvalErr(0.0),
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr)
     {
-        // TODO: This does not belong into SGD any more than the network or reader we operate on. Either move them in here, or move this out.
-        m_modelPath = (wstring)configSGD(L"modelPath"); // TODO: why is this explicit typecast needed? (compiler complains about an ambiguity, which it does not complain about elsewhere)
         msra::files::make_intermediate_dirs(m_modelPath);
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
@@ -275,8 +274,6 @@ public:
     SGD(const ScriptableObjects::IConfigRecordPtr configp) :
         SGD(*configp)
     { }
-
-    SGD(SGDParams&& sgdParams);
 
     void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
                IDataReader<ElemType>* trainSetDataReader,
@@ -471,8 +468,16 @@ public:
                        int npos);
 
 protected:
-
     wstring m_modelPath;
+    bool m_keepCheckPointFiles;
+    bool m_validateAfterModelReloading;
+
+    wstring m_trainCriterionNodeName;
+    wstring m_evalCriterionNodeName;
+
+    size_t m_prevChosenMinibatchSize;
+    double m_lastFinishedEpochEvalErr;
+
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
 

@@ -82,85 +82,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // AutoAdjust Parameters
         const ConfigRecordType & configAALR(configSGD(L"AutoAdjust", ConfigRecordType::Record()));
-        LearningRateSearchAlgorithm autoLearnRateSearchType = ParseLearningRateSearchType(configAALR(L"autoAdjustLR", L"None"));
-        double reduceLearnRateIfImproveLessThan =   configAALR(L"reduceLearnRateIfImproveLessThan",   0.0);
-        bool continueReduce =                       configAALR(L"continueReduce",                     false);
-        size_t learnRateAdjustInterval =            configAALR(L"learnRateAdjustInterval",            (size_t)1);
-        double learnRateDecreaseFactor =            configAALR(L"learnRateDecreaseFactor",            0.618);
-        double increaseLearnRateIfImproveMoreThan = configAALR(L"increaseLearnRateIfImproveMoreThan", numeric_limits<double>::infinity());
-        double learnRateIncreaseFactor =            configAALR(L"learnRateIncreaseFactor",            1.382);
+        m_autoLearnRateSearchType = ParseLearningRateSearchType(configAALR(L"autoAdjustLR", L"None"));
+        m_reduceLearnRateIfImproveLessThan =   configAALR(L"reduceLearnRateIfImproveLessThan",   0.0);
+        m_continueReduce =                     configAALR(L"continueReduce",                     false);
+        m_learnRateAdjustInterval =            configAALR(L"learnRateAdjustInterval",            (size_t)1);
+        m_learnRateAdjustInterval = max((size_t)1, m_learnRateAdjustInterval);  //minimum interval is 1 epoch
+        m_learnRateDecreaseFactor = configAALR(L"learnRateDecreaseFactor", 0.618);
+        m_increaseLearnRateIfImproveMoreThan = configAALR(L"increaseLearnRateIfImproveMoreThan", numeric_limits<double>::infinity());
+        m_learnRateIncreaseFactor =            configAALR(L"learnRateIncreaseFactor",            1.382);
 
         // AutoAdjust Auto Adjust Minibatch Parameters
-        bool autoAdjustMinibatch =                   configAALR(L"autoAdjustMinibatch",                 false);
-        size_t minibatchSizeTuningFrequency =        configAALR(L"minibatchSizeTuningFrequency",        (size_t)1);
-        size_t minibatchSizeTuningMax =              configAALR(L"minibatchSizeTuningMax",              (size_t)1048576);
-        size_t minibatchSearchCriterionErrorMargin = configAALR(L"minibatchSearchCriterionErrorMargin", (size_t)1);
+        m_autoAdjustMinibatch =                 configAALR(L"autoAdjustMinibatch",                 false);
+        m_minibatchSizeTuningFrequency =        configAALR(L"minibatchSizeTuningFrequency",        (size_t)1);
+        m_minibatchSizeTuningMax =              configAALR(L"minibatchSizeTuningMax",              (size_t)1048576);
+        m_minibatchSearchCriterionErrorMargin = configAALR(L"minibatchSearchCriterionErrorMargin", (size_t)1);
 
         // the number of minibatches used to search
         // the learning rate. Its typically set to 10-20% of
         // the total minibatches in an epoch.
-        intargvector numMiniBatch4LRSearch = configAALR(L"numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{ 500 })));
+        m_numMiniBatch4LRSearch = configAALR(L"numMiniBatch4LRSearch", ConfigRecordType::Array(intargvector(vector<int>{ 500 })));
 
-        size_t numPrevLearnRates =          configAALR(L"numPrevLearnRates",           (size_t)5);
-        size_t numBestSearchEpoch =         configAALR(L"numBestSearchEpoch",          (size_t)1);
-        bool loadBestModel =                configAALR(L"loadBestModel",               true);
-        bool useCVSetControlLRIfCVExists =  configAALR(L"UseCVSetControlLRIfCVExists", true);
-        bool useEvalCriterionControlLR =    configAALR(L"UseEvalCriterionControlLR",   false);
+        m_numPrevLearnRates =           configAALR(L"numPrevLearnRates",           (size_t)5);
+        m_numBestSearchEpoch =          configAALR(L"numBestSearchEpoch",          (size_t)1);
+        m_loadBestModel =               configAALR(L"loadBestModel",               true);
+        m_useCVSetControlLRIfCVExists = configAALR(L"UseCVSetControlLRIfCVExists", true);
+        m_useEvalCriterionControlLR =   configAALR(L"UseEvalCriterionControlLR",   false);
 
         // TODO: mbSize and truncated should be specified differently for truncated BPTT:
         //       mbSize = total number of samples after which a model update should happen
         //       truncated = truncation length
-        intargvector mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
-        bool truncated = configSGD(L"Truncated", false);
+        m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
+        m_truncated = configSGD(L"Truncated", false);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
-        size_t epochSize = configSGD(L"epochSize", (size_t)0);
+        m_epochSize = configSGD(L"epochSize", (size_t)0);
+        // the number of samples in each epoch (0 means, use all the samples in each epoch).
+        if (m_epochSize == 0)
+            m_epochSize = requestDataSize;
+        m_maxComputedEpochSize = m_epochSize;
 
         // the total number of epochs to run.
-        size_t maxEpochs = configSGD(L"maxEpochs");
+        m_maxEpochs = configSGD(L"maxEpochs");
 
         floatargvector momentumPerMB = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
 
         floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
 
-        wstring trainCriterionNodeName = configSGD(L"trainCriterionNodeName", L"");
-        wstring evalCriterionNodeName = configSGD(L"evalCriterionNodeName", L"");
+        m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
 
-        size_t maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
+        m_traceLevel =          configSGD(L"traceLevel",          (int)0);
+        m_numMBsToShowResult =  configSGD(L"numMBsToShowResult",  (size_t)10);
+        m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t)0);
 
-        int traceLevel =                configSGD(L"traceLevel",          (int)0);
-        size_t numMBsToShowResult =     configSGD(L"numMBsToShowResult",  (size_t)10);
-        size_t numMBsToCUDAProfile =    configSGD(L"numMBsToCUDAProfile", (size_t)0);
+        m_gradientClippingWithTruncation = configSGD(L"gradientClippingWithTruncation", true);
+        m_clippingThresholdPerSample =     configSGD(L"clippingThresholdPerSample",     numeric_limits<double>::infinity());
 
-        bool keepCheckPointFiles = configSGD(L"keepCheckPointFiles", false);
+        // sequence-training parameters
+        m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
+        m_frameDropThresh =  configSGD(L"frameDropThresh",  1e-10);
+        m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
 
-        bool gradientClippingWithTruncation =   configSGD(L"gradientClippingWithTruncation", true);
-        double clippingThresholdPerSample =     configSGD(L"clippingThresholdPerSample",     numeric_limits<double>::infinity());
+        m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 
-        // sequence training
-        double hsmoothingWeight =       configSGD(L"hsmoothingWeight", 0.95);
-        double frameDropThresh =        configSGD(L"frameDropThresh",  1e-10);
-        bool doReferenceAlign =         configSGD(L"doReferenceAlign", false);
-
-        floatargvector dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
-
-        GradientUpdateInfo gUpdateInfo;
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
         double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);
-        gUpdateInfo.mType = gradUpdateType;
-        gUpdateInfo.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
+        m_gradType.mType = gradUpdateType;
+        m_gradType.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
 
         // extract RMSProp parameters from config, if they exist. Default to reasonable values.
-        RMSPropInfo rpi;
-        rpi.dec =   configSGD(L"rms_wgt_dec", 0.75);
-        rpi.inc =   configSGD(L"rms_wgt_inc", 1.2);
-        rpi.min =   configSGD(L"rms_wgt_min", 0.1);
-        rpi.max =   configSGD(L"rms_wgt_max", 10.0);
-        rpi.gamma = configSGD(L"rms_gamma",   0.99);
+        m_rpi.dec =   configSGD(L"rms_wgt_dec", 0.75);
+        m_rpi.inc =   configSGD(L"rms_wgt_inc", 1.2);
+        m_rpi.min =   configSGD(L"rms_wgt_min", 0.1);
+        m_rpi.max =   configSGD(L"rms_wgt_max", 10.0);
+        m_rpi.gamma = configSGD(L"rms_gamma",   0.99);
 
-        bool needAveMultiplier = (bool) configSGD(L"normWithAveMultiplier", true);
-        double L2RegWeight = (double) configSGD(L"L2RegWeight", 0.0);
-        double L1RegWeight = (double) configSGD(L"L1RegWeight", 0.0);
+        m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
+        m_L2RegWeight =       configSGD(L"L2RegWeight", 0.0);
+        m_L1RegWeight =       configSGD(L"L1RegWeight", 0.0);
 
         /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
         /// useAdagrad=true
@@ -168,87 +166,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (useAdagrad)
         {
             gradUpdateType = GradientsUpdateType::AdaGrad;
-            gUpdateInfo.mType = gradUpdateType;
+            m_gradType.mType = gradUpdateType;
         }
 
-        AdaptationRegType adaptationRegType = ParseAdaptationRegType(configSGD(L"adaptationRegType", L"None"));
-        double adaptationRegWeight = configSGD(L"adaptationRegWeight", 0.0);
+        m_adaptationRegType = ParseAdaptationRegType(configSGD(L"adaptationRegType", L"None"));
+        m_adaptationRegWeight = configSGD(L"adaptationRegWeight", 0.0);
 
         /// gradient check setup
-        bool doGradientCheck =         configSGD(L"gradientcheck", false);
-        double gradientCheckSigDigit = configSGD(L"sigFigs",       6.0); // TODO: why is this a double?
+        m_doGradientCheck =       configSGD(L"gradientcheck", false);
+        m_gradientCheckSigDigit = configSGD(L"sigFigs",       6.0); // TODO: why is this a double?
 
-        if (doGradientCheck && sizeofElemType != sizeof(double))
-            LogicError("Gradient check needs to use precision = double");
+        if (m_doGradientCheck && sizeofElemType != sizeof(double))
+            LogicError("Gradient check needs to use precision = 'double'.");
 
-        bool validateAfterModelReloading = configSGD(L"validateAfterModelReloading", true);
+        m_useAllDataForPreComputedNode = configSGD(L"UseAllDataForPreComputedNode", true);
 
-        bool UsingAllDataForPreComputedNode = configSGD(L"UseAllDataForPreComputedNode", true);
-
-        // TODO: At this point we are copying local vars into members of the same name. This is a left-over of refactoring. We should just write to the members directly.
-        m_numPrevLearnRates = numPrevLearnRates;
-        m_prevChosenMinibatchSize = 0;
-        m_autoAdjustMinibatch = autoAdjustMinibatch;
-        m_minibatchSizeTuningMax = minibatchSizeTuningMax;
-        m_minibatchSizeTuningFrequency = minibatchSizeTuningFrequency;
-        m_minibatchSearchCriterionErrorMargin = minibatchSearchCriterionErrorMargin;
-
-        m_mbSize = mbSize;
-        m_truncated = truncated;
-
-        // the number of samples in each epoch (0 means, use all the samples in each epoch).
-        m_epochSize = epochSize;
-        if (m_epochSize == 0)
-        {
-            m_epochSize = requestDataSize;
-        }
-        m_maxComputedEpochSize = m_epochSize;
-
-        // the total number of epochs to run.
-        m_maxEpochs = maxEpochs;
-
-        m_gradientClippingWithTruncation = gradientClippingWithTruncation;
-        m_autoLearnRateSearchType = autoLearnRateSearchType;
-        m_traceLevel = traceLevel;
-
-        m_lastFinishedEpochEvalErr = 0.0;
-
-        m_loadBestModel = loadBestModel;
-        m_increaseLearnRateIfImproveMoreThan = increaseLearnRateIfImproveMoreThan;
-        m_learnRateIncreaseFactor = learnRateIncreaseFactor;
-        m_reduceLearnRateIfImproveLessThan = reduceLearnRateIfImproveLessThan;
-        m_continueReduce = continueReduce;
-
-        //minimum interval is 1 epoch
-        m_learnRateAdjustInterval = max((size_t)1, learnRateAdjustInterval);
-
-        m_learnRateDecreaseFactor = learnRateDecreaseFactor;
-        m_clippingThresholdPerSample = abs(clippingThresholdPerSample);
-        m_numMiniBatch4LRSearch = numMiniBatch4LRSearch;
-        m_dropoutRates = dropoutRates;
-        m_numMBsToShowResult = int(numMBsToShowResult);
-        m_numMBsToCUDAProfile = int(numMBsToCUDAProfile);
-        m_numBestSearchEpoch = numBestSearchEpoch;
-        m_maxTempMemSizeInSamplesForCNN = maxTempMemSizeInSamplesForCNN;
-        m_gradType = gUpdateInfo;
-        m_rpi = rpi;
-        m_keepCheckPointFiles = keepCheckPointFiles;
-
-        m_adaptationRegType = adaptationRegType;
-        m_adaptationRegWeight = adaptationRegWeight;
-
-        m_trainCriterionNodeName = trainCriterionNodeName;
-        m_evalCriterionNodeName = evalCriterionNodeName;
-        m_useAllDataForPreComputedNode = UsingAllDataForPreComputedNode;
-
-        m_needAveMultiplier = needAveMultiplier;
-        m_L2RegWeight = L2RegWeight;
-        m_L1RegWeight = L1RegWeight;
-
-        //sequence training parameters
-        m_hsmoothingWeight = hsmoothingWeight;
-        m_frameDropThresh = frameDropThresh;
-        m_doreferencealign = doReferenceAlign;
+        // consistency checks
         for (size_t i = 0; i < m_mbSize.size(); i++)
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -317,17 +250,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_needAdaptRegularization = false;
 
-        m_doGradientCheck = doGradientCheck;
-        m_gradientCheckSigDigit = gradientCheckSigDigit;
-        m_validateAfterModelReloading = validateAfterModelReloading;
-
-        m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
-        m_useEvalCriterionControlLR = useEvalCriterionControlLR;
-
         // BUGBUG: these are not passed to Init()
         m_doUnitTest = configSGD(L"unittest", false);
 
-        // Parallel training
+        // parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
         m_numGradientBits = 32;
         m_zeroThresholdFor1Bit = true;
@@ -381,16 +307,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // class SGD
     // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    SGD<ElemType>::SGD(SGDParams&& sgdParams) :
-        SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
-        m_distGradAgg(nullptr),
-        m_gradHeader(nullptr)
-    {
-        if (m_doGradientCheck && sizeof(ElemType) != sizeof(double))
-            InvalidArgument("Gradient check needs to use precision = double");
-    }
 
     template SGD<float >::SGD(const ConfigParameters &);
     template SGD<double>::SGD(const ConfigParameters &);
@@ -773,7 +689,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
-            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
 
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
