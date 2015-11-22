@@ -7,8 +7,12 @@
 #ifndef _FILEUTIL_
 #define _FILEUTIL_
 
-#include "Platform.h"
+#include "Basics.h"
 #include <stdio.h>
+#ifdef __WINDOWS__
+#include <windows.h>    // for mmreg.h and FILETIME
+#include <mmreg.h>
+#endif
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,6 +55,9 @@ void fsetmode (FILE * f, char type);
 // ----------------------------------------------------------------------------
 
 void freadOrDie (void * ptr, size_t size, size_t count, FILE * f);
+#ifdef _WIN32
+void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f);
+#endif
 
 template<class _T>
 void freadOrDie (_T & data, int num, FILE * f)    // template for vector<>
@@ -59,16 +66,32 @@ template<class _T>
 void freadOrDie (_T & data, size_t num, FILE * f)    // template for vector<>
 { data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 
+#ifdef _WIN32
+template<class _T>
+void freadOrDie (_T & data, int num, const HANDLE f)    // template for vector<>
+{ data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+template<class _T>
+void freadOrDie (_T & data, size_t num, const HANDLE f)    // template for vector<>
+{ data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+#endif
 
 // ----------------------------------------------------------------------------
 // fwriteOrDie(): like fwrite() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
 
 void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f);
+#ifdef _WIN32
+void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f);
+#endif
 
 template<class _T>
 void fwriteOrDie (const _T & data, FILE * f)    // template for vector<>
 { if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+#ifdef _WIN32
+template<class _T>
+void fwriteOrDie (const _T & data, const HANDLE f)    // template for vector<>
+{ if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+#endif
 
 
 // ----------------------------------------------------------------------------
@@ -200,6 +223,9 @@ int fskipwNewline (FILE * f, bool skip = true);
 // ----------------------------------------------------------------------------
 
 void fputstring (FILE * f, const char *);
+#ifdef _WIN32
+void fputstring (const HANDLE f, const char * str);
+#endif
 void fputstring (FILE * f, const std::string &);
 void fputstring (FILE * f, const wchar_t *);
 void fputstring (FILE * f, const std::wstring &);
@@ -215,6 +241,9 @@ string fgetTag (FILE * f);
 // ----------------------------------------------------------------------------
 
 void fcheckTag (FILE * f, const char * expectedTag);
+#ifdef _WIN32
+void fcheckTag (const HANDLE f, const char * expectedTag);
+#endif
 void fcheckTag_ascii (FILE * f, const string & expectedTag);
 
 // ----------------------------------------------------------------------------
@@ -228,6 +257,9 @@ void fcompareTag (const string & readTag, const string & expectedTag);
 // ----------------------------------------------------------------------------
 
 void fputTag (FILE * f, const char * tag);
+#ifdef _WIN32
+void fputTag(const HANDLE f, const char * tag);
+#endif
 
 // ----------------------------------------------------------------------------
 // fskipstring(): skip a 0-terminated string, such as a pad string
@@ -265,6 +297,9 @@ int fgetint24 (FILE * f);
 // ----------------------------------------------------------------------------
 
 int fgetint (FILE * f);
+#ifdef _WIN32
+int fgetint (const HANDLE f);
+#endif
 int fgetint_bigendian (FILE * f);
 int fgetint_ascii (FILE * f);
 
@@ -286,6 +321,21 @@ float fgetfloat_ascii (FILE * f);
 // ----------------------------------------------------------------------------
 
 double fgetdouble (FILE * f);
+#ifdef _WIN32
+// ----------------------------------------------------------------------------
+// fgetwav(): read an entire .wav file
+// ----------------------------------------------------------------------------
+
+void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate);
+void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate);
+
+// ----------------------------------------------------------------------------
+// fputwav(): save data into a .wav file
+// ----------------------------------------------------------------------------
+
+void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels = 1); 
+void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int nChannels = 1); 
+#endif
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value
@@ -317,6 +367,9 @@ void fputint (FILE * f, int val);
 
 void fputlong (FILE * f, long val);
 
+#ifdef _WIN32
+void fputint (const HANDLE f, int v);
+#endif
 // ----------------------------------------------------------------------------
 // fputfloat(): write a float value
 // ----------------------------------------------------------------------------
@@ -477,6 +530,15 @@ namespace msra { namespace files {
     vector<char*> fgetfilelines (const wstring & pathname, vector<char> & readbuffer);
 };};
 
+#ifdef _WIN32
+// ----------------------------------------------------------------------------
+// getfiletime(), setfiletime(): access modification time
+// ----------------------------------------------------------------------------
+
+bool getfiletime (const std::wstring & path, FILETIME & time);
+void setfiletime (const std::wstring & path, const FILETIME & time);
+
+#endif
 // ----------------------------------------------------------------------------
 // expand_wildcards() -- expand a path with wildcards (also intermediate ones)
 // ----------------------------------------------------------------------------
@@ -499,33 +561,10 @@ namespace msra { namespace files {
     bool fuptodate (const wstring & target, const wstring & input, bool inputrequired = true);
 };};
 
-#if 0
+#ifdef _WIN32
 // ----------------------------------------------------------------------------
 // simple support for WAV file I/O
 // ----------------------------------------------------------------------------
-
-// define the header if we haven't seen it yet
-#ifndef _WAVEFORMATEX_
-#define _WAVEFORMATEX_
-
-/*
- *  extended waveform format structure used for all non-PCM formats. this
- *  structure is common to all non-PCM formats.
- */
-typedef unsigned short WORD;  // in case not defined yet (i.e. linux)
-typedef struct tWAVEFORMATEX
-{
-    WORD        wFormatTag;         /* format type */
-    WORD        nChannels;          /* number of channels (i.e. mono, stereo...) */
-    DWORD       nSamplesPerSec;     /* sample rate */
-    DWORD       nAvgBytesPerSec;    /* for buffer estimation */
-    WORD        nBlockAlign;        /* block size of data */
-    WORD        wBitsPerSample;     /* number of bits per sample of mono data */
-    WORD        cbSize;             /* the count in bytes of the size of */
-                                    /* extra information (after cbSize) */
-} WAVEFORMATEX, *PWAVEFORMATEX;
-
-#endif /* _WAVEFORMATEX_ */
 
 typedef struct wavehder{
     char          riffchar[4];
