@@ -201,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 fprintf(stderr, "\n### Test %d ###\n\n", (int)i), fflush(stderr);
                 let parserTest = parserTests[i];
-                let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
+                let expr = ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + parserTest, vector<wstring>());
                 //expr->Dump();
                 Do(expr);
                 if (oneOnly)

@@ -16,10 +16,6 @@
 #endif
 
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-    using namespace Microsoft::MSR;
-
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
         L"Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] \n"
@@ -44,12 +40,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
         L"LogPrior(labels) = Log(Mean(labels)) \n"
         ;
-
-    // TODO: must be moved to ComputationNodeBase.h
-    // a ComputationNode that derives from MustFinalizeInit does not resolve some args immediately (just keeps ConfigValuePtrs),
-    // assuming they are not ready during construction.
-    // This is specifically meant to be used by DelayNode, see comments there.
-    struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
         L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
@@ -136,6 +126,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //BinaryStandardNode(TransposeTimesNode)
     ;
 
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace Microsoft::MSR;
+
     // helper that returns 'float' or 'double' depending on ElemType
     template<class ElemType> static const wchar_t * ElemTypeName();
     template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
@@ -150,11 +144,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
             // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
             // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
-            let expr = BS::ParseConfigString(BS::standardFunctions + BS::computationNodes + BS::commonMacros
+            let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
                 + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
-                + m_sourceCode);    // source code has the form [ ... ]
+                + m_sourceCode, vector<wstring>());    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
-            let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
+            let object = EvaluateField(expr, L"network");                                // this comes back as a BS::Object
             let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
             // This should not really fail since we constructed the source code above such that this is the right type.
             // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
