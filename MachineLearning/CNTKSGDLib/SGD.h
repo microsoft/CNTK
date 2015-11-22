@@ -256,17 +256,17 @@ public:
     SGD(const ConfigRecordType & configSGD) :
         SGDParams(configSGD, sizeof(ElemType)),
         // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
-        m_modelPath(configSGD(L"modelPath")),
+        m_modelPath((const wstring &)configSGD(L"modelPath")),
         m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
         m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
-        m_trainCriterionNodeName(configSGD(L"trainCriterionNodeName", L"")),
-        m_evalCriterionNodeName(configSGD(L"evalCriterionNodeName", L"")),
+        m_trainCriterionNodeName((const wstring &)configSGD(L"trainCriterionNodeName", L"")),
+        m_evalCriterionNodeName((const wstring &)configSGD(L"evalCriterionNodeName", L"")),
         m_prevChosenMinibatchSize(0),
         m_lastFinishedEpochEvalErr(0.0),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr)
     {
-        msra::files::make_intermediate_dirs(m_modelPath);
+            msra::files::make_intermediate_dirs(m_modelPath);
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
