@@ -927,7 +927,7 @@ void DoTrain(const ConfigRecordType & config)
     }
 
     const ConfigRecordType & configSGD(config(L"SGD"));
-    SGD<ElemType> sgd(SGDParams(configSGD, (ElemType)0));
+    SGD<ElemType> sgd(SGDParams(configSGD, sizeof(ElemType)));
 
     sgd.Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);
 }
