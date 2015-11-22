@@ -1285,6 +1285,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 
+// TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
 template <typename ElemType>
 void DoSequenceTrain(const ConfigParameters& config)
 {
@@ -1774,13 +1775,12 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
 
     // MAIN LOOP that executes the actions
     auto actionsVal = config[L"actions"];
-    // Note: weird behavior. If 'actions' is a single value (rather than an array) then it will have been resolved already. That means, it has already completed the action.
+    // Note: weird behavior. If 'actions' is a scalar value (rather than an array) then it will have been resolved already after the above call. That means, it has already completed its action!
     //       Not pretty, but a direct consequence of the lazy evaluation. The only good solution would be to have a syntax for arrays including length 0 and 1.
     //       Since this in the end behaves indistinguishable from the array loop below, we will keep it for now.
     if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
-        const ScriptableObjects::ConfigArray & actions = actionsVal.AsRef<ScriptableObjects::ConfigArray>();
-        // Note: We must use AsRef<>() here. Just assigning (using the auto-typecast) will make a copy, which will ^^ not work since the elements are not yet resolved.
+        const ScriptableObjects::ConfigArray & actions = actionsVal;
         for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
         {
             actions.At(i, [](const wstring &){});  // this will evaluate and thus execute the action

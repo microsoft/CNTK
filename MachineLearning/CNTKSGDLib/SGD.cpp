@@ -429,6 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
     }
 
+    // TODO: per discussion with Dong Yu, Guoguo Chen, and Yu Zhang, this function can be removed.
     template<class ElemType>
     void SGD<ElemType>::SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
                        IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
