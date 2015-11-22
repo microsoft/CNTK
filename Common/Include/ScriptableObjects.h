@@ -631,7 +631,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     // This allows code written for CNTK config to simply turn ConfigParameters into a template parameter and accept an IConfigRecord.
     // -----------------------------------------------------------------------
 
-    inline const ConfigValuePtr & IConfigRecord::operator()(const wstring & id) const { return operator[](id); }     // e.g. confRec("message")
+    inline const ConfigValuePtr & IConfigRecord::operator()(const wstring & id) const { return operator[](id); }     // e.g. confRec(L"message") instead of confRec[L"message"]
     template<class T> inline std::vector<T> IConfigRecord::operator()(const wstring & id, const std::vector<T> & defaultValue) const   // retrieve an argvector (which derives from std::vector)
     {
         const auto * valp = Find(id);

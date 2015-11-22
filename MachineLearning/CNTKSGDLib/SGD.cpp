@@ -67,8 +67,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-    template<class ConfigRecordType, class ElemType>
-    SGDParams::SGDParams(const ConfigRecordType& configSGD, ElemType/*for type deduction*/)
+    template<class ConfigRecordType>
+    SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     {
         floatargvector learningRatesPerMB = configSGD(L"learningRatesPerMB", ConfigRecordType::Array(floatargvector()));
 
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool doGradientCheck =         configSGD(L"gradientcheck", false);
         double gradientCheckSigDigit = configSGD(L"sigFigs",       6.0); // TODO: why is this a double?
 
-        if (doGradientCheck && sizeof(ElemType) != sizeof(double))
+        if (doGradientCheck && sizeofElemType != sizeof(double))
             LogicError("Gradient check needs to use precision = double");
 
         bool validateAfterModelReloading = configSGD(L"validateAfterModelReloading", true);
@@ -333,26 +333,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_parallelizationStartEpochNum = 0;
         m_nFramesBetweenMASync = 40000; // default 40k frames 
 
-        if ((g_mpi != nullptr) && configSGD.ExistsCurrent(L"ParallelTrain"))
+        if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
         {
             const ConfigRecordType & configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"None"));
             m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
 
-            if (configParallelTrain.ExistsCurrent(L"DataParallelSGD"))
+            if (configParallelTrain.Exists(L"DataParallelSGD"))
             {
                 const ConfigRecordType & configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
-                size_t defaultGradientBits = 8 * sizeof(ElemType);
+                size_t defaultGradientBits = 8 * sizeofElemType;
                 m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
                 m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
-                if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
+                if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeofElemType)))
                 {
                     InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
             }
 
-            if (configParallelTrain.ExistsCurrent(L"ModelAveragingSGD") )
+            if (configParallelTrain.Exists(L"ModelAveragingSGD") )
             {
                 const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
                 m_nFramesBetweenMASync = configMASGD(L"SyncFrequencyInFrames", (size_t)40000);
@@ -360,6 +360,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
+
+    static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
+    {
+        wstring precision = configp->Get(L"precision");
+        if (precision == L"float")
+            return sizeof(float);
+        else if (precision == L"double")
+            return sizeof(double);
+        else
+            RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+    }
+
+    SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp) :
+        SGDParams(*configp, GetSizeOfPrecision(configp))
+    { }
 
     template<class ElemType>
     SGD<ElemType>::SGD(SGDParams&& sgdParams) :

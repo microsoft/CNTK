@@ -98,13 +98,10 @@ struct GradientUpdateInfo
 
 struct SGDParams : public ScriptableObjects::Object
 {
-    template<class ConfigRecord, class ElemType>    // (needed for default value of m_gradientBits)
-    SGDParams(const ConfigRecord& configSGD, ElemType exampleElemType/*for type deduction*/);
+    template<class ConfigRecord>    // (needed for default value of m_gradientBits)
+    SGDParams(const ConfigRecord& configSGD, size_t sizeofElemType);
 
-    SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
-        : SGDParams(*configp, 1.0f/*for type deduction  --FIX THIS*/)
-    {
-    }
+    SGDParams(const ScriptableObjects::IConfigRecordPtr configp);
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
@@ -262,7 +259,7 @@ protected:
 public:
     template<class ConfigRecordType>
     SGD(const ConfigRecordType & configSGD) :
-        SGD(SGDParams(configSGD, ElemType(0)))
+        SGD(SGDParams(configSGD, sizeof(ElemType)))
     { }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
