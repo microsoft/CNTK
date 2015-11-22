@@ -20,10 +20,9 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
-#include "TimerUtility.h"
 #include "Profiler.h"
 
-using namespace std;
+using namespace std;    // ugh! TODO: get rid of this from .h files!!!
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -178,8 +177,6 @@ protected:
     AdaptationRegType m_adaptationRegType;
     double m_adaptationRegWeight;
     bool m_needAdaptRegularization;
-    bool m_progressTracing;
-    Timer m_progressTracingTimer;
 
     bool m_loadBestModel;
     double m_reduceLearnRateIfImproveLessThan;
@@ -263,8 +260,8 @@ protected:
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
 public:
-    SGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
-    SGD(SGDParams&& sgdParams, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
+    SGD(const ConfigParameters& configSGD);
+    SGD(SGDParams&& sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
@@ -458,10 +455,6 @@ public:
                        int npos);
 
 protected:
-
-    // This includes the total epochs across all training commands
-    size_t m_fullTotalMaxEpochs;
-    size_t m_fullEpochsOffset;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
