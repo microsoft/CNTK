@@ -5125,9 +5125,9 @@ __global__ void _assignAlphaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			/*if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id + 1]))
+			if (phoneid < phonenum - blanknum && (t >= phonebound[id + 1]+3))
 				Alphascore[t*M + id] = LZERO;
-			else*/
+			else
 				Alphascore[t*M + id] = (ElemType)x + ascore;
 			
 		}
@@ -5238,9 +5238,9 @@ __global__ void _assignBetaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			/*if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id+1]) )
+			if (phoneid < phonenum - blanknum && (t >= phonebound[id+1]+3) )
 				Betascore[t*M + id] = LZERO;
-			else*/
+			else
 				Betascore[t*M + id] = (ElemType)x + ascore;
 		}
 
