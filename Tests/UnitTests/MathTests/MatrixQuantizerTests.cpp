@@ -45,9 +45,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 #else
     static bool createDebugOut = false;
 #endif
-    static const float c_SinglePrecisionTolerance = 0.00005f;
-    static const double c_DoublePrecisionTolerance = 0.000000001;
-    static const float c_SinglePrecisionGpuQuantizationTolerance = 0.0001f;
+    //static const float c_SinglePrecisionTolerance = 0.00005f;
+    //static const double c_DoublePrecisionTolerance = 0.000000001;
+    //static const float c_SinglePrecisionGpuQuantizationTolerance = 0.0001f;
+    static const float c_SinglePrecisionTolerance = 0.0001f;
+    static const double c_DoublePrecisionTolerance = 0.00000001;
+    static const float c_SinglePrecisionGpuQuantizationTolerance = 0.001f;
 
     template <typename ElemType>
     static void ReferenceCPUQuantizer(
