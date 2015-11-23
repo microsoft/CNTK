@@ -173,7 +173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold);
 		CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
 		CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq,
-			ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
+			const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
         CPUMatrix<ElemType>& InplaceSqrt ();
         CPUMatrix<ElemType>& AssignSqrtOf (const CPUMatrix<ElemType>& a);
 

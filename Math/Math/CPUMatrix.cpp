@@ -5191,7 +5191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 	template<class ElemType>
 	CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-		const std::vector<size_t> phoneseq, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+		const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
 	{
 		if (isColWise)
 		{

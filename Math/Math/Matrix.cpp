@@ -5085,7 +5085,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 	template<class ElemType>
 	Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-		const std::vector<size_t> phoneseq, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+		const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
 	{
 		if (prob.IsEmpty())
 			throw std::logic_error("AssignCTCScore: Matrix a is empty.");
@@ -5110,8 +5110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		DISPATCH_MATRIX_ON_FLAG(&prob,
 			this,
-			this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, phoneseq, totalscore, framenum, blanknum, isColWise),
-			this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, phoneseq, totalscore, framenum, blanknum, isColWise),
+			this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, phoneseq, phonebound, totalscore, framenum, blanknum, isColWise),
+			this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, phoneseq, phonebound, totalscore, framenum, blanknum, isColWise),
 			NOT_IMPLEMENTED,
 			NOT_IMPLEMENTED
 			);

@@ -4339,7 +4339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 	template<class ElemType>
 	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-		const std::vector<size_t> phoneseq, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+		const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
 	{
 		//Resize(a.GetNumRows(), a.GetNumCols());  do resize outside
 		if (isColWise)
@@ -4353,18 +4353,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 			int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
 			size_t *gpuphoneseq;
+			size_t *gpuphonebound;
 			CUDA_CALL(cudaMalloc((void **)&gpuphoneseq, phoneseq.size()*sizeof(size_t)));
 			CUDA_CALL(cudaMemcpy(gpuphoneseq, phoneseq.data(), phoneseq.size()*sizeof(size_t), cudaMemcpyHostToDevice));
+
+			CUDA_CALL(cudaMalloc((void **)&gpuphonebound, phonebound.size()*sizeof(size_t)));
+			CUDA_CALL(cudaMemcpy(gpuphonebound, phonebound.data(), phonebound.size()*sizeof(size_t), cudaMemcpyHostToDevice));
+
 			cudaEvent_t done = nullptr;
 			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
 			for (long t = 0; t < N; t++)
 			{
-				_assignAlphaScore << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, alpha.m_pArray, gpuphoneseq, t, M, phonenum, blanknum);
+				_assignAlphaScore << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, alpha.m_pArray, gpuphoneseq, gpuphonebound, t, M, phonenum, blanknum);
 				//_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, alpha.m_pArray, N);
 			}
 			for (long t = N - 1; t >= 0; t--)
 			{
-				_assignBetaScore << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, beta.m_pArray, gpuphoneseq, t, N, M, phonenum, blanknum);
+				_assignBetaScore << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.m_pArray, beta.m_pArray, gpuphoneseq, gpuphonebound, t, N, M, phonenum, blanknum);
 			}
 			totalscore = 0.0;
 			_assigntotalscore << <1, 1, 0, t_stream >> > (beta.m_pArray, blanknum);

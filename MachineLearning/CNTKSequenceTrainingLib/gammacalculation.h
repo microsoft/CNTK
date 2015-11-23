@@ -224,6 +224,7 @@ namespace msra { namespace lattices {
 			ElemType finalscore = 0;
 
 			std::vector<size_t> phoneseq;
+			std::vector<size_t> phonebound;
 			size_t blankid;
 
 			size_t mbsize = numcols / samplesInRecurrentStep;
@@ -273,24 +274,35 @@ namespace msra { namespace lattices {
 				//make phone sequence 
 
 				phoneseq.clear();
+				phonebound.clear();
 				phoneseq.push_back(65535);
+				phonebound.push_back(0);
 				for (size_t i = 0; i < uidsstripe.size(); i++)
 				{
 					if (uidsstripe[i] != 65535 /*&& uids[i] != 0 && uids[i] != 1 && uids[i] != 2 && uids[i] != 34*/)
 					{
 						for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+						{
 							phoneseq.push_back(blankid);
+							phonebound.push_back(i);
+						}
 						phoneseq.push_back(uidsstripe[i]);
-
+						phonebound.push_back(i);
 					}
+
 				}
 				//phoneseq.push_back(blankid);
 				for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+				{
 					phoneseq.push_back(blankid);
+					phonebound.push_back(numframes);
+				}
 				phoneseq.push_back(65535);
+				phonebound.push_back(numframes);
+
 				oneUttCTCScore.Resize(numrows, numframes);
 
-				oneUttCTCScore.AssignCTCScore(tempmatrix, alpha, beta, phoneseq, finalscore, numframes, blanknum, true);
+				oneUttCTCScore.AssignCTCScore(tempmatrix, alpha, beta, phoneseq, phonebound, finalscore, numframes, blanknum, true);
 				rowsum.Resize(1, numframes);
 
 

@@ -4633,6 +4633,7 @@ __global__ void _assignAlphaScore(
 	const ElemType *prob,
 	ElemType *Alphascore,
 	const unsigned __int64 *phoneseq,
+	const unsigned __int64 *phonebound,
 	const long  t,
 	const long M,
 	const long phonenum,
@@ -4706,7 +4707,11 @@ __global__ void _assignAlphaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			Alphascore[t*M + id] = (ElemType)x + ascore;
+			if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id + 1]))
+				Alphascore[t*M + id] = CNLOGZERO;
+			else
+				Alphascore[t*M + id] = (ElemType)x + ascore;
+			
 		}
 
 
@@ -4721,6 +4726,7 @@ __global__ void _assignBetaScore(
 	const ElemType *prob,
 	ElemType *Betascore,
 	const unsigned __int64 *phoneseq,
+	const unsigned __int64 *phonebound,
 	const long  t,
 	const long N,
 	const long M,
@@ -4789,7 +4795,10 @@ __global__ void _assignBetaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			Betascore[t*M + id] = (ElemType)x + ascore;
+			if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id+1]) )
+				Betascore[t*M + id] = CNLOGZERO;
+			else
+				Betascore[t*M + id] = (ElemType)x + ascore;
 		}
 
 	}
