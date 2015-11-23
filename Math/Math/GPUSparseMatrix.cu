@@ -974,6 +974,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify externally managed matrix");
+
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
 
@@ -1075,6 +1078,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType>
+    void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+    {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify externally managed matrix");
+
+        if (a.GetComputeDeviceId() != c.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId())
+            RuntimeError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: All matrices must be on the same GPU");
+
+
+        if (a.m_format != MatrixFormat::matrixFormatSparseCSC
+            || b.m_format != MatrixFormat::matrixFormatSparseCSC
+            || c.m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        // Can't distribute the operations if we need to move values across columns
+        if (a.GetNumCols() != T || keepWeight != 0 || scaleFactor != 1)
+            NOT_IMPLEMENTED;
+
+        if (a.GetNumRows() != D*S*M*K)
+            LogicError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: tensor dimensions and underlying matrix dimensions don't match");
+
+        c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumNZElements(), true, false);
+        c.SetNzCount(a.GetNumNZElements());
+
+        c.PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        CUDA_LONG N = (CUDA_LONG)c.GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
+            reinterpret_cast<const ElemType*>(a.NzValues()),  // source nz values
+            a.RowLocation(),
+            a.ColLocation(),
+            reinterpret_cast<ElemType*>(c.NzValues()),  // target nz values
+            c.RowLocation(),
+            c.ColLocation(),
+            D, S, M, K, T);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
 
     // backward pass from hidden layer to feature weight
     // dense X sparse = sparse 

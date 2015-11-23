@@ -1237,6 +1237,49 @@ __global__ void _tensorShuffleScaleAndAdd(
     pc[nb] = cval;
 }
 
+// see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
+template<class ElemType>
+__global__ void _tensorShuffleScaleAndAddRowSparse(
+    const ElemType* anzValues,  //source nz values
+    const GPUSPARSE_INDEX_TYPE* aRowIndex,
+    const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
+    ElemType* cnzValues,  //target nz values
+    GPUSPARSE_INDEX_TYPE* cRowIndex,
+    GPUSPARSE_INDEX_TYPE* cColCSCIndex,
+    size_t D, size_t S, size_t M, size_t K, size_t T)
+{
+    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (col >= T)
+        return;
+
+    size_t N = D * S * M * K;
+    int start = aColCSCIndex[col];
+    int end = aColCSCIndex[col + 1];
+    int current = start;
+    for (size_t nc = 0; nc < N; nc++)
+    {
+        // recover the 5 indices from the loop counter
+        size_t d = (nc                  ) % D;
+        size_t s = (nc / D              ) % S;
+        size_t m = (nc / D / S          ) % M;
+        size_t k = (nc / D / S / M      ) % K;
+
+        // compute index for the a and b/c tensors
+        size_t na = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+
+        for (size_t j = start; j < end; j++)
+        {
+            if (aRowIndex[j] == na)
+            {
+                cnzValues[current] = anzValues[j];
+                cRowIndex[current] = nc;
+                current++;
+                break;
+            }
+        }
+    }
+}
+
 template<class ElemType>
 __global__ void _hasElement(
     const ElemType* a,
