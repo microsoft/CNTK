@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Common\ReaderTestHelper.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Common\Include\Config.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="HTKLMFReaderTests.cpp" />
+    <ClCompile Include="..\..\..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Common\DebugUtil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Common\Eval.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Common\TimerUtility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="UCIFastReaderTests.cpp" />
+    <ClCompile Include="..\..\..\Common\Config.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{c448395c-93e6-46ab-adda-9e09683d7098}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{73a7917d-7dae-4d52-89ab-9aa5ab0632d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Config">
+      <UniqueIdentifier>{2803cda6-39ec-416a-9054-e5fc7e442626}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control">
+      <UniqueIdentifier>{024ba6c7-74fe-4a89-a5e9-394e46c13f82}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop7_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_0_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_1_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop22_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.txt">
+      <Filter>Config</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop2_12_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop3_13_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop4_8_14_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+  </ItemGroup>
+</Project>

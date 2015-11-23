@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A4FC3467-4787-43E8-BBC0-D79AE56B468D}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>HTKLMFReaderTests</RootNamespace>
+    <ProjectName>ReaderTests</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Choose>
+    <When Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">
+      <PropertyGroup>
+        <HasBoost>true</HasBoost>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <HasBoost>false</HasBoost>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>..\..\..\common\include;..\..\..\Math\Math;$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\UnitTests\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>..\..\..\common\include;..\..\..\Math\Math;$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\UnitTests\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <UseFullPaths>true</UseFullPaths>
+      <OpenMPSupport>true</OpenMPSupport>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>htkmlfreader.lib;cntkmath.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <UseFullPaths>true</UseFullPaths>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <OpenMPSupport>true</OpenMPSupport>
+      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>htkmlfreader.lib;cntkmath.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Common\Include\Config.h" />
+    <ClInclude Include="Common\ReaderTestHelper.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Common\Config.cpp" />
+    <ClCompile Include="..\..\..\Common\DataReader.cpp" />
+    <ClCompile Include="..\..\..\Common\DebugUtil.cpp" />
+    <ClCompile Include="..\..\..\Common\Eval.cpp" />
+    <ClCompile Include="..\..\..\Common\File.cpp" />
+    <ClCompile Include="..\..\..\Common\fileutil.cpp" />
+    <ClCompile Include="..\..\..\Common\TimerUtility.cpp" />
+    <ClCompile Include="HTKLMFReaderTests.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="UCIFastReaderTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop11_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop12_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop13_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop14_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop16_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop17_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop19_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop20_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop21_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop22_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop2_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop3_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop4_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop5_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop6_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop7_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop8_Config.txt" />
+    <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.txt" />
+    <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop2_12_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop3_13_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop4_8_14_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_0_Control.txt" />
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_1_Control.txt" />
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop22_Control.txt" />
+    <Text Include="Data\HTKMLFReaderSimpleDataLoop7_Control.txt" />
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Control.txt" />
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
+    <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
+  <ImportGroup Label="ExtensionTargets" />
+  <Target Name="CheckDependencies">
+    <Warning Condition="!$(HasBoost)" Text="UCIFastReaderTests requires Boost 1.55 or higher to build. Skipping the build. Please install the library from http://boost.org and set BOOST_INCLUDE_PATH environment variable to boost headers directory and BOOST_LIB_PATH to boost lib directory." />
+  </Target>
+  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
+    <ItemGroup>
+      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
+    </Copy>
+  </Target>
+</Project>
