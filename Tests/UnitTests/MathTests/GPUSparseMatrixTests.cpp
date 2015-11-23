@@ -530,6 +530,23 @@ namespace Microsoft
                     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
                 }
 
+                BOOST_AUTO_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd)
+                {
+                    size_t D = 10, S = 10, M = 10, K = 10, T = 10;
+                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D*S*M*K, T, c_deviceIdZero, -1, 1);
+                    GPUMatrix<float> denseMatrixB(D*S*M*K, T, c_deviceIdZero);
+                    GPUMatrix<float> denseMatrixC(D*S*M*K, T, c_deviceIdZero);
+                    GPUSparseMatrix<float> sparseMatrixA(matrixFormatSparseCSC, c_deviceIdZero);
+                    GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
+                    sparseMatrixA.SetValue(denseMatrixA);
+
+                    GPUMatrix<float>::TensorShuffleScaleAndAdd(0, denseMatrixA, D, S, M, K, T, 1, denseMatrixB, denseMatrixB);
+                    GPUSparseMatrix<float>::TensorShuffleScaleAndAdd(0, sparseMatrixA, D, S, M, K, T, 1, sparseMatrixB, sparseMatrixB);
+                    sparseMatrixB.CopyToDenseMatrix(denseMatrixC);
+
+                    BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
+                }
+
 				BOOST_AUTO_TEST_SUITE_END()
 			}
 		}

@@ -4406,7 +4406,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_CPUMatrix, D, S, M, K, T, scaleFactor, *b.m_CPUMatrix, *c.m_CPUMatrix),
             GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUMatrix, *c.m_GPUMatrix),
             NOT_IMPLEMENTED,
-            NOT_IMPLEMENTED
+            GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUSparseMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix)
             );
     }
 
