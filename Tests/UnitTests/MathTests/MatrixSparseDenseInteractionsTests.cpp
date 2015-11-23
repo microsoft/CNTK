@@ -268,14 +268,14 @@ namespace Microsoft
 
                     mAdense ^= 2.3f; 
                     mAsparse ^= 2.3f; 
-                    BOOST_CHECK(mAsparse.IsEqualTo(mAdense, c_epsilonFloatE4));
-                    BOOST_CHECK(mAdense.IsEqualTo(mAsparse, c_epsilonFloatE4));
+                    BOOST_CHECK(mAsparse.IsEqualTo(mAdense, c_epsilonFloatE3));
+                    BOOST_CHECK(mAdense.IsEqualTo(mAsparse, c_epsilonFloatE3));
 
                     mBdense.AssignElementPowerOf(mAdense, 3.2f);
                     mBsparse.AssignElementPowerOf(mAsparse, 3.2f);
 
-                    BOOST_CHECK(mBsparse.IsEqualTo(mBdense, c_epsilonFloatE4));
-                    BOOST_CHECK(mBdense.IsEqualTo(mBsparse, c_epsilonFloatE4));
+                    BOOST_CHECK(mBsparse.IsEqualTo(mBdense, c_epsilonFloatE3));
+                    BOOST_CHECK(mBdense.IsEqualTo(mBsparse, c_epsilonFloatE3));
                 }
 
                 BOOST_AUTO_TEST_SUITE_END()
