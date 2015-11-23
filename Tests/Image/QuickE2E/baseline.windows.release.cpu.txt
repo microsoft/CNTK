@@ -838,7 +838,7 @@ Starting minibatch loop.
 randomordering: 16 retries for 100 elements (16.0%) to ensure window condition
 randomordering: recached sequence for seed 8: 8, 5, ...
  Epoch[ 9 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.84732117; EvalErr[0]PerSample = 0.01000000; TotalTime = 0.08772s; TotalTimePerSample = 0.87715ms; SamplesPerSecond = 1140
-Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 0.845092; EvalErrPerSample = 0.0099999998; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.087807
+Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 0.84732115; EvalErrPerSample = 0.0099999998; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.087807
 Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 9 at record count 900, and file position 900
 already there from last epoch
@@ -847,7 +847,7 @@ Starting minibatch loop.
 randomordering: 16 retries for 100 elements (16.0%) to ensure window condition
 randomordering: recached sequence for seed 9: 7, 10, ...
  Epoch[10 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.73455086; EvalErr[0]PerSample = 0.04000000; TotalTime = 0.08833s; TotalTimePerSample = 0.88331ms; SamplesPerSecond = 1132
-Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 0.7289505; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.088424
+Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 0.73455083; EvalErrPerSample = 0.04000000; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.088424
 Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000 
 starting epoch 10 at record count 1000, and file position 0
 already there from last epoch
@@ -856,7 +856,7 @@ Starting minibatch loop.
 randomordering: 22 retries for 100 elements (22.0%) to ensure window condition
 randomordering: recached sequence for seed 10: 13, 22, ...
  Epoch[11 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.52689182; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.08851s; TotalTimePerSample = 0.88509ms; SamplesPerSecond = 1129
-Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 0.52313471; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.088608
+Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 0.52689183; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.088608
 Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000 
 starting epoch 11 at record count 1100, and file position 100
 already there from last epoch
@@ -865,7 +865,7 @@ Starting minibatch loop.
 randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
 randomordering: recached sequence for seed 11: 6, 31, ...
  Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37077690; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.08724s; TotalTimePerSample = 0.87241ms; SamplesPerSecond = 1146
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.36936018; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.087336
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37077689; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.087336
 CNTKCommandTrainEnd: Train
 
 
@@ -2183,7 +2183,7 @@ Starting minibatch loop.
 randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
 randomordering: recached sequence for seed 11: 6, 31, ...
  Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37650299; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.89367s; TotalTimePerSample = 8.93670ms; SamplesPerSecond = 111
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37544486; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.908817
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37650299; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.908817
 CNTKCommandTrainEnd: Train
 
 
