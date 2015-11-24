@@ -917,7 +917,7 @@ public:
     ConfigValue operator()(const std::wstring& name,
                            const wchar_t* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -931,7 +931,7 @@ public:
     ConfigValue operator()(const std::wstring& name,
                            const char* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -1135,6 +1135,10 @@ public:
     {
         std::string value = Find(key);
         return !_stricmp(compareValue.c_str(), value.c_str());
+    }
+    bool Match(const std::wstring& key, const std::wstring& compareValue) const
+    {
+        return Match(string(key.begin(), key.end()), msra::strfun::utf8(compareValue));
     }
 
     // return the entire path to this config element
@@ -1350,10 +1354,12 @@ public:
 };
 
 // get config sections that define files (used for readers)
-void GetFileConfigNames(const ConfigParameters& readerConfig,
+template<class ConfigRecordType>
+void GetFileConfigNames(const ConfigRecordType& readerConfig,
                         std::vector<std::wstring>& features,
                         std::vector<std::wstring>& labels);
-void FindConfigNames(const ConfigParameters& config, std::string key,
+template<class ConfigRecordType>
+void FindConfigNames(const ConfigRecordType& config, std::string key,
                      std::vector<std::wstring>& names);
 
 // Version of argument vectors that preparse everything instead of parse on demand
