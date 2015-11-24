@@ -20,7 +20,7 @@ namespace Microsoft
             {
                 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(GPUMatrixConstructorNoFlag)
+				BOOST_FIXTURE_TEST_CASE(GPUMatrixConstructorNoFlag, RandomSeedFixture)
 				{
                     // TODO: consider splitting into several tests
 					GPUMatrix<float> m0(c_deviceIdZero);
@@ -41,7 +41,7 @@ namespace Microsoft
 					BOOST_CHECK(m1.IsEqualTo(m1Copy));
                 }
 
-				BOOST_AUTO_TEST_CASE(GPUMatrixConstructorFlagNormal)
+				BOOST_FIXTURE_TEST_CASE(GPUMatrixConstructorFlagNormal, RandomSeedFixture)
 				{
                     std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
                     GPUMatrix<float> m(2, 3, c_deviceIdZero, array.data(), matrixFlagNormal);
@@ -50,7 +50,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL_COLLECTIONS(result.get(), result.get() + 6, array.begin(), array.end());
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixIdentityAndZero)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixIdentityAndZero, RandomSeedFixture)
                 {
                     // TODO: consider splitting into two separate tests?
                     const int size = 60;
@@ -72,7 +72,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixElementWiseOperations)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixElementWiseOperations, RandomSeedFixture)
                 {
                     const float val = 3.0;
                     const int rows = 16;
@@ -103,7 +103,7 @@ namespace Microsoft
                     // TODO: add other element wise operations?
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixInplaceOperations)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixInplaceOperations, RandomSeedFixture)
                 {
                     const float val = 0.42f;
                     const int rows = 16;
@@ -145,7 +145,7 @@ namespace Microsoft
                     // TODO: there are two more inplace operations. Test these? compare to CPU results?
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixAddAndSub)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixAddAndSub, RandomSeedFixture)
                 {
                     std::array<float, 6> array0 = { 1, 2, 3, 4, 5, 6 };
                     GPUMatrix<float> m0(2, 3, c_deviceIdZero, array0.data(), matrixFlagNormal);
@@ -201,7 +201,7 @@ namespace Microsoft
                     BOOST_CHECK(m3.IsEqualTo(m0));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixNorms)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixNorms, RandomSeedFixture)
                 {
                     std::array<float, 6> array = {
                         1, 4, 2, 
@@ -278,11 +278,11 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(5, b.MatrixNorm0());
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixRandomUniform)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniform, RandomSeedFixture)
                 {
                     const float low = -0.035f;
                     const float high = 0.035f;
-                    auto m = GPUMatrix<float>::RandomUniform(768, 50, c_deviceIdZero, low, high, 1L);
+                    auto m = GPUMatrix<float>::RandomUniform(768, 50, c_deviceIdZero, low, high, IncrementCounter());
                     unique_ptr<float[]> result(m.CopyToArray());
 
                     for (int i = 0; i < 768 * 50; ++i)
@@ -292,7 +292,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixColumnSlice)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixColumnSlice, RandomSeedFixture)
                 {
                     std::array<float, 6> array = {
                         1, 4, 2,
@@ -311,7 +311,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(m3));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixRowSlice)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRowSlice, RandomSeedFixture)
                 {
                     std::array<float, 15> array0 = {
                         1, 2, 3, 
@@ -354,7 +354,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(m4));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixKhatriRaoProduct)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixKhatriRaoProduct, RandomSeedFixture)
                 {
                     std::array<float, 12> arrayA = {
                         0.8147f, 0.9058f, 0.1270f, 0.9134f, 
@@ -384,7 +384,7 @@ namespace Microsoft
                     BOOST_CHECK(c.IsEqualTo(d, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixAddColumnReshapeProductOf)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixAddColumnReshapeProductOf, RandomSeedFixture)
                 {
                     // tests column-wise reshaped product. Used to compute KhatriRaoProduct Gradient
                     std::array<float, 12> arrayA = {
@@ -426,7 +426,7 @@ namespace Microsoft
                     BOOST_CHECK(c.IsEqualTo(d1, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixInnerProduct)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixInnerProduct, RandomSeedFixture)
                 {
                     std::array<float, 6> array = {
                         1, 4, 2,
@@ -446,7 +446,7 @@ namespace Microsoft
                     BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixAssignRepeatOf)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixAssignRepeatOf, RandomSeedFixture)
                 {
                     std::array<float, 6> array0 = {
                         1, 2, 
@@ -473,10 +473,10 @@ namespace Microsoft
                     BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixRowElementOperations)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRowElementOperations, RandomSeedFixture)
                 {
-                    GPUMatrix<float> m0 = GPUMatrix<float>::RandomUniform(20, 28, c_deviceIdZero, -1, 1);
-                    GPUMatrix<float> m1 = GPUMatrix<float>::RandomUniform(1, 28, c_deviceIdZero, 1, 2);
+                    GPUMatrix<float> m0 = GPUMatrix<float>::RandomUniform(20, 28, c_deviceIdZero, -1, 1, IncrementCounter());
+                    GPUMatrix<float> m1 = GPUMatrix<float>::RandomUniform(1, 28, c_deviceIdZero, 1, 2, IncrementCounter());
 
                     GPUMatrix<float> m2(c_deviceIdZero);
                     m2.SetValue(m0);
@@ -486,10 +486,10 @@ namespace Microsoft
                     BOOST_CHECK(m0.IsEqualTo(m2, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUMatrixColumnElementOperations)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixColumnElementOperations, RandomSeedFixture)
                 {
-                    GPUMatrix<float> m0 = GPUMatrix<float>::RandomUniform(20, 28, c_deviceIdZero, -1, 1);
-                    GPUMatrix<float> m1 = GPUMatrix<float>::RandomUniform(20, 1, c_deviceIdZero, 1, 2);
+                    GPUMatrix<float> m0 = GPUMatrix<float>::RandomUniform(20, 28, c_deviceIdZero, -1, 1, IncrementCounter());
+                    GPUMatrix<float> m1 = GPUMatrix<float>::RandomUniform(20, 1, c_deviceIdZero, 1, 2, IncrementCounter());
 
                     GPUMatrix<float> m2(c_deviceIdZero);
                     m2.SetValue(m0);
@@ -497,6 +497,42 @@ namespace Microsoft
                     m2.ColumnElementDivideBy(m1);
 
                     BOOST_CHECK(m0.IsEqualTo(m2, c_epsilonFloatE4));
+                }
+
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingFloat, RandomSeedFixture)
+                {
+                    const float low = 0;
+                    const float high = 1;
+                    const unsigned long seedUsed = 1;
+                    const unsigned long seedIgnored = 4711;
+
+                    // The current GPUMatrix implementation uses a static RNG.
+
+                    GPUMatrix<float>::ResetCurandObject(seedUsed, __FUNCTION__);
+                    auto m1 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+
+                    GPUMatrix<float>::ResetCurandObject(seedUsed, __FUNCTION__);
+                    auto m2 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+
+                    BOOST_CHECK(m1.IsEqualTo(m2));
+                }
+
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
+                {
+                    const double low = 0;
+                    const double high = 1;
+                    const unsigned long seedUsed = 1;
+                    const unsigned long seedIgnored = 4711;
+
+                    // The current GPUMatrix implementation uses a static RNG.
+
+                    GPUMatrix<double>::ResetCurandObject(seedUsed, __FUNCTION__);
+                    auto m1 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+
+                    GPUMatrix<double>::ResetCurandObject(seedUsed, __FUNCTION__);
+                    auto m2 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+
+                    BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
                 BOOST_AUTO_TEST_SUITE_END()

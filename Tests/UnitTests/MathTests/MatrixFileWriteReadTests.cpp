@@ -27,9 +27,9 @@ namespace Microsoft
 			{
 				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(CPUMatrixFileWriteRead)
+				BOOST_FIXTURE_TEST_CASE(CPUMatrixFileWriteRead, RandomSeedFixture)
 				{
-					CPUMatrix<float> matrixCpu = CPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
+					CPUMatrix<float> matrixCpu = CPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
 					CPUMatrix<float> matrixCpuCopy = matrixCpu;
 					
 					std::wstring fileNameCpu(L"MCPU.txt");
@@ -44,10 +44,10 @@ namespace Microsoft
                     BOOST_CHECK(matrixCpuCopy.IsEqualTo(matrixCpuRead, c_epsilonFloatE5));
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixFileWriteRead)
+				BOOST_FIXTURE_TEST_CASE(MatrixFileWriteRead, RandomSeedFixture)
 				{
 					//Test Matrix in Dense mode
-					Matrix<float> matrix = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
+					Matrix<float> matrix = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
 					Matrix<float> matrixCopy = matrix;
 
 					std::wstring fileName(L"M.txt");
@@ -62,7 +62,7 @@ namespace Microsoft
                     BOOST_CHECK(matrixRead.IsEqualTo(matrixCopy, c_epsilonFloatE5));
 
 					//Test Matrix in Sparse mode
-					Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
+					Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f, IncrementCounter());
 					Matrix<float> matrixSparseCopy = matrixSparse;
 
 					matrixSparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
@@ -84,9 +84,9 @@ namespace Microsoft
 
 				BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(GPUMatrixFileWriteRead)
+				BOOST_FIXTURE_TEST_CASE(GPUMatrixFileWriteRead, RandomSeedFixture)
 				{
-					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, c_deviceIdZero, -26.3f, 30.2f);
+					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, c_deviceIdZero, -26.3f, 30.2f, IncrementCounter());
 					GPUMatrix<float> matrixGpuCopy = matrixGpu;
 
 					std::wstring filenameGpu(L"MGPU.txt");
