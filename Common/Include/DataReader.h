@@ -64,7 +64,6 @@ public:
     typedef unsigned int LabelIdType;
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
-    bool     mDoRandomize = true;
 
     virtual void Init(const ConfigParameters& /*config*/) = 0;
     virtual void Destroy() = 0;
@@ -99,8 +98,6 @@ public:
     virtual bool CanReadFor(wstring /* nodeName */) { return false; }
 
     bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/) { NOT_IMPLEMENTED; }
-
-    void SetDoRandomize(bool b){ mDoRandomize = b; }
 
     // Workaround for the two-forward-pass sequence and ctc training, which
     // allows processing more utterances at the same time. Only used in
@@ -143,10 +140,14 @@ class DataReader: public IDataReader<ElemType>, protected Plugin
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-public:
+private:
     vector<wstring> m_ioNames;
-    map<wstring, IDataReader<ElemType> *> m_dataReader;  // readers
-    map<wstring, ConfigParameters> m_configure; 
+    map<wstring, IDataReader<ElemType> *> m_dataReaders;    // readers
+    //map<wstring, ConfigParameters> m_configure;             // configuration parameters for each sub-reader
+
+    // construct a raw data reader from a dynamic library
+    void GetDataReader(const ConfigParameters& config);
+
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
     // Sample format below for UCIReader:
@@ -172,10 +173,9 @@ public:
     //]
     virtual void Init(const ConfigParameters& config);
 
-    void GetDataReader(const ConfigParameters& config);
-
     // Destroy - cleanup and remove this class
-    // NOTE: this destroys the object, and it can't be used past this point
+    // NOTE: this destroys the object, and it can't be used past this point.
+    // The reason why this is not just a destructor is that it goes across a DLL boundary.
     virtual void Destroy();
 
     /// number of utterances per minibatch, for data parallelsim
