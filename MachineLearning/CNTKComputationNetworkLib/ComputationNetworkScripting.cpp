@@ -73,9 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else                // oops, a different node with the same name
                     LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
 
-            // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
+            // If node derives from ILateAttachingNode() then it has unresolved inputs. Resolve them now.
             // This may generate a whole new load of nodes, including nodes which in turn have late init.
-            // TODO: think this through whether it may generate circular references nevertheless
             let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
             if (lateAttachingNode)
                 lateAttachingNode->LateAttachInputs();

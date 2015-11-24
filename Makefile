@@ -186,7 +186,6 @@ CNTKMATH:=cntkmath
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/BestGpu.cpp \
 	Common/ConfigFile.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
@@ -431,6 +430,7 @@ CNTK_SRC =\
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
+	Common/BestGpu.cpp \
 	Common/MPIWrapper.cpp \
 
 

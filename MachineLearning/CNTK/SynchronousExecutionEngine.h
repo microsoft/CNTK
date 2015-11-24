@@ -22,7 +22,7 @@ class SynchronousNodeEvaluator : public NDLNodeEvaluator<ElemType>
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
     // Constructor - create evaluator
-    SynchronousNodeEvaluator(ComputationNetwork& cn) : m_net(cn)
+    SynchronousNodeEvaluator(ComputationNetworkPtr cn) : m_net(cn)
     { }
 
     // Evaluate - evaluate a node and translate into underlying 
@@ -69,7 +69,7 @@ public:
 
                 // In this example, in the call D=Times(A.B,X.B), we need to resolve A.B and X.B appropriately.
                 // Specifically, "A.B" must be resolved to the fully qualified name "C.A.B", whereas "X.B" must be resolved to the fully qualified name "P.B".
-                // We then use this fully-qualified name to look up this node in the model (using "m_net.GetNodeFromName").
+                // We then use this fully-qualified name to look up this node in the model (using "m_net->GetNodeFromName").
 
                 std::size_t firstDotPos = name.find_first_of(".");
                 if (firstDotPos == std::string::npos)
@@ -105,9 +105,9 @@ public:
             }
 
             // fully qualified names can be looked up in the model
-            if (m_net.NodeNameExist(wname))
+            if (m_net->NodeNameExist(wname))
             {
-                void* np = (void*)m_net.GetNodeFromName(wname);
+                void* np = (void*)m_net->GetNodeFromName(wname);
                 nodeParam->SetEvalValue(np);
             }
             // NOTE: there is a bug here, we allow an abbreviated node reference (i.e. L1.BFF) based on return values in NDL 
@@ -170,9 +170,9 @@ public:
                     // check for the fully quantified name in the computation network
                     // this is needed for MEL processing, since CN nodes names can be used as parameters in MEL
                     std::wstring wname = msra::strfun::utf16(name);
-                    if (m_net.NodeNameExist(wname))
+                    if (m_net->NodeNameExist(wname))
                     {
-                        void* np = (void*)m_net.GetNodeFromName(wname).get();
+                        void* np = (void*)m_net->GetNodeFromName(wname).get();
                         // if we don't have a resolve node, it's because the name didn't exist in NDL
                         if (!nodeResolve)
                             nodeResolve = nodeParam;
@@ -276,15 +276,15 @@ public:
             std::string value = param->GetValue();
             if (!_stricmp(value.c_str(), "feature"))
             {
-                SetOutputNode(m_net.FeatureNodes(), compNode);
+                SetOutputNode(m_net->FeatureNodes(), compNode);
             }
             else if (!_stricmp(value.c_str(), "label"))
             {
-                SetOutputNode(m_net.LabelNodes(), compNode);
+                SetOutputNode(m_net->LabelNodes(), compNode);
             }
             else if (!_stricmp(value.c_str(), "criteria"))
             {
-                SetOutputNode(m_net.FinalCriterionNodes(), compNode);
+                SetOutputNode(m_net->FinalCriterionNodes(), compNode);
             }
             else if (!_stricmp(value.c_str(), "multiseq"))
             {
@@ -292,11 +292,11 @@ public:
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {
-                SetOutputNode(m_net.EvaluationNodes(), compNode);
+                SetOutputNode(m_net->EvaluationNodes(), compNode);
             }
             else if (!_stricmp(value.c_str(), "output"))
             {
-                SetOutputNode(m_net.OutputNodes(), compNode);
+                SetOutputNode(m_net->OutputNodes(), compNode);
             }
         }
 
@@ -321,8 +321,8 @@ public:
     // returns - pointer to the matching EvalValue for that node, of NULL if not found
     virtual void* FindSymbol(const wstring& symbol)
     {
-        if (m_net.NodeNameExist(symbol))
-            return m_net.GetNodeFromName(symbol).get();
+        if (m_net->NodeNameExist(symbol))
+            return m_net->GetNodeFromName(symbol).get();
         return nullptr;
     }
 
@@ -331,7 +331,7 @@ public:
     }
 
 private:
-    ComputationNetwork& m_net;
+    ComputationNetworkPtr m_net;
     void operator=(const SynchronousNodeEvaluator&);
 };
 
@@ -343,29 +343,25 @@ class SynchronousExecutionEngine : public IExecutionEngine<ElemType>
 public:
     SynchronousExecutionEngine(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, unsigned long randomSeedOffset=0)
     {
-        m_computationNetwork = new ComputationNetwork(deviceId);
+        m_computationNetwork = make_shared<ComputationNetwork>(deviceId);
         m_computationNetwork->SetRandomSeedOffset(randomSeedOffset);
-        m_ownNetwork = true;
-        m_nodeEvaluator = new SynchronousNodeEvaluator<ElemType>(*m_computationNetwork);
+        m_nodeEvaluator = new SynchronousNodeEvaluator<ElemType>(m_computationNetwork);
     }
 
-    SynchronousExecutionEngine(ComputationNetwork* computationNetwork)
+    SynchronousExecutionEngine(ComputationNetworkPtr computationNetwork)
     {
         m_computationNetwork = computationNetwork;
-        m_ownNetwork = false;
-        m_nodeEvaluator = new SynchronousNodeEvaluator<ElemType>(*m_computationNetwork);
+        m_nodeEvaluator = new SynchronousNodeEvaluator<ElemType>(m_computationNetwork);
     }
 
     virtual ~SynchronousExecutionEngine()
     { 
-        if (m_ownNetwork)
-            delete m_computationNetwork;
         delete m_nodeEvaluator;
     }
 
-    ComputationNetwork& GetComputationNetwork()
+    ComputationNetworkPtr GetComputationNetwork()
     {
-        return *m_computationNetwork;
+        return m_computationNetwork;
     }
 
     NDLNodeEvaluator<ElemType>& GetNodeEvaluator()
@@ -374,8 +370,7 @@ public:
     }
 
 private:
-    bool m_ownNetwork;
-    ComputationNetwork* m_computationNetwork;
+    ComputationNetworkPtr m_computationNetwork;
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
 protected:
     // Copy constructor, should never be called.
