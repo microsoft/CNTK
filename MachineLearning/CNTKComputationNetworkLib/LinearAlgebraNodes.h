@@ -488,6 +488,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //after multiplication the structure is lost
             m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
+
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        {
+            Base::AllocateGradientMatricesForChildren(matrixPool);
+
+            //this is a special handling case. We need to set the sparse property here so that it will not be shared.
+            if (Inputs(1)->FunctionValues().GetMatrixType() == SPARSE && Inputs(0)->GradientValues().GetMatrixType() == DENSE)
+                Inputs(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+        }
     };
 
     template class TimesNode<float>; 

@@ -138,8 +138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     public:
-        const ElemType* NzValues() const { return m_pArray; }
-        inline ElemType* NzValues() { return m_pArray; }
+        const ElemType* NzValues() const { return m_nzValues; }
+        inline ElemType* NzValues() { return m_nzValues; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
@@ -170,6 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         int m_colIdx; //used to SetValue()
         size_t m_compIndexSize;
+        ElemType* m_nzValues;
 
         //non-zero values are stored in m_pArray
         CPUSPARSE_INDEX_TYPE *m_unCompIndex; //row/col ids in CSC/CSR format

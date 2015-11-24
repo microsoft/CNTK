@@ -899,7 +899,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_gradientValues != nullptr && m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
                     ReleaseMatrixToPool(m_gradientValues, matrixPool);
 
-                ReleaseMatrixToPool(m_functionValues, matrixPool);
+                if (m_functionValues->GetMatrixType() != SPARSE)
+                    ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;

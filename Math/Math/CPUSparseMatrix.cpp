@@ -117,6 +117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pArray = NULL;
             m_blockIds = NULL;
         }
+        m_nzValues = NULL;
     }
 
     //should only be used by constructors.
@@ -183,12 +184,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_colIdx = moveFrom.m_colIdx;
         m_pArray = moveFrom.m_pArray;
+        m_nzValues = moveFrom.m_nzValues;
         m_unCompIndex = moveFrom.m_unCompIndex;
         m_compIndex = moveFrom.m_compIndex;
 
         m_blockSize = moveFrom.m_blockSize;
         m_blockIdShift = moveFrom.m_blockIdShift;
-        m_pArray = moveFrom.m_pArray;
         m_blockIds = moveFrom.m_blockIds;
 
         //release the pointer from the source object so that the destructor won't release it twice
@@ -216,12 +217,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_colIdx = moveFrom.m_colIdx;
             m_pArray = moveFrom.m_pArray;
+            m_nzValues = moveFrom.m_nzValues;
             m_unCompIndex = moveFrom.m_unCompIndex;
             m_compIndex = moveFrom.m_compIndex;
 
             m_blockSize = moveFrom.m_blockSize;
             m_blockIdShift = moveFrom.m_blockIdShift;
-            m_pArray = moveFrom.m_pArray;
             m_blockIds = moveFrom.m_blockIds;
 
             //release the pointer from the source object so that the destructor won't release it twice
@@ -250,6 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 delete[] m_pArray; 
                 m_pArray = nullptr;
+                m_nzValues = nullptr;
 
                 delete[] m_unCompIndex; 
                 m_unCompIndex = nullptr;
@@ -261,6 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 delete[] m_pArray; 
                 m_pArray = nullptr;
+                m_nzValues = nullptr;
 
                 delete[] m_blockIds; 
                 m_blockIds = nullptr;
@@ -391,6 +394,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_format == MatrixFormat::matrixFormatSparseCSC)
         {
             slice.m_pArray = m_pArray;
+            slice.m_nzValues = m_pArray + m_compIndex[startColumn];  //note: m_compIndex is always against  m_pArray
             slice.m_unCompIndex = m_unCompIndex;
             slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
             slice.m_externalBuffer = true;
@@ -431,6 +435,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             slice.m_pArray = m_pArray + startColBlock * m_numRows;
+            slice.m_nzValues = slice.m_pArray;
             slice.m_blockIds = m_blockIds + startColBlock; //the value stored in the block id is based on the original column numbers
             slice.m_blockSize = (size_t)max((long long)0, endColBlock - startColBlock);
             slice.m_blockIdShift = m_blockIdShift + startColumn;
@@ -560,22 +565,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_nz > 0)
                 {
                     assert(m_compIndexSize > 0 && m_nz < numNZElemToReserve);
-                    memcpy(pArray, m_pArray, NzSize());
+                    memcpy(pArray, m_nzValues, NzSize());
                     memcpy(unCompIndex, m_unCompIndex, MajorIndexSize());
                     memcpy(compIndex, m_compIndex, SecondaryIndexSize());
                 }
 
-                if (m_pArray != NULL)
-                    delete [] m_pArray;
-                if (m_unCompIndex != NULL)
-                    delete [] m_unCompIndex;
-                if (m_compIndex != NULL)
-                    delete [] m_compIndex;
-                m_pArray = NULL;
-                m_unCompIndex = NULL;
-                m_compIndex = NULL;
+                delete [] m_pArray;
+                delete [] m_unCompIndex;
+                delete [] m_compIndex;
 
                 m_pArray = pArray;
+                m_nzValues = m_pArray;
                 m_unCompIndex = unCompIndex;
                 m_compIndex = compIndex;
             }
@@ -590,7 +590,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
                     assert(m_compIndexSize > 0 && m_elemSizeAllocated < numNZElemToReserve);
-                    memcpy(blockVal, m_pArray, NzSize());
+                    memcpy(blockVal, m_nzValues, NzSize());
                     memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
                 }
 
@@ -598,6 +598,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 delete[] m_blockIds;
 
                 m_pArray = blockVal;
+                m_nzValues = m_pArray;
                 m_blockIds = blockIds;
             }
 
@@ -1181,18 +1182,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifndef USE_MKL
-            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_nzValues), 1);
 #else  
-            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_nzValues), 1);
 #endif
         }
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
-            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_nzValues), 1);
 #else
-            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_nzValues), 1);
 #endif
         }
     }
@@ -1335,6 +1336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUSparseMatrix<char>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
     template CPUSparseMatrix<char>::CPUSparseMatrix(MatrixFormat);
     template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const &);
+    template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> &&);
     template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
     template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
     template char* CPUSparseMatrix<char>::BufferPointer() const;
