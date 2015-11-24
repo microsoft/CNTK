@@ -112,7 +112,9 @@ public:
      {
      }
 
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);

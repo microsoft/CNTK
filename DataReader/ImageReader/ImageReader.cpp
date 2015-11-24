@@ -67,7 +67,7 @@ public:
 
         m_jitterType = ParseJitterType(config("jitterType", ""));
 
-        if (!config.ExistsCurrent("hflip"))
+        if (!config.ExistsCurrent(L"hflip"))
             m_hFlip = m_cropType == CropType::Random;
         else
             m_hFlip = std::stoi(config("hflip")) != 0;

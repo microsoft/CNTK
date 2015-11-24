@@ -410,7 +410,8 @@ void SequenceReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -476,7 +477,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         // if we have labels, we need a label Mapping file, it will be a file with one label per line
         if (m_labelInfo[index].type != labelNone)
         {
-            std::wstring wClassFile = readerConfig("wordclass", "");
+            std::wstring wClassFile = readerConfig(L"wordclass", "");
             nwords = labelConfig[index]("labelDim");
             if (wClassFile != L""){
                 ReadClassInfo(wClassFile, class_size,
@@ -546,14 +547,14 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_endReached = false;
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig(L"file");
     if (m_traceLevel > 0)
     {
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
@@ -565,7 +566,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     /// read unk sybol
-    mUnk = readerConfig("unk", "<unk>");
+    mUnk = readerConfig(L"unk", "<unk>");
 
 }
 
@@ -672,7 +673,7 @@ template<class ElemType>
 void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
 {
     // check for a writer tag first (lets us know we are caching)
-    if (!readerConfig.Exists("writerType"))
+    if (!readerConfig.Exists(L"writerType"))
         return;
 
     // first try to open the binary cache
@@ -682,10 +683,10 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
         // TODO: need to go down to all levels, maybe search for sectionType
         ConfigArray filesList(',');
         vector<std::wstring> names;
-        if (readerConfig.Exists("wfile"))
+        if (readerConfig.Exists(L"wfile"))
         {
-            filesList.push_back(readerConfig("wfile"));
-            if (fexists(readerConfig("wfile")))
+            filesList.push_back(readerConfig(L"wfile"));
+            if (fexists(readerConfig(L"wfile")))
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
@@ -1349,7 +1350,8 @@ template class SequenceReader<double>;
 template class SequenceReader<float>;
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -1402,7 +1404,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         LogicError("unsupported format %s", mode.c_str()); 
 
     /// read unk sybol
-    this->mUnk = readerConfig("unk", "<unk>");
+    this->mUnk = readerConfig(L"unk", "<unk>");
 
     class_size = 0;
     m_featureDim = featureConfig("dim");
@@ -1433,7 +1435,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         // if we have labels, we need a label Mapping file, it will be a file with one label per line
         if (m_labelInfo[index].type != labelNone)
         {
-            std::wstring wClassFile = readerConfig("wordclass", "");
+            std::wstring wClassFile = readerConfig(L"wordclass", "");
             nwords = labelConfig[index]("labelDim");
             if (wClassFile != L""){
                 ReadClassInfo(wClassFile, class_size,
@@ -1507,12 +1509,12 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_endReached = false;
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             ;
@@ -1523,7 +1525,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
         else
         {
-            ;//readerConfig("randomize");
+            ;//readerConfig(L"randomize");
         }
     }
     else
@@ -1535,7 +1537,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file", "");
+    std::wstring m_file = readerConfig(L"file", "");
     if (m_traceLevel > 0)
     {
         fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
@@ -1546,7 +1548,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", "1");
 }
 
 template<class ElemType>

@@ -136,7 +136,8 @@ void LibSVMBinaryReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void LibSVMBinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     m_labelDim = 2; // maximum label ID we will ever see (used for array dimensions)
     std::vector<std::wstring> features;
@@ -167,11 +168,11 @@ void LibSVMBinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_partialMinibatch = m_endReached = false;
     m_labelType = labelCategory;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel", "0");
+    m_traceLevel = readerConfig(L"traceLevel", "0");
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             m_randomizeRange = randomizeNone;
@@ -182,7 +183,7 @@ void LibSVMBinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
         else
         {
-            m_randomizeRange = readerConfig("randomize");
+            m_randomizeRange = readerConfig(L"randomize");
         }
     }
     else
@@ -190,7 +191,7 @@ void LibSVMBinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
         m_randomizeRange = randomizeNone;
     }
 
-    std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
 

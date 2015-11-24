@@ -413,7 +413,9 @@ private:
     bool CheckEndDataset(size_t actualmbsize);
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy();
     BinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { }
     virtual ~BinaryReader();
@@ -455,7 +457,9 @@ private:
     Section* CreateSection(const ConfigParameters& config, Section* parentSection, size_t p_records, size_t p_windowSize=0);
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     // DataWriter Constructor
     // config - [in] configuration parameters for the datareader 
     BinaryWriter(const ConfigParameters& config)

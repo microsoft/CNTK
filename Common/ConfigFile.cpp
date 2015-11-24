@@ -234,12 +234,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto pair = *iter;
             ConfigParameters temp (iter->second);
             // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
-            if (temp.ExistsCurrent("dim"))
+            if (temp.ExistsCurrent(L"dim"))
             {
-                if (temp.ExistsCurrent("labelMappingFile") 
-                    || temp.ExistsCurrent("labelDim")
-                    || temp.ExistsCurrent("labelType")
-                    || (temp.ExistsCurrent("sectionType") && temp("sectionType") == "labels"))
+                if (temp.ExistsCurrent(L"labelMappingFile") 
+                    || temp.ExistsCurrent(L"labelDim")
+                    || temp.ExistsCurrent(L"labelType")
+                    || (temp.ExistsCurrent(L"sectionType") && temp("sectionType") == "labels"))
                 {
                     labels.push_back(msra::strfun::utf16(iter->first));
                 }

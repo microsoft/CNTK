@@ -6,6 +6,7 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataWriter.h"
+#include "ScriptableObjects.h"
 #include <map>
 #include <vector>
 
@@ -37,7 +38,10 @@ private:
 public:
     using LabelType = typename IDataWriter<ElemType>::LabelType;
     using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
-    virtual void Init(const ConfigParameters& writerConfig);
+    template<class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType & writerConfig);
+    virtual void Init(const ConfigParameters & config) { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) { InitFromConfig(config); }
     virtual void Destroy();
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);

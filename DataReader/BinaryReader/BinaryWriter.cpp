@@ -95,7 +95,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // determine the element size, default to ElemType size
     size_t elementSize = sizeof(ElemType);
-    if (config.ExistsCurrent("elementSize"))
+    if (config.ExistsCurrent(L"elementSize"))
     {
         elementSize = config("elementSize");
     }
@@ -103,7 +103,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     // get the number of records we should expect (max)
     // if defined in previous levels same number will be used
     size_t records = p_records;
-    if (config.ExistsCurrent("wrecords"))
+    if (config.ExistsCurrent(L"wrecords"))
     {
         records = config("wrecords");
     }
@@ -114,14 +114,14 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     }
 
     size_t dim=1; // default dimension (single item)
-    if (config.ExistsCurrent("dim"))
+    if (config.ExistsCurrent(L"dim"))
     {
         dim = config("dim");
     }
 
     // get the section type (used for caching)
     SectionType sectionType = sectionTypeNull;
-    if (config.ExistsCurrent("sectionType"))
+    if (config.ExistsCurrent(L"sectionType"))
     {
         SectionType foundType = sectionTypeNull;
         std::string type = config("sectionType");
@@ -150,7 +150,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // filename to use the one defined at this level, if there is none use the parent file
     SectionFile* file = NULL;
-    if (config.ExistsCurrent("wfile"))
+    if (config.ExistsCurrent(L"wfile"))
     {
         std::wstring wfile = config("wfile");
         auto secFile = m_secFiles.find(wfile);
@@ -213,7 +213,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // get the window size, to see if we want to do separate element mapping
     size_t windowSize = p_windowSize;
-    if (config.ExistsCurrent("windowSize"))
+    if (config.ExistsCurrent(L"windowSize"))
     {
         windowSize = config("windowSize");
     }

@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         udims.clear();
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        ConfigArray outputNames = writerConfig(L"outputNodeNames","");
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
 

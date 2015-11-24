@@ -26,6 +26,7 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "commandArgUtil.h" // for ConfigParameters
+#include "ScriptableObjects.h"
 #include <map>
 #include <string>
 
@@ -53,7 +54,8 @@ public:
     typedef std::string LabelType;
     typedef unsigned int LabelIdType;
 
-    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Init(const ConfigParameters & writerConfig) = 0;
+    virtual void Init(const ScriptableObjects::IConfigRecord & writerConfig) = 0;
     virtual void Destroy() = 0;
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
@@ -124,7 +126,9 @@ private:
     //  ]
     //  
     //]
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void GetDataWriter(const ConfigParameters& config);
 

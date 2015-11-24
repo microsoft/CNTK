@@ -747,6 +747,18 @@ public:
     // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
     template<class V> static const V & Array(const V & vec) { return vec; }
 
+    // get the names of all members in this record (but not including parent scopes)
+    vector<wstring> GetMemberIds() const
+    {
+        vector<wstring> ids;
+        for (auto iter = begin(); iter != end(); ++iter)
+        {
+            auto id = iter->first;
+            ids.push_back(wstring(id.begin(), id.end()));
+        }
+        return ids;
+    }
+
 public:
     // explicit copy function. Only to be used when a copy must be made.
     // this also clears out the parent pointer, so only local configs can be used
