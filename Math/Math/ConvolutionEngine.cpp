@@ -47,7 +47,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
             assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c());
-            out.Reshape(outT.c(), outputSizePerChannel * batchSize);
+
+            // GPU and 1-dimensional image
+            bool m_1DConvolutionOnGPUSparse = (inT.h() == 1 &&
+                in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                in.GetMatrixType() == MatrixType::SPARSE);
+
+            out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+
+            // Reshaping is only necessary if we are going to use the unpacking trick
+            if (!m_1DConvolutionOnGPUSparse)
+                out.Reshape(outT.c(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
@@ -60,10 +70,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Mat inputSubBatch;
-                // This is a temporary work-around to make convolution work for sparse matrices.
-                // AssignPackedConvolutionInput only supports dense matrix input today. So convert
-                // to dense if input matrix is sparse. Allocating/de-allocating memory is costly.
-                // So for dense matrices operate on the slice directly.
+
+                // We optimize for three different scenarios here by handling them slightly differently.
+                // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
+                // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
+                // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
                 if (in.GetMatrixType() == MatrixType::DENSE)
                     inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
                 else
@@ -71,14 +82,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 }
-                m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                    inT.w(), inT.h(), inT.c(),
-                    outT.w(), outT.h(), outT.c(),
-                    filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
-                    convDesc.padding());
-                
-                Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
-                Mat::Multiply(filter, false, m_tempMatrix, false, outputSubBatch);
+
+                if (m_1DConvolutionOnGPUSparse)
+                {
+                    if (filterT.w() * inT.c() != filter.GetNumCols())
+                        LogicError("Kernel width and weight matrix dimensions don't match.");
+
+                    Mat outputSubBatch = out.ColumnSlice(startSampleId, smallBatchSize);
+                    Mat::ConvolveAndWeightedAdd(1, filter, inputSubBatch, 0, outputSubBatch,
+                        convDesc.wStride() * inT.c(), convDesc.padding());
+                }
+                else
+                {
+                    m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                        inT.w(), inT.h(), inT.c(),
+                        outT.w(), outT.h(), outT.c(),
+                        filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
+                        convDesc.padding());
+
+                    Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
+                    Mat::Multiply(filter, false, m_tempMatrix, false, outputSubBatch);
+                }
             }
 
             out.Reshape(outT.c() * outputSizePerChannel, batchSize);  //each sample becomes a column

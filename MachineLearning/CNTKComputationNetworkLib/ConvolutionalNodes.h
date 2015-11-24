@@ -483,24 +483,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
-        {
-            //m_poolEng->Backward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.channels,
-                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
-                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
-        void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-        {
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
-            m_inT->setN(batchSize);
-            m_outT->setN(batchSize);
-            assert(m_poolEng != nullptr);
-            m_poolEng->Forward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
-        }
-
         void InferImageDimsFromInputs() override
         {
             Base::InferImageDimsFromInputs();
@@ -530,14 +512,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
-        {
-            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.GetNumChannels(),
-                                                          m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
-                                                          m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_outputSizePerSample, 
-                                                          m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
         void InferImageDimsFromInputs() override
         {
             Base::InferImageDimsFromInputs();
@@ -563,9 +537,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0)
         {
         }
-
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor) :
             Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
+        {
+        }
+        BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"))
         {
         }
 

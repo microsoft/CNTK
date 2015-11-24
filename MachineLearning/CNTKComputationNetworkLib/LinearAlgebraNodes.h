@@ -137,7 +137,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // None of the input nodes are convolutional.
                     if (cols0 == 1)
+                    {
+                        functionValues.Reshape(rows0, rows1 * cols1 / rows0);
                         functionValues.AssignSumOf(inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0), inputFunctionValues0);
+                    }
                     else
                     {
                         functionValues.Reshape(rows1, rows0 * cols0 / rows1);
