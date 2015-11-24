@@ -319,7 +319,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     m_labelType = labelCategory;
     m_featureCount = vdim;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig(L"traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
     // set the feature count to at least one (we better have one feature...)
