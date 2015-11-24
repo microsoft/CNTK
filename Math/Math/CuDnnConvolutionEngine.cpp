@@ -294,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(biasT.w() == 1);
             assert(biasT.h() == 1);
             assert(biasT.n() == 1);
-            assert(outT.w() * out.h() * out.c() == out.GetNumRows());
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
             assert(outT.n() == out.GetNumCols());
 
             CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(outT), ptr(out), &C::Zero, t(outT), ptr(dst)));

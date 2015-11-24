@@ -485,23 +485,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        virtual void BackpropToV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
-        {
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputSampleLayout.GetNumChannels(),
-                                                      m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
-        virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-        {
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
-            m_inT->setN(batchSize);
-            m_outT->setN(batchSize);
-            assert(m_poolEng != nullptr);
-            m_poolEng->Forward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
-        }
-
         void InferImageDimsFromInputs() override
         {
             Base::InferImageDimsFromInputs();
@@ -531,14 +514,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        virtual void BackpropToV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
-        {
-            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputSampleLayout.GetNumChannels(),
-                                                          m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                          m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                          m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
         virtual bool OutputUsedInComputingInputNodesGradients() const override
         {
             // The AveragePoolingNode does not require its output value for computing
@@ -554,12 +529,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-        {
-            functionValues.AssignAveragePoolingResult(input0, m_inputSampleLayout.GetNumChannels(),
-                                                      m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         void InferImageDimsFromInputs() override
         {
             Base::InferImageDimsFromInputs();
@@ -585,9 +554,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0)
         {
         }
-
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor) :
             Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
+        {
+        }
+        BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"))
         {
         }
 
