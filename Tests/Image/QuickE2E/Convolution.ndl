@@ -45,7 +45,7 @@ DNN=[
     pool2H = 2
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+    pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
 
     h1Dim = 128
     # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
