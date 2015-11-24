@@ -51,7 +51,7 @@ namespace Microsoft {
                 int noise_sample_size;
                 noiseSampler<long> m_noiseSampler;
 
-                map<string, int> nBests;
+                map<wstring, int> nBests;
                 bool compare_val(const ElemType& first, const ElemType& second);
 
                 void SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest = 1);

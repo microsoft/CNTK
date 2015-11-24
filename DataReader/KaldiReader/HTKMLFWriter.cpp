@@ -61,24 +61,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ConfigParameters thisOutput = writerConfig(outputNames[i]);
 
             if (thisOutput.Exists("dim"))
-                udims.push_back(thisOutput("dim"));
+                udims.push_back(thisOutput(L"dim"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer need to specify dim of output");
             if (thisOutput.Exists("file"))
-                scriptpaths.push_back(thisOutput("file"));
+                scriptpaths.push_back(thisOutput(L"file"));
             else if (thisOutput.Exists("scpFile"))
-                scriptpaths.push_back(thisOutput("scpFile"));
+                scriptpaths.push_back(thisOutput(L"scpFile"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer needs to specify scpFile for output");
             
             if (thisOutput.Exists("Kaldicmd"))
             {
-                kaldicmd.push_back(thisOutput("Kaldicmd"));
+                kaldicmd.push_back(thisOutput(L"Kaldicmd"));
             }
  
             outputNameToIdMap[outputNames[i]]= i;
             outputNameToDimMap[outputNames[i]]=udims[i];
-            wstring type = thisOutput("type","Real");
+            wstring type = thisOutput(L"type","Real");
             if (type == L"Real")
             {
                 outputNameToTypeMap[outputNames[i]] = OutputTypes::outputReal;

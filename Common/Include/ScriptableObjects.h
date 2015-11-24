@@ -372,6 +372,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         template<class T> std::vector<T> operator()(const wstring & id, const std::vector<T> & defaultValue) const;
         bool ExistsCurrent(const wstring & id) const;
         bool Exists(const wstring & id) const { return Find(id) != nullptr; }
+        bool Match(const wstring & id, const wstring & compareValue) const;
+        const std::string ConfigName() const;
         static const IConfigRecord & Record();
         template<class V> static const std::vector<typename V::value_type> & Array(const V & vec);
     };
@@ -664,7 +666,17 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 return true;
         return false;
     }
-    /*static*/ inline const IConfigRecord & IConfigRecord::Record()   // empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
+    inline bool IConfigRecord::Match(const wstring & id, const wstring & compareValue) const
+    {
+        auto * valp = Find(id);
+        wstring val = valp ? *valp : wstring();
+        return !_wcsicmp(compareValue.c_str(), val.c_str());
+    }
+    inline const string IConfigRecord::ConfigName() const
+    {
+        LogicError("ConfigName not supported by BrainScript.");         // needed in BinaryWriter
+    }
+    /*static*/ inline const IConfigRecord & IConfigRecord::Record()     // empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
     {
         static struct EmptyConfigRecord : public IConfigRecord
         {

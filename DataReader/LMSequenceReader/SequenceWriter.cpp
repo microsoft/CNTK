@@ -36,22 +36,22 @@ namespace Microsoft {
                 return (first < second);
             }
 
-            template<class ElemType>
-            void LMSequenceWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+            template<class ElemType> template<class ConfigRecordType>
+            void LMSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig)
             {
                 udims.clear();
 
-                ConfigArray outputNames = writerConfig(L"outputNodeNames", "");
+                vector<wstring> outputNames = writerConfig(L"outputNodeNames", ConfigRecordType::Array(stringargvector()));
                 if (outputNames.size()<1)
                     RuntimeError("writer needs at least one outputNodeName specified in config");
 
                 foreach_index(i, outputNames) // inputNames should map to node names
                 {
-                    ConfigParameters thisOutput = writerConfig(outputNames[i]);
-                    outputFiles[outputNames[i]] = thisOutput("file");
-                    int iN = thisOutput("nbest", "1");
+                    const ConfigRecordType & thisOutput = writerConfig(outputNames[i]);
+                    outputFiles[outputNames[i]] = (const wstring &)thisOutput(L"file");
+                    int iN = thisOutput(L"nbest", 1);
                     nBests[outputNames[i]] = iN;
-                    wstring fname = thisOutput("token");
+                    wstring fname = thisOutput(L"token");
                     /// read unk sybol
                     mUnk[outputNames[i]] = writerConfig(L"unk", "<unk>");
 
@@ -116,9 +116,9 @@ namespace Microsoft {
 
                 for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                 {
-                    string outputName = ws2s(iter->first);
+                    wstring outputName = iter->first;
                     Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
-                    wstring outFile = outputFiles[s2ws(outputName)];
+                    wstring outFile = outputFiles[outputName];
 
                     SaveToFile(outFile, outputData, idx4word[iter->first], nBests[outputName]);
                 }

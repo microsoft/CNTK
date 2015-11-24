@@ -100,9 +100,8 @@ protected:
     bool   m_idx2probRead;
     std::wstring m_file; 
 public:
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-
+    using LabelType   = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
     map<string, int> word4idx;
     map<int, string> idx4word;
@@ -373,7 +372,9 @@ public:
             m_featureTemp.clear();
     };
    
-    void Init(const ConfigParameters& readerConfig);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     void Reset();
 
     /// return length of sentences size
