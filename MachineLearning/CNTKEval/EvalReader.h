@@ -76,9 +76,8 @@ public:
 
     }
 
-    virtual void Init(const ConfigParameters& /*config*/)
-    {
-    }
+    virtual void Init(const ConfigParameters & /*config*/) override { }
+    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { }
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
@@ -89,7 +88,8 @@ public:
 
     // EvalReader Constructor
     // config - [in] configuration parameters for the datareader 
-    EvalReader(const ConfigParameters& config)
+    template<class ConfigRecordType>
+    EvalReader(const ConfigRecordType& config)
     {
         m_recordCount = m_currentRecord = 0;
         Init(config);
