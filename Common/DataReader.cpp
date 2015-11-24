@@ -37,80 +37,66 @@ void DataReader<ElemType>::Destroy()
     /// newer code that explicitly place multiple streams for inputs
     foreach_index(i, m_ioNames) // inputNames should map to node names
     {
-        m_dataReader[m_ioNames[i]]->Destroy();
+        m_dataReaders[m_ioNames[i]]->Destroy();
     }
 }
 
 // DataReader Constructor
 // config - [in] string  of options (i.e. "filename=data.txt") data reader specific 
+// Only called from DataReader constructor
 template<class ElemType>
 void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
 {
     typedef void(*GetReaderProc)(IDataReader<ElemType>** preader);
 
-    // initialize just in case
-    m_dataReader.clear();
-
-    mNbrUttPerMinibatch = config("nbruttsineachrecurrentiter", "1");
-    if (config.Exists("randomize"))
-    {
-        string randomizeString = config("randomize");
-        if (randomizeString == "None")
-        {
-            this->mDoRandomize = false;
-        }
-        else if (randomizeString == "Auto")
-        {
-            this->mDoRandomize = true;
-        }
-    }
-
-
-    // create a variable of each type just to call the proper templated version
-    ElemType elemType = ElemType();
+    assert(m_dataReaders.empty());
 
     ConfigArray ioNames = config("readers", "");
     if (ioNames.size() > 0)
     {
         /// newer code that explicitly place multiple streams for inputs
-        foreach_index(i, ioNames) // inputNames should map to node names
+        for (const auto & ioName : ioNames) // inputNames should map to node names
         {
-            ConfigParameters thisIO = config(ioNames[i]);
+            ConfigParameters thisIO = config(ioName);
             // get the name for the reader we want to use, default to UCIFastReader
-            GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(thisIO("readerType", "UCIFastReader"), GetReaderName(elemType));
-            //assert(getReaderProc != NULL);
-            m_configure[ioNames[i]] = thisIO;
-            m_ioNames.push_back(ioNames[i]);
-            getReaderProc(&m_dataReader[ioNames[i]]);
+            GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(thisIO("readerType", "UCIFastReader"), GetReaderName((ElemType)0));
+            //m_configure[ioName] = thisIO;
+            m_ioNames.push_back(ioName);
+            getReaderProc(&m_dataReaders[ioName]);  // instantiates the reader with the default constructor (no config processed at this point)
         }
     }
     else
     {
         wstring ioName = L"ioName";
-        /// backward support to use only one type of data reader
+        // backward support to use only one type of data reader
         // get the name for the reader we want to use, default to UCIFastReader
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType));
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName((ElemType)0));
         //assert(getReaderProc != NULL);
-        m_configure[ioName] = config;
+        //m_configure[ioName] = config;
         m_ioNames.push_back(ioName);
-        getReaderProc(&m_dataReader[ioName]);
+        getReaderProc(&m_dataReaders[ioName]);
     }
 
 }
 
 // DataReader Constructor
-// options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific 
+// options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
 template<class ElemType>
 DataReader<ElemType>::DataReader(const ConfigParameters& config)
 {
     GetDataReader(config);
+
     // now pass that to concurrent reader so we can read ahead
     //m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
     // NOW we can init
-    for (size_t i = 0; i < m_ioNames.size(); i++)
+    for (const auto & ioName : m_ioNames)
     {
-        m_dataReader[m_ioNames[i]]->Init(m_configure[m_ioNames[i]]);
-        m_dataReader[m_ioNames[i]]->SetNumParallelSequences(mNbrUttPerMinibatch);
+        const ConfigParameters & thisIO = config("readers", "").size() > 0 ? config(ioName) : config/*legacy*/;
+        m_dataReaders[ioName]->Init(thisIO);
+
+        // pass on some global option    --TODO: Why is this not done inside each reader??
+        mNbrUttPerMinibatch = config("nbruttsineachrecurrentiter", "1");
+        m_dataReaders[ioName]->SetNumParallelSequences(mNbrUttPerMinibatch);
     }
 }
 template<class ElemType>
@@ -127,9 +113,9 @@ DataReader<ElemType>::~DataReader()
 {
     // free up resources
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->Destroy(); 
+        m_dataReaders[m_ioNames[i]]->Destroy(); 
 
-    m_dataReader.clear(); 
+    m_dataReaders.clear(); 
 }
 
 //StartMinibatchLoop - Startup a minibatch loop 
@@ -140,7 +126,7 @@ template<class ElemType>
 void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+        m_dataReaders[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
 //SupportsDistributedMBRead - Tells if the reader supports distributed minibatch reading for parallel training
@@ -150,8 +136,8 @@ bool DataReader<ElemType>::SupportsDistributedMBRead() const
     bool supportsDistributedMBRead = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
-        auto currReaderIter = m_dataReader.find(m_ioNames[i]);
-        assert(currReaderIter != m_dataReader.end());
+        auto currReaderIter = m_dataReaders.find(m_ioNames[i]);
+        assert(currReaderIter != m_dataReaders.end());
 
         supportsDistributedMBRead &= currReaderIter->second->SupportsDistributedMBRead();
     }
@@ -170,7 +156,7 @@ void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t e
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
-        m_dataReader[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
+        m_dataReaders[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
     }
 }
 
@@ -197,9 +183,9 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         if (nbr > 0)
-            m_dataReader[m_ioNames[i]]->SetNumParallelSequences(nbr);
-        bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch(matrices);
-        thisNbr = m_dataReader[m_ioNames[i]]->GetNumParallelSequences();
+            m_dataReaders[m_ioNames[i]]->SetNumParallelSequences(nbr);
+        bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch(matrices);
+        thisNbr = m_dataReaders[m_ioNames[i]]->GetNumParallelSequences();
         if (nbr > 0 && thisNbr != nbr)
             LogicError("DataReader<ElemType>::GetMinibatch: The specified number of utterances per minibatch is not consistent to the actual number of utterances per minibatch");
         nbr = thisNbr;
@@ -218,7 +204,7 @@ bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::db
 	bool bRet = true;
 	for (size_t i = 0; i < m_ioNames.size(); i++)
 	{
-		bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
+		bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
 	}
 	return bRet;
 }
@@ -232,7 +218,7 @@ bool DataReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm * hmm)
 	bool bRet = true;
 	for (size_t i = 0; i < m_ioNames.size(); i++)
 	{
-		bRet &= m_dataReader[m_ioNames[i]]->GetHmmData(hmm);
+		bRet &= m_dataReaders[m_ioNames[i]]->GetHmmData(hmm);
 	}
 	return bRet;	
 }
@@ -243,7 +229,7 @@ size_t DataReader<ElemType>::GetNumParallelSequences()
     size_t nNbr = 0; 
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
-        IDataReader<ElemType> * ptr = m_dataReader[m_ioNames[i]];
+        IDataReader<ElemType> * ptr = m_dataReaders[m_ioNames[i]];
         if (nNbr == 0)
             nNbr = ptr->GetNumParallelSequences();
         if (nNbr != ptr->GetNumParallelSequences())
@@ -257,7 +243,7 @@ bool DataReader<ElemType>::RequireSentenceSeg() const
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = ans || m_dataReader.find(m_ioNames[i])->second->RequireSentenceSeg();  // can't say m_dataReader[] since that is non-const...
+        ans = ans || m_dataReaders.find(m_ioNames[i])->second->RequireSentenceSeg();  // can't say m_dataReaders[] since that is non-const...
     return ans;
 }
 
@@ -265,7 +251,7 @@ template<class ElemType>
 void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->InitProposals(matrices);
+        m_dataReaders[m_ioNames[i]]->InitProposals(matrices);
 }
 
 template<class ElemType>
@@ -273,7 +259,7 @@ int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
     int iRet = -1;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        iRet = m_dataReader[m_ioNames[i]]->GetSentenceEndIdFromOutputLabel();
+        iRet = m_dataReaders[m_ioNames[i]]->GetSentenceEndIdFromOutputLabel();
     return iRet;
 }
 
@@ -282,7 +268,7 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        bRet &= m_dataReader[m_ioNames[i]]->GetProposalObs(matrices, tidx, history);
+        bRet &= m_dataReaders[m_ioNames[i]]->GetProposalObs(matrices, tidx, history);
     return bRet;
 }
 
@@ -291,14 +277,14 @@ void DataReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     // BUGBUG: This copies all data reader's layout info on top of each other, keeping only the last one; likely not what was intended.
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->CopyMBLayoutTo(pMBLayout);
+        m_dataReaders[m_ioNames[i]]->CopyMBLayoutTo(pMBLayout);
 }
 
 template<class ElemType>
 void DataReader<ElemType>::SetRandomSeed(int seed)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetRandomSeed(seed);
+        m_dataReaders[m_ioNames[i]]->SetRandomSeed(seed);
 }
 
 template<class ElemType>
@@ -309,7 +295,7 @@ bool DataReader<ElemType>::GetMinibatchCopy(
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, pMBLayout) || ans);
+        ans = (m_dataReaders[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, pMBLayout) || ans);
     return ans;
 }
 
@@ -321,7 +307,7 @@ bool DataReader<ElemType>::SetNetOutput(
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, pMBLayout) || ans);
+        ans = (m_dataReaders[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, pMBLayout) || ans);
     return ans;
 }
 
@@ -340,7 +326,7 @@ template<class ElemType>
 void DataReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetLabelMapping(sectionName, labelMapping);
+        m_dataReaders[m_ioNames[i]]->SetLabelMapping(sectionName, labelMapping);
 }
 
 // GetData - Gets metadata from the specified section (into CPU memory) 
@@ -356,7 +342,7 @@ bool DataReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRe
 {
     bool bRet = true; 
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        bRet &= m_dataReader[m_ioNames[i]]->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
+        bRet &= m_dataReaders[m_ioNames[i]]->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
     return bRet;
 }
 
@@ -365,7 +351,7 @@ bool DataReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        bRet &= m_dataReader[m_ioNames[i]]->DataEnd(endDataType);
+        bRet &= m_dataReaders[m_ioNames[i]]->DataEnd(endDataType);
     return bRet;
 }
 
