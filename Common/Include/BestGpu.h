@@ -8,12 +8,16 @@
 
 // #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
 #include "CommonMatrix.h"
+#include "commandArgUtil.h"
+#include "ScriptableObjects.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef CPUONLY
-    DEVICEID_TYPE DeviceFromConfig(const class ConfigParameters& config);
+    DEVICEID_TYPE DeviceFromConfig(const ConfigParameters & config);
+    DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config);
 #else
-    static inline DEVICEID_TYPE DeviceFromConfig(const class ConfigParameters& /*config*/) { return -1/*CPUDEVICE*/; }    // tells runtime system to not try to use GPUs
+    template<class ConfigRecordType>
+    static inline DEVICEID_TYPE DeviceFromConfig(const ConfigRecordType & /*config*/) { return -1/*CPUDEVICE*/; }    // tells runtime system to not try to use GPUs
     // TODO: find a way to use CPUDEVICE without a huge include overhead; OK so far since CPUONLY mode is sorta special...
 #endif
 }}}

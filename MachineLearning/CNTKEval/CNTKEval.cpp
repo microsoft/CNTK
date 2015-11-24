@@ -58,7 +58,7 @@ template<class ElemType>
 void CNTKEval<ElemType>::Destroy()
 {
     // cleanup everything
-    delete m_net;   // TODO: use shared_ptr
+    m_net.reset();
     delete m_reader;
     delete m_writer;
     delete this;
@@ -71,11 +71,7 @@ void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
     fprintf(stderr, "DeviceID=%d\n", (int)deviceId);
-    if (m_net != NULL)
-        delete m_net;
-    m_net = new ComputationNetwork(deviceId);
-    m_net->LoadFromFile<ElemType>(modelFileName);
-    m_net->ResetEvalTimeStamp();
+    m_net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
 }
 
 // GetNodeDimensions - Get the node dimensions of the specified nodes
@@ -169,7 +165,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     m_writer->SetData(&outputs, &m_dimensions);
 
     // call the evaluator
-    SimpleOutputWriter<ElemType> eval(*m_net);
+    SimpleOutputWriter<ElemType> eval(m_net);
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
 }
 

@@ -147,7 +147,7 @@ public:
             search = symbol.substr(firstStart);
         }
 
-        ComputationNetwork* cn = netNdl->cn;
+        ComputationNetworkPtr cn = netNdl->cn;
         wstring name = msra::strfun::utf16(search);
         vector<ComputationNodeBasePtr> nodes = cn->GetNodesFromName(name);
         // didn't find the name in the current symbols, try NDL
@@ -378,7 +378,7 @@ public:
         }
     }
     
-    void OverrideModelNameAndSetDefaultModel(ComputationNetwork* cn, string modelName = "default")
+    void OverrideModelNameAndSetDefaultModel(ComputationNetworkPtr cn, string modelName = "default")
     {
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found != m_mapNameToNetNdl.end() && found->second.cn != cn)
@@ -583,7 +583,7 @@ public:
     // EvaluateNDLSnippet - evaluate the passed snippet of NDL into a computational network
     // script - [in] text of the NDL snippet
     // network - [in/out] computation network to insert NDL into
-    void EvaluateNDLSnippet(const ConfigValue& script, ComputationNetwork* network)
+    void EvaluateNDLSnippet(const ConfigValue& script, ComputationNetworkPtr network)
     {
         NDLUtil<ElemType> ndlUtil(network);
         ndlUtil.ProcessNDLConfig(script);
@@ -646,7 +646,7 @@ public:
                 // model1=[...] - Embedded NDL script
                 if (0 == foundBrace)
                 {
-                    ComputationNetwork* cn = new ComputationNetwork();
+                    ComputationNetworkPtr cn = make_shared<ComputationNetwork>();
                     EvaluateNDLSnippet(rightValue, cn);
                     OverrideModelNameAndSetDefaultModel(cn, key);
                 }

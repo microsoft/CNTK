@@ -109,10 +109,12 @@ public:
 
     // it auto-casts to the common types
     // Note: This is meant to read out a parameter once to assign it, instead of over again.
+#if 0
     operator std::string() const
     {
         return *this;
     } // TODO: does not seem to work
+#endif
 
     operator const char *() const
     {
@@ -317,7 +319,7 @@ public:
     ConfigParser(char separator, const std::wstring& configname)
         : m_separator(separator)
     {
-        m_configName = msra::strfun::utf8(configname);
+        m_configName = string(configname.begin(), configname.end());
     }
 
     ConfigParser(char separator)
@@ -656,7 +658,7 @@ public:
 
     void SetName(const std::wstring& name)
     {
-        m_configName = msra::strfun::utf8(name);
+        m_configName = string(name.begin(), name.end());
     }
 
     void SetName(const std::string& name)
@@ -735,11 +737,10 @@ public:
         return *this;
     }
 
-    // hide new so only stack allocated
-    void * operator new(size_t /*size*/)
-    {
-        return NULL;
-    }
+private:
+    // hide new so only stack allocated   --TODO: Why do we care?
+    void * operator new(size_t /*size*/);
+public:
 
     // used as default argument to operator(id, default) to retrieve ConfigParameters
     static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }
@@ -898,6 +899,7 @@ public:
     {
         return (find(name) != end());
     }
+    bool ExistsCurrent(const wchar_t * name) const { return ExistsCurrent(string(name, name + wcslen(name))); }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
@@ -930,14 +932,14 @@ public:
 
     // version for defaults with types
     template<typename Type>
-    Type operator()(const char * name,
+    Type operator()(const wchar_t * name,
                     const Type & defaultValue) const
     {
         // find the value
         // TODO: unify with the Find() function below
         for (auto * dict = this; dict; dict = dict->m_parent)
         {
-            auto iter = dict->find(name);
+            auto iter = dict->find(string(name, name + wcslen(name)));
             if (iter != dict->end())
             {
                 if (iter->second == "default")
@@ -1095,7 +1097,7 @@ public:
     // dict(name): read out a mandatory parameter value
     ConfigValue operator()(const std::wstring& name) const
     {
-        return operator()(msra::strfun::utf8(name));
+        return operator()(string(name.begin(), name.end()));
     }
 
     // dict(name): read out a mandatory parameter value

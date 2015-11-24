@@ -113,6 +113,12 @@ DataReader<ElemType>::DataReader(const ConfigParameters& config)
         m_dataReader[m_ioNames[i]]->SetNumParallelSequences(mNbrUttPerMinibatch);
     }
 }
+template<class ElemType>
+DataReader<ElemType>::DataReader(const ScriptableObjects::IConfigRecord &)
+{
+    bool x = false;
+    if (!x) NOT_IMPLEMENTED;/*the hoop avoids an unreachable-code warning which we don't care about here*/
+}
 
 
 // destructor - cleanup temp files, etc. 

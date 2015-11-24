@@ -58,6 +58,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & us = GetStaticInstance();
             if (!us.m_enabled)
                 return false;
+            // in case we are not able to estimate, we will increase as needed
+            // BUGBUG: This is a workaround because in BrainScript we cannot estimate the total number of epochs without actually running the actions.
+            if (currentStep + 1 > us.m_totalNumberOfSteps)
+                us.m_totalNumberOfSteps = currentStep + 1;
             // compute global progress
             bool needToPrint = us.m_progressTracingTimer.ElapsedSeconds() > 0;// 10;
             if (needToPrint)

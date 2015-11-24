@@ -49,15 +49,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SaveToFile(File& fstream) const
         {
+#if 1
+            // saving as 32-bit ints. This allows to continue to support the old format (size_t W, H, C)
+            fstream << (uint32_t)m_tensorDims.size();
+            for (auto dim : m_tensorDims)
+            {
+                if (dim > UINT32_MAX)
+                    LogicError("ImageLayout::SaveToFile(): Tensor dimension out of bounds (> 4G).");
+                fstream << (uint32_t)dim;
+            }
+#else
             // TODO: need to use a generic format
             assert(m_tensorDims.size() == 3);   // current format does not understand anything else
             fstream << m_tensorDims[1] << m_tensorDims[2] << m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+#endif
         }
         void LoadFromFile(File& fstream)
         {
+#if 1
+            // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
+            // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
+            uint32_t n, dim;
+            fstream >> n >> dim;
+            if (dim)        // heuristic to detect the old format. Old format stores a size_t, i.e. the second uint32_t is 0 (no dimensions are > 4G)
+            {
+                m_tensorDims.resize(n);
+                m_tensorDims[0] = dim;
+                for (size_t i = 1; i < n; i++)
+                {
+                    fstream >> dim;
+                    m_tensorDims[i] = dim;
+                }
+                assert(n == m_tensorDims.size());
+            }
+            else            // detected the old size_t W, H, C format
+            {
+                m_tensorDims.resize(3);     // current format is hard-coded for 3, for back compat
+                m_tensorDims[1] = n;
+                fstream >> m_tensorDims[2] >> m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+        }
+#else
             // TODO: need to use a generic format
             m_tensorDims.resize(3);     // current format is hard-coded for 3, for back compat
             fstream >> m_tensorDims[1] >> m_tensorDims[2] >> m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+#endif
         }
 
         // accessors
