@@ -36,8 +36,10 @@ static const std::size_t closingBraceVarSize = strlen(closingBraceVar);
 // str - string to trim
 // NOTE: if the entire string is empty, then the string will be set to an empty string
 void Trim(std::string& str);
+
 class ConfigValue;
 typedef std::map<std::string, ConfigValue, nocase_compare> ConfigDictionary;
+
 class ConfigParameters;
 std::string::size_type ParseKeyValue(const std::string& token,
                                      std::string::size_type pos,

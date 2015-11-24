@@ -41,13 +41,6 @@ void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType & writerConfig)
 }
 
 
-template<class ElemType>
-void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& /*config*/)
-{
-    NOT_IMPLEMENTED;
-}
-
-
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
 template<class ElemType>
@@ -61,7 +54,7 @@ void DataWriter<ElemType>::Destroy()
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
 template<class ElemType>
-DataWriter<ElemType>::DataWriter(const ConfigParameters& config)
+template<class ConfigRecordType> DataWriter<ElemType>::DataWriter(const ConfigRecordType & config)
 {
     Init(config);
 }

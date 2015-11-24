@@ -90,7 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DataReader<ElemType>* m_cachingReader;
         DataWriter<ElemType>* m_cachingWriter;
         ConfigParameters m_readerConfig;
-        void InitCache(const ConfigParameters& config);
+        void InitCache(const ConfigParameters & config);
+        void InitCache(const ScriptableObjects::IConfigRecord & config);
 
         size_t RandomizeSweep(size_t epochSample);
         bool Randomize() {return m_randomizeRange != randomizeNone;}
