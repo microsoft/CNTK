@@ -20,7 +20,7 @@ namespace Microsoft
             {
                 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(GPUBlasMultiplyAndWeightedAdd)
+				BOOST_FIXTURE_TEST_CASE(GPUBlasMultiplyAndWeightedAdd, RandomSeedFixture)
 				{
 					const float alpha = 2.0f;
 					const float beta = 0.42f;
@@ -39,7 +39,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(mr, c_epsilonFloatE4));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUBlasScale)
+				BOOST_FIXTURE_TEST_CASE(GPUBlasScale, RandomSeedFixture)
 				{
 					const float scale = 0.5f;
 					GPUMatrix<float> m0(12, 53, c_deviceIdZero);
@@ -51,7 +51,7 @@ namespace Microsoft
                     BOOST_CHECK(m0.IsEqualTo(mr, c_epsilonFloatE4));
                 }
 
-				BOOST_AUTO_TEST_CASE(GPUBlasInnerProduct)
+				BOOST_FIXTURE_TEST_CASE(GPUBlasInnerProduct, RandomSeedFixture)
 				{
                     GPUMatrix<float> m0(10, 10, c_deviceIdZero);
 					GPUMatrix<float> m1(10, 10, c_deviceIdZero);

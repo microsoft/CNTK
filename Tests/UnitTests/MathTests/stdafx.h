@@ -15,3 +15,4 @@
 #include <array>
 #include <boost/test/unit_test.hpp>
 #include "constants.h"
+#include "fixtures.h"

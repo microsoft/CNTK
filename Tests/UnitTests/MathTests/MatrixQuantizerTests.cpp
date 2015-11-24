@@ -394,9 +394,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         }
     }
 
-    BOOST_AUTO_TEST_SUITE(GPUMatrixSuite);
+    BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-    BOOST_AUTO_TEST_CASE(GPUMatrix1BitQuantizeFloat)
+    BOOST_FIXTURE_TEST_CASE(GPUMatrix1BitQuantizeFloat, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
@@ -412,7 +412,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         TestQuantization<float>(c_deviceIdZero, 100, 50, -0.5f, +0.5f, 2915, 5);
     }
 
-    BOOST_AUTO_TEST_CASE(GPUMatrix1BitQuantizeDouble)
+    BOOST_FIXTURE_TEST_CASE(GPUMatrix1BitQuantizeDouble, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
@@ -432,7 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
     BOOST_AUTO_TEST_SUITE(CPUMatrixSuite);
 
-    BOOST_AUTO_TEST_CASE(CPUMatrix1BitQuantizeFloat)
+    BOOST_FIXTURE_TEST_CASE(CPUMatrix1BitQuantizeFloat, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
@@ -448,7 +448,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         TestQuantization<float>(CPUDEVICE, 100, 50, -0.5f, +0.5f, 2915, 5);
     }
 
-    BOOST_AUTO_TEST_CASE(CPUMatrix1BitQuantizeDouble)
+    BOOST_FIXTURE_TEST_CASE(CPUMatrix1BitQuantizeDouble, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
