@@ -52,17 +52,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Create a Data Reader
     //DATAREADER_API IDataReader* DataReaderFactory(void)
 
-    template<class ElemType>
-        void HTKMLFReader<ElemType>::Init(const ConfigParameters& readerConfig)
+    template<class ElemType> template<class ConfigRecordType>
+        void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
         {
             m_mbiter = NULL;
             m_frameSource = NULL;
             //m_readAheadSource = NULL;
             m_lattices = NULL;
-            m_truncated = readerConfig("Truncated", "false");
+            m_truncated = readerConfig(L"Truncated", "false");
             m_convertLabelsToTargets = false;
 
-            m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+            m_numberOfuttsPerMinibatch = readerConfig(L"nbruttsineachrecurrentiter", "1");
 
             if (m_numberOfuttsPerMinibatch < 1)
             {
@@ -82,9 +82,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_noData = false;
 
 
-            string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
+            string command(readerConfig(L"action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
-            if (readerConfig.Exists("legacyMode"))
+            if (readerConfig.Exists(L"legacyMode"))
                 RuntimeError("legacy mode has been deprecated\n");
 
             if (command == "write"){
@@ -243,9 +243,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (iFeat!=scriptpaths.size() || iLabel!=mlfpathsmulti.size())
                 throw std::runtime_error(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
 
-            if (readerConfig.Exists("randomize"))
+            if (readerConfig.Exists(L"randomize"))
             {
-                const std::string& randomizeString = readerConfig("randomize");
+                const std::string& randomizeString = readerConfig(L"randomize");
                 if (randomizeString == "None")
                 {
                     randomize = randomizeNone;
@@ -256,30 +256,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    randomize = readerConfig("randomize");
+                    randomize = readerConfig(L"randomize");
                 }
             }
 
-            if (readerConfig.Exists("frameMode"))
+            if (readerConfig.Exists(L"frameMode"))
             {
-                const std::string& framemodeString = readerConfig("frameMode");
+                const std::string& framemodeString = readerConfig(L"frameMode");
                 if (framemodeString == "false")
                 {
                     framemode = false;
                 }
             }
 
-            int verbosity = readerConfig("verbosity","2");
+            int verbosity = readerConfig(L"verbosity","2");
 
             // determine if we partial minibatches are desired
-            std::string minibatchMode(readerConfig("minibatchMode","Partial"));
+            std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
             m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
             // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
-            std::string readMethod(readerConfig("readMethod","blockRandomize"));
+            std::string readMethod(readerConfig(L"readMethod","blockRandomize"));
 
             // see if they want to use readAhead
-            //m_readAhead = readerConfig("readAhead", "false");
+            //m_readAhead = readerConfig(L"readAhead", "false");
 
             // read all input files (from multiple inputs)
             // TO DO: check for consistency (same number of files in each script file)
@@ -308,8 +308,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 #ifdef _WIN32
 
-            if (readerConfig.Exists("unigram"))
-                unigrampath = readerConfig("unigram");
+            if (readerConfig.Exists(L"unigram"))
+                unigrampath = readerConfig(L"unigram");
 
             // load a unigram if needed (this is used for MMI training)
             msra::lm::CSymbolSet unigramsymbols;
@@ -343,8 +343,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             // get labels
 
-            //if (readerConfig.Exists("statelist"))
-            //    statelistpath = readerConfig("statelist");
+            //if (readerConfig.Exists(L"statelist"))
+            //    statelistpath = readerConfig(L"statelist");
 
             double htktimetoframe = 100000.0;           // default is 10ms 
             //std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
@@ -375,9 +375,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 std::string pageFilePath;
                 std::vector<std::wstring> pagePaths;
-                if (readerConfig.Exists("pageFilePath"))
+                if (readerConfig.Exists(L"pageFilePath"))
                 {
-                    pageFilePath = readerConfig("pageFilePath");
+                    pageFilePath = readerConfig(L"pageFilePath");
 
                     // replace any '/' with '\' for compat with default path
                     std::replace(pageFilePath.begin(), pageFilePath.end(), '/','\\'); 
@@ -1610,11 +1610,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto pair = *iter;
                 ConfigParameters temp = iter->second;
                 // see if we have a config parameters that contains a "file" element, it's a sub key, use it
-                if (temp.ExistsCurrent("scpFile"))
+                if (temp.ExistsCurrent(L"scpFile"))
                 {
                     features.push_back(msra::strfun::utf16(iter->first));
                 }
-                else if (temp.ExistsCurrent("mlfFile"))
+                else if (temp.ExistsCurrent(L"mlfFile"))
                 {
                     labels.push_back(msra::strfun::utf16(iter->first));
                 }

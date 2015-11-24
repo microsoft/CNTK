@@ -65,7 +65,8 @@ public:
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
 
-    virtual void Init(const ConfigParameters& /*config*/) = 0;
+    virtual void Init(const ConfigParameters & config) = 0;
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
     virtual void Destroy() = 0;
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
 
@@ -141,12 +142,8 @@ class DataReader: public IDataReader<ElemType>, protected Plugin
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
 private:
-    vector<wstring> m_ioNames;
+    vector<wstring> m_ioNames;                              // TODO: why are these needed, why not loop over m_dataReaders?
     map<wstring, IDataReader<ElemType> *> m_dataReaders;    // readers
-    //map<wstring, ConfigParameters> m_configure;             // configuration parameters for each sub-reader
-
-    // construct a raw data reader from a dynamic library
-    void GetDataReader(const ConfigParameters& config);
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
@@ -171,21 +168,24 @@ private:
     //      labelType=Category
     //  ]
     //]
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point.
     // The reason why this is not just a destructor is that it goes across a DLL boundary.
-    virtual void Destroy();
-
-    /// number of utterances per minibatch, for data parallelsim
-    size_t mNbrUttPerMinibatch;
+    virtual void Destroy() override;
 
 public:
     // DataReader Constructor
-    // config - [in] configuration parameters for the datareader 
-    DataReader(const ConfigParameters& config);
-    DataReader(const ScriptableObjects::IConfigRecord &);
+    // config - [in] configuration parameters for the datareader
+    template<class ConfigRecordType>
+    DataReader(const ConfigRecordType& config);
+    // constructor from Scripting
+    DataReader(const ScriptableObjects::IConfigRecordPtr configp) :
+        DataReader(*configp)
+    { }
     virtual ~DataReader();
 
     //StartMinibatchLoop - Startup a minibatch loop 

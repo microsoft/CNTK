@@ -307,9 +307,9 @@ void LUSequenceReader<ElemType>::ChangeMaping(const map<LabelType, LabelType>& m
     }
 }
 
-
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -326,8 +326,8 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
 
     {
-        wstring tInputLabel = readerConfig("inputLabel", L"");
-        wstring tOutputLabel = readerConfig("outputLabel", L"");
+        wstring tInputLabel = readerConfig(L"inputLabel", L"");
+        wstring tOutputLabel = readerConfig(L"outputLabel", L"");
 
         if (labels.size() == 2)
         {
@@ -421,7 +421,7 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
 
-    ConfigArray wContext = readerConfig("wordContext", "0");
+    ConfigArray wContext = readerConfig(L"wordContext", "0");
     intargvector wordContext = wContext;
     m_wordContext = wordContext;
 
@@ -429,7 +429,7 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig(L"file");
     if (m_traceLevel > 0)
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
 
@@ -437,12 +437,12 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
 
-    mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", "1");
 
     mRandomize = false;
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             ;
@@ -453,10 +453,10 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
 
-    mEqualLengthOutput = readerConfig("equalLength", "true");
-    mAllowMultPassData = readerConfig("dataMultiPass", "false");
+    mEqualLengthOutput = readerConfig(L"equalLength", "true");
+    mAllowMultPassData = readerConfig(L"dataMultiPass", "false");
 
-    mIgnoreSentenceBeginTag = readerConfig("ignoresentencebegintag", "false");
+    mIgnoreSentenceBeginTag = readerConfig(L"ignoresentencebegintag", "false");
 
 }
 
@@ -1143,7 +1143,7 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
 template<class ElemType>
 void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& readerConfig)
 {
-    mWordMappingFn = readerConfig("wordmap", "");
+    mWordMappingFn = readerConfig(L"wordmap", "");
     wstring si, so;
     wstring ss;
     vector<wstring> vs;
@@ -1164,7 +1164,7 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& re
         }
         fp.close();
     }
-    mUnkStr = (wstring)readerConfig("unk", "<unk>");
+    mUnkStr = (wstring)readerConfig(L"unk", "<unk>");
 }
 
 
@@ -1226,9 +1226,10 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetRandomSeed(int us)
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
-    ConfigArray ioNames = readerConfig("ioNodeNames", "");
+    ConfigArray ioNames = readerConfig(L"ioNodeNames", "");
     if (ioNames.size() > 0)
     {
         /// newer code that explicitly place multiple streams for inputs

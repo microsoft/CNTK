@@ -41,7 +41,7 @@ namespace Microsoft {
             {
                 udims.clear();
 
-                ConfigArray outputNames = writerConfig("outputNodeNames", "");
+                ConfigArray outputNames = writerConfig(L"outputNodeNames", "");
                 if (outputNames.size()<1)
                     RuntimeError("writer needs at least one outputNodeName specified in config");
 
@@ -53,7 +53,7 @@ namespace Microsoft {
                     nBests[outputNames[i]] = iN;
                     wstring fname = thisOutput("token");
                     /// read unk sybol
-                    mUnk[outputNames[i]] = writerConfig("unk", "<unk>");
+                    mUnk[outputNames[i]] = writerConfig(L"unk", "<unk>");
 
                     SequenceReader<ElemType>::ReadClassInfo(fname, class_size,
                         word4idx[outputNames[i]],

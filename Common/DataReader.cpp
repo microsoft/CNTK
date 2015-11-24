@@ -22,7 +22,8 @@ template<> std::string GetReaderName(float) {std::string name = "GetReaderF"; re
 template<> std::string GetReaderName(double) {std::string name = "GetReaderD"; return name;}
 
 template<class ElemType>
-void DataReader<ElemType>::Init(const ConfigParameters& /*config*/)
+template<class ConfigRecordType>
+void DataReader<ElemType>::InitFromConfig(const ConfigRecordType& /*config*/)
 {
     RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
@@ -42,69 +43,58 @@ void DataReader<ElemType>::Destroy()
 }
 
 // DataReader Constructor
-// config - [in] string  of options (i.e. "filename=data.txt") data reader specific 
-// Only called from DataReader constructor
+// options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
 template<class ElemType>
-void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
+template<class ConfigRecordType>
+DataReader<ElemType>::DataReader(const ConfigRecordType & config)
 {
     typedef void(*GetReaderProc)(IDataReader<ElemType>** preader);
 
     assert(m_dataReaders.empty());
 
-    ConfigArray ioNames = config("readers", "");
-    if (ioNames.size() > 0)
+    bool hasMultipleReaders = config.Exists(L"readers");
+    if (hasMultipleReaders)
     {
-        /// newer code that explicitly place multiple streams for inputs
+        vector<wstring> ioNames = config(L"readers", ConfigRecordType::Array(stringargvector()));
+        // newer code that explicitly place multiple streams for inputs
         for (const auto & ioName : ioNames) // inputNames should map to node names
         {
-            ConfigParameters thisIO = config(ioName);
+            const ConfigRecordType & thisIO = config(ioName);
             // get the name for the reader we want to use, default to UCIFastReader
-            GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(thisIO("readerType", "UCIFastReader"), GetReaderName((ElemType)0));
-            //m_configure[ioName] = thisIO;
+            GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(thisIO(L"readerType", L"UCIFastReader"), GetReaderName((ElemType)0));
             m_ioNames.push_back(ioName);
             getReaderProc(&m_dataReaders[ioName]);  // instantiates the reader with the default constructor (no config processed at this point)
         }
     }
-    else
+    else        // legacy
     {
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
         // get the name for the reader we want to use, default to UCIFastReader
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName((ElemType)0));
-        //assert(getReaderProc != NULL);
-        //m_configure[ioName] = config;
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"UCIFastReader"), GetReaderName((ElemType)0));
         m_ioNames.push_back(ioName);
         getReaderProc(&m_dataReaders[ioName]);
     }
 
-}
-
-// DataReader Constructor
-// options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
-template<class ElemType>
-DataReader<ElemType>::DataReader(const ConfigParameters& config)
-{
-    GetDataReader(config);
-
     // now pass that to concurrent reader so we can read ahead
     //m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
     // NOW we can init
+    // TODO: merge with the code above, but we first need to get the nbrUttPerMinibatch initialized inside each reader
     for (const auto & ioName : m_ioNames)
     {
-        const ConfigParameters & thisIO = config("readers", "").size() > 0 ? config(ioName) : config/*legacy*/;
+        const ConfigRecordType & thisIO = hasMultipleReaders ? config(ioName) : config/*legacy*/;
         m_dataReaders[ioName]->Init(thisIO);
 
         // pass on some global option    --TODO: Why is this not done inside each reader??
-        mNbrUttPerMinibatch = config("nbruttsineachrecurrentiter", "1");
-        m_dataReaders[ioName]->SetNumParallelSequences(mNbrUttPerMinibatch);
+        size_t nbrUttPerMinibatch = config(L"nbruttsineachrecurrentiter", (size_t)1);
+        m_dataReaders[ioName]->SetNumParallelSequences(nbrUttPerMinibatch);
     }
 }
-template<class ElemType>
-DataReader<ElemType>::DataReader(const ScriptableObjects::IConfigRecord &)
-{
-    bool x = false;
-    if (!x) NOT_IMPLEMENTED;/*the hoop avoids an unreachable-code warning which we don't care about here*/
-}
+
+template DataReader<float >::DataReader(const ConfigParameters &);
+template DataReader<double>::DataReader(const ConfigParameters &);
+template DataReader<float >::DataReader(const ScriptableObjects::IConfigRecord &);
+template DataReader<double>::DataReader(const ScriptableObjects::IConfigRecord &);
 
 
 // destructor - cleanup temp files, etc. 
@@ -113,15 +103,13 @@ DataReader<ElemType>::~DataReader()
 {
     // free up resources
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReaders[m_ioNames[i]]->Destroy(); 
-
-    m_dataReaders.clear(); 
+        m_dataReaders[m_ioNames[i]]->Destroy();
 }
 
-//StartMinibatchLoop - Startup a minibatch loop 
-// mbSize - [in] size of the minibatch (number of frames, etc.)
-// epoch - [in] epoch number for this loop
-// requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
+// StartMinibatchLoop - Startup a minibatch loop 
+//  mbSize - [in] size of the minibatch (number of frames, etc.)
+//  epoch - [in] epoch number for this loop
+//  requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 template<class ElemType>
 void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {

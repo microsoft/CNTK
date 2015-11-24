@@ -137,7 +137,9 @@ private:
 
     virtual bool ReadRecord(size_t readSample);
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy();
     LibSVMBinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
     virtual ~LibSVMBinaryReader();

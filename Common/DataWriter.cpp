@@ -21,7 +21,8 @@ template<> std::string GetWriterName(float) {std::string name = "GetWriterF"; re
 template<> std::string GetWriterName(double) {std::string name = "GetWriterD"; return name;}
 
 template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& /*config*/)
+template<class ConfigRecordType>
+void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType & /*config*/)
 {
     RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
@@ -89,11 +90,8 @@ template<class ElemType>
 DataWriter<ElemType>::~DataWriter()
 {
     // free up resources
-    if (m_dataWriter != NULL)
-    {
+    if (m_dataWriter)
         m_dataWriter->Destroy();
-        m_dataWriter = NULL;
-    }
 }
 
 // GetSections - Get the sections of the file

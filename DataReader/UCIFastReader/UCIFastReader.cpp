@@ -273,7 +273,8 @@ void UCIFastReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -318,15 +319,15 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_labelType = labelCategory;
     m_featureCount = vdim;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
     // set the feature count to at least one (we better have one feature...)
     assert (m_featureCount != 0);
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             m_randomizeRange = randomizeNone;
@@ -337,7 +338,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
         else
         {
-            m_randomizeRange = readerConfig("randomize");
+            m_randomizeRange = readerConfig(L"randomize");
         }
     }
     else
@@ -346,7 +347,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
 
     // determine if we partial minibatches are desired
-    std::string minibatchMode(readerConfig("minibatchMode","Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
     // get start and dimensions for labels and features
@@ -405,7 +406,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         {
             // only do label creation if we have the allow flag, should only be done as a separate command
             // to ensure that the label file will exist for verification step in training
-            bool allowLabelCreation = readerConfig("allowMapCreation","false");
+            bool allowLabelCreation = readerConfig(L"allowMapCreation","false");
             if (allowLabelCreation)
                 m_labelFileToWrite = labelPath;
             else
@@ -423,7 +424,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_labelDim = (LabelIdType)udim;
 
     mOneLinePerFile = false;
-    mOneLinePerFile = readerConfig("onelineperfile", "false");
+    mOneLinePerFile = readerConfig(L"onelineperfile", "false");
 
 }
 
@@ -433,7 +434,7 @@ template<class ElemType>
 void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
 {
     // check for a writer tag first (lets us know we are caching)
-    if (!readerConfig.Exists("writerType"))
+    if (!readerConfig.Exists(L"writerType"))
         return;
 
     // first try to open the binary cache
@@ -443,10 +444,10 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
         // TODO: need to go down to all levels, maybe search for sectionType
         ConfigArray filesList(',');
         vector<std::wstring> names;
-        if (readerConfig.Exists("wfile"))
+        if (readerConfig.Exists(L"wfile"))
         {
-            filesList.push_back(readerConfig("wfile"));
-            if (fexists(readerConfig("wfile")))
+            filesList.push_back(readerConfig(L"wfile"));
+            if (fexists(readerConfig(L"wfile")))
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);

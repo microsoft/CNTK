@@ -33,8 +33,8 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 }
 
 
-template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+template<class ElemType> template<class ConfigRecordType>
+void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType & writerConfig)
 {
     m_dataWriter = new HTKMLFWriter<ElemType>();
     m_dataWriter->Init(writerConfig);

@@ -408,11 +408,11 @@ void DoCreateLabelMap(const ConfigParameters& config)
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
-        if (labelConfig.ExistsCurrent("labelMappingFile"))
+        if (labelConfig.ExistsCurrent(L"labelMappingFile"))
         {
             labelMappingFile = labelConfig(L"labelMappingFile");
         }
-        else if (readerConfig.ExistsCurrent("labelMappingFile"))
+        else if (readerConfig.ExistsCurrent(L"labelMappingFile"))
         {
             labelMappingFile = labelConfig(L"labelMappingFile");
         }
@@ -1436,7 +1436,7 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
 static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
 {
-    if (TopLevelConfig.ExistsCurrent("Truncated"))
+    if (TopLevelConfig.ExistsCurrent(L"Truncated"))
     {
         return;
     }

@@ -52,7 +52,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numFiles;
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        ConfigArray outputNames = writerConfig(L"outputNodeNames","");
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
 

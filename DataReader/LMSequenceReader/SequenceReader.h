@@ -218,7 +218,9 @@ protected:
     bool SentenceEnd();
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     static void ReadClassInfo(const wstring & vocfile, int& class_size,
         map<string, int>& word4idx,
         map<int, string>& idx4word,

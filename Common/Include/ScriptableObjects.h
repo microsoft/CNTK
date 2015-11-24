@@ -250,6 +250,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // If you encounter this, instead say 'us = (double)((const wstring&)arg).size();' with a &. Don't forget the const (I have seen broken typecasts without).
         operator const IConfigRecord &() const { return AsRef<IConfigRecord>(); }
         operator const ConfigArray &() const { return AsRef<ConfigArray>(); }
+        operator const wstring &() const { return AsRef<wstring>(); }       // somehow operator T() does not work here, still giving ambiguous messages. This makes it work. Probably not generic. Need to fix this.
         operator double() const { return AsRef<Double>(); }
         operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }
@@ -471,6 +472,16 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 failfn(L"index out of bounds");
             return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
         }
+#if 0
+        // get an entire array into a std::vector. Note that this will force all values to be evaluated.
+        template<typename C>
+        std::vector<C> AsVector() const
+        {
+            if (firstIndex != 0)
+                InvalidArgument("ConfigArray::AsVector(): First index must be 0.");
+            return vector<C>(values.begin(), values.end());
+        }
+#endif
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -643,7 +654,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         if (range.first != 0) valp->Fail(L"This array is expected to begin with index 0.");
         std::vector<T> res(range.second + 1);
         for (int i = range.first; i <= range.second; i++)
-            res[i] = arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
+            res[i] = (const T &)arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
         return res;
     }
     inline bool IConfigRecord::ExistsCurrent(const wstring & id) const // this is inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.

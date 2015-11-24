@@ -31,8 +31,6 @@
 #include <vld.h> // for memory leak detection
 #endif
 
-
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Create a Data Writer
@@ -51,11 +49,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
         
-        m_verbosity = writerConfig("verbosity", "2");
-        m_overflowValue = writerConfig("overflowValue", "50");
-        m_maxNumOverflowWarning = writerConfig("maxNumOverflowWarning", "10");
+        m_verbosity = writerConfig(L"verbosity", "2");
+        m_overflowValue = writerConfig(L"overflowValue", "50");
+        m_maxNumOverflowWarning = writerConfig(L"maxNumOverflowWarning", "10");
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        ConfigArray outputNames = writerConfig(L"outputNodeNames","");
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
         int counter = 0;

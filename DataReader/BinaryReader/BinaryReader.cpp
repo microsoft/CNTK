@@ -59,16 +59,17 @@ void BinaryReader<ElemType>::LoadSections(Section* sectionRoot, MappingType mapp
 //  }
 //]
 template<class ElemType>
-void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BinaryReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // load in all the file config info for the root level
     std::vector<std::wstring> fileConfigs;
-    ConfigArray files(readerConfig("file"),',');
+    ConfigArray files(readerConfig(L"file"),',');
     mOneLinePerFile = false;
-    mOneLinePerFile = readerConfig("onelineperfile", "false");
-    m_dim = readerConfig("dim", "20");
+    mOneLinePerFile = readerConfig(L"onelineperfile", "false");
+    m_dim = readerConfig(L"dim", "20");
     m_totalSamples = 0;
-    size_t windowSize = readerConfig("windowSize","0");
+    size_t windowSize = readerConfig(L"windowSize","0");
     MappingType mapping = windowSize?mappingElementWindow:mappingSection;
 
     if (mOneLinePerFile)
@@ -111,10 +112,10 @@ void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
     // initialize all the variables
     m_mbStartSample = m_epoch = m_epochStartSample = 0;
     m_partialMinibatch = false;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel","0");
 
     // determine if partial minibatches are desired
-    std::string minibatchMode(readerConfig("minibatchMode","Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
     // Initial load is complete
