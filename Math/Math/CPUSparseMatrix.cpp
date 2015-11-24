@@ -432,7 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             slice.m_pArray = m_pArray + startColBlock * m_numRows;
             slice.m_blockIds = m_blockIds + startColBlock; //the value stored in the block id is based on the original column numbers
-            slice.m_blockSize = (size_t)max(0, endColBlock - startColBlock);
+            slice.m_blockSize = (size_t)max((long long)0, endColBlock - startColBlock);
             slice.m_blockIdShift = m_blockIdShift + startColumn;
             slice.m_externalBuffer = true;
             slice.m_nz = slice.m_blockSize * m_numRows;
