@@ -760,8 +760,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader->GetHmmData(hmm);
         }
 
-		isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
-		if (isSequenceTrainingCriterion)
+		bool isCTCTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
+        if (isCTCTrainingCriterion)
 		{
 			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
 			auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);

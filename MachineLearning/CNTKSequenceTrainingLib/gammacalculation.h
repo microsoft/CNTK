@@ -381,7 +381,7 @@ namespace msra { namespace lattices {
 				size_t mbsize = numcols / samplesInRecurrentStep;
 				if (samplesInRecurrentStep > 1)
 				{
-					assert(mbsize == sentenceSeg.GetNumCols());
+                    //assert(mbsize == pMBLayout->GetNumCols());
 				}
 
 				size_t mapi = 0;
