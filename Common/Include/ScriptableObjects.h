@@ -650,7 +650,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         if (!valp)
             return defaultValue;                // default value
         if (!valp->Is<ConfigArray>())
-            return std::vector<T>(1, (T)*valp); // scalar value
+            return std::vector<T>(1, (const T &)*valp); // scalar value
         const ConfigArray & arr = *valp;        // actual array
         const auto range = arr.GetIndexRange();
         if (range.first != 0) valp->Fail(L"This array is expected to begin with index 0.");

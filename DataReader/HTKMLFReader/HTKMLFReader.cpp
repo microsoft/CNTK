@@ -24,6 +24,7 @@
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "commandArgUtil.h"
+#include "ScriptableObjects.h"
 #include "HTKMLFReader.h"
 #include "TimerUtility.h"
 #ifdef LEAKDETECT
@@ -400,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (readerConfig.Exists(L"unigram"))
-                unigrampath = (wstring)readerConfig(L"unigram");
+                unigrampath = (const wstring &)readerConfig(L"unigram");
 
             // load a unigram if needed (this is used for MMI training)
             msra::lm::CSymbolSet unigramsymbols;

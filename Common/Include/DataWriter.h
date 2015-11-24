@@ -130,8 +130,6 @@ private:
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
     virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
-    void GetDataWriter(const ConfigParameters& config);
-
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
     virtual void Destroy();
@@ -139,7 +137,12 @@ private:
 public:
     // DataWriter Constructor
     // config - [in] configuration parameters for the datareader 
-    DataWriter(const ConfigParameters& config);
+    template<class ConfigRecordType>
+    DataWriter(const ConfigRecordType& config);
+    // constructor from Scripting
+    DataWriter(const ScriptableObjects::IConfigRecordPtr configp) :
+        DataWriter(*configp)
+    { }
     virtual ~DataWriter();
 
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
