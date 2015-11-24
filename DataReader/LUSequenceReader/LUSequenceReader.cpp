@@ -437,7 +437,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
 
-    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", "1");
+    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
 
     mRandomize = false;
     if (readerConfig.Exists(L"randomize"))
@@ -453,11 +453,10 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
         }
     }
 
-    mEqualLengthOutput = readerConfig(L"equalLength", "true");
-    mAllowMultPassData = readerConfig(L"dataMultiPass", "false");
+    mEqualLengthOutput = readerConfig(L"equalLength",   true);
+    mAllowMultPassData = readerConfig(L"dataMultiPass", false);
 
-    mIgnoreSentenceBeginTag = readerConfig(L"ignoresentencebegintag", "false");
-
+    mIgnoreSentenceBeginTag = readerConfig(L"ignoresentencebegintag", false);
 }
 
 template<class ElemType>
@@ -1141,13 +1140,14 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& readerConfig)
 {
-    mWordMappingFn = readerConfig(L"wordmap", "");
+    mWordMappingFn = readerConfig(L"wordmap", L"");
     wstring si, so;
     wstring ss;
     vector<wstring> vs;
-    if (mWordMappingFn != "")
+    if (mWordMappingFn != L"")
     {
         wifstream fp;
         fp.open(mWordMappingFn.c_str(), wifstream::in);
@@ -1164,9 +1164,8 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& re
         }
         fp.close();
     }
-    mUnkStr = (wstring)readerConfig(L"unk", "<unk>");
+    mUnkStr = (wstring)readerConfig(L"unk", L"<unk>");
 }
-
 
 template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
