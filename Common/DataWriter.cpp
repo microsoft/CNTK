@@ -9,7 +9,6 @@
 #include "stdafx.h"
 #define DATAWRITER_LOCAL
 #include "DataWriter.h"
-#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -78,6 +77,12 @@ DataWriter<ElemType>::DataWriter(const ConfigRecordType & config)
 
     m_dataWriter->Init(config);
 }
+
+template DataWriter<float >::DataWriter(const ConfigParameters &);
+template DataWriter<double>::DataWriter(const ConfigParameters &);
+template DataWriter<float >::DataWriter(const ScriptableObjects::IConfigRecord &);
+template DataWriter<double>::DataWriter(const ScriptableObjects::IConfigRecord &);
+
 
 
 // destructor - cleanup temp files, etc. 
