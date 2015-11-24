@@ -168,7 +168,7 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType & reade
     m_partialMinibatch = m_endReached = false;
     m_labelType = labelCategory;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig(L"traceLevel", "0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
 
     if (readerConfig.Exists(L"randomize"))
     {
