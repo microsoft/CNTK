@@ -1724,7 +1724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (numSubminibatchRequested > 0)
             {
-                actualNumSubminibatch = smbhelper.GetMinibatchIntoCache(*trainSetDataReader, net, *inputMatrices, numSubminibatchRequested); 
+                actualNumSubminibatch = smbhelper.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchRequested); 
             }
             else
             {
@@ -1778,7 +1778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif 
                         ComputationNetwork::UpdateEvalTimeStamps(featureNodes); 
                         ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
-                        ForwardBackward(net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate); 
+                        ForwardBackward(*net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate); 
                         smbhelper.DoneWithCurrentSubMinibatch(ismb); 
                     }
 #ifdef SMB_DEBUG
@@ -1789,7 +1789,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else 
                 {
-                    ForwardBackward(net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate);
+                    ForwardBackward(*net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate);
                 }
 
             } // if (actualMBSize > 0)
