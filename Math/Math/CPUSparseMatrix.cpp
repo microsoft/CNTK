@@ -400,7 +400,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (m_format == MatrixFormat::matrixFormatSparseBlockCol)
         {
-            size_t startColBlock = 0, endColBlock = 0;
+            long long startColBlock = 0, endColBlock = 0;
             bool foundStart = false, foundEnd = false;
             for (size_t j = 0; j < m_blockSize; j++)
             {
@@ -409,12 +409,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     assert(m_blockIds[j] > m_blockIds[j - 1]);  //assume ids are increasing.Is this valid?
                 }
 
-                if (!foundStart && m_blockIds[j] - m_blockIdShift >= startColumn) // start column with values
+                if (!foundStart && (long long) m_blockIds[j] - (long long)m_blockIdShift >= (long long)startColumn) // start column with values
                 {
                     startColBlock = j;
                     foundStart = true;
                 }
-                else if (m_blockIds[j] - m_blockIdShift >= startColumn + numCols) //end column with values
+                else if ((long long)m_blockIds[j] - (long long)m_blockIdShift >= (long long)(startColumn + numCols)) //end column with values
                 {
                     endColBlock = j;
                     foundEnd = true;
@@ -423,16 +423,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (!foundStart)
             {
-                startColBlock = m_blockSize;
+                startColBlock = (long long)m_blockSize;
             }
             if (!foundEnd)
             {
-                endColBlock = m_blockSize;
+                endColBlock = (long long)m_blockSize;
             }
 
             slice.m_pArray = m_pArray + startColBlock * m_numRows;
             slice.m_blockIds = m_blockIds + startColBlock; //the value stored in the block id is based on the original column numbers
-            slice.m_blockSize = max(0, endColBlock - startColBlock);
+            slice.m_blockSize = (size_t)max(0, endColBlock - startColBlock);
             slice.m_blockIdShift = m_blockIdShift + startColumn;
             slice.m_externalBuffer = true;
             slice.m_nz = slice.m_blockSize * m_numRows;
