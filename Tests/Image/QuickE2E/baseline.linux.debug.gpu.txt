@@ -1,15 +1,6 @@
--------------------------------------------------------------------
-Build info: 
-
-        Built time: Nov 23 2015 10:00:15
-        Last modified date: Mon Nov 23 09:45:21 2015
-        Built by alexeyk on alexey-rz           
-        Build Path: C:\src\cntk\MachineLearning\CNTK\
-        CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
--------------------------------------------------------------------
-running on alexey-rz at 2015/11/23 10:36:55
+running on localhost at 2015/11/23 11:42:03
 command line: 
-C:\src\cntk\x64\Debug\CNTK.exe configFile=C:\src\cntk\Tests\Image\QuickE2E\cntk.config RunDir=C:\src\cntk\Tests\Image\_run DataDir=C:\src\cntk\Tests\Image\Data ConfigDir=C:\src\cntk\Tests\Image\QuickE2E DeviceId=-1 
+/home/alexey/Projects/cntk/bin/cntk configFile=./QuickE2E/cntk.config DataDir=./Data RunDir=. ConfigDir=./QuickE2E DeviceId=0 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -22,9 +13,9 @@ Train=[
     modelPath=$RunDir$/models/cntk.dnn
     deviceId=$DeviceId$
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=$ConfigDir$/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=$ConfigDir$/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -68,27 +59,27 @@ Test=[
         ]
     ]    
 ]
-RunDir=C:\src\cntk\Tests\Image\_run
-DataDir=C:\src\cntk\Tests\Image\Data
-ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-DeviceId=-1
+DataDir=./Data
+RunDir=.
+ConfigDir=./QuickE2E
+DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=Train:Test
-deviceId=-1
-ndlMacros=C:\src\cntk\Tests\Image\QuickE2E/Macros.ndl
+deviceId=0
+ndlMacros=./QuickE2E/Macros.ndl
 parallelTrain=false
 Train=[
     action=train
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
-    deviceId=-1
+    modelPath=./models/cntk.dnn
+    deviceId=0
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=./QuickE2E/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -98,7 +89,7 @@ Train=[
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Train.txt
+        file=./Data/Train.txt
         features=[
             dim=784
             start=1
@@ -107,19 +98,19 @@ Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
 Test=[
     action=test
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+    modelPath=./models/cntk.dnn
      NDLNetworkBuilder=[
-        networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
+        networkDescription=./QuickE2E/Convolution.ndl
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Test.txt
+        file=./Data/Test.txt
         features=[
             dim=784
             start=1
@@ -128,35 +119,35 @@ Test=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
-RunDir=C:\src\cntk\Tests\Image\_run
-DataDir=C:\src\cntk\Tests\Image\Data
-ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-DeviceId=-1
+DataDir=./Data
+RunDir=.
+ConfigDir=./QuickE2E
+DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=Train:Test
-configparameters: cntk.config:ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-configparameters: cntk.config:DataDir=C:\src\cntk\Tests\Image\Data
-configparameters: cntk.config:deviceId=-1
-configparameters: cntk.config:ndlMacros=C:\src\cntk\Tests\Image\QuickE2E/Macros.ndl
+configparameters: cntk.config:ConfigDir=./QuickE2E
+configparameters: cntk.config:DataDir=./Data
+configparameters: cntk.config:deviceId=0
+configparameters: cntk.config:ndlMacros=./QuickE2E/Macros.ndl
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=C:\src\cntk\Tests\Image\_run
+configparameters: cntk.config:RunDir=.
 configparameters: cntk.config:Test=[
     action=test
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+    modelPath=./models/cntk.dnn
      NDLNetworkBuilder=[
-        networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
+        networkDescription=./QuickE2E/Convolution.ndl
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Test.txt
+        file=./Data/Test.txt
         features=[
             dim=784
             start=1
@@ -165,19 +156,19 @@ configparameters: cntk.config:Test=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
 
 configparameters: cntk.config:Train=[
     action=train
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
-    deviceId=-1
+    modelPath=./models/cntk.dnn
+    deviceId=0
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=./QuickE2E/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -187,7 +178,7 @@ configparameters: cntk.config:Train=[
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Train.txt
+        file=./Data/Train.txt
         features=[
             dim=784
             start=1
@@ -196,7 +187,7 @@ configparameters: cntk.config:Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
@@ -204,12 +195,12 @@ configparameters: cntk.config:Train=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: Train Test 
 precision = float
-CNTKModelPath: C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+CNTKModelPath: ./models/cntk.dnn
 CNTKCommandTrainInfo: Train : 12
 CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
 CNTKCommandTrainBegin: Train
-NDLBuilder Using CPU
-reading uci file C:\src\cntk\Tests\Image\Data/Train.txt
+NDLBuilder Using GPU 0
+reading uci file ./Data/Train.txt
 
 
 Allocating matrices for forward propagation.
@@ -776,7 +767,8 @@ Validating --> Err = ErrorPrediction(labels[10, MBSize 1], OutputNodes.z[10, MBS
 
 10 out of 26 nodes do not share the minibatch layout with the input data.
 
-SGD using CPU.
+SetUniformRandomValue (GPU): creating curand object with seed 1
+SGD using GPU 0.
 GetTrainCriterionNodes  ...
 GetEvalCriterionNodes  ...
 
@@ -792,109 +784,109 @@ starting epoch 0 at record count 0, and file position 0
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 11 retries for 100 elements (11.0%) to ensure window condition
-randomordering: recached sequence for seed 0: 15, 33, ...
- Epoch[ 1 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.37230545; EvalErr[0]PerSample = 0.90000000; TotalTime = 1.21884s; TotalTimePerSample = 12.18842ms; SamplesPerSecond = 82
-Finished Epoch[ 1 of 12]: [Training Set] TrainLossPerSample = 2.3723054; EvalErrPerSample = 0.89999998; Ave LearnRatePerSample = 0.004999999888; EpochTime=1.250578
+randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
+randomordering: recached sequence for seed 0: 38, 46, ...
+ Epoch[ 1 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.41911163; EvalErr[0]PerSample = 0.92000000; TotalTime = 0.53526s; TotalTimePerSample = 5.35259ms; SamplesPerSecond = 186
+Finished Epoch[ 1 of 12]: [Training Set] TrainLossPerSample = 2.4191115; EvalErrPerSample = 0.91999996; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.558449
 Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 1 at record count 100, and file position 100
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 26 retries for 100 elements (26.0%) to ensure window condition
-randomordering: recached sequence for seed 1: 20, 26, ...
- Epoch[ 2 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.34000610; EvalErr[0]PerSample = 0.88000000; TotalTime = 0.65477s; TotalTimePerSample = 6.54771ms; SamplesPerSecond = 152
-Finished Epoch[ 2 of 12]: [Training Set] TrainLossPerSample = 2.3400061; EvalErrPerSample = 0.88; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.65512
+randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
+randomordering: recached sequence for seed 1: 38, 46, ...
+ Epoch[ 2 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.38765198; EvalErr[0]PerSample = 0.89000000; TotalTime = 0.06055s; TotalTimePerSample = 0.60545ms; SamplesPerSecond = 1651
+Finished Epoch[ 2 of 12]: [Training Set] TrainLossPerSample = 2.3876519; EvalErrPerSample = 0.88999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.060761
 Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 2 at record count 200, and file position 200
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 28 retries for 100 elements (28.0%) to ensure window condition
-randomordering: recached sequence for seed 2: 4, 35, ...
- Epoch[ 3 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.23482727; EvalErr[0]PerSample = 0.80000000; TotalTime = 0.66302s; TotalTimePerSample = 6.63021ms; SamplesPerSecond = 150
-Finished Epoch[ 3 of 12]: [Training Set] TrainLossPerSample = 2.2348273; EvalErrPerSample = 0.79999995; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.663372
+randomordering: 30 retries for 100 elements (30.0%) to ensure window condition
+randomordering: recached sequence for seed 2: 34, 6, ...
+ Epoch[ 3 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.30177277; EvalErr[0]PerSample = 0.85000000; TotalTime = 0.06050s; TotalTimePerSample = 0.60495ms; SamplesPerSecond = 1653
+Finished Epoch[ 3 of 12]: [Training Set] TrainLossPerSample = 2.3017728; EvalErrPerSample = 0.84999996; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.060688
 Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 3 at record count 300, and file position 300
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 17 retries for 100 elements (17.0%) to ensure window condition
-randomordering: recached sequence for seed 3: 28, 7, ...
- Epoch[ 4 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.18458984; EvalErr[0]PerSample = 0.82000000; TotalTime = 0.66943s; TotalTimePerSample = 6.69434ms; SamplesPerSecond = 149
-Finished Epoch[ 4 of 12]: [Training Set] TrainLossPerSample = 2.1845899; EvalErrPerSample = 0.81999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.669791
+randomordering: 14 retries for 100 elements (14.0%) to ensure window condition
+randomordering: recached sequence for seed 3: 35, 34, ...
+ Epoch[ 4 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.33002518; EvalErr[0]PerSample = 0.89000000; TotalTime = 0.05966s; TotalTimePerSample = 0.59664ms; SamplesPerSecond = 1676
+Finished Epoch[ 4 of 12]: [Training Set] TrainLossPerSample = 2.3300252; EvalErrPerSample = 0.88999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.059867
 Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 4 at record count 400, and file position 400
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 15 retries for 100 elements (15.0%) to ensure window condition
-randomordering: recached sequence for seed 4: 5, 36, ...
- Epoch[ 5 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.94950211; EvalErr[0]PerSample = 0.68000000; TotalTime = 0.65519s; TotalTimePerSample = 6.55185ms; SamplesPerSecond = 152
-Finished Epoch[ 5 of 12]: [Training Set] TrainLossPerSample = 1.9495021; EvalErrPerSample = 0.68000001; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.655564
+randomordering: 13 retries for 100 elements (13.0%) to ensure window condition
+randomordering: recached sequence for seed 4: 30, 23, ...
+ Epoch[ 5 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.23725708; EvalErr[0]PerSample = 0.88000000; TotalTime = 0.05858s; TotalTimePerSample = 0.58577ms; SamplesPerSecond = 1707
+Finished Epoch[ 5 of 12]: [Training Set] TrainLossPerSample = 2.237257; EvalErrPerSample = 0.88; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.058768
 Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 5 at record count 500, and file position 500
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 13 retries for 100 elements (13.0%) to ensure window condition
-randomordering: recached sequence for seed 5: 11, 48, ...
- Epoch[ 6 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.70178970; EvalErr[0]PerSample = 0.31000000; TotalTime = 0.66804s; TotalTimePerSample = 6.68037ms; SamplesPerSecond = 149
-Finished Epoch[ 6 of 12]: [Training Set] TrainLossPerSample = 1.7017896; EvalErrPerSample = 0.31; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.668389
+randomordering: 25 retries for 100 elements (25.0%) to ensure window condition
+randomordering: recached sequence for seed 5: 33, 43, ...
+ Epoch[ 6 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.24089386; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.05882s; TotalTimePerSample = 0.58824ms; SamplesPerSecond = 1699
+Finished Epoch[ 6 of 12]: [Training Set] TrainLossPerSample = 2.2408938; EvalErrPerSample = 0.89999998; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.059015
 Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 6 at record count 600, and file position 600
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 13 retries for 100 elements (13.0%) to ensure window condition
-randomordering: recached sequence for seed 6: 15, 3, ...
- Epoch[ 7 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.36245956; EvalErr[0]PerSample = 0.17000000; TotalTime = 0.65609s; TotalTimePerSample = 6.56091ms; SamplesPerSecond = 152
-Finished Epoch[ 7 of 12]: [Training Set] TrainLossPerSample = 1.3624595; EvalErrPerSample = 0.17; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.656443
+randomordering: 14 retries for 100 elements (14.0%) to ensure window condition
+randomordering: recached sequence for seed 6: 12, 17, ...
+ Epoch[ 7 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.15189026; EvalErr[0]PerSample = 0.80000000; TotalTime = 0.05783s; TotalTimePerSample = 0.57827ms; SamplesPerSecond = 1729
+Finished Epoch[ 7 of 12]: [Training Set] TrainLossPerSample = 2.1518903; EvalErrPerSample = 0.79999995; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.058039
 Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 7 at record count 700, and file position 700
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 22 retries for 100 elements (22.0%) to ensure window condition
-randomordering: recached sequence for seed 7: 9, 19, ...
- Epoch[ 8 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.17384888; EvalErr[0]PerSample = 0.09000000; TotalTime = 0.65872s; TotalTimePerSample = 6.58715ms; SamplesPerSecond = 151
-Finished Epoch[ 8 of 12]: [Training Set] TrainLossPerSample = 1.1738489; EvalErrPerSample = 0.089999996; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.659065
+randomordering: 14 retries for 100 elements (14.0%) to ensure window condition
+randomordering: recached sequence for seed 7: 40, 7, ...
+ Epoch[ 8 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  2.02036377; EvalErr[0]PerSample = 0.68000000; TotalTime = 0.05703s; TotalTimePerSample = 0.57030ms; SamplesPerSecond = 1753
+Finished Epoch[ 8 of 12]: [Training Set] TrainLossPerSample = 2.0203638; EvalErrPerSample = 0.68000001; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.057228
 Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 8 at record count 800, and file position 800
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 16 retries for 100 elements (16.0%) to ensure window condition
-randomordering: recached sequence for seed 8: 8, 5, ...
- Epoch[ 9 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.84733147; EvalErr[0]PerSample = 0.01000000; TotalTime = 0.66847s; TotalTimePerSample = 6.68467ms; SamplesPerSecond = 149
-Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 0.84733146; EvalErrPerSample = 0.0099999998; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.668841
+randomordering: 17 retries for 100 elements (17.0%) to ensure window condition
+randomordering: recached sequence for seed 8: 8, 48, ...
+ Epoch[ 9 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.74879242; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.05806s; TotalTimePerSample = 0.58065ms; SamplesPerSecond = 1722
+Finished Epoch[ 9 of 12]: [Training Set] TrainLossPerSample = 1.7487924; EvalErrPerSample = 0.44; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.058275
 Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.000000 
 starting epoch 9 at record count 900, and file position 900
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 16 retries for 100 elements (16.0%) to ensure window condition
-randomordering: recached sequence for seed 9: 7, 10, ...
- Epoch[10 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.73448944; EvalErr[0]PerSample = 0.04000000; TotalTime = 0.67011s; TotalTimePerSample = 6.70111ms; SamplesPerSecond = 149
-Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 0.73448944; EvalErrPerSample = 0.039999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.670465
+randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
+randomordering: recached sequence for seed 9: 14, 26, ...
+ Epoch[10 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.56006454; EvalErr[0]PerSample = 0.18000000; TotalTime = 0.05721s; TotalTimePerSample = 0.57207ms; SamplesPerSecond = 1748
+Finished Epoch[10 of 12]: [Training Set] TrainLossPerSample = 1.5600646; EvalErrPerSample = 0.17999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.057409
 Starting Epoch 11: learning rate per sample = 0.005000  effective momentum = 0.700000 
 starting epoch 10 at record count 1000, and file position 0
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 22 retries for 100 elements (22.0%) to ensure window condition
-randomordering: recached sequence for seed 10: 13, 22, ...
- Epoch[11 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.52700432; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.65013s; TotalTimePerSample = 6.50128ms; SamplesPerSecond = 153
-Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 0.5270043; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.650488
+randomordering: 31 retries for 100 elements (31.0%) to ensure window condition
+randomordering: recached sequence for seed 10: 22, 4, ...
+ Epoch[11 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.32553162; EvalErr[0]PerSample = 0.14000000; TotalTime = 0.05778s; TotalTimePerSample = 0.57785ms; SamplesPerSecond = 1730
+Finished Epoch[11 of 12]: [Training Set] TrainLossPerSample = 1.3255316; EvalErrPerSample = 0.14; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.058009
 Starting Epoch 12: learning rate per sample = 0.005000  effective momentum = 0.700000 
 starting epoch 11 at record count 1100, and file position 100
 already there from last epoch
 
 Starting minibatch loop.
-randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
-randomordering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37213734; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.65604s; TotalTimePerSample = 6.56038ms; SamplesPerSecond = 152
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37213734; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.656382
+randomordering: 17 retries for 100 elements (17.0%) to ensure window condition
+randomordering: recached sequence for seed 11: 2, 40, ...
+ Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.01003433; EvalErr[0]PerSample = 0.03000000; TotalTime = 0.05721s; TotalTimePerSample = 0.57209ms; SamplesPerSecond = 1747
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 1.0100343; EvalErrPerSample = 0.029999999; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.057407
 CNTKCommandTrainEnd: Train
 
 
@@ -1465,24 +1457,15 @@ Validating --> Err = ErrorPrediction(labels[10, MBSize 0], OutputNodes.z[10, MBS
 evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-randomordering: 11 retries for 100 elements (11.0%) to ensure window condition
-randomordering: recached sequence for seed 0: 15, 33, ...
-Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.31800278    Perplexity = 1.3743801    
+randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
+randomordering: recached sequence for seed 0: 38, 46, ...
+Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.84035759    Perplexity = 2.3171954    
 COMPLETED
 === Deleting last epoch data
 ==== Re-running from checkpoint
--------------------------------------------------------------------
-Build info: 
-
-        Built time: Nov 23 2015 10:00:15
-        Last modified date: Mon Nov 23 09:45:21 2015
-        Built by alexeyk on alexey-rz           
-        Build Path: C:\src\cntk\MachineLearning\CNTK\
-        CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
--------------------------------------------------------------------
-running on alexey-rz at 2015/11/23 10:38:30
+running on localhost at 2015/11/23 11:43:57
 command line: 
-C:\src\cntk\x64\Debug\CNTK.exe configFile=C:\src\cntk\Tests\Image\QuickE2E\cntk.config RunDir=C:\src\cntk\Tests\Image\_run DataDir=C:\src\cntk\Tests\Image\Data ConfigDir=C:\src\cntk\Tests\Image\QuickE2E DeviceId=-1 
+/home/alexey/Projects/cntk/bin/cntk configFile=./QuickE2E/cntk.config DataDir=./Data RunDir=. ConfigDir=./QuickE2E DeviceId=0 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -1495,9 +1478,9 @@ Train=[
     modelPath=$RunDir$/models/cntk.dnn
     deviceId=$DeviceId$
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=$ConfigDir$/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=$ConfigDir$/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -1541,27 +1524,27 @@ Test=[
         ]
     ]    
 ]
-RunDir=C:\src\cntk\Tests\Image\_run
-DataDir=C:\src\cntk\Tests\Image\Data
-ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-DeviceId=-1
+DataDir=./Data
+RunDir=.
+ConfigDir=./QuickE2E
+DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=Train:Test
-deviceId=-1
-ndlMacros=C:\src\cntk\Tests\Image\QuickE2E/Macros.ndl
+deviceId=0
+ndlMacros=./QuickE2E/Macros.ndl
 parallelTrain=false
 Train=[
     action=train
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
-    deviceId=-1
+    modelPath=./models/cntk.dnn
+    deviceId=0
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=./QuickE2E/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -1571,7 +1554,7 @@ Train=[
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Train.txt
+        file=./Data/Train.txt
         features=[
             dim=784
             start=1
@@ -1580,19 +1563,19 @@ Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
 Test=[
     action=test
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+    modelPath=./models/cntk.dnn
      NDLNetworkBuilder=[
-        networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
+        networkDescription=./QuickE2E/Convolution.ndl
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Test.txt
+        file=./Data/Test.txt
         features=[
             dim=784
             start=1
@@ -1601,35 +1584,35 @@ Test=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
-RunDir=C:\src\cntk\Tests\Image\_run
-DataDir=C:\src\cntk\Tests\Image\Data
-ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-DeviceId=-1
+DataDir=./Data
+RunDir=.
+ConfigDir=./QuickE2E
+DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=Train:Test
-configparameters: cntk.config:ConfigDir=C:\src\cntk\Tests\Image\QuickE2E
-configparameters: cntk.config:DataDir=C:\src\cntk\Tests\Image\Data
-configparameters: cntk.config:deviceId=-1
-configparameters: cntk.config:ndlMacros=C:\src\cntk\Tests\Image\QuickE2E/Macros.ndl
+configparameters: cntk.config:ConfigDir=./QuickE2E
+configparameters: cntk.config:DataDir=./Data
+configparameters: cntk.config:deviceId=0
+configparameters: cntk.config:ndlMacros=./QuickE2E/Macros.ndl
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=C:\src\cntk\Tests\Image\_run
+configparameters: cntk.config:RunDir=.
 configparameters: cntk.config:Test=[
     action=test
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+    modelPath=./models/cntk.dnn
      NDLNetworkBuilder=[
-        networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
+        networkDescription=./QuickE2E/Convolution.ndl
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Test.txt
+        file=./Data/Test.txt
         features=[
             dim=784
             start=1
@@ -1638,19 +1621,19 @@ configparameters: cntk.config:Test=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
 
 configparameters: cntk.config:Train=[
     action=train
-    modelPath=C:\src\cntk\Tests\Image\_run/models/cntk.dnn
-    deviceId=-1
+    modelPath=./models/cntk.dnn
+    deviceId=0
     traceLevel=1
-        NDLNetworkBuilder=[
-                networkDescription=C:\src\cntk\Tests\Image\QuickE2E/Convolution.ndl
-        ]
+		NDLNetworkBuilder=[
+				networkDescription=./QuickE2E/Convolution.ndl
+		]
     SGD=[
         epochSize=100
         minibatchSize=10
@@ -1660,7 +1643,7 @@ configparameters: cntk.config:Train=[
     ]
     reader=[
         readerType=UCIFastReader
-        file=C:\src\cntk\Tests\Image\Data/Train.txt
+        file=./Data/Train.txt
         features=[
             dim=784
             start=1
@@ -1669,7 +1652,7 @@ configparameters: cntk.config:Train=[
             dim=1
             start=0
             labelDim=10
-            labelMappingFile=C:\src\cntk\Tests\Image\Data/labelsmap.txt
+            labelMappingFile=./Data/labelsmap.txt
         ]
     ]    
 ]
@@ -1677,13 +1660,13 @@ configparameters: cntk.config:Train=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: Train Test 
 precision = float
-CNTKModelPath: C:\src\cntk\Tests\Image\_run/models/cntk.dnn
+CNTKModelPath: ./models/cntk.dnn
 CNTKCommandTrainInfo: Train : 12
 CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 12
 CNTKCommandTrainBegin: Train
-NDLBuilder Using CPU
-reading uci file C:\src\cntk\Tests\Image\Data/Train.txt
-Starting from checkpoint. Load Network From File C:\src\cntk\Tests\Image\_run/models/cntk.dnn.11.
+NDLBuilder Using GPU 0
+reading uci file ./Data/Train.txt
+Starting from checkpoint. Load Network From File ./models/cntk.dnn.11.
 
 
 Allocating matrices for forward propagation.
@@ -2250,7 +2233,7 @@ Validating --> Err = ErrorPrediction(labels[10, MBSize 0], OutputNodes.z[10, MBS
 
 10 out of 26 nodes do not share the minibatch layout with the input data.
 
-SGD using CPU.
+SGD using GPU 0.
 GetTrainCriterionNodes  ...
 GetEvalCriterionNodes  ...
 
@@ -2267,10 +2250,10 @@ starting epoch 11 at record count 1100, and file position 100
 reading from record 0 to 100 to be positioned properly for epoch
 
 Starting minibatch loop.
-randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
-randomordering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37792297; EvalErr[0]PerSample = 0.00000000; TotalTime = 1.34518s; TotalTimePerSample = 13.45185ms; SamplesPerSecond = 74
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37792295; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=1.371377
+randomordering: 17 retries for 100 elements (17.0%) to ensure window condition
+randomordering: recached sequence for seed 11: 2, 40, ...
+ Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  1.01463303; EvalErr[0]PerSample = 0.02000000; TotalTime = 0.12786s; TotalTimePerSample = 1.27864ms; SamplesPerSecond = 782
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 1.0146331; EvalErrPerSample = 0.02; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.152772
 CNTKCommandTrainEnd: Train
 
 
@@ -2841,7 +2824,7 @@ Validating --> Err = ErrorPrediction(labels[10, MBSize 0], OutputNodes.z[10, MBS
 evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
 starting epoch 0 at record count 0, and file position 0
 already there from last epoch
-randomordering: 11 retries for 100 elements (11.0%) to ensure window condition
-randomordering: recached sequence for seed 0: 15, 33, ...
-Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.33039909    Perplexity = 1.3915234    
+randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
+randomordering: recached sequence for seed 0: 38, 46, ...
+Final Results: Minibatch[1-1]: Samples Seen = 100    Err: ErrorPrediction/Sample = 0    CE: CrossEntropyWithSoftmax/Sample = 0.88667282    Perplexity = 2.427041    
 COMPLETED
