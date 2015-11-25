@@ -13,7 +13,8 @@
 #include "ConcStack.h"
 #include <algorithm>
 #include <fstream>
-#include <sstream>
+#include <sstream>  // TODO: this should go away once we update the parameter parsing
+#include <unordered_map>
 #include <opencv2/opencv.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
