@@ -491,11 +491,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
         {
-            Base::AllocateGradientMatricesForChildren(matrixPool);
-
-            //this is a special handling case. We need to set the sparse property here so that it will not be shared.
-            if (Inputs(1)->FunctionValues().GetMatrixType() == SPARSE && Inputs(0)->GradientValues().GetMatrixType() == DENSE)
+            //this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
+            if (m_children[0]->NeedGradient() && Inputs(1)->FunctionValues().GetMatrixType() == SPARSE)
+            {
+                CreateMatrixIfNull(Inputs(0)->GradientValuesPtr());
                 Inputs(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            }
+           
+            //we need to call base allocation at end since we will need to allocate special ones first 
+            //so that the default allocator will not allocate it again.
+            Base::AllocateGradientMatricesForChildren(matrixPool);
         }
     };
 
