@@ -193,7 +193,7 @@ public:
     }
 
     template<class ConfigRecordType>
-    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType & config)
+    void InitFromConfig(const ConfigRecordType & config)
     {
         m_imgWidth = config(L"width");
         m_imgHeight = config(L"height");
