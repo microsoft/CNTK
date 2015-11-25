@@ -373,6 +373,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         bool ExistsCurrent(const wstring & id) const;
         bool Exists(const wstring & id) const { return Find(id) != nullptr; }
         bool Match(const wstring & id, const wstring & compareValue) const;
+        bool CanBeConfigRecord(const wstring & id) const { return operator[](id).Is<IConfigRecord>(); }
+        bool CanBeString(const wstring & id) const { return operator[](id).Is<wstring>(); }
         const std::string ConfigName() const;
         static const IConfigRecord & Record();
         template<class V> static const std::vector<typename V::value_type> & Array(const V & vec);

@@ -55,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> template<class ConfigRecordType>
         void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
         {
-            m_truncated = readerConfig(L"Truncated", false);
+            m_truncated = readerConfig(L"truncated", false);
             m_convertLabelsToTargets = false;
 
             intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{ 1 })));
@@ -84,7 +84,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_trainOrTest = false;
                 PrepareForWriting(readerConfig);
             }
-            else{
+            else
+            {
                 m_trainOrTest = true;
                 PrepareForTrainingOrTesting(readerConfig);
             }
@@ -121,20 +122,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GetDataNamesFromConfig(readerConfig, featureNames, labelNames, hmmNames, latticeNames);
             if (featureNames.size() + labelNames.size() <= 1)
             {
-                RuntimeError("network needs at least 1 input and 1 output specified!");
+                InvalidArgument("network needs at least 1 input and 1 output specified!");
             }
 
             //load data for all real-valued inputs (features)
             foreach_index(i, featureNames)
             {
-                ConfigParameters thisFeature = readerConfig(featureNames[i]);
-                m_featDims.push_back(thisFeature("dim"));
-                ConfigArray contextWindow = thisFeature("contextWindow", "1");
+                const ConfigRecordType & thisFeature = readerConfig(featureNames[i]);
+                m_featDims.push_back(thisFeature(L"dim"));
+                intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{ 1 })));
                 if (contextWindow.size() == 1) // symmetric
                 {
                     size_t windowFrames = contextWindow[0];
                     if (windowFrames % 2 == 0 )
-                        RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
+                        InvalidArgument("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowFrames);
                     size_t context = windowFrames / 2;           // extend each side by this
                     numContextLeft.push_back(context);
                     numContextRight.push_back(context);
@@ -147,23 +148,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
+                    InvalidArgument("contextFrames must have 1 or 2 values specified, found %d", (int)contextWindow.size());
                 }
                 // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
                 // that is what the lower level feature readers expect
                 m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]); 
 
-                string type = thisFeature("type","Real");
-                if (type=="Real"){
+                wstring type = thisFeature(L"type", L"real");
+                if (!_wcsicmp(type.c_str(), L"real"))
+                {
                     m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
                 }
-                else{
-                    RuntimeError("feature type must be Real");
+                else
+                {
+                    InvalidArgument("feature type must be 'real'");
                 }
 
                 m_featureNameToIdMap[featureNames[i]]= iFeat;
-                scriptpaths.push_back(thisFeature("scpFile"));
-                RootPathInScripts.push_back(thisFeature("PrefixPathInSCP", ""));
+                scriptpaths.push_back(thisFeature(L"scpFile"));
+                RootPathInScripts.push_back(thisFeature(L"prefixPathInSCP", L""));
                 m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
                 m_featuresBufferMultiIO.push_back(nullptr);
@@ -174,41 +177,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             foreach_index(i, labelNames)
             {
-                ConfigParameters thisLabel = readerConfig(labelNames[i]);
-                if (thisLabel.Exists("labelDim"))
-                    m_labelDims.push_back(thisLabel("labelDim"));
-                else if (thisLabel.Exists("dim"))
-                    m_labelDims.push_back(thisLabel("dim"));
+                const ConfigRecordType & thisLabel = readerConfig(labelNames[i]);
+                if (thisLabel.Exists(L"labelDim"))
+                    m_labelDims.push_back(thisLabel(L"labelDim"));
+                else if (thisLabel.Exists(L"dim"))
+                    m_labelDims.push_back(thisLabel(L"dim"));
                 else
-                    RuntimeError("labels must specify dim or labelDim");
+                    InvalidArgument("labels must specify dim or labelDim");
 
-                string type;
-                if (thisLabel.Exists("labelType"))
-                    type = thisLabel("labelType"); // let's deprecate this eventually and just use "type"...
+                wstring type;
+                if (thisLabel.Exists(L"labelType"))
+                    type = (const wstring &)thisLabel(L"labelType"); // let's deprecate this eventually and just use "type"...
                 else
-                    type = thisLabel("type","Category"); // outputs should default to category
+                    type = (const wstring &)thisLabel(L"type", L"category"); // outputs should default to category
 
-                if (type=="Category")
+                if (!_wcsicmp(type.c_str(), L"category"))
                     m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
                 else
-                    RuntimeError("label type must be Category");
+                    InvalidArgument("label type must be 'category'");
 
-                statelistpaths.push_back(thisLabel("labelMappingFile",L""));
+                statelistpaths.push_back(thisLabel(L"labelMappingFile", L""));
 
                 m_labelNameToIdMap[labelNames[i]]=iLabel;
                 m_labelNameToDimMap[labelNames[i]]=m_labelDims[i];
                 mlfpaths.clear();
                 if (thisLabel.ExistsCurrent(L"mlfFile"))
                 {
-                    mlfpaths.push_back(thisLabel("mlfFile"));
+                    mlfpaths.push_back(thisLabel(L"mlfFile"));
                 }
                 else
                 {
                     if (!thisLabel.ExistsCurrent(L"mlfFileList"))
                     {
-                        RuntimeError("Either mlfFile or mlfFileList must exist in HTKMLFReder");
+                        InvalidArgument("Either mlfFile or mlfFileList must exist in HTKMLFReder");
                     }
-                    wstring list = thisLabel("mlfFileList");
+                    wstring list = thisLabel(L"mlfFileList");
                     for (msra::files::textreader r(list); r;)
                     {
                         mlfpaths.push_back(r.wgetline());
@@ -221,14 +224,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 iLabel++;
 
-                wstring labelToTargetMappingFile(thisLabel("labelToTargetMappingFile",L""));
+                wstring labelToTargetMappingFile(thisLabel(L"labelToTargetMappingFile", L""));
                 if (labelToTargetMappingFile != L"")
                 {
                     std::vector<std::vector<ElemType>> labelToTargetMap;
                     m_convertLabelsToTargetsMultiIO.push_back(true);
-                    if (thisLabel.Exists("targetDim"))
+                    if (thisLabel.Exists(L"targetDim"))
                     {
-                        m_labelNameToDimMap[labelNames[i]]=m_labelDims[i]=thisLabel("targetDim");
+                        m_labelNameToDimMap[labelNames[i]] = m_labelDims[i] = thisLabel(L"targetDim");
                     }
                     else
                         RuntimeError("output must specify targetDim if labelToTargetMappingFile specified!");
@@ -246,20 +249,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //get lattice toc file names 
             std::pair<std::vector<wstring>, std::vector<wstring>> latticetocs;
-            foreach_index(i, latticeNames)
-                //only support one set of lattice now
+            foreach_index(i, latticeNames)  //only support one set of lattice now
             {
-                ConfigParameters thislattice = readerConfig(latticeNames[i]);
-
+                const ConfigRecordType & thisLattice = readerConfig(latticeNames[i]);
 
                 vector<wstring> paths;
-                expand_wildcards(thislattice("denlatTocFile"), paths);
+                expand_wildcards(thisLattice(L"denLatTocFile"), paths);
                 latticetocs.second.insert(latticetocs.second.end(), paths.begin(), paths.end());
 
-                if (thislattice.Exists("numlatTocFile"))
+                if (thisLattice.Exists(L"numLatTocFile"))
                 {
                     paths.clear();
-                    expand_wildcards(thislattice("numlatTocFile"), paths);
+                    expand_wildcards(thisLattice(L"numLatTocFile"), paths);
                     latticetocs.first.insert(latticetocs.first.end(), paths.begin(), paths.end());
                 }
 
@@ -269,11 +270,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<wstring> cdphonetyingpaths, transPspaths;
             foreach_index(i, hmmNames)
             {
-                ConfigParameters thishmm = readerConfig(hmmNames[i]);
+                const ConfigRecordType & thisHMM = readerConfig(hmmNames[i]);
 
-                vector<wstring> paths;
-                cdphonetyingpaths.push_back(thishmm("phoneFile"));
-                transPspaths.push_back(thishmm("transpFile", L""));
+                cdphonetyingpaths.push_back(thisHMM(L"phoneFile"));
+                transPspaths.push_back(thisHMM(L"transPFile", L""));
             }
 
             // mmf files 
@@ -285,36 +285,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (readerConfig.Exists(L"randomize"))
             {
-                const std::string& randomizeString = readerConfig(L"randomize");
-                if (randomizeString == "None")
-                {
+                wstring randomizeString = readerConfig.CanBeString(L"randomize") ? readerConfig(L"randomize") : wstring();
+                if (!_wcsicmp(randomizeString.c_str(), L"none"))
                     randomize = randomizeNone;
-                }
-                else if (randomizeString == "Auto")
-                {
+                else if (!_wcsicmp(randomizeString.c_str(), L"auto"))
                     randomize = randomizeAuto;
-                }
                 else
-                {
                     randomize = readerConfig(L"randomize");
-                }
             }
 
             m_frameMode = readerConfig(L"frameMode", true);
             m_verbosity = readerConfig(L"verbosity", 2);
 
             // determine if we partial minibatches are desired
-            wstring minibatchMode(readerConfig(L"minibatchMode", L"Partial"));
-            m_partialMinibatch = !_wcsicmp(minibatchMode.c_str(), L"Partial");
+            wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
+            m_partialMinibatch = !_wcsicmp(minibatchMode.c_str(), L"partial");
 
             // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
             wstring readMethod(readerConfig(L"readMethod",L"blockRandomize"));
 
             if (readMethod == L"blockRandomize" && randomize == randomizeNone)
-            {
-                fprintf(stderr, "WARNING: Randomize cannot be set to None when readMethod is set to blockRandomize. Change it Auto.");
-                randomize = randomizeAuto;
-            }
+                InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
 
             // read all input files (from multiple inputs)
             // TO DO: check for consistency (same number of files in each script file)
@@ -337,7 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numFiles=n;
                 else
                     if (n!=numFiles)
-                        RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                        RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", (int)numFiles, (int)n));
 
                 // post processing file list : 
                 //  - if users specified PrefixPath, add the prefix to each of path in filelist
@@ -349,7 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/'); 
                     // second, remove trailling slash if there is any 
                     std::wregex trailer(L"/+$");
-                    rootpath=std::regex_replace(rootpath, trailer, wstring(L""));
+                    rootpath = std::regex_replace(rootpath, trailer, wstring());
                     // third, join the rootpath with each entry in filelist 
                     if (!rootpath.empty())
                     {
@@ -396,7 +387,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ExpandDotDotDot(entry, scriptpath, scpdircached);
                 }
 
-
                 infilesmulti.push_back(std::move(filelist));
             }
 
@@ -418,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 endwordid = unigramsymbols["</s>"];
             }
 
-            if (!unigram)
+            if (!unigram && latticetocs.second.size() > 0)
                 fprintf (stderr, "trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion\n");
 
             // currently assumes all mlfs will have same root name (key)
@@ -466,11 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (!_wcsicmp(readMethod.c_str(), L"rollingWindow"))
             {
-#ifdef _WIN32   // TODO: This distinction should be done on the Platform.h level
                 std::wstring pageFilePath;
-#else
-                std::string pageFilePath;
-#endif
                 std::vector<std::wstring> pagePaths;
                 if (readerConfig.Exists(L"pageFilePath"))
                 {
@@ -486,11 +472,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 #ifdef __unix__
                     struct stat statbuf;
-                    if (stat(pageFilePath.c_str(), &statbuf)==-1)
+                    if (stat(charpath(pageFilePath), &statbuf)==-1)
                     {
                         RuntimeError("pageFilePath does not exist");
                     }
-
 #endif
                 }
                 else  // using default temporary path
@@ -500,8 +485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     GetTempPath(MAX_PATH, &pageFilePath[0]);
 #endif
 #ifdef __unix__
-                pageFilePath.reserve(PATH_MAX);
-                pageFilePath = "/tmp/temp.CNTK.XXXXXX";
+                    pageFilePath = L"/tmp/temp.CNTK.XXXXXX";
 #endif
                 }
 
@@ -510,8 +494,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", MAX_PATH-14));
 #endif
 #ifdef __unix__
-            if (pageFilePath.size()>PATH_MAX-14) // max length of input to GetTempFileName is PATH_MAX-14
-                RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
+                if (pageFilePath.size()>PATH_MAX-14) // max length of input to GetTempFileName is PATH_MAX-14
+                    RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
 #endif
                 foreach_index(i, infilesmulti)
                 {
@@ -521,13 +505,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     pagePaths.push_back(tempFile);
 #endif
 #ifdef __unix__
-                char* tempFile;
-                //GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
-                tempFile = (char*) pageFilePath.c_str();
-                int fid = mkstemp(tempFile);
-                unlink (tempFile);
-                close (fid);
-                pagePaths.push_back(GetWC(tempFile));
+                    char tempFile[PATH_MAX];
+                    strcpy(tempFile, msra::strfun::utf8(pageFilePath).c_str());
+                    int fid = mkstemp(tempFile);
+                    unlink (tempFile);
+                    close (fid);
+                    pagePaths.push_back(GetWC(tempFile));
 #endif
                 }
 
@@ -539,7 +522,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                RuntimeError("readMethod must be rollingWindow or blockRandomize");
+                RuntimeError("readMethod must be 'rollingWindow' or 'blockRandomize'");
             }
 
         }
@@ -548,6 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Note that the terms features imply be real-valued quanities and 
     // labels imply categorical quantities, irrespective of whether they 
     // are inputs or targets for the network
+    // TODO: lots of code dup with the other Prepare function
     template<class ElemType> template<class ConfigRecordType>
         void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerConfig)
         {
@@ -570,10 +554,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             foreach_index(i, featureNames)
             {
-                ConfigParameters thisFeature = readerConfig(featureNames[i]);
-                realDims.push_back(thisFeature("dim"));
+                const ConfigRecordType & thisFeature = readerConfig(featureNames[i]);
+                realDims.push_back(thisFeature(L"dim"));
 
-                ConfigArray contextWindow = thisFeature("contextWindow", "1");
+                intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{ 1 })));
                 if (contextWindow.size() == 1) // symmetric
                 {
                     size_t windowFrames = contextWindow[0];
@@ -597,16 +581,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // that is what the lower level feature readers expect
                 realDims[i] = realDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
 
-                string type = thisFeature("type","Real");
-                if (type=="Real"){
+                wstring type = thisFeature(L"type", L"real");
+                if (!_wcsicmp(type.c_str(), L"real"))
+                {
                     m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
                 }
                 else{
-                    RuntimeError("feature type must be Real");
+                    RuntimeError("feature type must be 'real'");
                 }
 
                 m_featureNameToIdMap[featureNames[i]]= iFeat;
-                scriptpaths.push_back(thisFeature("scpFile"));
+                scriptpaths.push_back(thisFeature(L"scpFile"));
                 m_featureNameToDimMap[featureNames[i]] = realDims[i];
 
                 m_featuresBufferMultiIO.push_back(nullptr);
@@ -622,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 vector<wstring> filelist;
                 std::wstring scriptpath = scriptpaths[i];
-                fprintf(stderr, "reading script file %S ...", scriptpath.c_str());
+                fprintf(stderr, "reading script file %ls ...", scriptpath.c_str());
                 size_t n = 0;
                 for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly/*optimization*/; )
                 {
@@ -663,7 +648,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if ((numSubsets > 1) && (m_numSeqsPerMB < numSubsets))
                 {
-                    LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numSeqsPerMB, numSubsets);
+                    LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", (int)m_numSeqsPerMB, (int)numSubsets);
                 }
 
                 m_numSeqsPerMB = (m_numSeqsPerMB / numSubsets) + ((subsetNum < (m_numSeqsPerMB % numSubsets)) ? 1 : 0);
@@ -1789,6 +1774,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (const auto & id : readerConfig.GetMemberIds())
             {
+                if (!readerConfig.CanBeConfigRecord(id))
+                    continue;
                 const ConfigRecordType & temp = readerConfig(id);
                 // see if we have a config parameters that contains a "file" element, it's a sub key, use it
                 if (temp.ExistsCurrent(L"scpFile"))
@@ -1807,7 +1794,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     lattices.push_back(id);
                 }
-
             }
         }
 

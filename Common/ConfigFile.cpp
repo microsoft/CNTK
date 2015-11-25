@@ -229,11 +229,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // features - [in,out] a vector of feature name strings
     // labels - [in,out] a vector of label name strings
     template<class ConfigRecordType>
-    void GetFileConfigNames(const ConfigRecordType& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
+    void GetFileConfigNames(const ConfigRecordType& config, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
     {
-        for (const auto & id : readerConfig.GetMemberIds())
+        for (const auto & id : config.GetMemberIds())
         {
-            const ConfigRecordType & temp = readerConfig(id);
+            if (!config.CanBeConfigRecord(id))
+                continue;
+            const ConfigRecordType & temp = config(id);
             // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
             if (temp.ExistsCurrent(L"dim"))
             {
@@ -265,6 +267,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         wstring wkey = wstring(key.begin(), key.end());
         for (const auto & id : config.GetMemberIds())
         {
+            if (!config.CanBeConfigRecord(id))
+                continue;
             const ConfigRecordType & temp = config(id);
             // see if we have a config parameters that contains a "key" element, if so use it
             if (temp.ExistsCurrent(wkey.c_str()))

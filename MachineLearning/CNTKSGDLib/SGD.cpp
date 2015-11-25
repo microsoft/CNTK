@@ -2558,6 +2558,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SGD<double>;
 
     // register SGD<> with the ScriptableObject system
-    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>,SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
 
 }}}
