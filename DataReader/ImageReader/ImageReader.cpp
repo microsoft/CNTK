@@ -29,7 +29,7 @@ class ITransform
 {
 public:
     virtual void Init(const ConfigParameters & config) = 0;
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
     virtual void Apply(cv::Mat& mat) = 0;
 
     ITransform() {};
@@ -76,7 +76,7 @@ public:
             m_hFlip = std::stoi(config(L"hflip")) != 0;
     }
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -217,7 +217,7 @@ public:
             m_interp.push_back(cv::INTER_LINEAR);
     }
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -287,7 +287,7 @@ public:
         }
     }
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -319,7 +319,7 @@ ImageReader<ElemType>::~ImageReader()
 }
 
 template<class ElemType>
-template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+template<class ConfigRecordType>
 void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
 {
     using SectionT = std::pair<std::string, ConfigParameters>;      // TODO: does not work for BrainScript, since configs cannot be copied
@@ -375,7 +375,7 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     m_mbStart = 0;
 }
 virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+//virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
 template<class ElemType>
 void ImageReader<ElemType>::Destroy()
