@@ -326,8 +326,8 @@ double fgetdouble (FILE * f);
 // fgetwav(): read an entire .wav file
 // ----------------------------------------------------------------------------
 
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate);
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate);
+void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate);
+void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate);
 
 // ----------------------------------------------------------------------------
 // fputwav(): save data into a .wav file

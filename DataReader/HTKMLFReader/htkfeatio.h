@@ -765,11 +765,10 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 
         filename = filename.substr (1, filename.length() -2);   // strip quotes
         if (filename.find ("*/") == 0) filename = filename.substr (2);
-#ifdef _WIN32
-        wstring key = msra::strfun::utf16 (regex_replace (filename, regex ("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
-#endif
-#ifdef __unix__
-        wstring key = msra::strfun::utf16 (removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
+#ifdef _MSC_VER
+        wstring key = msra::strfun::utf16(regex_replace(filename, regex("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
+#else
+        wstring key = msra::strfun::utf16(msra::dbn::removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
 #endif
 
         // determine lines range

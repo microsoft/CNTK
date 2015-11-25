@@ -11,6 +11,7 @@
 
 #include "File.h"
 #include "commandArgUtil.h"
+#include "ScriptableObjects.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -227,47 +228,58 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
     // features - [in,out] a vector of feature name strings
     // labels - [in,out] a vector of label name strings
-    void GetFileConfigNames(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
+    template<class ConfigRecordType>
+    void GetFileConfigNames(const ConfigRecordType& config, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
     {
-        for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
+        for (const auto & id : config.GetMemberIds())
         {
-            auto pair = *iter;
-            ConfigParameters temp (iter->second);
+            if (!config.CanBeConfigRecord(id))
+                continue;
+            const ConfigRecordType & temp = config(id);
             // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
-            if (temp.ExistsCurrent("dim"))
+            if (temp.ExistsCurrent(L"dim"))
             {
-                if (temp.ExistsCurrent("labelMappingFile") 
-                    || temp.ExistsCurrent("labelDim")
-                    || temp.ExistsCurrent("labelType")
-                    || (temp.ExistsCurrent("sectionType") && temp("sectionType") == "labels"))
+                if (temp.ExistsCurrent(L"labelMappingFile") 
+                    || temp.ExistsCurrent(L"labelDim")
+                    || temp.ExistsCurrent(L"labelType")
+                    || (temp.ExistsCurrent(L"sectionType") && (const wstring&)temp(L"sectionType") == L"labels"))
                 {
-                    labels.push_back(msra::strfun::utf16(iter->first));
+                    labels.push_back(id);
                 }
                 else
                 {
-                    features.push_back(msra::strfun::utf16(iter->first));
+                    features.push_back(id);
                 }
             }
         }
     }
 
+    template void GetFileConfigNames<ConfigParameters>(const ConfigParameters &, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
+    template void GetFileConfigNames<ScriptableObjects::IConfigRecord>(const ScriptableObjects::IConfigRecord &, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
+
     // FindConfigNames - determine the names of the heirarchy of sections in the config file that contain a particular key
     // config - configuration to search
     // key - string we ar searching for in each config section
     // names - [in,out] a vector of section names in "path" format (i.e. base\subsection)
-    void FindConfigNames(const ConfigParameters& config, std::string key, std::vector<std::wstring>& names)
+    template<class ConfigRecordType>
+    void FindConfigNames(const ConfigRecordType& config, std::string key, std::vector<std::wstring>& names)
     {
-        for (auto iter = config.begin(); iter != config.end(); ++iter)
+        wstring wkey = wstring(key.begin(), key.end());
+        for (const auto & id : config.GetMemberIds())
         {
-            auto pair = *iter;
-            ConfigParameters temp (iter->second);
+            if (!config.CanBeConfigRecord(id))
+                continue;
+            const ConfigRecordType & temp = config(id);
             // see if we have a config parameters that contains a "key" element, if so use it
-            if (temp.ExistsCurrent(key))
+            if (temp.ExistsCurrent(wkey.c_str()))
             {
-                names.push_back(msra::strfun::utf16(iter->first));
+                names.push_back(id);
             }
         }
     }
+
+    template void FindConfigNames<ConfigParameters>(const ConfigParameters &, std::string key, std::vector<std::wstring>& names);
+    template void FindConfigNames<ScriptableObjects::IConfigRecord>(const ScriptableObjects::IConfigRecord &, std::string key, std::vector<std::wstring>& names);
 
     // Trim - trim white space off the start and end of the string
     // str - string to trim

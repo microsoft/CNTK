@@ -14,7 +14,6 @@
 #include "BestGpu.h"
 
 #include "ComputationNetwork.h"
-#include "IComputationNetBuilder.h"
 #include "commandArgUtil.h"
 
 // TODO: giving up moving stuff for now, running out of time. The following #includes should not be necessary once the hard-working code in here gets moved to .cpp
@@ -74,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     extern EvalCriterion ParseEvalCriterionString(wstring s);
 
     template<class ElemType>
-    class SimpleNetworkBuilder : public IComputationNetBuilder<ElemType>
+    class SimpleNetworkBuilder
     {
     protected:
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -248,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr) override;
+        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr);
 
         ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // support for fseide's Microsoft-internal legacy tool "DBN.exe"
 

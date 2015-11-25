@@ -90,8 +90,8 @@ private:
     
     int m_verbosity;
 
-    void PrepareForTrainingOrTesting(const ConfigParameters& config);
-    void PrepareForWriting(const ConfigParameters& config);
+    template<class ConfigRecordType> void PrepareForTrainingOrTesting(const ConfigRecordType & config);
+    template<class ConfigRecordType> void PrepareForWriting(const ConfigRecordType & config);
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
@@ -106,8 +106,8 @@ private:
     size_t GetNumParallelSequences();
     void SetNumParallelSequences(const size_t) { };
 
-    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
-                                std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
+    template<class ConfigRecordType> void GetDataNamesFromConfig(const ConfigRecordType & readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
+                                                                 std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     
@@ -138,7 +138,9 @@ public:
     HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>())
     {
     }
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy() { delete this; }
     virtual ~HTKMLFReader() { }
 

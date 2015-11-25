@@ -555,7 +555,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     else
         RuntimeError("lattice: mal-formed before parse N=/L= line in lattice.");
     
-    ASSERT(info.numnodes > 0);
+    assert(info.numnodes > 0);
     nodes.reserve (info.numnodes);
     // parse the nodes
     for (size_t i = 0; i < info.numnodes; i++, iter++)
@@ -572,7 +572,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         info.numframes = max (info.numframes, (size_t) nodes.back().t);
     }
     // parse the edges
-    ASSERT(info.numedges > 0);
+    assert(info.numedges > 0);
     edges.reserve (info.numedges);
     align.reserve (info.numedges * 10);  // 10 phones per word on av. should be enough
     std::string label;

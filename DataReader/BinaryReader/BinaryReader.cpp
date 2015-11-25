@@ -58,28 +58,40 @@ void BinaryReader<ElemType>::LoadSections(Section* sectionRoot, MappingType mapp
 //      c:\speech\mnist\mnist_labels.bin
 //  }
 //]
+
+static vector<wstring> GetCommaSeparatedItems(const ConfigParameters & config, wstring key)
+{
+    ConfigArray files(config(key), ',');
+    return (stringargvector) files;
+}
+static vector<wstring> GetCommaSeparatedItems(const ScriptableObjects::IConfigRecord & config, wstring key)
+{
+    return config(key, vector<wstring>());
+}
+
 template<class ElemType>
-void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BinaryReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // load in all the file config info for the root level
     std::vector<std::wstring> fileConfigs;
-    ConfigArray files(readerConfig("file"),',');
+    vector<wstring> files = GetCommaSeparatedItems(readerConfig, L"file");
     mOneLinePerFile = false;
-    mOneLinePerFile = readerConfig("onelineperfile", "false");
-    m_dim = readerConfig("dim", "20");
+    mOneLinePerFile = readerConfig(L"onelineperfile", false);
+    m_dim = readerConfig(L"dim", (size_t)20);
     m_totalSamples = 0;
-    size_t windowSize = readerConfig("windowSize","0");
+    size_t windowSize = readerConfig(L"windowSize", (size_t)0);
     MappingType mapping = windowSize?mappingElementWindow:mappingSection;
 
     if (mOneLinePerFile)
     {
         for (int i = 0; i < files.size(); ++i)
         {
-            FILE* secFile = fopen(files[i], "rt");
+            FILE* secFile = _wfopen(files[i].c_str(), L"rt");
             if (secFile != nullptr)
                 m_fStream.push_back(secFile);
             else
-                LogicError("BinaryReader::init cannot find %s to read", files[i]);
+                LogicError("BinaryReader::init cannot find %ls to read", files[i].c_str());
         }
     }
     else
@@ -111,10 +123,10 @@ void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
     // initialize all the variables
     m_mbStartSample = m_epoch = m_epochStartSample = 0;
     m_partialMinibatch = false;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
 
     // determine if partial minibatches are desired
-    std::string minibatchMode(readerConfig("minibatchMode","Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
     // Initial load is complete

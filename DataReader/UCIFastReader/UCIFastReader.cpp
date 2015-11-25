@@ -273,7 +273,8 @@ void UCIFastReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -281,9 +282,8 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     // initialize the cache
     InitCache(readerConfig);
-    readerConfig.CopyTo(m_readerConfig);
 
-    // if we have a cache, no need to parse the test files...
+    // if we have a cache, no need to parse the text files...
     if (m_cachingReader)
         return;
 
@@ -298,18 +298,19 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     {
         m_labelsName = labels[0];
     }
-    ConfigParameters configFeatures = readerConfig(m_featuresName,"");
-    ConfigParameters configLabels = readerConfig(m_labelsName,"");;
-    if (configFeatures.size() == 0)
+    if (!readerConfig.Exists(m_featuresName))
         RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
-    if (configLabels.size() == 0)
+    bool hasLabels = readerConfig.Exists(m_labelsName);
+    if (!hasLabels)
         fprintf(stderr, "Warning: labels are not specified.");
-    else if (configFeatures("file","") != configLabels("file",""))
+    const ConfigRecordType & configFeatures = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
+    const ConfigRecordType & configLabels   = readerConfig(m_labelsName.c_str(), ConfigRecordType::Record());
+    if (configFeatures(L"file", L"") != configLabels(L"file", L""))
         RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
-    size_t vdim = configFeatures("dim");
-    string name = configFeatures.Name();
-    size_t udim = configLabels("labelDim","0");
+    size_t vdim = configFeatures(L"dim");
+    //string name = configFeatures.Name();            // TODO: Aaargh!!!
+    size_t udim = configLabels(L"labelDim", (size_t)0);
 
     // initialize all the variables
     m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = 0;
@@ -318,15 +319,15 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_labelType = labelCategory;
     m_featureCount = vdim;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
     // set the feature count to at least one (we better have one feature...)
     assert (m_featureCount != 0);
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             m_randomizeRange = randomizeNone;
@@ -337,7 +338,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
         else
         {
-            m_randomizeRange = readerConfig("randomize");
+            m_randomizeRange = readerConfig(L"randomize");
         }
     }
     else
@@ -346,52 +347,52 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
 
     // determine if we partial minibatches are desired
-    std::string minibatchMode(readerConfig("minibatchMode","Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
     // get start and dimensions for labels and features
-    size_t startLabels = configLabels("start", "0");
-    size_t dimLabels = configLabels("dim", "0");
+    size_t startLabels = configLabels(L"start", (size_t)0);
+    size_t dimLabels = configLabels(L"dim", (size_t)0);
 
-    size_t startFeatures = configFeatures("start", "0");
-    size_t dimFeatures = configFeatures("dim", "0");
+    size_t startFeatures = configFeatures(L"start", (size_t)0);
+    size_t dimFeatures = configFeatures(L"dim", (size_t)0);
 
     // determine label type desired
-    std::string labelType;
-    if (configLabels.size() == 0)
-        labelType = "None";
+    std::wstring labelType;
+    if (!hasLabels)
+        labelType = L"none";
     else
-        labelType = configLabels("labelType","Category");
+        labelType = (wstring)configLabels(L"labelType", L"category");
 
     //convert to lower case for case insensitive comparison
-    msra::strfun::tolower_ascii(labelType);
-    if (labelType == "category")
+    if (!_wcsicmp(labelType.c_str(), L"category"))
     {
         m_labelType = labelCategory;
     }
-    else if (labelType == "regression")
+    else if (!_wcsicmp(labelType.c_str(), L"regression"))
     {
         m_labelType = labelRegression;
     }
-    else if (labelType == "none")
+    else if (!_wcsicmp(labelType.c_str(), L"none"))
     {
         m_labelType = labelNone;
         dimLabels = 0;   // override for no labels
     }
 
-    std::wstring file = configFeatures("file");
+    std::wstring file = configFeatures(L"file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading uci file %ls\n", file.c_str());
+        fprintf(stderr, "Reading UCI file %ls\n", file.c_str());
 
     m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
     if (m_labelType != labelNone)
     {
-        ConfigArray arrayLabels;
-        std::wstring labelPath = configLabels("labelMappingFile");
+        std::wstring labelPath = configLabels(L"labelMappingFile");
         if (fexists(labelPath))
         {
+            // TODO: We use the old CNTK config reader for this. With BrainScript, we would have to parse the file locally here, which should be easy.
+            ConfigArray arrayLabels;
             arrayLabels.LoadConfigFile(labelPath);
             for (int i=0; i < arrayLabels.size(); ++i)
             {
@@ -405,7 +406,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         {
             // only do label creation if we have the allow flag, should only be done as a separate command
             // to ensure that the label file will exist for verification step in training
-            bool allowLabelCreation = readerConfig("allowMapCreation","false");
+            bool allowLabelCreation = readerConfig(L"allowMapCreation", false);
             if (allowLabelCreation)
                 m_labelFileToWrite = labelPath;
             else
@@ -422,18 +423,32 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         udim = m_labelIdMax;
     m_labelDim = (LabelIdType)udim;
 
-    mOneLinePerFile = false;
-    mOneLinePerFile = readerConfig("onelineperfile", "false");
-
+    mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
 // readerConfig - reader configuration
 template<class ElemType>
-void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
+void UCIFastReader<ElemType>::InitCache(const ScriptableObjects::IConfigRecord & readerConfig)
 {
     // check for a writer tag first (lets us know we are caching)
-    if (!readerConfig.Exists("writerType"))
+    if (readerConfig.Exists(L"writerType"))
+        InvalidArgument("UCIFastReader: Caching ('writerType') is currently not supported for BrainScript.");
+    // BrainScript cannot support this because of the manipulations of ConfigRecords, which the ScriptableObjects interface does not support (IConigRecords are immutable).
+    // TODO: We could implement an overlay IConfigRecord implementation that fakes the two values that are being added to the interface.
+    // BrainScript also cannot support this because a copy of the readerConfig is kept. IConfigRecords are not copyable.
+    // TODO: We could copy the IConfigRecordPtr. That is allowed. Not trivial to do with template magic.
+}
+template<class ElemType>
+void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
+{
+    // first time we are called we cache our parameters
+    // Note: This is a little ugly. It is an artifact of integrating with BrainScript. Since BrainScript does not allow to copy configs, I moved that copy code here into the ConfigParameters implementation.
+    if (&readerConfig != &m_readerConfig)
+        readerConfig.CopyTo(m_readerConfig);
+
+    // check for a writer tag first (lets us know we are caching)
+    if (!readerConfig.Exists(L"writerType"))
         return;
 
     // first try to open the binary cache
@@ -443,10 +458,10 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
         // TODO: need to go down to all levels, maybe search for sectionType
         ConfigArray filesList(',');
         vector<std::wstring> names;
-        if (readerConfig.Exists("wfile"))
+        if (readerConfig.Exists(L"wfile"))
         {
-            filesList.push_back(readerConfig("wfile"));
-            if (fexists(readerConfig("wfile")))
+            filesList.push_back(readerConfig(L"wfile"));
+            if (fexists(readerConfig(L"wfile")))
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
@@ -490,6 +505,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
     }
     catch (runtime_error err)
     {
+        // In case caching reader/writer cannot be created, we gracefully fail over and disable caching.
         fprintf(stderr,"Error attemping to create Binary%s\n%s\n",found?"Reader":"Writer",err.what());
         delete m_cachingReader;
         m_cachingReader = NULL;

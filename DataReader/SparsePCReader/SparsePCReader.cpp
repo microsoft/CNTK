@@ -67,25 +67,26 @@ void SparsePCReader<ElemType>::Destroy()
 // Init - Reader Initialize for multiple data sets
 // config - [in] configuration parameters for the datareader
 template<class ElemType>
-void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // Sparse PC reader considers every consecutive N rows to be part of a single block.
     // This is used later to compute the corss-entropy with softmax per block.
     // Default value is 1 to indicate all rows are independent.
-    m_microBatchSize = readerConfig("microbatchSize", "1");
+    m_microBatchSize = readerConfig(L"microbatchSize", (size_t)1);
 
     m_miniBatchSize = 0;
-    m_traceLevel = readerConfig("traceLevel", "0");
-    m_maxReadData = readerConfig("maxReadData", "0");
-    m_doGradientCheck = readerConfig("gradientCheck", "false");
-    m_returnDense = readerConfig("returnDense", "false");
-    m_sparsenessFactor = readerConfig("sparsenessFactor", "50"); // We don't expect more than one in 50 input positions to have non-zero values
-    m_verificationCode = readerConfig("verificationCode", "0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
+    m_maxReadData = readerConfig(L"maxReadData", (size_t)0);
+    m_doGradientCheck = readerConfig(L"gradientCheck", false);
+    m_returnDense = readerConfig(L"returnDense", false);
+    m_sparsenessFactor = readerConfig(L"sparsenessFactor", (size_t)50); // We don't expect more than one in 50 input positions to have non-zero values
+    m_verificationCode = (int32_t)readerConfig(L"verificationCode", (size_t)0);
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
 
-    m_file = readerConfig("file");
+    m_file = (const wstring &)readerConfig(L"file");
 
     // Determine the names of the features and lables sections in the config file.
     // features - [in,out] a vector of feature name strings

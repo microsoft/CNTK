@@ -54,12 +54,11 @@ class minibatchutterancesourcemulti : public minibatchsource
         size_t numframes() const { return parsedpath.numframes(); }
         wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
-#ifdef _WIN32
+#ifdef _MSC_VER
             static const wstring emptywstring;
             static const wregex deleteextensionre (L"\\.[^\\.\\\\/:]*$");
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
-#endif
-#ifdef __unix__
+#else
             return removeExtension(logicalpath());
 #endif
         }

@@ -88,6 +88,13 @@ BinaryWriter<ElemType>::~BinaryWriter()
 
 
 template<class ElemType>
+Section* BinaryWriter<ElemType>::CreateSection(const ScriptableObjects::IConfigRecord&, Section*, size_t, size_t)
+{
+    InvalidArgument("BinaryWriter currently not implemented for BrainScript.");
+    // ...the reason being that the BinaryWriter needs the ConfigPath, which is also not available in BrainScript.
+}
+
+template<class ElemType>
 Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, Section* parentSection, size_t p_records, size_t p_windowSize)
 {
     // first check if we need to open a new section file
@@ -95,39 +102,38 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // determine the element size, default to ElemType size
     size_t elementSize = sizeof(ElemType);
-    if (config.ExistsCurrent("elementSize"))
+    if (config.ExistsCurrent(L"elementSize"))
     {
-        elementSize = config("elementSize");
+        elementSize = config(L"elementSize");
     }
 
     // get the number of records we should expect (max)
     // if defined in previous levels same number will be used
     size_t records = p_records;
-    if (config.ExistsCurrent("wrecords"))
+    if (config.ExistsCurrent(L"wrecords"))
     {
-        records = config("wrecords");
+        records = config(L"wrecords");
     }
     if (records == 0)
     {
-        std::string message = "Required config variable (wrecords) missing from " + config.ConfigPath();
-        RuntimeError(message);
+        InvalidArgument("Required config variable 'wrecords' missing from BinaryWriter configuration.");
     }
 
     size_t dim=1; // default dimension (single item)
-    if (config.ExistsCurrent("dim"))
+    if (config.ExistsCurrent(L"dim"))
     {
-        dim = config("dim");
+        dim = config(L"dim");
     }
 
     // get the section type (used for caching)
     SectionType sectionType = sectionTypeNull;
-    if (config.ExistsCurrent("sectionType"))
+    if (config.ExistsCurrent(L"sectionType"))
     {
         SectionType foundType = sectionTypeNull;
-        std::string type = config("sectionType");
+        wstring type = config(L"sectionType");
         for (int i=0; i < sectionTypeMax;i++)
         {
-            if (!_stricmp(type.c_str(), SectionTypeStrings[i]))
+            if (!_wcsicmp(type.c_str(), SectionTypeStrings[i]))
             {
                 foundType = SectionType(i);
                 break;
@@ -137,8 +143,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         // check to make sure it matched something
         if (foundType == sectionTypeNull)
         {
-            std::string message = "Invalid type (sectionType) in " + config.ConfigPath();
-            RuntimeError(message);
+            InvalidArgument("Invalid value for 'sectionType' in BinaryWriter configuration: %ls", type.c_str());
         }
         sectionType = foundType;
     }
@@ -150,9 +155,9 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // filename to use the one defined at this level, if there is none use the parent file
     SectionFile* file = NULL;
-    if (config.ExistsCurrent("wfile"))
+    if (config.ExistsCurrent(L"wfile"))
     {
-        std::wstring wfile = config("wfile");
+        std::wstring wfile = config(L"wfile");
         auto secFile = m_secFiles.find(wfile);
         if (secFile != m_secFiles.end())
         {
@@ -161,7 +166,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         else
         {
             // TODO: sanity check and use records as a clue of how big to make it
-            size_t initialSize = config("wsize","256"); // default to 256MB if not provided
+            size_t initialSize = config(L"wsize", (size_t)256); // default to 256MB if not provided
             initialSize *= 1024*1024;   // convert MB to bytes
             if (initialSize < dataSize)
                 initialSize = dataSize*5/4; // make the initalSize slightly larger than needed for data
@@ -180,8 +185,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         }
         else if (sectionType != sectionTypeNull)
         {
-            std::string message = "No filename (wfile) defined in " + config.ConfigPath();
-            RuntimeError(message);
+            InvalidArgument("No filename (wfile) defined in BinaryWriter configuration.");
         }
     }
 
@@ -213,9 +217,9 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
     // get the window size, to see if we want to do separate element mapping
     size_t windowSize = p_windowSize;
-    if (config.ExistsCurrent("windowSize"))
+    if (config.ExistsCurrent(L"windowSize"))
     {
-        windowSize = config("windowSize");
+        windowSize = config(L"windowSize");
     }
     MappingType mappingMain = windowSize?mappingElementWindow:mappingParent;
     MappingType mappingAux = windowSize?mappingSection:mappingParent;
@@ -242,20 +246,19 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         auto sectionLabel = new SectionLabel(file, parentSection, filePositionNext, mappingMain, dataSize);
         SectionData dataType = sectionDataInt;
         LabelKind labelKind = labelCategory; // default
-        if (config.Match("labelType", "Regression"))
+        if (config.Match(L"labelType", L"Regression"))
         {
             labelKind = labelRegression;
             dataType = sectionDataFloat;
             elementSize = sizeof(ElemType);
         }
-        else if (config.Match("labelType", "Category"))
+        else if (config.Match(L"labelType", L"Category"))
         {
             // everything set already, default value
         }
         else
         {
-            std::string message = "Invalid type (labelType) or missing in " + config.ConfigPath();
-            RuntimeError(message);
+            RuntimeError("Invalid type 'labelType' or missing in BinaryWriter configuration.");
         }
 
         // initialize the section header
@@ -263,7 +266,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
         // initialize the special label header items
         sectionLabel->SetLabelKind(labelKind);
-        sectionLabel->SetLabelDim(config("labelDim"));
+        sectionLabel->SetLabelDim(config(L"labelDim"));
         section = sectionLabel;
         break;
         }
@@ -275,7 +278,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         break;
     case sectionTypeStats: // data statistics
         {
-        ConfigArray calcStats = config("compute");
+        ConfigArray calcStats = config(L"compute");
         records = calcStats.size();
         elementSize = sizeof(NumericStatistics);
         dataOnlySize = records*elementSize;
@@ -337,7 +340,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     // wait until here so everything is mapped and valid in the object
     if (sectionType == sectionTypeStats)
     {
-        ConfigArray calcStats = config("compute");
+        ConfigArray calcStats = config(L"compute");
         ((SectionStats*)section)->InitCompute(calcStats);
     }
 
@@ -365,13 +368,13 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
 
 // Init - initialize the Binary writer
 // config - the configuration for the binary writer
-template<class ElemType>
-void BinaryWriter<ElemType>::Init(const ConfigParameters& config)
+template<class ElemType> template<class ConfigRecordType>
+void BinaryWriter<ElemType>::InitFromConfig(const ConfigRecordType & config)
 {
     // initialize all the variables
     m_recordCurrent = 0;
-    m_recordMax = config("wrecords","0");
-    m_traceLevel = config("traceLevel","0");
+    m_recordMax = config(L"wrecords", (size_t)0);
+    m_traceLevel = config(L"traceLevel", 0);
     m_uniqueID = (WORD)GetTickCount();
 
     // get the configuration, this will recursively go down and create all subfiles/sections as well 
