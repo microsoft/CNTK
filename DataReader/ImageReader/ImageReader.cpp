@@ -53,6 +53,11 @@ public:
     {
         m_cropType = ParseCropType(config(L"cropType", ""));
 
+#if 1
+        floatargvector cropRatio = config(L"cropRatio", "1.0");
+        m_cropRatioMin = cropRatio[0];
+        m_cropRatioMax = cropRatio[1];
+#else
         std::stringstream ss{ config(L"cropRatio", "1") };
         std::string token{ "" };
         if (std::getline(ss, token, ':'))
@@ -60,6 +65,7 @@ public:
             m_cropRatioMin = std::stof(token);
             m_cropRatioMax = std::getline(ss, token, ':') ? std::stof(token) : m_cropRatioMin;
         }
+#endif
 
         if (!(0 < m_cropRatioMin && m_cropRatioMin <= 1.0) || 
             !(0 < m_cropRatioMax && m_cropRatioMax <= 1.0) ||
