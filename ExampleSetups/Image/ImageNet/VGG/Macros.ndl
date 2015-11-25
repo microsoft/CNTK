@@ -9,10 +9,10 @@ DnnReLULayer(inDim, outDim, x, wScale, bValue)
 }
 
 # Fully-connected layer.
-DnnLayer(hiddenDim, labelDim, x, wScale, bValue)
+DnnLayer(inDim, outDim, x, wScale, bValue)
 {
-    W = Parameter(labelDim, hiddenDim, init = Gaussian, initValueScale = wScale)
-    b = Parameter(labelDim, init = fixedValue, value = bValue)
+    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale)
+    b = Parameter(outDim, init = fixedValue, value = bValue)
     t = Times(W, x)
     z = Plus(t, b)
 }

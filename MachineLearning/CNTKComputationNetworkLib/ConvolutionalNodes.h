@@ -118,13 +118,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)  //derivative with respect to the weight matrix
             {
                 Matrix<ElemType>& grad = Inputs(0)->GradientValues();
-                m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, frameRange.IsAllFrames());
+                m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, frameRange.IsAllFrames(), *m_tempMatrix);
             }
             else if (inputIndex == 1)  // derivative with respect to the input feature
             {
                 const Matrix<ElemType>& input0 = Inputs(0)->FunctionValues();
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad);
+                m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
             }
         }
 
@@ -152,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input0.HasNan("Convolution-input0");
             sliceInput1Value.HasNan("Convolution-input1");
 #endif
-            m_convEng->Forward(*m_inT, sliceInput1Value, *m_filterT, input0, *m_convDesc, *m_outT, sliceOutputValue);
+            m_convEng->Forward(*m_inT, sliceInput1Value, *m_filterT, input0, *m_convDesc, *m_outT, sliceOutputValue, *m_tempMatrix);
 #if NANCHECK
             sliceOutputValue.HasNan("Convolution");
 #endif
@@ -169,8 +169,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_convEng != nullptr);
             m_convEng->BackwardBias(*m_outT, srcGrad, *m_biasT, biasGrad);
         }
-
-    public:
 
         // note: this also infers dimensions from chilren
         void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -202,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(outputDim, Input(1)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs()
+        void InferImageDimsFromInputs() override
         {
             InferImageDimsFromInput(1, false);
 
@@ -242,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_biasT = m_factory->CreateTensor(1, 1, m_imageLayout.GetNumChannels(), 1);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+        void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -561,6 +559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
             BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"))
         {
+            AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
         void SaveToFile(File& fstream) const override
