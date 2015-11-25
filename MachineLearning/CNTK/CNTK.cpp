@@ -17,8 +17,8 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
-#include "buildinfo.h"
 #endif
+#include "buildinfo.h"
 #include "hostname.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
@@ -1643,24 +1643,36 @@ std::string TimeDateStamp()
     return buf;
 }
 
-#ifdef _WIN32
 void PrintBuiltInfo()
 {
     fprintf(stderr, "-------------------------------------------------------------------\n");
     fprintf(stderr, "Build info: \n\n");
     fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
-    fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-    fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#ifdef _BUILDTYPE_ 
+    fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif 
+#ifdef _MATHLIB_
+    fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
     fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+#endif 
+#ifdef _CUB_PATH_
+    fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUB_PATH_);
+#endif 
 #ifdef _GIT_EXIST
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
     fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
 #endif
-    fprintf(stderr, "-------------------------------------------------------------------\n");
-
-}
+#ifdef _BUILDER_ 
+    fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+#endif 
+#ifdef _BUILDPATH_
+    fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+}
 
 void PrintUsageInfo()
 {
@@ -1779,9 +1791,7 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     }
 
     // echo config info to log
-#ifdef _WIN32
     PrintBuiltInfo();
-#endif
 
     // execute the actions
     //std::string type = config(L"precision", "float");
@@ -1867,9 +1877,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         RedirectStdErr(logpath);
     }
 
-#ifdef _WIN32
     PrintBuiltInfo();
-#endif
     std::string timestamp = TimeDateStamp();
 
     //dump config info

@@ -1,0 +1,105 @@
+#!/bin/bash
+
+
+# description: 
+# this script is used to generated buildinfo.h in MachineLearning/CNTK which will contain the following infomation to be displayed at runtime: 
+# 	CUDA_PATH 	(if exists) 
+#	CUB_PATH	(if exists)
+#	GIT_COMMIT	
+#	GTT_BRANCH
+#	BUILDTYPE	(release/debug)
+#	MATHLIB		(MKL/ACML)
+
+usage ()
+{
+	echo "usage: $0 <Config.make>"
+	echo "-------------------------------------------------------------------"
+	echo "This script is used to generate buildinfo.h in MachineLearning/CNTK"
+	echo "This script needs to be called from the top level directory of CNTK project"
+	echo "This script assumes git can be used"
+	echo "This script assumes Config.make has been made"
+	echo "-------------------------------------------------------------------"
+	if [ ! -z "$1" ] ; then 
+		echo "ERROR message: $1"
+	fi
+	exit 1
+}
+
+Has_Git()
+{
+	if hash git 2>/dev/null; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+makebuildinfo()
+{
+	target=$1
+	BUILDTYPE=$2
+	MATHLIB=$3
+	GIT_COMMIT=$4
+	GIT_BRANCH=$5
+	CUDA_PATH=$6
+	CUB_PATH=$7
+	
+	printf "#ifndef _BUILDINFO_H\n" 			> 	$target
+	printf "#define _BUILDINFO_H\n" 			>>	$target
+	printf "#define _GIT_EXIST\n"				>> 	$target 
+	printf "#define _MATHLIB_ \"%s\"\n" $MATHLIB		>> 	$target
+	printf "#define _BUILDSHA1_ \"%s\"\n" $GIT_COMMIT   	>>  	$target
+	printf "#define _BUILDBRANCH_ \"%s\"\n" $GIT_BRANCH 	>>	$target 
+	if [ ! -z "$CUDA_PATH" ]; then 
+		printf "#define _CUDA_PATH_ \"%s\"\n" $CUDA_PATH >> $target
+	fi
+	if [ ! -z "$CUB_PATH" ]; then 
+		printf "#define _CUB_PATH_ \"%s\"\n"  $CUB_PATH  >> $target
+	fi
+	printf "#define _BUILDTYPE_ \"%s\"\n" $BUILDTYPE    	>> 	$target
+	printf "#endif\n" 					>>	$target
+}
+
+#//////////////////////////////////////////////////////#
+#		main function 			       #
+#//////////////////////////////////////////////////////#	
+if [ $# -ne 1 ]; then 
+	usage 
+fi
+
+config=$1
+
+# 1. check whether we have git and what is the sha-1 value 
+if Has_Git; then has_git=1; else has_git=0; usage "git not exist"; fi
+GIT_COMMIT=`git rev-parse HEAD`
+GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
+
+# 2. looking into Config.make
+if [ ! -e $config ] ; then 
+	usage "Config.make not exists"
+fi
+source $config
+
+# 3. whether we have CUDA_PATH 
+if [ -z "${CUDA_PATH+x}" ]; then 
+	CUDAPATH=""
+else
+	CUDAPATH=$CUDA_PATH
+fi
+
+# 4. whether we have CUB_PATH
+if [ -z "${CUB_PATH+x}" ]; then 
+	CUBPATH=""
+else
+	CUBPATH=$CUB_PATH
+fi
+
+# 5. make buildinfo.h 
+target=MachineLearning/CNTK/buildinfo.h
+if [ ! -d MachineLearning ] ; then 
+	usage
+fi
+if [ -e MachineLearning/CNTK/buildinfo.h ] ; then 
+	rm MachineLearning/CNTK/buildinfo.h
+fi
+makebuildinfo $target $BUILDTYPE $MATHLIB $GIT_COMMIT $GIT_BRANCH $CUDAPATH $CUBPATH
