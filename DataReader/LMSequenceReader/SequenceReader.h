@@ -11,10 +11,10 @@
 #include "DataWriter.h"
 #include "commandArgUtil.h"
 #include "SequenceParser.h"
+#include "RandomOrdering.h"
 #include <string>
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
 #include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {

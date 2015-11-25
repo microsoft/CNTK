@@ -80,7 +80,7 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
