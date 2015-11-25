@@ -217,9 +217,6 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 
 //#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
 //#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
-#ifndef ASSERT
-#define ASSERT assert
-#endif
 
 // ----------------------------------------------------------------------------
 // basic data types
@@ -227,66 +224,6 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 
 namespace msra { namespace basetypes {
 
-// class ARRAY -- std::vector with array-bounds checking
-// VS 2008 and above do this, so there is no longer a need for this.
-
-#pragma warning(push)
-#pragma warning(disable : 4555) // expression has no affect, used so retail won't be empty
-
-template<class _ElemType>
-class ARRAY : public std::vector<_ElemType>
-{
-#if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
-    static void throwOutOfBounds()
-    {   // (moved to separate function hoping to keep inlined code smaller
-        OACR_WARNING_PUSH;
-        OACR_WARNING_DISABLE(IGNOREDBYCOMMA, "Reviewd OK. Special trick below to show a message when assertion fails"
-            "[rogeryu 2006/03/24]");
-        OACR_WARNING_DISABLE(BOGUS_EXPRESSION_LIST, "This is intentional. [rogeryu 2006/03/24]");
-        //ASSERT ("ARRAY::operator[] out of bounds", false);
-        OACR_WARNING_POP;
-    }
-#endif
-
-public:
-
-    ARRAY() : std::vector<_ElemType> () { }
-    ARRAY (int size) : std::vector<_ElemType> (size) { }
-
-#if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
-    // ------------------------------------------------------------------------
-    // operator[]: with array-bounds checking
-    // ------------------------------------------------------------------------
-
-    inline _ElemType & operator[] (int index)            // writing
-    {
-        if (index < 0 || index >= size()) throwOutOfBounds();
-        return (*(std::vector<_ElemType>*) this)[index];
-    }
-
-    // ------------------------------------------------------------------------
-
-    inline const _ElemType & operator[] (int index) const    // reading
-    {
-        if (index < 0 || index >= size()) throwOutOfBounds();
-        return (*(std::vector<_ElemType>*) this)[index];
-    }
-#endif
-
-    // ------------------------------------------------------------------------
-    // size(): same as base class, but returning an 'int' instead of 'size_t'
-    // to allow for better readable code
-    // ------------------------------------------------------------------------
-
-    inline int size() const
-    {
-        size_t siz = ((std::vector<_ElemType>*) this)->size();
-        return (int) siz;
-    }
-};
-// overload swap(), otherwise we'd fallback to 3-way assignment & possibly throw
-template<class _T> inline void swap (ARRAY<_T> & L, ARRAY<_T> & R)  throw()
-{ swap ((std::vector<_T> &) L, (std::vector<_T> &) R); }
 
 // class fixed_vector - non-resizable vector
 
@@ -294,8 +231,8 @@ template<class _T> class fixed_vector
 {
     _T * p;                 // pointer array
     size_t n;               // number of elements
-    void check (int index) const { index/*avoid compiler warning*/;ASSERT (index >= 0 && (size_t) index < n); }
-    void check (size_t index) const { ASSERT (index < n); }
+    void check (int index) const { index/*avoid compiler warning*/;assert (index >= 0 && (size_t) index < n); }
+    void check (size_t index) const { assert (index < n); }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
@@ -316,7 +253,7 @@ public:
     inline const _T & operator[] (int index) const    { check (index); return p[index]; }  // reading
     inline       _T & operator[] (size_t index)       { check (index); return p[index]; }  // writing
     inline const _T & operator[] (size_t index) const { check (index); return p[index]; }  // reading
-    inline int indexof (const _T & elem) const { ASSERT (&elem >= p && &elem < p + n); return &elem - p; }
+    inline int indexof (const _T & elem) const { assert (&elem >= p && &elem < p + n); return &elem - p; }
     inline void swap (fixed_vector & other)  throw() { std::swap (other.p, p); std::swap (other.n, n); }
     template<class VECTOR> fixed_vector & operator= (const VECTOR & other)
     {
@@ -346,7 +283,7 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 template<class T> class matrix : fixed_vector<T>
 {
     size_t numcols;
-    size_t locate (size_t i, size_t j) const { ASSERT (i < rows() && j < cols()); return i * cols() + j; }
+    size_t locate (size_t i, size_t j) const { assert (i < rows() && j < cols()); return i * cols() + j; }
 public:
     typedef T elemtype;
     matrix() : numcols (0) {}

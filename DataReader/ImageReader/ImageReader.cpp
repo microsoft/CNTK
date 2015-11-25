@@ -274,15 +274,10 @@ public:
         else
         {
             cv::FileStorage fs;
-            // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...
-            auto fname = meanFile;
-#ifdef _WIN32
-            fs.open(fname.c_str(), cv::FileStorage::READ);
-#else
-            fs.open(charpath(fname), cv::FileStorage::READ);
-#endif
+            // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...  [fseide] no, only OpenCV has this problem.
+            fs.open(msra::strfun::utf8(meanFile).c_str(), cv::FileStorage::READ);
             if (!fs.isOpened())
-                RuntimeError("Could not open file: " + fname);
+                RuntimeError("Could not open file: %ls", meanFile.c_str());
             fs["MeanImg"] >> m_meanImg;
             int cchan;
             fs["Channel"] >> cchan;
@@ -291,7 +286,7 @@ public:
             int ccol;
             fs["Col"] >> ccol;
             if (cchan * crow * ccol != m_meanImg.channels() * m_meanImg.rows * m_meanImg.cols)
-                RuntimeError("Invalid data in file: " + fname);
+                RuntimeError("Invalid data in file: %ls", meanFile.c_str());
             fs.release();
             m_meanImg = m_meanImg.reshape(cchan, crow);
         }

@@ -10,8 +10,9 @@
 #include <chrono> 
 #include <iostream>
 #include <vector>
-#include "..\Math\Matrix.h"
-#include "..\Math\CPUMatrix.h"
+#include "Matrix.h"
+#include "CPUMatrix.h"
+#include "Sequences.h"
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
@@ -95,7 +96,7 @@ void oldRnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Ma
 template<class ElemType>
 void oldRNNEvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t indexInBatch, const size_t mNbr)
 {
-    ASSERT(delay > 0);
+    assert(delay > 0);
 
     if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
         functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
