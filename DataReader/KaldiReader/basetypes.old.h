@@ -148,12 +148,12 @@ typedef unsigned char byte;
 
 #define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
 #define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
-#ifndef ASSERT
+#ifndef assert
 #ifdef _CHECKED // basetypes.h expects this function to be defined (it is in message.h)
 extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp);
-#define ASSERT(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
+#define assert(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
 #else
-#define ASSERT assert
+#define assert assert
 #endif
 #endif
 
@@ -164,11 +164,11 @@ using namespace std;
 
 namespace msra { namespace basetypes {
 
-// class ARRAY -- std::vector with array-bounds checking
+// class std::vector -- std::vector with array-bounds checking
 // VS 2008 and above do this, so there is no longer a need for this.
 
 template<class _ElemType>
-class ARRAY : public std::vector<_ElemType>
+class std::vector : public std::vector<_ElemType>
 {
 #if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
     static void throwOutOfBounds()
@@ -177,15 +177,15 @@ class ARRAY : public std::vector<_ElemType>
         OACR_WARNING_DISABLE(IGNOREDBYCOMMA, "Reviewd OK. Special trick below to show a message when assertion fails"
             "[rogeryu 2006/03/24]");
         OACR_WARNING_DISABLE(BOGUS_EXPRESSION_LIST, "This is intentional. [rogeryu 2006/03/24]");
-        ASSERT (("ARRAY::operator[] out of bounds", false));
+        assert (("std::vector::operator[] out of bounds", false));
         OACR_WARNING_POP;
     }
 #endif
 
 public:
 
-    ARRAY() : std::vector<_ElemType> () { }
-    ARRAY (int size) : std::vector<_ElemType> (size) { }
+    std::vector() : std::vector<_ElemType> () { }
+    std::vector (int size) : std::vector<_ElemType> (size) { }
 
 #if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
     // ------------------------------------------------------------------------
@@ -219,7 +219,7 @@ public:
     }
 };
 // overload swap(), otherwise we'd fallback to 3-way assignment & possibly throw
-template<class _T> inline void swap (ARRAY<_T> & L, ARRAY<_T> & R) throw()
+template<class _T> inline void swap (std::vector<_T> & L, std::vector<_T> & R) throw()
 { swap ((std::vector<_T> &) L, (std::vector<_T> &) R); }
 
 // class fixed_vector - non-resizable vector
@@ -228,8 +228,8 @@ template<class _T> class fixed_vector
 {
     _T * p;                 // pointer array
     size_t n;               // number of elements
-    void check (int index) const { index; ASSERT (index >= 0 && (size_t) index < n); }
-    void check (size_t index) const { index; ASSERT (index < n); }
+    void check (int index) const { index; assert (index >= 0 && (size_t) index < n); }
+    void check (size_t index) const { index; assert (index < n); }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
@@ -250,7 +250,7 @@ public:
     inline const _T & operator[] (int index) const    { check (index); return p[index]; }  // reading
     inline       _T & operator[] (size_t index)       { check (index); return p[index]; }  // writing
     inline const _T & operator[] (size_t index) const { check (index); return p[index]; }  // reading
-    inline int indexof (const _T & elem) const { ASSERT (&elem >= p && &elem < p + n); return &elem - p; }
+    inline int indexof (const _T & elem) const { assert (&elem >= p && &elem < p + n); return &elem - p; }
     inline void swap (fixed_vector & other) throw() { std::swap (other.p, p); std::swap (other.n, n); }
     template<class VECTOR> fixed_vector & operator= (const VECTOR & other)
     {
@@ -278,7 +278,7 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 template<class T> class matrix : fixed_vector<T>
 {
     size_t numcols;
-    size_t locate (size_t i, size_t j) const { ASSERT (i < rows() && j < cols()); return i * cols() + j; }
+    size_t locate (size_t i, size_t j) const { assert (i < rows() && j < cols()); return i * cols() + j; }
 public:
     typedef T elemtype;
     matrix() : numcols (0) {}
@@ -464,7 +464,7 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
                                   &buf[0], (int) buf.size());
     if (rc == 0) throw std::runtime_error ("MultiByteToWideChar");
-    ASSERT (rc < buf.size ());
+    assert (rc < buf.size ());
     (*(std::wstring*)this) = &buf[0];
 }};
 #endif

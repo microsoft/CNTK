@@ -246,7 +246,7 @@ public:
             p[0] = (unsigned char) value;
             p[1] = (unsigned char) (value >> 8);
             p[2] = (unsigned char) (value >> 16);
-            ASSERT (value == (int) *this);
+            assert (value == (int) *this);
             return value;
         }
     };
@@ -265,7 +265,7 @@ public:
         base.resize (newsize);
         uint24_ref r = uint24_ref (&base[cursize]);
         r = value;
-        ASSERT (value == back());
+        assert (value == back());
     }
 };
 
@@ -310,7 +310,7 @@ class mgram_map
                 if ((size_t) id >= level1lookup.size()) return nindex;
                 i = level1lookup[id];
             }
-            ASSERT (i == nindex || ids[1][i] == id);
+            assert (i == nindex || ids[1][i] == id);
             return i;
         }
         index_t beg = firsts[m][i];
@@ -733,11 +733,11 @@ public:
 
         coord c (k.m, (index_t) ids[k.m].size());
 
-        ASSERT (firsts[k.m-1].back() == (index_t) ids[k.m].size());
+        assert (firsts[k.m-1].back() == (index_t) ids[k.m].size());
         ids[k.m].push_back (thisid);        // create value
         firsts[k.m-1].back() = (index_t) ids[k.m].size();
         if (firsts[k.m-1].back() != (index_t) ids[k.m].size()) fail ("create() numeric overflow--index_t too small");
-        ASSERT (k.m == M || firsts[k.m].back() == (index_t) ids[k.m+1].size());
+        assert (k.m == M || firsts[k.m].back() == (index_t) ids[k.m+1].size());
 
         // optimization: level1nonsparse flag
         // If unigram level is entirely non-sparse, we can save the search
@@ -769,10 +769,10 @@ public:
             firsts[m].resize (ids[m].size() +1, (int) ids[m+1].size());
         foreach_index (m, firsts)
         {
-            ASSERT (firsts[m][0] == 0);
+            assert (firsts[m][0] == 0);
             foreach_index (i, ids[m])
-                ASSERT (firsts[m][i] <= firsts[m][i+1]);
-            ASSERT ((size_t) firsts[m].back() == ids[m+1].size());
+                assert (firsts[m][i] <= firsts[m][i+1]);
+            assert ((size_t) firsts[m].back() == ids[m+1].size());
         }
         // id mapping
         // user-provided w->id map
@@ -1039,7 +1039,7 @@ public:
                     continue;
 
                 const mgram_map::key key = *iter;
-                ASSERT (m == key.order());
+                assert (m == key.order());
 
                 // --- output m-gram to ARPA file
                 fprintfOrDie (outf, "%.4f", logP[iter] / log10);
@@ -1065,7 +1065,7 @@ public:
                 numMGramsWritten++;
             }
             fflushOrDie (outf);
-            ASSERT (numMGramsWritten == map.size (m));
+            assert (numMGramsWritten == map.size (m));
             fprintf (stderr, "\n");
         }
 
@@ -1352,7 +1352,7 @@ protected:
                 int newid = w2id[w];        // map to new id space
                 mgram[m-1] = newid;
             }
-            for (int k = 0; k < m; k++) ASSERT (mgram[k] == w2id[key[k]]);
+            for (int k = 0; k < m; k++) assert (mgram[k] == w2id[key[k]]);
             // insert new key into sortedMap
             mgram_map::coord c = sortedMap.create (mgram_map::unmapped_key (&mgram[0], m), createCache);
             // copy over logP and logB
@@ -1478,7 +1478,7 @@ protected:
             if (m == 0) continue;
 
             const mgram_map::key key = *iter;
-            ASSERT (m == key.order());
+            assert (m == key.order());
 
             float thisP = P[iter];
             if (islog)
@@ -1967,7 +1967,7 @@ public:
         // estimate
         vector<bool> dropWord (userSymMap.size(), false);
         dropWord.push_back (true);  // filtering but no <UNK>: 
-        ASSERT (!filterVocabulary || unkId != -1 || dropWord[dropId]);
+        assert (!filterVocabulary || unkId != -1 || dropWord[dropId]);
 
         //std::vector<unsigned int> minObs (2, 0);
         //std::vector<unsigned int> iMinObs (3, 0);
@@ -2101,7 +2101,7 @@ public:
                 if (m < M && m < 3)      // for comments see where we estimate the discounted probabilities
                 {   //    ^^ seems not to work for 4-grams...
                     const mgram_map::key key = *iter;   // needed to check for startId
-                    ASSERT (key.order() == m);
+                    assert (key.order() == m);
 
                     if (m < 2 || key.pop_w().back() != startId)
                     {
@@ -2245,7 +2245,7 @@ public:
                 }
 
                 const mgram_map::key key = *iter;
-                ASSERT (key.order() == iter.order());   // (remove this check once verified)
+                assert (key.order() == iter.order());   // (remove this check once verified)
 
                 // get history's count
                 const mgram_map::coord j = histCoord[m-1];  // index of parent entry
@@ -2278,7 +2278,7 @@ public:
                         histCount = KNTotalCounts[c_h];     // (u,v,w) -> count (*,v,*)
                         if (histCount == 0)                 // must exist
                             RuntimeError ("estimate: malformed data: back-off value not found (denominator)");
-                        ASSERT (histCount >= count);
+                        assert (histCount >= count);
                     }
                 }
 
@@ -2627,7 +2627,7 @@ public:
                 if (i == -1)
                     goto backoff0;
 
-                ASSERT (entries_1[i].id == id);         // verify unmapped unigram case
+                assert (entries_1[i].id == id);         // verify unmapped unigram case
                 double logP = entries_1[i].logP;
                 return totalLogB + logP;
             }
@@ -2640,7 +2640,7 @@ public:
             int i = (entries1Unmapped) ? id : findEntry (entries[1], refs[0][0].firstEntry, refs[0][1].firstEntry, id);
             if (i == -1)    // unknown history: fall back
                 goto fallback;
-            ASSERT (entries[1][i].id == id);         // verify unmapped unigram case
+            assert (entries[1][i].id == id);         // verify unmapped unigram case
 
             // found it: advance search by one history token
             const std::vector<LMHIST> & refs_1 = refs[1];
@@ -2656,7 +2656,7 @@ public:
                 int i = findEntry (entries[n], beg, end, id);
                 if (i == -1)                            // unseen history: fall back
                     goto fallback;
-                ASSERT (entries[n][i].id == id);         // verify unmapped unigram case
+                assert (entries[n][i].id == id);         // verify unmapped unigram case
 
                 // found it: advance search by one history token
                 const std::vector<LMHIST> & refs_n = refs[n];
@@ -2679,7 +2679,7 @@ public:
             i = findEntry (entries_m, beg, end, id);
             if (i == -1)
                 goto backoff;
-            ASSERT (entries_m[i].id == id);         // verify unmapped unigram case
+            assert (entries_m[i].id == id);         // verify unmapped unigram case
 
             longestMGramFound = m;
 
@@ -2722,7 +2722,7 @@ fallback:   // we get here in case of fallback (no back-off weight) or back-off
             int i = findEntry (entries_n, beg, end, id);
             if (i == -1)    // unknown history: fall back
                 return score_unoptimized (mgram +1, m -1);      // tail recursion
-            ASSERT (entries_n[i].id == id);         // verify unmapped unigram case
+            assert (entries_n[i].id == id);         // verify unmapped unigram case
             // found it: advance search by one history token
             const std::vector<LMHIST> & refs_n = refs[n];
             logB = refs_n[i].logB;
@@ -2739,7 +2739,7 @@ fallback:   // we get here in case of fallback (no back-off weight) or back-off
         int i = findEntry (entries_m1, beg, end, id);
         if (i != -1)
         {
-            ASSERT (entries_m1[i].id == id);        // verify unmapped unigram case
+            assert (entries_m1[i].id == id);        // verify unmapped unigram case
             double logP = entries_m1[i].logP;
             return logP;
         }
@@ -2997,7 +2997,7 @@ skipMGram:
                 refs_h[i].firstEntry =  n0;
                 n0 += num;
             }
-            ASSERT (refs_h.back().firstEntry == (int) entries[m].size());
+            assert (refs_h.back().firstEntry == (int) entries[m].size());
 
             // create closing history entry
             if (m < M)
