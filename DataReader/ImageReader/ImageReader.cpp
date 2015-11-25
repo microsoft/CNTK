@@ -380,8 +380,8 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     m_epochStart = 0;
     m_mbStart = 0;
 }
-virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-//virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
+//template<class ElemType> virtual void ImageReader<ElemType>::Init(const ScriptableObjects::IConfigRecord & config);
 
 template<class ElemType>
 void ImageReader<ElemType>::Destroy()
