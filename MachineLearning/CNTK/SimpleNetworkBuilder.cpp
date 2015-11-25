@@ -2354,16 +2354,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 contextStdDev.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
 
                 w = builder.Mean(input, L"MeanOfFeatures");
-                static_pointer_cast<PreComputedNode<ElemType>>(w)->MarkComputed(false);
-                w->FunctionValues().SetValue(contextMean);
+                static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(contextMean);
                 w->SetParameterUpdateRequired(false);
-                static_pointer_cast<PreComputedNode<ElemType>>(w)->MarkComputed(true);
 
                 b = builder.InvStdDev(input, L"InvStdOfFeatures");
-                static_pointer_cast<PreComputedNode<ElemType>>(b)->MarkComputed(false);
-                b->FunctionValues().SetValue(contextStdDev);
+                static_pointer_cast<PreComputedNode<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
                 b->SetParameterUpdateRequired(false);
-                static_pointer_cast<PreComputedNode<ElemType>>(b)->MarkComputed(true);
 
                 output = builder.PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
                 input = output;
@@ -2422,10 +2418,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
             w = builder.Mean(label, L"Prior");
-            static_pointer_cast<PreComputedNode<ElemType>>(w)->MarkComputed(false);
-            w->FunctionValues().SetValue(priorVals);
+            static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(priorVals);
             w->SetParameterUpdateRequired(false);
-            static_pointer_cast<PreComputedNode<ElemType>>(w)->MarkComputed(true);
         }
         else // pretrained network - need to add output layer, initalize
         {
@@ -2456,9 +2450,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
                 prior = builder.Mean(label, L"Prior");
+                static_pointer_cast<PreComputedNode<ElemType>>(prior)->MarkComputed(false);
                 prior->FunctionValues().SetValue(zeros);
-                pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(prior);
-                pcNodePtr->MarkComputed(false);
             }
         }
 
