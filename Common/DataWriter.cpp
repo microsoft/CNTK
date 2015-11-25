@@ -27,7 +27,6 @@ void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType & /*config*/)
     // not implemented, calls the underlying class instead
 }
 
-
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
 template<class ElemType>
@@ -82,8 +81,6 @@ template DataWriter<float >::DataWriter(const ConfigParameters &);
 template DataWriter<double>::DataWriter(const ConfigParameters &);
 template DataWriter<float >::DataWriter(const ScriptableObjects::IConfigRecord &);
 template DataWriter<double>::DataWriter(const ScriptableObjects::IConfigRecord &);
-
-
 
 // destructor - cleanup temp files, etc. 
 template<class ElemType>

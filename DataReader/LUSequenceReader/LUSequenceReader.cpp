@@ -8,6 +8,8 @@
 
 
 #include "stdafx.h"
+#include "Basics.h"
+#include "basetypes.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "LUSequenceReader.h"
@@ -369,8 +371,8 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
             const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
             m_labelInfo[index].idMax = 0;
-            m_labelInfo[index].beginSequence = labelConfig(L"beginSequence", L"");
-            m_labelInfo[index].endSequence   = labelConfig(L"endSequence",   L"");
+            m_labelInfo[index].beginSequence = (wstring)labelConfig(L"beginSequence", L"");
+            m_labelInfo[index].endSequence   = (wstring)labelConfig(L"endSequence",   L"");
             m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
 
             m_labelInfo[index].isproposal = labelConfig(L"isProposal", false);
@@ -423,9 +425,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
 
-    ConfigArray wContext = readerConfig(L"wordContext", "0");
-    intargvector wordContext = wContext;
-    m_wordContext = wordContext;
+    m_wordContext = readerConfig(L"wordContext", ConfigRecordType::Array(intargvector(vector<int>{ 0 })));
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
@@ -1145,14 +1145,18 @@ template<class ElemType>
 template<class ConfigRecordType>
 void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& readerConfig)
 {
-    mWordMappingFn = readerConfig(L"wordmap", L"");
+    mWordMappingFn = (wstring)readerConfig(L"wordmap", L"");
     wstring si, so;
     wstring ss;
     vector<wstring> vs;
     if (mWordMappingFn != L"")
     {
         wifstream fp;
+#ifdef _WIN32
         fp.open(mWordMappingFn.c_str(), wifstream::in);
+#else
+        fp.open(charpath(mWordMappingFn), wifstream::in);
+#endif
 
         while (fp.good())
         {
@@ -1230,13 +1234,13 @@ template<class ElemType>
 template<class ConfigRecordType>
 void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
-    ConfigArray ioNames = readerConfig(L"ioNodeNames", "");
+    vector<wstring> ioNames = readerConfig(L"ioNodeNames", ConfigRecordType::Array(stringargvector()));
     if (ioNames.size() > 0)
     {
         /// newer code that explicitly place multiple streams for inputs
         foreach_index(i, ioNames) // inputNames should map to node names
         {
-            ConfigParameters thisIO = readerConfig(ioNames[i]);
+            const ConfigRecordType & thisIO = readerConfig(ioNames[i]);
 
             BatchLUSequenceReader<ElemType> *thisReader = new BatchLUSequenceReader<ElemType>();
             thisReader->Init(thisIO);
