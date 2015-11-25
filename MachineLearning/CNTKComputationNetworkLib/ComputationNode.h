@@ -899,7 +899,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_gradientValues != nullptr && m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
                     ReleaseMatrixToPool(m_gradientValues, matrixPool);
 
-                ReleaseMatrixToPool(m_functionValues, matrixPool);
+                if (m_functionValues->GetMatrixType() != SPARSE)
+                    ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
@@ -950,6 +951,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto f_numCols = m_functionValues->GetNumCols();
             if (f_numRows != m_numRows || f_numCols != m_numCols)
                 LogicError("UpdateFunctionMBSize: m_functionValues out of sync with m_numRows/m_numCols");
+
+#ifdef SHOW_MATRIX_TYPE
+            fprintf(stderr, "MatrixType %ls: %ls(%ls  %ls)\n",
+                NodeName().c_str(),
+                OperationName().c_str(),
+                FunctionValues().GetMatrixType() == MatrixType::DENSE ? L"Dense" : L"Sparse",
+                FunctionValues().GetCurrentMatrixLocation() == GPU ? L"GPU" :
+                FunctionValues().GetCurrentMatrixLocation() == CPU ? L"CPU" : L"BOTH");
+#endif        
         }
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
@@ -1047,9 +1057,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
         Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
+        shared_ptr<Matrix<ElemType>>& FunctionValuesPtr() { return m_functionValues; }
 
         const Matrix<ElemType>& GradientValues() const { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
+        shared_ptr<Matrix<ElemType>>& GradientValuesPtr() { return m_gradientValues; }
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
@@ -1291,6 +1303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
             }
         }
+
         //to be called by derived classed if that class needs to print node values
         void PrintNodeValuesToFile(const bool printValues, File& fstream) const
         {
@@ -1479,7 +1492,7 @@ protected: \
     using Base::SetDims; /*using Base::NotifyFunctionValuesMBSizeModified;*/ using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadFunctionValues; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientValuesPtr; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_imageLayout; \
@@ -1503,7 +1516,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::NodeName; \
-    using Base::FunctionValues
+    using Base::FunctionValues; using Base::FunctionValuesPtr
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \

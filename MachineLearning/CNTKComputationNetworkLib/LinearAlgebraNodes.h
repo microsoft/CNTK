@@ -480,6 +480,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //after multiplication the structure is lost
             m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
+
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        {
+            //this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
+            if (m_children[0]->NeedGradient() && Inputs(1)->FunctionValues().GetMatrixType() == SPARSE)
+            {
+                CreateMatrixIfNull(Inputs(0)->GradientValuesPtr());
+                Inputs(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            }
+           
+            //we need to call base allocation at end since we will need to allocate special ones first 
+            //so that the default allocator will not allocate it again.
+            Base::AllocateGradientMatricesForChildren(matrixPool);
+        }
     };
 
     template class TimesNode<float>; 
