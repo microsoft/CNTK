@@ -11,13 +11,12 @@
 #include "Basics.h"
 #include "DataReader.h"
 #include "commandArgUtil.h"
+#include "ScriptableObjects.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
-std::string GetReaderName(ElemType)
-{std::string empty; return empty;}
-
+std::string GetReaderName(ElemType) { return std::string(); }
 template<> std::string GetReaderName(float) {std::string name = "GetReaderF"; return name;}
 template<> std::string GetReaderName(double) {std::string name = "GetReaderD"; return name;}
 
@@ -346,5 +345,8 @@ bool DataReader<ElemType>::DataEnd(EndDataType endDataType)
 //The explicit instantiation
 template class DataReader<double>;
 template class DataReader<float>;
+
+// register SGD<> with the ScriptableObject system
+ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<DataReader<float>, DataReader<double>> registerDataReaderPlugin(L"DataReaderPlugin");
 
 }}}

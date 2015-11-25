@@ -362,23 +362,24 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
         else
             RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-        ConfigParameters featureConfig = readerConfig(m_featuresName, "");
-        ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
+        //const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
-            m_labelInfo[index].idMax = 0;
-            m_labelInfo[index].beginSequence = (wstring) labelConfig[index]("beginSequence", "");
-            m_labelInfo[index].endSequence = (wstring) labelConfig[index]("endSequence", "");
-            m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
+            const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-            m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
+            m_labelInfo[index].idMax = 0;
+            m_labelInfo[index].beginSequence = labelConfig(L"beginSequence", L"");
+            m_labelInfo[index].endSequence   = labelConfig(L"endSequence",   L"");
+            m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
+
+            m_labelInfo[index].isproposal = labelConfig(L"isProposal", false);
 
             m_labelInfo[index].m_clsinfoRead = false;
 
             // determine label type desired
-            std::string labelType(labelConfig[index]("labelType", "Category"));
-            if (labelType == "Category")
+            wstring labelType(labelConfig(L"labelType", L"category"));
+            if (!_wcsicmp(labelType.c_str(), L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -388,18 +389,19 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
             // if we have labels, we need a label Mapping file, it will be a file with one label per line
             if (m_labelInfo[index].type != labelNone)
             {
-                string mode = labelConfig[index]("mode", "plain");//plain, class
+                wstring mode = labelConfig(L"mode", L"plain");//plain, class
 
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
 
-                if (mode == "class")
+                if (mode == L"class")
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
                 }
 
-                std::wstring wClassFile = labelConfig[index]("token", "");
-                if (wClassFile != L""){
+                std::wstring wClassFile = labelConfig(L"token", L"");
+                if (wClassFile != L"")
+                {
                     ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, 
                         m_labelInfo[index].readerMode == ReaderMode::Class, 
                         m_labelInfo[index].word4cls,

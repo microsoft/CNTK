@@ -318,7 +318,7 @@ public:
         int & mNbrCls);
 
     template<class ConfigRecordType>
-    void LoadWordMapping(const ConfigRecordType& ConfigRecordType);
+    void LoadWordMapping(const ConfigRecordType& config);
     bool CanReadFor(wstring nodeName);  /// return true if this reader can output for a node with name nodeName
 
     vector<size_t> ReturnToProcessId() { return mToProcess; }

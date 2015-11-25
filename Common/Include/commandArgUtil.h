@@ -761,6 +761,9 @@ public:
         return ids;
     }
 
+    bool CanBeConfigRecord(const wstring & /*id*/) const { return true; }
+    bool CanBeString(const wstring & /*id*/) const { return true; }
+
 public:
     // explicit copy function. Only to be used when a copy must be made.
     // this also clears out the parent pointer, so only local configs can be used

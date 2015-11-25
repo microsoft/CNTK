@@ -137,7 +137,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataReader: public IDataReader<ElemType>, protected Plugin
+class DataReader: public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
@@ -203,7 +203,7 @@ public:
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
-	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
+    virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
