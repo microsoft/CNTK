@@ -20,55 +20,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static AdaptationRegType ParseAdaptationRegType(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"" || s == L"none")
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return AdaptationRegType::None;
-        else if (s == L"kl" || s == L"klreg")
+        else if (!_wcsicmp(s.c_str(), L"kl") || !_wcsicmp(s.c_str(), L"klReg"))
             return AdaptationRegType::KL;
         else
-            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
+            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
         }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"" || s == L"none" || s == L"normal" || s == L"simple")
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none") || !_wcsicmp(s.c_str(), L"normal") || !_wcsicmp(s.c_str(), L"simple"))
             return GradientsUpdateType::None;
-        else if (s == L"adagrad")
+        else if (!_wcsicmp(s.c_str(), L"adagrad"))
             return GradientsUpdateType::AdaGrad;
-        else if (s == L"rmsprop")
+        else if (!_wcsicmp(s.c_str(), L"rmsProp"))
             return GradientsUpdateType::RmsProp;
-        else if (s == L"fsadagrad")
+        else if (!_wcsicmp(s.c_str(), L"fsAdagrad"))
             return GradientsUpdateType::FSAdaGrad;
         else
-            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
+            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if ((s == L"") || (s == L"none"))
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return ParallelizationMethod::None;
-        else if (s == L"dataparallelsgd")
+        else if (!_wcsicmp(s.c_str(), L"dataParallelSGD"))
             return ParallelizationMethod::DataParallelSGD;
-        else if (s == L"modelaveragingsgd")
+        else if (!_wcsicmp(s.c_str(), L"modelAveragingSGD"))
             return ParallelizationMethod::ModelAveragingSGD;
         else
-            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
+            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
         }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
         // TODO: why allow so many variants?
-        msra::strfun::tolower_ascii(s);
-        if (s == L"false" || s == L"none")
+        if (!_wcsicmp(s.c_str(), L"false") || !_wcsicmp(s.c_str(), L"none"))
             return LearningRateSearchAlgorithm::None;
-        else if (s == L"searchbeforeepoch" || s == L"beforeepoch" || s == L"before")
+        else if (!_wcsicmp(s.c_str(), L"searchBeforeEpoch") || !_wcsicmp(s.c_str(), L"beforeEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"before"/*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-        else if (s == L"adjustafterepoch" || s == L"afterepoch" || s == L"after")
+        else if (!_wcsicmp(s.c_str(), L"adjustAfterEpoch") || !_wcsicmp(s.c_str(), L"afterEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"after"/*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
         else
-            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
+            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
     }
 
     template<class ConfigRecordType>

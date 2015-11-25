@@ -135,7 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _MSC_VER
                 outputStreams.push_back(new ofstream ((outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #else
-                outputStreams.push_back(new ofstream(charpath(outputPath + L"." + outputNodes[i]->NodeName())));
+                outputStreams.push_back(new ofstream(wtocharpath(outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #endif
 
             //specify feature value nodes

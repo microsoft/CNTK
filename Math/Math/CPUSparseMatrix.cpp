@@ -7,6 +7,8 @@
 //
 
 #include "stdafx.h"
+#include "Basics.h"
+#include "File.h"
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
@@ -15,16 +17,11 @@
 #include "CPUSparseMatrix.h"
 #include <random>
 #include <chrono>
-#ifdef    _WIN32
-#include <Windows.h>
-#endif
+#include <iostream>
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
 
-#include "Basics.h"
-#include "fileutil.h"
-#include <iostream>
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifndef USE_MKL

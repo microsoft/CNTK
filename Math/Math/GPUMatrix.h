@@ -13,9 +13,13 @@
 #include "BestGpu.h"    // for CPUONLY macro
 #include <string>
 #include <vector>
+#include <stack>
+#include <functional>
+#include <mutex>
 #include <ctime>
-#include <limits.h>     // for ULONG_MAX
 #include <iostream>     // for cout/cerr
+#include <memory>       // for unique_ptr
+#include <limits.h>     // for ULONG_MAX
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -45,9 +49,55 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
-    void PrepareDevice(DEVICEID_TYPE deviceId);
+    // -----------------------------------------------------------------------
+    // conc_stack -- very simple version of thread-safe stack. Add other functions as needed.
+    // -----------------------------------------------------------------------
 
-    //This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
+    template<typename T>
+    class conc_stack
+    {
+    public:
+        typedef typename std::stack<T>::value_type value_type;
+
+        conc_stack() {}
+
+        value_type pop_or_create(std::function<value_type()> factory)
+        {
+            std::lock_guard<std::mutex> g(m_locker);
+            if (m_stack.size() == 0)
+                return factory();
+            auto res = std::move(m_stack.top());
+            m_stack.pop();
+            return res;
+        }
+
+        void push(const value_type& item)
+        {
+            std::lock_guard<std::mutex> g(m_locker);
+            m_stack.push(item);
+        }
+
+        void push(value_type&& item)
+        {
+            std::lock_guard<std::mutex> g(m_locker);
+            m_stack.push(std::forward<value_type>(item));
+        }
+
+    public:
+        conc_stack(const conc_stack&) = delete;
+        conc_stack& operator=(const conc_stack&) = delete;
+        conc_stack(conc_stack&&) = delete;
+        conc_stack& operator=(conc_stack&&) = delete;
+
+    private:
+        std::stack<value_type> m_stack;
+        std::mutex m_locker;
+    };
+
+    // -----------------------------------------------------------------------
+    // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class MATH_API DeviceBoundNumber
     {
@@ -64,6 +114,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
+
+    // -----------------------------------------------------------------------
+    // GPUMatrix
+    // -----------------------------------------------------------------------
+
+    void PrepareDevice(DEVICEID_TYPE deviceId);
 
     template<class ElemType>
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>

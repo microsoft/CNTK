@@ -12,12 +12,11 @@
 #pragma warning (disable: 4996)     // ^^ this does not seem to work--TODO: make it work
 #define _FILE_OFFSET_BITS 64        // to force fseeko() and ftello() 64 bit in Linux
 
-#ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
-#endif
+#include "Basics.h"
 #include "fileutil.h"
 #ifdef __unix__
 #include <sys/types.h>
@@ -36,6 +35,7 @@
 #include <algorithm>    // for std::find
 #include <limits.h>
 #include <memory>
+#include <cwctype>
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
@@ -492,7 +492,7 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
     if (!MoveFileW(from.c_str(), to.c_str()))
         RuntimeError ("error renaming file '%S': %d", from.c_str(), GetLastError());
 #else
-    renameOrDie (charpath(from), charpath(to));
+    renameOrDie (wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
 }
 
@@ -710,14 +710,14 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
 // STL string version
 std::string fgetline (FILE * f)
 {
-    fixed_vector<char> buf (1000000);
+    vector<char> buf (1000000);
     return fgetline (f, &buf[0], (int) buf.size());
 }
 
 // STL string version
 std::wstring fgetlinew (FILE * f)
 {
-    fixed_vector<wchar_t> buf (1000000);
+    vector<wchar_t> buf (1000000);
     return fgetline (f, &buf[0], (int) buf.size());
 }
 
@@ -1891,7 +1891,7 @@ bool getfiletime(const wstring & path, FILETIME & time)
     int result;
 
     // Get data associated with "crt_stat.c": 
-    result = stat(charpath(path), &buf);
+    result = stat(wtocharpath(path.c_str()).c_str(), &buf);
     // Check if statistics are valid: 
     if (result != 0)
         return false;
@@ -1996,11 +1996,11 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 #ifdef _WIN32
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        RuntimeError ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
+        RuntimeError ("error in expanding wild cards '%S': Win32 error %d", path.c_str(), (int)::GetLastError());
 #else
     // On Linux we have just the function for the job: glob
     glob_t globResult;
-    if (glob(charpath(path), GLOB_TILDE, NULL, &globResult) != 0)
+    if (glob(wtocharpath(path.c_str()).c_str(), GLOB_TILDE, NULL, &globResult) != 0)
     {
         RuntimeError("error in expanding wild cards '%S': %S", path.c_str(), strerror(errno));
     }
@@ -2139,16 +2139,16 @@ vector<wstring> wsep_string(const wstring & istr, const wstring & sep)
 static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill(buf.begin(), buf.end(), 0);
+    vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    fill(buf.begin(), buf.end(), 0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }
 static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
-    std::fill(buf.begin(), buf.end(), (wchar_t)0);
+    vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    fill(buf.begin(), buf.end(), (wchar_t)0);
     //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);

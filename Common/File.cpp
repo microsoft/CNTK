@@ -11,7 +11,6 @@
 
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
-#include "fileutil.h"
 #include "File.h"
 #include <string>
 #include <stdint.h>

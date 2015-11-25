@@ -1436,7 +1436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         }
         // TODO: method names should be CamelCase
-        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
+        std::vector<shared_ptr<const msra::dbn::latticepair>> * getLatticePtr()
         {
             return &m_lattices;
         }
@@ -1486,7 +1486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double m_frameDropThreshold;
         double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
         bool m_doReferenceAlignment;
-        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattices;
+        std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
         msra::asr::simplesenonehmm m_hmm;
         msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
         bool m_gammaCalcInitialized;

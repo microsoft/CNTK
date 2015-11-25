@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "basetypes.h"
 #include "fileutil.h"
 #include "simple_checked_arrays.h"
 
@@ -23,6 +24,8 @@
 #include "minibatchsourcehelpers.h"
 
 namespace msra { namespace asr {
+
+using namespace std;
 
 // ===========================================================================
 // htkfeatio -- common base class for reading and writing HTK feature files

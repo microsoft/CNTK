@@ -9,10 +9,22 @@ namespace msra { namespace dbn {
 // ---------------------------------------------------------------------------
 // latticesource -- manages loading of lattices for MMI (in pairs for numer and denom)
 // ---------------------------------------------------------------------------
+
+class latticepair : public pair<msra::lattices::lattice, msra::lattices::lattice>
+{
+public:
+    // NOTE: we don't check numerator lattice now
+    size_t getnumframes() const { return second.getnumframes(); }
+    size_t getnumnodes() const { return second.getnumnodes(); }
+    size_t getnumedges() const { return second.getnumedges(); }
+    wstring getkey() const { return second.getkey(); }
+};
+
 class latticesource
 {
     const msra::lattices::archive numlattices, denlattices;
 public:
+    typedef msra::dbn::latticepair latticepair;
     latticesource (std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs, const std::unordered_map<std::string,size_t> & modelsymmap)
         : numlattices (latticetocs.first, modelsymmap), denlattices (latticetocs.second, modelsymmap) {}
 
@@ -33,16 +45,6 @@ public:
         return numlattices.haslattice (key) && denlattices.haslattice (key); 
 #endif
     }
-
-    class latticepair : public pair<msra::lattices::lattice, msra::lattices::lattice>
-    {
-    public:
-        // NOTE: we don't check numerator lattice now
-        size_t getnumframes() const { return second.getnumframes(); }
-        size_t getnumnodes() const { return second.getnumnodes(); }
-        size_t getnumedges() const { return second.getnumedges(); }
-        wstring getkey() const { return second.getkey(); }
-    };
 
     void getlattices (const std::wstring & key, shared_ptr<const latticepair> & L, size_t expectedframes) const
     {

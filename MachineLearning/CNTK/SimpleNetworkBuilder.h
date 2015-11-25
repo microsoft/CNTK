@@ -44,7 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ALIGNMENTSIMILARITYGFORWARDDECODER =22
     };
 
-    enum class TrainingCriterion : int
+    enum class TrainingCriterion : int  // TODO: camel-case these
     {
         CrossEntropyWithSoftmax,
         CrossEntropy,
@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ClassCrossEntropyWithSoftmax,
         NCECrossEntropyWithSoftmax,
         CRF,
-		SequenceWithSoftmax
+        SequenceWithSoftmax
     };
 
     enum class EvalCriterion : int
@@ -64,9 +64,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Logistic,
         ErrorPrediction,
         ClassCrossEntropyWithSoftmax,
-		SequenceWithSoftmax,
         NCECrossEntropyWithSoftmax,
-        CRF
+        CRF,
+        SequenceWithSoftmax
     };
 
     extern TrainingCriterion ParseTrainingCriterionString(wstring s);

@@ -159,7 +159,7 @@ static inline void showavailablememory (const char * what)
         if (rc)
             fprintf (stderr, "%s: %8.2f MB available on NUMA node %d\n", what, availmb, i);
         else
-            fprintf (stderr, "%s: error '%S' for getting available memory on NUMA node %d\n", what, FormatWin32Error (::GetLastError()).c_str(), i);
+            fprintf (stderr, "%s: error for getting available memory on NUMA node %d\n", what, i);
     }
 }
 
