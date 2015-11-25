@@ -360,21 +360,20 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     // determine label type desired
     std::wstring labelType;
     if (!hasLabels)
-        labelType = L"None";
+        labelType = L"none";
     else
-        labelType = configLabels(L"labelType", L"Category");
+        labelType = (wstring)configLabels(L"labelType", L"category");
 
     //convert to lower case for case insensitive comparison
-    msra::strfun::tolower_ascii(labelType);
-    if (labelType == L"category")
+    if (!_wcsicmp(labelType.c_str(), L"category"))
     {
         m_labelType = labelCategory;
     }
-    else if (labelType == L"regression")
+    else if (!_wcsicmp(labelType.c_str(), L"regression"))
     {
         m_labelType = labelRegression;
     }
-    else if (labelType == L"none")
+    else if (!_wcsicmp(labelType.c_str(), L"none"))
     {
         m_labelType = labelNone;
         dimLabels = 0;   // override for no labels
@@ -382,7 +381,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
 
     std::wstring file = configFeatures(L"file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading uci file %ls\n", file.c_str());
+        fprintf(stderr, "Reading UCI file %ls\n", file.c_str());
 
     m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels);
 
