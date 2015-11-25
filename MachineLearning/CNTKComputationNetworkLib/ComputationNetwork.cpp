@@ -1102,7 +1102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pLeft->FunctionValues() = redU;
                 pRight->FunctionValues() = redVT;
 
-                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD", true /*createOutputMatrix*/), pLeft, pRight);
+                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
                 //========================================
                 // Step 3. remove old node
