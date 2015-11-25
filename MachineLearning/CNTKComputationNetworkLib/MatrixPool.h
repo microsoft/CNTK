@@ -30,8 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Release(shared_ptr<Matrix<ElemType>> freeMatrix)
         {
             vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
-            if (freeMatrix == nullptr)
-                RuntimeError("MatrixPool::Release: freeMatrix should not be null.");
+            if (freeMatrix == nullptr || freeMatrix->GetMatrixType() == SPARSE)
+                RuntimeError("MatrixPool::Release: freeMatrix should not be null or sparse.");
 #ifdef _DEBUG
             for (int i = 0; i < releasedMatrices.size(); i++)
             {
