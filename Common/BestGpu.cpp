@@ -143,7 +143,7 @@ DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config)
 {
     static DEVICEID_TYPE deviceId = CPUDEVICE;
 
-    bool bLockGPU = config(L"LockGPU", true);
+    bool bLockGPU = config(L"lockGPU", true);
     // we need to deal with the old CNTK config semantics where 'deviceId' can be either a string or an int
     auto valpp = config.Find(L"deviceId");
     if (!valpp)
@@ -171,7 +171,7 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     static DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
-    bool bLockGPU = config(L"LockGPU", true);
+    bool bLockGPU = config(L"lockGPU", true);
 
     if (!_stricmp(val.c_str(), "cpu"))
         return SelectDevice(CPUDEVICE, false);
