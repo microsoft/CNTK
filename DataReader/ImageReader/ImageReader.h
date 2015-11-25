@@ -30,7 +30,7 @@ public:
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
 #if 1
     // ImageReader does not follow standard ConfigParameters conventions, so it cannot be easily adapted to BrainScript.
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { NOT_IMPLEMENTED; }
+    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { NOT_IMPLEMENTED; }
 #else
     virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 #endif

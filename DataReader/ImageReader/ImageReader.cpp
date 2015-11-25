@@ -275,8 +275,12 @@ public:
         {
             cv::FileStorage fs;
             // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...
-            auto fname = charpath(meanFile);
-            fs.open(fname, cv::FileStorage::READ);
+            auto fname = meanFile;
+#ifdef _WIN32
+            fs.open(fname.c_str(), cv::FileStorage::READ);
+#else
+            fs.open(charpath(fname), cv::FileStorage::READ);
+#endif
             if (!fs.isOpened())
                 RuntimeError("Could not open file: " + fname);
             fs["MeanImg"] >> m_meanImg;
