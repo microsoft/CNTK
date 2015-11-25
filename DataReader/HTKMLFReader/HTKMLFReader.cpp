@@ -472,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 #ifdef __unix__
                     struct stat statbuf;
-                    if (stat(charpath(pageFilePath), &statbuf)==-1)
+                    if (stat(wtocharpath(pageFilePath).c_str(), &statbuf)==-1)
                     {
                         RuntimeError("pageFilePath does not exist");
                     }
@@ -813,7 +813,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         template<class ElemType>
-        bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr< const msra::dbn::latticesource::latticepair>> & latticeinput, 
+        bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr< const msra::dbn::latticepair>> & latticeinput, 
             vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap)
         {
             if (m_trainOrTest)
@@ -826,7 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         template<class ElemType>
-        bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, 
+        bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>> & latticeinput, 
             std::vector<size_t> &uids, std::vector<size_t> &boundaries, std::vector<size_t> &extrauttmap)
         {
             latticeinput.clear();

@@ -11,7 +11,7 @@
 #include "CPUSparseMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
-#include "fileutil.h"
+#include "File.h"
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL

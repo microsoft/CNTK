@@ -58,9 +58,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>

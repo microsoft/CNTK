@@ -9,7 +9,6 @@
 
 #include "stdafx.h"
 #include "Basics.h"
-#include "basetypes.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "LUSequenceReader.h"
@@ -1155,7 +1154,7 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& re
 #ifdef _WIN32
         fp.open(mWordMappingFn.c_str(), wifstream::in);
 #else
-        fp.open(charpath(mWordMappingFn), wifstream::in);
+        fp.open(wtocharpath(mWordMappingFn.c_str()).c_str(), wifstream::in);
 #endif
 
         while (fp.good())

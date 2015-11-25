@@ -13,6 +13,8 @@
 #include "commandArgUtil.h"
 #include "ScriptableObjects.h"
 
+using namespace std;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
@@ -186,14 +188,14 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 // boundary - phone boundaries
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template<class ElemType>
-bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap)
 {
-	bool bRet = true;
-	for (size_t i = 0; i < m_ioNames.size(); i++)
-	{
-		bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
-	}
-	return bRet;
+    bool bRet = true;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
+    }
+    return bRet;
 }
 
 // GetHmmData - Get the HMM definition for SE training

@@ -225,7 +225,7 @@ public:
         return m_currentRecord < m_recordCount;
     }
 
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & /*latticeinput*/, vector<size_t> & /*uids*/, 
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & /*latticeinput*/, vector<size_t> & /*uids*/, 
         vector<size_t> & /*boundaries*/, vector<size_t> &/*extrauttmap*/)
     {
         return true;

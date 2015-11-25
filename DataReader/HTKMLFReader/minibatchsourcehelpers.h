@@ -204,7 +204,7 @@ public:
     {
         size_t tbegin = max (ts, randomizationrange/2) - randomizationrange/2;
         size_t tend = min (te + randomizationrange/2, map.size());
-        return std::make_pair<size_t,size_t> (move(tbegin), move(tend));
+        return std::make_pair<size_t, size_t>(std::move(tbegin), std::move(tend));
     }
 
     // this returns the map directly (read-only) and will lazily initialize it for a given seed
@@ -242,7 +242,7 @@ public:
                         if (trand <= map[t] + randomizationrange/2 && map[t] < trand + randomizationrange/2
                             && (size_t) t <= map[trand] + randomizationrange/2 && map[trand] < (size_t) t + randomizationrange/2)
                         {
-                            ::swap (map[t], map[trand]);
+                            std::swap (map[t], map[trand]);
                             break;
                         }
                         // but don't multi-swap stuff out of its range (for swapping positions that have been swapped before)
@@ -263,7 +263,7 @@ public:
     #endif
     #if 1       // test whether it is indeed a unique complete sequence
                 auto map2 = map;
-                ::sort (map2.begin(), map2.end());
+                std::sort (map2.begin(), map2.end());
                 foreach_index (t, map2) assert (map2[t] == (size_t) t);
     #endif
                 fprintf (stderr, "randomordering: recached sequence for seed %d: %d, %d, ...\n", (int) seed, (int) map[0], (int) map[1]);

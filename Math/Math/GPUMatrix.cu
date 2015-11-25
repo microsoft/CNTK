@@ -11,16 +11,16 @@
 #ifndef CPUONLY
 
 #include "cublas_v2.h"
+#include "Basics.h"
+#include "GPUMatrix.h"
+#include "GPUMatrixCUDAKernels.cuh"
+#include "GPUSparseMatrix.h"
+#include "device_launch_parameters.h"
 #include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
-#include "device_launch_parameters.h"
-#include "GPUMatrix.h"
-#include "GPUMatrixCUDAKernels.cuh"
-#include "GPUSparseMatrix.h"
-#include <iostream> // for cout
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")

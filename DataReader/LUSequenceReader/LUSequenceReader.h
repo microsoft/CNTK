@@ -7,6 +7,7 @@
 #pragma once
 //#define LEAKDETECT
 
+#include "Basics.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "LUSequenceParser.h"
@@ -15,8 +16,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
-
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

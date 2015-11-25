@@ -1127,7 +1127,7 @@ public:
     void read (const std::wstring & pathname, SYMMAP & userSymMap, bool filterVocabulary, int maxM)
     {
         int lineNo = 0;
-        msra::basetypes::auto_file_ptr f(fopenOrDie (pathname, L"rbS"));
+        auto_file_ptr f(fopenOrDie (pathname, L"rbS"));
         fprintf (stderr, "read: reading %S", pathname.c_str());
         filename = pathname;            // (keep this info for debugging)
 

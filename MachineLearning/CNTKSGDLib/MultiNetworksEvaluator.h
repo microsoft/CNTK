@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _MSC_VER
                 outputStream.open(output);
 #else
-                outputStream.open(charpath(output));    // GCC does not implement wide-char pathnames here
+                outputStream.open(wtocharpath(output).c_str());    // GCC does not implement wide-char pathnames here
 #endif
             }
 
@@ -516,6 +516,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
                     (*ptr)->DataEnd(endDataSentence);
             }
+        }
+
+        template<class F>
+        static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+        {
+            return l.second > r.second;
         }
 
         bool GetCandidatesAtOneTimeInstance(const Matrix<ElemType>& score,
