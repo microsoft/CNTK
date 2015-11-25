@@ -208,8 +208,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using typename Base::Filter;
         using typename Base::ConvDesc;
 
-        CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0), m_tempC(deviceId)
+        CuDnnConvolutionEngine(DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples)
+            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0)
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
             CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
@@ -228,7 +228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
         void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& outT, Mat& out) override
+            const Tensor4D& outT, Mat& out, Mat workspace) override
         {
             assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
@@ -240,14 +240,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Find best algo and allocate temp buffer, if needed.
             FindBestForwardAlgo(t(inT), f(filterT), cd(convDesc), t(outT));
             if (m_fwdAlgo.memory > 0)
-                m_tempC.Resize((m_fwdAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                workspace.Resize((m_fwdAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Perform forward convolution operation.
             CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), f(filterT), ptr(filter), cd(convDesc), m_fwdAlgo.algo,
-                m_tempC.BufferPointer(), m_fwdAlgo.memory, &C::Zero, t(outT), ptr(out)));
+                ptr(workspace), m_fwdAlgo.memory, &C::Zero, t(outT), ptr(out)));
         }
 
         void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& gradT, Mat& grad) override
+            const Tensor4D& gradT, Mat& grad, Mat workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
@@ -261,14 +261,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Find best algo and allocate temp buffer, if needed.
             FindBestBackwardDataAlgo(f(filterT), t(srcGradT), cd(convDesc), t(gradT));
             if (m_backDataAlgo.memory > 0)
-                m_tempC.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                workspace.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
             CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, f(filterT), ptr(filter), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backDataAlgo.algo,
-                m_tempC.BufferPointer(), m_backDataAlgo.memory, &C::One, t(gradT), ptr(grad)));
+                ptr(workspace), m_backDataAlgo.memory, &C::One, t(gradT), ptr(grad)));
         }
 
         void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-            const Filter& filterT, Mat& filter, bool /*allowReuse*/) override
+            const Filter& filterT, Mat& filter, bool /*allowReuse*/, Mat workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
@@ -282,10 +282,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Find best algo and allocate temp buffer, if needed.
             FindBestBackwardFilterAlgo(t(inT), t(srcGradT), cd(convDesc), f(filterT));
             if (m_backFiltAlgo.memory > 0)
-                m_tempC.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                workspace.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
             CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backFiltAlgo.algo,
-                m_tempC.BufferPointer(), m_backFiltAlgo.memory, &C::One, f(filterT), ptr(filter)));
+                ptr(workspace), m_backFiltAlgo.memory, &C::One, f(filterT), ptr(filter)));
         }
 
         void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
@@ -480,13 +480,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using C = Consts<ElemType>;
 
         // REVIEW alexeyk: currently limit is set once in ctor though in CNTK it can be, theoretically, changed in runtime.
-        // Also, the behavior is a bit weird as value 0 means 'no limit',
         size_t m_maxTempMemSizeInSamples;
         cudnnHandle_t m_cudnn;
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
         size_t m_curMBSize;
-        // Temp buffer for convolution operation (optional).
-        GPUMatrix<ElemType> m_tempC;
         cudnnConvolutionFwdAlgoPerf_t m_fwdAlgo;
         cudnnConvolutionBwdDataAlgoPerf_t m_backDataAlgo;
         cudnnConvolutionBwdFilterAlgoPerf_t m_backFiltAlgo;

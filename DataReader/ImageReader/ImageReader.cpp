@@ -98,8 +98,13 @@ public:
             ratio = m_cropRatioMin;
             break;
         case RatioJitterType::UniRatio:
-            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
-            assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
+            if (m_cropRatioMin == m_cropRatioMax)
+                ratio = m_cropRatioMin;
+            else
+            {
+                ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
+                assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
+            }
             break;
         default:
             RuntimeError("Jitter type currently not implemented.");

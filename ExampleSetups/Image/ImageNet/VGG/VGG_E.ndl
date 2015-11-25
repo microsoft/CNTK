@@ -23,6 +23,7 @@ ndlMnistMacros = [
     poolhs = 2
     poolvs = 2
     
+    # Initial parameter values.
     conv1WScale = 0.03
     conv1BValue = 0
     conv2WScale = 0.03
@@ -86,8 +87,10 @@ DNN=[
 
     hiddenDim = 4096
     h1 = DnnReLULayer(25088, hiddenDim, pool5, fc1WScale, fc1BValue)
-    h2 = DnnReLULayer(hiddenDim, hiddenDim, h1, fc2WScale, fc2BValue)
-    ol = DnnLayer(hiddenDim, labelDim, h2, fc3WScale, fc3BValue)
+    h1_d = Dropout(h1)
+    h2 = DnnReLULayer(hiddenDim, hiddenDim, h1_d, fc2WScale, fc2BValue)
+    h2_d = Dropout(h2)
+    ol = DnnLayer(hiddenDim, labelDim, h2_d, fc3WScale, fc3BValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)

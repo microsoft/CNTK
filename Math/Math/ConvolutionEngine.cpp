@@ -22,13 +22,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_tempMatrix(deviceId), m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+            : m_ones(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
         }
 
     public:
         void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& outT, Mat& out) override
+            const Tensor4D& outT, Mat& out, Mat workspace) override
         {
             assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
@@ -49,14 +49,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c());
 
             // GPU and 1-dimensional image
-            bool m_1DConvolutionOnGPUSparse = (inT.h() == 1 &&
+            bool gpuSparse1D = (inT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
                 in.GetMatrixType() == MatrixType::SPARSE);
 
             out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
             // Reshaping is only necessary if we are going to use the unpacking trick
-            if (!m_1DConvolutionOnGPUSparse)
+            if (!gpuSparse1D)
                 out.Reshape(outT.c(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
@@ -68,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
                 size_t smallBatchSize = endSampleId - startSampleId;
 
-                m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Mat inputSubBatch;
 
                 // We optimize for three different scenarios here by handling them slightly differently.
@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                 }
 
-                if (m_1DConvolutionOnGPUSparse)
+                if (gpuSparse1D)
                 {
                     if (filterT.w() * inT.c() != filter.GetNumCols())
                         LogicError("Kernel width and weight matrix dimensions don't match.");
@@ -94,14 +94,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                    workspace.AssignPackedConvolutionInput(inputSubBatch,
                         inT.w(), inT.h(), inT.c(),
                         outT.w(), outT.h(), outT.c(),
                         filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
                         convDesc.padding());
 
                     Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
-                    Mat::Multiply(filter, false, m_tempMatrix, false, outputSubBatch);
+                    Mat::Multiply(filter, false, workspace, false, outputSubBatch);
                 }
             }
 
@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& gradT, Mat& grad) override
+            const Tensor4D& gradT, Mat& grad, Mat workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
@@ -146,12 +146,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
                 size_t smallBatchSize = endSampleId - startSampleId;
 
-                m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType> outputGradientSubBatch = srcGradTmp.ColumnSlice(startSampleId * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                Matrix<ElemType>::Multiply(filter, true, outputGradientSubBatch, false, m_tempMatrix);
+                Matrix<ElemType>::Multiply(filter, true, outputGradientSubBatch, false, workspace);
 
                 Matrix<ElemType> inputGradientSubBatch = grad.ColumnSlice(startSampleId, smallBatchSize);
-                m_tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
+                workspace.UnpackConvolutionInput(inputGradientSubBatch,
                     gradT.w(), gradT.h(), gradT.c(),
                     srcGradT.w(), srcGradT.h(), srcGradT.c(),
                     filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc, 
-            const Filter& filterT, Mat& filter, bool allowReuse) override
+            const Filter& filterT, Mat& filter, bool allowReuse, Mat workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
@@ -194,9 +194,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
-            if (numSubBatches == 1 && allowReuse)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
-                // REVIEW alexeyk: the following makes an assumption that data in m_tempMatrix was filled by Forward call and remained unchanged. Find way to enforce/verify that.
-                Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, m_tempMatrix, true, filter);
+            // GPU and 1-dimensional image
+            bool gpuSparse1D = (inT.h() == 1 &&
+                in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                in.GetMatrixType() == MatrixType::SPARSE);
+
+            if (numSubBatches == 1 && allowReuse && !gpuSparse1D)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+                // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
+                Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filter);
             else
             {
                 for (size_t i = 0; i < numSubBatches; i++)
@@ -205,17 +210,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
                     size_t smallBatchSize = endSampleID - startSampleID;
 
-                    m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Matrix<ElemType> inputSubBatch = in.ColumnSlice(startSampleID, smallBatchSize);
                     inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
-                    m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                    workspace.AssignPackedConvolutionInput(inputSubBatch,
                         inT.w(), inT.h(), inT.c(),
                         srcGradT.w(), srcGradT.h(), srcGradT.c(),
                         filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
                         convDesc.padding());
 
                     Matrix<ElemType> outputGradientSubBatch = srcGradTmp.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, m_tempMatrix, true, filter);
+                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filter);
                 }
             }
 
@@ -283,7 +288,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_maxTempMemSizeInSamples;
-        Mat m_tempMatrix;
         Mat m_ones;
     };
 
