@@ -180,6 +180,19 @@ ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
 
+
+########################################
+# Build info 
+########################################
+
+BUILDINFO:= MachineLearning/CNTK/buildinfo.h
+GENBUILD:=Scripts/genrate_build_info 
+
+$(BUILDINFO): Scripts/genrate_build_info
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@$(GENBUILD) $(BUILD_TOP)/Config.make
+
+
 ########################################
 # Math library
 ########################################
@@ -451,7 +464,7 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
@@ -485,7 +498,10 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: clean buildall all
+.PHONY: force clean buildall all
+
+force:	$(BUILDINFO)
+	
 
 clean:
 	@echo $(SEPARATOR)

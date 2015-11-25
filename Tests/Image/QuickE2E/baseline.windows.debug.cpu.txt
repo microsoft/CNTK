@@ -893,8 +893,8 @@ already there from last epoch
 Starting minibatch loop.
 randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
 randomordering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37213734; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.65604s; TotalTimePerSample = 6.56038ms; SamplesPerSecond = 152
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37213734; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.656382
+ Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37077690; EvalErr[0]PerSample = 0.00000000; TotalTime = 0.65604s; TotalTimePerSample = 6.56038ms; SamplesPerSecond = 152
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37077689; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=0.656382
 CNTKCommandTrainEnd: Train
 
 
@@ -2269,8 +2269,8 @@ reading from record 0 to 100 to be positioned properly for epoch
 Starting minibatch loop.
 randomordering: 21 retries for 100 elements (21.0%) to ensure window condition
 randomordering: recached sequence for seed 11: 6, 31, ...
- Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37792297; EvalErr[0]PerSample = 0.00000000; TotalTime = 1.34518s; TotalTimePerSample = 13.45185ms; SamplesPerSecond = 74
-Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37792295; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=1.371377
+ Epoch[12 of 12]-Minibatch[   1-  10 of 10]: SamplesSeen = 100; TrainLossPerSample =  0.37650299; EvalErr[0]PerSample = 0.00000000; TotalTime = 1.34518s; TotalTimePerSample = 13.45185ms; SamplesPerSecond = 74
+Finished Epoch[12 of 12]: [Training Set] TrainLossPerSample = 0.37650299; EvalErrPerSample = 0; Ave LearnRatePerSample = 0.004999999888; EpochTime=1.371377
 CNTKCommandTrainEnd: Train
 
 
