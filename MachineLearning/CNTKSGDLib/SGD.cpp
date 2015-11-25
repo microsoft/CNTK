@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //       mbSize = total number of samples after which a model update should happen
         //       truncated = truncation length
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
-        m_truncated = configSGD(L"Truncated", false);
+        m_truncated = configSGD(L"truncated", false);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
