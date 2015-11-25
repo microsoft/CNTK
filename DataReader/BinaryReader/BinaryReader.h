@@ -24,15 +24,15 @@ enum SectionData
     sectionDataMax
 };
 
-static const char* SectionTypeStrings[sectionTypeMax] =
+static const wchar_t* SectionTypeStrings[sectionTypeMax] =
 {
-    "Null",
-    "File", // file header
-    "Data", // data section
-    "Labels", // label data
-    "LabelMapping", // label mapping table (array of strings)
-    "Stats", // data statistics
-    "CategoryLabels", // labels in category format (float type, all zeros with a single 1.0 per column)
+    L"Null",
+    L"File", // file header
+    L"Data", // data section
+    L"Labels", // label data
+    L"LabelMapping", // label mapping table (array of strings)
+    L"Stats", // data statistics
+    L"CategoryLabels", // labels in category format (float type, all zeros with a single 1.0 per column)
 };
 
 enum CustomStructure
@@ -413,7 +413,9 @@ private:
     bool CheckEndDataset(size_t actualmbsize);
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy();
     BinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { }
     virtual ~BinaryReader();
@@ -452,10 +454,13 @@ private:
     std::map<std::wstring, SectionType, nocase_compare> m_sectionInfo;
 
     // create a section from config parameters
-    Section* CreateSection(const ConfigParameters& config, Section* parentSection, size_t p_records, size_t p_windowSize=0);
+    Section* CreateSection(const ConfigParameters& config, Section* parentSection, size_t p_records, size_t p_windowSize = 0);
+    Section* CreateSection(const ScriptableObjects::IConfigRecord& config, Section* parentSection, size_t p_records, size_t p_windowSize = 0);
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     // DataWriter Constructor
     // config - [in] configuration parameters for the datareader 
     BinaryWriter(const ConfigParameters& config)

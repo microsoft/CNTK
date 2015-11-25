@@ -9,7 +9,7 @@
 #ifndef _BASETYPES_
 #define _BASETYPES_
 
-
+#if 0
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
@@ -68,6 +68,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #if !defined(_DEBUG) || defined(_CHECKED) || defined(_MANAGED)
 #pragma warning(disable : 4702) // unreachable code
 #endif
+#endif
 
 #include "Platform.h"
 #include <stdio.h>
@@ -105,15 +106,18 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 typedef unsigned char byte;
 #endif
 
+#if 0
 #ifdef _WIN32
 #pragma push_macro("STRSAFE_NO_DEPRECATE")
 #define STRSAFE_NO_DEPRECATE    // deprecation managed elsewhere, not by strsafe
 #include <strsafe.h>    // for strbcpy() etc templates
 #pragma pop_macro("STRSAFE_NO_DEPRECATE")
 #endif
+#endif
 
 using namespace std;
 
+#if 0
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
 #ifdef UNDER_CE
@@ -147,6 +151,7 @@ using namespace std;
 // disable warnings for which fixing would make code less readable
 #pragma warning(disable : 4290) //  throw() declaration ignored
 #pragma warning(disable : 4244) // conversion from typeA to typeB, possible loss of data
+#endif
 
 // ----------------------------------------------------------------------------
 // (w)cstring -- helper class like std::string but with auto-cast to char*
@@ -176,6 +181,7 @@ static inline wchar_t*GetWC(const char *c)
 
     return wc;
 }
+#if 0   // needed with gcc because some regex function is not implemented properly there
 struct MatchPathSeparator
 {
     bool operator()( char ch ) const
@@ -207,6 +213,7 @@ static inline std::wstring removeExtension (std::wstring const& filename)
     size_t lastindex = filename.find_last_of(L".");
     return filename.substr(0, lastindex);
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
@@ -249,12 +256,14 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 // basic macros   --TODO: do we need those? delete what we dont' need
 // ----------------------------------------------------------------------------
 
-#ifndef ASSERT
+#if 0
+#ifndef assert
 #ifdef _CHECKED // basetypes.h expects this function to be defined (it is in message.h)
 extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp);
-#define ASSERT(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
+#define assert(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
 #else
-#define ASSERT assert
+#define assert assert
+#endif
 #endif
 #endif
 #define UNUSED(x) (void)(x)
@@ -303,14 +312,15 @@ namespace msra { namespace basetypes {
         }
     };
 
-// class ARRAY -- std::vector with array-bounds checking
+// class std::vector -- std::vector with array-bounds checking
 // VS 2008 and above do this, so there is no longer a need for this.
 
 #pragma warning(push)
 #pragma warning(disable : 4555) // expression has no affect, used so retail won't be empty
 
+#if 0
 template<class _ElemType>
-class ARRAY : public std::vector<_ElemType>
+class std::vector : public std::vector<_ElemType>
 {
 #if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
     static void throwOutOfBounds()
@@ -319,15 +329,15 @@ class ARRAY : public std::vector<_ElemType>
         OACR_WARNING_DISABLE(IGNOREDBYCOMMA, "Reviewd OK. Special trick below to show a message when assertion fails"
             "[rogeryu 2006/03/24]");
         OACR_WARNING_DISABLE(BOGUS_EXPRESSION_LIST, "This is intentional. [rogeryu 2006/03/24]");
-        //ASSERT ("ARRAY::operator[] out of bounds", false);
+        //assert ("std::vector::operator[] out of bounds", false);
         OACR_WARNING_POP;
     }
 #endif
 
 public:
 
-    ARRAY() : std::vector<_ElemType> () { }
-    ARRAY (int size) : std::vector<_ElemType> (size) { }
+    std::vector() : std::vector<_ElemType> () { }
+    std::vector (int size) : std::vector<_ElemType> (size) { }
 
 #if defined (_DEBUG) || defined (_CHECKED)    // debug version with range checking
     // ------------------------------------------------------------------------
@@ -361,8 +371,9 @@ public:
     }
 };
 // overload swap(), otherwise we'd fallback to 3-way assignment & possibly throw
-template<class _T> inline void swap (ARRAY<_T> & L, ARRAY<_T> & R)  throw()
+template<class _T> inline void swap (std::vector<_T> & L, std::vector<_T> & R)  throw()
 { swap ((std::vector<_T> &) L, (std::vector<_T> &) R); }
+#endif
 
 // class fixed_vector - non-resizable vector
 
@@ -372,14 +383,14 @@ template<class _T> class fixed_vector
     size_t n;               // number of elements
     void check (int index) const 
     { 
-        ASSERT (index >= 0 && (size_t) index < n);
+        assert (index >= 0 && (size_t) index < n);
 #ifdef NDEBUG
         UNUSED(index);
 #endif
     }
     void check (size_t index) const 
     {
-        ASSERT (index < n); 
+        assert (index < n); 
 #ifdef NDEBUG
         UNUSED(index);
 #endif
@@ -404,7 +415,7 @@ public:
     inline const _T & operator[] (int index) const    { check (index); return p[index]; }  // reading
     inline       _T & operator[] (size_t index)       { check (index); return p[index]; }  // writing
     inline const _T & operator[] (size_t index) const { check (index); return p[index]; }  // reading
-    inline int indexof (const _T & elem) const { ASSERT (&elem >= p && &elem < p + n); return &elem - p; }
+    inline int indexof (const _T & elem) const { assert (&elem >= p && &elem < p + n); return &elem - p; }
     void swap (fixed_vector & other)  throw() { std::swap (other.p, p); std::swap (other.n, n); }
     template<class VECTOR> fixed_vector & operator= (const VECTOR & other)
     {
@@ -431,10 +442,11 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 // class matrix - simple fixed-size 2-dimensional array, access elements as m(i,j)
 // stored as concatenation of rows
 
+#if 1
 template<class T> class matrix : fixed_vector<T>
 {
     size_t numcols;
-    size_t locate(size_t i, size_t j) const { ASSERT(i < rows() && j < cols()); return i * cols() + j; }
+    size_t locate(size_t i, size_t j) const { assert(i < rows() && j < cols()); return i * cols() + j; }
 public:
     typedef T elemtype;
     matrix() : numcols(0) {}
@@ -454,6 +466,7 @@ template<class _T> inline void swap(matrix<_T> & L, matrix<_T> & R) throw() { L.
 typedef std::string STRING;
 typedef std::wstring WSTRING;
 typedef std::basic_string<TCHAR> TSTRING;    // wide/narrow character string
+#endif
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)
 // ... TODO: change all of basetypes classes/structs to use this
@@ -596,7 +609,7 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
                                   &buf[0], (int) buf.size());
     if (rc == 0) RuntimeError("MultiByteToWideChar");
-    ASSERT (rc < buf.size ());
+    assert (rc < buf.size ());
     (*(std::wstring*)this) = &buf[0];
 }};
 #endif
@@ -618,7 +631,7 @@ static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
     size_t len = p.length();
     msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }
@@ -663,6 +676,7 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
     return res;
 }
 
+#if 1
 // parsing strings to numbers
 static inline int toint (const wchar_t * s)
 {
@@ -720,12 +734,14 @@ static inline double todouble (const std::wstring & s)
     if (*endptr) RuntimeError("todouble: invalid input string");
     return value;
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // tokenizer -- utility for white-space tokenizing strings in a character buffer
 // This simple class just breaks a string, but does not own the string buffer.
 // ----------------------------------------------------------------------------
 
+#if 1
 class tokenizer : public std::vector<char*>
 {
     const char * delim;
@@ -747,6 +763,7 @@ public:
 #endif   
     }
 };
+#endif
 
 };};    // namespace
 
@@ -789,6 +806,7 @@ public:
 };
 inline int fclose (auto_file_ptr & af) { return af.fclose(); }
 
+#if 0
 #ifdef _MSC_VER
 // auto-closing container for Win32 handles.
 // Pass close function if not CloseHandle(), e.g.
@@ -827,7 +845,7 @@ public:
     operator const T () const { return it; }
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
-
+#endif
 
 };};
 
@@ -879,6 +897,7 @@ public:
 
 namespace msra { namespace util {
 
+#if 0
 // to (slightly) simplify processing of command-line arguments.
 // command_line args (argc, argv);
 // while (args.has (1) && args[0][0] == '-') { option = args.shift(); process (option); }
@@ -894,7 +913,8 @@ public:
     const wchar_t * shift() { if (size() == 0) return NULL; num--; return *args++; }
     const wchar_t * operator[] (int i) const { return (i < 0 || i >= size()) ? NULL : args[i]; }
 };
- 
+#endif
+
 // byte-reverse a variable --reverse all bytes (intended for integral types and float)
 template<typename T> static inline void bytereverse (T & v)  throw()
 {   // note: this is more efficient than it looks because sizeof (v[0]) is a constant
@@ -943,46 +963,18 @@ template<class S> static inline void ZeroStruct (S & s) { memset (&s, 0, sizeof 
 // machine dependent
 // ----------------------------------------------------------------------------
 
+#if 0
 #define MACHINE_IS_BIG_ENDIAN (false)
+#endif
 
 using namespace msra::basetypes;    // for compatibility
 
-#pragma warning (pop)
+//#pragma warning (pop)
 
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
 // why is this in basetypes.h?
-enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
-{
-    None = 0,
-    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
-    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
-    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
-    NoLabel = 1 << 3,               // binary 1000  frame has no label
-
-    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
-    SequenceStartOrNoFeature = SequenceStart | NoFeature,
-    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
-    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
-};
-
-inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
-}
-
-inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
-{
-    a = a | b;
-    return a;
-}
-
-inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
-}
-
 template<class F>
 static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
 {

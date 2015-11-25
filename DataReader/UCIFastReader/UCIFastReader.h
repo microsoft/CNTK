@@ -90,7 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DataReader<ElemType>* m_cachingReader;
         DataWriter<ElemType>* m_cachingWriter;
         ConfigParameters m_readerConfig;
-        void InitCache(const ConfigParameters& config);
+        void InitCache(const ConfigParameters & config);
+        void InitCache(const ScriptableObjects::IConfigRecord & config);
 
         size_t RandomizeSweep(size_t epochSample);
         bool Randomize() {return m_randomizeRange != randomizeNone;}
@@ -104,7 +105,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool EnsureDataAvailable(size_t mbStartSample, bool endOfDataCheck=false);
         virtual bool ReadRecord(size_t readSample);
     public:
-        virtual void Init(const ConfigParameters& config);
+        template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+        virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+        virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
         virtual void Destroy();
         UCIFastReader() { m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_labelsIdBuffer=NULL; m_pMBLayout=make_shared<MBLayout>(); }
         virtual ~UCIFastReader();

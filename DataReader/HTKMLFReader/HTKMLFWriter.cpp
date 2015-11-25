@@ -31,7 +31,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //DATAWRITER_API IDataWriter* DataWriterFactory(void)
 
     template<class ElemType>
-    void HTKMLFWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+    template<class ConfigRecordType>
+    void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType & writerConfig)
     {
         m_tempArray = nullptr;
         m_tempArraySize = 0;
@@ -41,29 +42,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numFiles;
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        vector<wstring> outputNames = writerConfig(L"outputNodeNames", ConfigRecordType::Array(stringargvector()));
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
-
 
         foreach_index(i, outputNames) // inputNames should map to node names
         {
             ConfigParameters thisOutput = writerConfig(outputNames[i]);
             if (thisOutput.Exists("dim"))
-                udims.push_back(thisOutput("dim"));
+                udims.push_back(thisOutput(L"dim"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer need to specify dim of output");
 
             if (thisOutput.Exists("file"))
-                scriptpaths.push_back(thisOutput("file"));
+                scriptpaths.push_back(thisOutput(L"file"));
             else if (thisOutput.Exists("scpFile"))
-                scriptpaths.push_back(thisOutput("scpFile"));
+                scriptpaths.push_back(thisOutput(L"scpFile"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer needs to specify scpFile for output");
 
             outputNameToIdMap[outputNames[i]]= i;
             outputNameToDimMap[outputNames[i]]=udims[i];
-            wstring type = thisOutput("type","Real");
+            wstring type = thisOutput(L"type","Real");
             if (type == L"Real")
             {
                 outputNameToTypeMap[outputNames[i]] = OutputTypes::outputReal;
@@ -99,7 +99,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         outputFileIndex=0;
         sampPeriod=100000;
-
     }
 
     template<class ElemType>

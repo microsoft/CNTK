@@ -360,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This stuff must all be removed from SimpleEvaluator, as this is not simple at all!!
         void InitTrainEncoderDecoderWithHiddenStates(const ConfigParameters& readerConfig)
         {
-            ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
+            ConfigArray arrEncoderNodeNames = readerConfig(L"encoderNodes", "");
             vector<wstring> encoderNodeNames;
 
             m_lst_pair_encoder_decode_node_names.clear();;
@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            ConfigArray arrDecoderNodeNames = readerConfig("decoderNodes", "");
+            ConfigArray arrDecoderNodeNames = readerConfig(L"decoderNodes", "");
             vector<wstring> decoderNodeNames;
             if (arrDecoderNodeNames.size() > 0)
             {

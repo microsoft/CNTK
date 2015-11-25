@@ -1,3 +1,4 @@
+#if 1   // only needed for some unused code in MultiNetworksSGD.h
 //
 // <copyright file="IComputationNetBuilder.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -25,3 +26,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 }}}
+#endif

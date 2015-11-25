@@ -281,4 +281,28 @@ public:
 typedef unsigned short CLASSIDTYPE;
 typedef unsigned short HMMIDTYPE;
 
+#ifndef _MSC_VER
+// these needed below with gcc because some regex function is not implemented properly there
+struct MatchPathSeparator
+{
+    bool operator()(char ch) const { return ch == '\\' || ch == '/'; }
+};
+static inline std::string basename(std::string const& pathname)
+{
+    return std::string(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+static inline std::string removeExtension(std::string const& filename)
+{
+    return filename.substr(0, filename.find_last_of("."));
+}
+static inline std::wstring basename(std::wstring const& pathname)
+{
+    return std::wstring(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+static inline std::wstring removeExtension(std::wstring const& filename)
+{
+    return filename.substr(0, filename.find_last_of(L"."));
+}
+#endif
+
 };};

@@ -64,9 +64,9 @@ public:
     typedef unsigned int LabelIdType;
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
-    bool     mDoRandomize = true;
 
-    virtual void Init(const ConfigParameters& /*config*/) = 0;
+    virtual void Init(const ConfigParameters & config) = 0;
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
     virtual void Destroy() = 0;
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
 
@@ -99,8 +99,6 @@ public:
     virtual bool CanReadFor(wstring /* nodeName */) { return false; }
 
     bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/) { NOT_IMPLEMENTED; }
-
-    void SetDoRandomize(bool b){ mDoRandomize = b; }
 
     // Workaround for the two-forward-pass sequence and ctc training, which
     // allows processing more utterances at the same time. Only used in
@@ -139,14 +137,14 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataReader: public IDataReader<ElemType>, protected Plugin
+class DataReader: public IDataReader<ElemType>, protected Plugin, public ScriptableObjects::Object
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-public:
-    vector<wstring> m_ioNames;
-    map<wstring, IDataReader<ElemType> *> m_dataReader;  // readers
-    map<wstring, ConfigParameters> m_configure; 
+private:
+    vector<wstring> m_ioNames;                              // TODO: why are these needed, why not loop over m_dataReaders?
+    map<wstring, IDataReader<ElemType> *> m_dataReaders;    // readers
+
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
     // Sample format below for UCIReader:
@@ -170,22 +168,24 @@ public:
     //      labelType=Category
     //  ]
     //]
-    virtual void Init(const ConfigParameters& config);
-
-    void GetDataReader(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     // Destroy - cleanup and remove this class
-    // NOTE: this destroys the object, and it can't be used past this point
-    virtual void Destroy();
-
-    /// number of utterances per minibatch, for data parallelsim
-    size_t mNbrUttPerMinibatch;
+    // NOTE: this destroys the object, and it can't be used past this point.
+    // The reason why this is not just a destructor is that it goes across a DLL boundary.
+    virtual void Destroy() override;
 
 public:
     // DataReader Constructor
-    // config - [in] configuration parameters for the datareader 
-    DataReader(const ConfigParameters& config);
-    DataReader(const ScriptableObjects::IConfigRecord &);
+    // config - [in] configuration parameters for the datareader
+    template<class ConfigRecordType>
+    DataReader(const ConfigRecordType& config);
+    // constructor from Scripting
+    DataReader(const ScriptableObjects::IConfigRecordPtr configp) :
+        DataReader(*configp)
+    { }
     virtual ~DataReader();
 
     //StartMinibatchLoop - Startup a minibatch loop 
@@ -203,7 +203,7 @@ public:
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
-	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
+    virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();

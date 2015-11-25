@@ -173,7 +173,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
 
         // get names of features and labels
         std::vector<std::wstring> files;
-        files.push_back(readerConfig("file"));
+        files.push_back(readerConfig(L"file"));
 
         // setup minibatch matrices
         Matrix<ElemType> featuresMatrix;

@@ -36,8 +36,10 @@ static const std::size_t closingBraceVarSize = strlen(closingBraceVar);
 // str - string to trim
 // NOTE: if the entire string is empty, then the string will be set to an empty string
 void Trim(std::string& str);
+
 class ConfigValue;
 typedef std::map<std::string, ConfigValue, nocase_compare> ConfigDictionary;
+
 class ConfigParameters;
 std::string::size_type ParseKeyValue(const std::string& token,
                                      std::string::size_type pos,
@@ -747,6 +749,21 @@ public:
     // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
     template<class V> static const V & Array(const V & vec) { return vec; }
 
+    // get the names of all members in this record (but not including parent scopes)
+    vector<wstring> GetMemberIds() const
+    {
+        vector<wstring> ids;
+        for (auto iter = begin(); iter != end(); ++iter)
+        {
+            auto id = iter->first;
+            ids.push_back(wstring(id.begin(), id.end()));
+        }
+        return ids;
+    }
+
+    bool CanBeConfigRecord(const wstring & /*id*/) const { return true; }
+    bool CanBeString(const wstring & /*id*/) const { return true; }
+
 public:
     // explicit copy function. Only to be used when a copy must be made.
     // this also clears out the parent pointer, so only local configs can be used
@@ -905,7 +922,7 @@ public:
     ConfigValue operator()(const std::wstring& name,
                            const wchar_t* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -919,7 +936,7 @@ public:
     ConfigValue operator()(const std::wstring& name,
                            const char* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -1123,6 +1140,10 @@ public:
     {
         std::string value = Find(key);
         return !_stricmp(compareValue.c_str(), value.c_str());
+    }
+    bool Match(const std::wstring& key, const std::wstring& compareValue) const
+    {
+        return Match(string(key.begin(), key.end()), msra::strfun::utf8(compareValue));
     }
 
     // return the entire path to this config element
@@ -1338,10 +1359,12 @@ public:
 };
 
 // get config sections that define files (used for readers)
-void GetFileConfigNames(const ConfigParameters& readerConfig,
+template<class ConfigRecordType>
+void GetFileConfigNames(const ConfigRecordType& readerConfig,
                         std::vector<std::wstring>& features,
                         std::vector<std::wstring>& labels);
-void FindConfigNames(const ConfigParameters& config, std::string key,
+template<class ConfigRecordType>
+void FindConfigNames(const ConfigRecordType& config, std::string key,
                      std::vector<std::wstring>& names);
 
 // Version of argument vectors that preparse everything instead of parse on demand

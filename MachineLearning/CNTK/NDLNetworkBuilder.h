@@ -6,7 +6,6 @@
 #pragma once
 #include "NetworkDescriptionLanguage.h"
 #include "ComputationNetwork.h"
-#include "IComputationNetBuilder.h"
 #include "IExecutionEngine.h"
 #include "Basics.h"
 #include <string>
@@ -24,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     using namespace Microsoft::MSR;
 
     template<class ElemType>
-    class NDLBuilder : public IComputationNetBuilder<ElemType>
+    class NDLBuilder
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
@@ -204,7 +203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ndlUtil.ProcessNDLConfig(config, true);
         }
 
-        virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
+        virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {

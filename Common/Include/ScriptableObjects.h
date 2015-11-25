@@ -250,6 +250,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // If you encounter this, instead say 'us = (double)((const wstring&)arg).size();' with a &. Don't forget the const (I have seen broken typecasts without).
         operator const IConfigRecord &() const { return AsRef<IConfigRecord>(); }
         operator const ConfigArray &() const { return AsRef<ConfigArray>(); }
+        operator const wstring &() const { return AsRef<wstring>(); }       // somehow operator T() does not work here, still giving ambiguous messages. This makes it work. Probably not generic. Need to fix this.
         operator double() const { return AsRef<Double>(); }
         operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }
@@ -371,6 +372,10 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         template<class T> std::vector<T> operator()(const wstring & id, const std::vector<T> & defaultValue) const;
         bool ExistsCurrent(const wstring & id) const;
         bool Exists(const wstring & id) const { return Find(id) != nullptr; }
+        bool Match(const wstring & id, const wstring & compareValue) const;
+        bool CanBeConfigRecord(const wstring & id) const { return operator[](id).Is<IConfigRecord>(); }
+        bool CanBeString(const wstring & id) const { return operator[](id).Is<wstring>(); }
+        const std::string ConfigName() const;
         static const IConfigRecord & Record();
         template<class V> static const std::vector<typename V::value_type> & Array(const V & vec);
     };
@@ -471,6 +476,16 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 failfn(L"index out of bounds");
             return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
         }
+#if 0
+        // get an entire array into a std::vector. Note that this will force all values to be evaluated.
+        template<typename C>
+        std::vector<C> AsVector() const
+        {
+            if (firstIndex != 0)
+                InvalidArgument("ConfigArray::AsVector(): First index must be 0.");
+            return vector<C>(values.begin(), values.end());
+        }
+#endif
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -637,13 +652,13 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         if (!valp)
             return defaultValue;                // default value
         if (!valp->Is<ConfigArray>())
-            return std::vector<T>(1, (T)*valp); // scalar value
+            return std::vector<T>(1, (const T &)*valp); // scalar value
         const ConfigArray & arr = *valp;        // actual array
         const auto range = arr.GetIndexRange();
         if (range.first != 0) valp->Fail(L"This array is expected to begin with index 0.");
         std::vector<T> res(range.second + 1);
         for (int i = range.first; i <= range.second; i++)
-            res[i] = arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
+            res[i] = (const T &)arr.At(i, [](const wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
         return res;
     }
     inline bool IConfigRecord::ExistsCurrent(const wstring & id) const // this is inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
@@ -653,7 +668,17 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 return true;
         return false;
     }
-    /*static*/ inline const IConfigRecord & IConfigRecord::Record()   // empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
+    inline bool IConfigRecord::Match(const wstring & id, const wstring & compareValue) const
+    {
+        auto * valp = Find(id);
+        wstring val = valp ? *valp : wstring();
+        return !_wcsicmp(compareValue.c_str(), val.c_str());
+    }
+    inline const string IConfigRecord::ConfigName() const
+    {
+        LogicError("ConfigName not supported by BrainScript.");         // needed in BinaryWriter
+    }
+    /*static*/ inline const IConfigRecord & IConfigRecord::Record()     // empty record to be passed as a default to operator() when retrieving a nested ConfigRecord
     {
         static struct EmptyConfigRecord : public IConfigRecord
         {

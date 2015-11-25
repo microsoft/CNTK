@@ -1361,8 +1361,8 @@ void WAVEHEADER::write (FILE * f)
     fputint (f, nAvgBytesPerSec);
     fputshort (f, nBlockAlign);
     fputshort (f, wBitsPerSample);
-    ASSERT (FmtLength == 16);
-    ASSERT (wFormatTag == 1);
+    assert (FmtLength == 16);
+    assert (wFormatTag == 1);
     fputTag (f, "data");
     fputint (f, DataLength);
     fflushOrDie (f);
@@ -1455,14 +1455,14 @@ static short toolULawToLinear(unsigned char p_ucULawByte)
 
 // fgetwavraw(): only read data of .wav file. For multi-channel data, samples
 // are kept interleaved.
-static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
+static void fgetwavraw(FILE * f, std::vector<short> & wav, const WAVEHEADER & wavhd)
 {
     int bytesPerSample = wavhd.wBitsPerSample / 8;  // (sample size on one channel)
     wav.resize (wavhd.DataLength / bytesPerSample);
     if (wavhd.wFormatTag == 7)    // mulaw
     {
         (wavhd.nChannels == 1) || RuntimeError ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
-        ARRAY<unsigned char> data;
+        std::vector<unsigned char> data;
         int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
         data.resize (numSamples);
         freadOrDie (&data[0], sizeof (data[0]), numSamples, f);
@@ -1486,7 +1486,7 @@ static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
 // fgetwav(): read an entire .wav file. Stereo is mapped to mono.
 // ----------------------------------------------------------------------------
 
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
 {
     WAVEHEADER wavhd;           // will be filled in for 16-bit PCM!!
     signed short wFormatTag;    // real format tag as found in data
@@ -1502,7 +1502,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     else if (wavhd.nChannels == 2)
     {
         //read raw data        
-        ARRAY<short> buf;
+        std::vector<short> buf;
         buf.resize(numSamples * 2);
         fgetwavraw(f, buf, wavhd);
         
@@ -1523,7 +1523,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     }
 }
 
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate)
 {
     auto_file_ptr f = fopenOrDie (fn, L"rbS");
     fgetwav (f, wav, sampleRate);
@@ -1538,13 +1538,13 @@ void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
 
-void fgetraw (FILE *f, ARRAY< ARRAY<short> > & data, const WAVEHEADER & wavhd)
+void fgetraw (FILE *f, std::vector< std::vector<short> > & data, const WAVEHEADER & wavhd)
 {
-    ARRAY<short> wavraw;
+    std::vector<short> wavraw;
     fgetwavraw (f, wavraw, wavhd);
     data.resize (wavhd.nChannels);
     int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-    ASSERT (numSamples == (int) wavraw.size() / wavhd.nChannels);
+    assert (numSamples == (int) wavraw.size() / wavhd.nChannels);
 
     for (int i = 0; i < wavhd.nChannels; i++)
     {
@@ -1599,7 +1599,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
     unsigned int RiffLength = 36 + DataLength;
     unsigned int FmtLength  = 16; 
     // file header
-    ASSERT (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
+    assert (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
     fputTag (f, "RIFF");
     fputint (f, RiffLength);
     fputTag (f, "WAVE");
@@ -1861,11 +1861,24 @@ bool operator>= (const FILETIME & targettime, const FILETIME & inputtime)   // f
 }
 #endif
 
-bool getfiletime (const wstring & path, FILETIME & time)
+#ifdef _WIN32
+class auto_find_handle
+{
+    HANDLE h;
+    auto_find_handle operator= (const auto_find_handle &);
+    auto_find_handle(const auto_find_handle &);
+public:
+    auto_find_handle(HANDLE p_h) : h(p_h) {}
+    ~auto_find_handle() { if (h != INVALID_HANDLE_VALUE) ::FindClose(h); }
+    operator HANDLE () const { return h; }
+};
+#endif
+
+bool getfiletime(const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
 #ifdef _WIN32
     WIN32_FIND_DATAW findFileData;
-    auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
+    auto_find_handle hFind (FindFirstFileW (path.c_str(), &findFileData));
     if (hFind != INVALID_HANDLE_VALUE)
     {
         time = findFileData.ftLastWriteTime;
@@ -1891,7 +1904,7 @@ bool getfiletime (const wstring & path, FILETIME & time)
 #if 0
 void setfiletime (const wstring & path, const FILETIME & time)
 {   // update the file modification time of an existing file
-    auto_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
+    auto_find_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
                                 FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (h == INVALID_HANDLE_VALUE)
@@ -1947,7 +1960,7 @@ static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
 
     // crawl folder
     WIN32_FIND_DATAW ffdata;
-    auto_handle hFind (::FindFirstFileW (path.c_str(), &ffdata), ::FindClose);
+    auto_find_handle hFind (::FindFirstFileW (path.c_str(), &ffdata));
     if (hFind == INVALID_HANDLE_VALUE) 
     {
         DWORD err = ::GetLastError();
@@ -2136,7 +2149,7 @@ static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
     size_t len = p.length();
     msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }

@@ -9,7 +9,6 @@
 #include "stdafx.h"
 #define DATAWRITER_LOCAL
 #include "DataWriter.h"
-#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -21,12 +20,12 @@ template<> std::string GetWriterName(float) {std::string name = "GetWriterF"; re
 template<> std::string GetWriterName(double) {std::string name = "GetWriterD"; return name;}
 
 template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& /*config*/)
+template<class ConfigRecordType>
+void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType & /*config*/)
 {
     RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
-
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
@@ -37,63 +36,59 @@ void DataWriter<ElemType>::Destroy()
 }
 
 // DataWriter Constructor
-// config - [in] configuration parameters defining all the parameters to the writer
+// config - [in] configuration data for the data writer
 template<class ElemType>
-void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& config)
+template<class ConfigRecordType>
+DataWriter<ElemType>::DataWriter(const ConfigRecordType & config)
 {
-    typedef void (*GetWriterProc)(IDataWriter<ElemType>** pwriter);
+    typedef void(*GetWriterProc)(IDataWriter<ElemType>** pwriter);
 
     // initialize just in case
     m_dataWriter = NULL;
 
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
-    string writerType = config("writerType", "BinaryReader");
-    if (writerType == "HTKMLFWriter" || writerType == "HTKMLFReader")
+    // TODO: This seems like a find-replace operation?
+    wstring writerType = config(L"writerType", L"BinaryReader");
+    if (writerType == L"HTKMLFWriter" || writerType == L"HTKMLFReader")
     {
-        writerType = "HTKMLFReader";
+        writerType = L"HTKMLFReader";
     }
-    else if (writerType == "BinaryWriter" || writerType == "BinaryReader")
+    else if (writerType == L"BinaryWriter" || writerType == L"BinaryReader")
     {
-        writerType = "BinaryReader";
+        writerType = L"BinaryReader";
     }
-    else if (writerType == "LUSequenceWriter" || writerType == "LUSequenceReader")
+    else if (writerType == L"LUSequenceWriter" || writerType == L"LUSequenceReader")
     {
-        writerType = "LUSequenceReader";
+        writerType = L"LUSequenceReader";
     }
-    else if (writerType == "LMSequenceWriter" || writerType == "LMSequenceReader")
+    else if (writerType == L"LMSequenceWriter" || writerType == L"LMSequenceReader")
     {
-        writerType = "LMSequenceReader";
+        writerType = L"LMSequenceReader";
     }
-    else if (writerType == "KaldiReader" || writerType == "KaldiWriter")
+    else if (writerType == L"KaldiReader" || writerType == L"KaldiWriter")
     {
-        writerType = "KaldiReader";
+        writerType = L"KaldiReader";
     }
 
     ElemType elemType = ElemType();
     GetWriterProc getWriterProc = (GetWriterProc)Plugin::Load(writerType, GetWriterName(elemType));
     getWriterProc(&m_dataWriter);
-}
 
-// DataWriter Constructor
-// config - [in] configuration data for the data writer
-template<class ElemType>
-DataWriter<ElemType>::DataWriter(const ConfigParameters& config)
-{
-    GetDataWriter(config);
     m_dataWriter->Init(config);
 }
 
+template DataWriter<float >::DataWriter(const ConfigParameters &);
+template DataWriter<double>::DataWriter(const ConfigParameters &);
+template DataWriter<float >::DataWriter(const ScriptableObjects::IConfigRecord &);
+template DataWriter<double>::DataWriter(const ScriptableObjects::IConfigRecord &);
 
 // destructor - cleanup temp files, etc. 
 template<class ElemType>
 DataWriter<ElemType>::~DataWriter()
 {
     // free up resources
-    if (m_dataWriter != NULL)
-    {
+    if (m_dataWriter)
         m_dataWriter->Destroy();
-        m_dataWriter = NULL;
-    }
 }
 
 // GetSections - Get the sections of the file

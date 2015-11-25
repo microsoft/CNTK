@@ -8,6 +8,8 @@
 
 
 #include "stdafx.h"
+#include "Basics.h"
+#include "basetypes.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "LUSequenceReader.h"
@@ -307,9 +309,9 @@ void LUSequenceReader<ElemType>::ChangeMaping(const map<LabelType, LabelType>& m
     }
 }
 
-
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -326,8 +328,8 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
 
     {
-        wstring tInputLabel = readerConfig("inputLabel", L"");
-        wstring tOutputLabel = readerConfig("outputLabel", L"");
+        wstring tInputLabel = readerConfig(L"inputLabel", L"");
+        wstring tOutputLabel = readerConfig(L"outputLabel", L"");
 
         if (labels.size() == 2)
         {
@@ -362,23 +364,24 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         else
             RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-        ConfigParameters featureConfig = readerConfig(m_featuresName, "");
-        ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
+        //const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
-            m_labelInfo[index].idMax = 0;
-            m_labelInfo[index].beginSequence = (wstring) labelConfig[index]("beginSequence", "");
-            m_labelInfo[index].endSequence = (wstring) labelConfig[index]("endSequence", "");
-            m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
+            const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-            m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
+            m_labelInfo[index].idMax = 0;
+            m_labelInfo[index].beginSequence = (wstring)labelConfig(L"beginSequence", L"");
+            m_labelInfo[index].endSequence   = (wstring)labelConfig(L"endSequence",   L"");
+            m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
+
+            m_labelInfo[index].isproposal = labelConfig(L"isProposal", false);
 
             m_labelInfo[index].m_clsinfoRead = false;
 
             // determine label type desired
-            std::string labelType(labelConfig[index]("labelType", "Category"));
-            if (labelType == "Category")
+            wstring labelType(labelConfig(L"labelType", L"category"));
+            if (!_wcsicmp(labelType.c_str(), L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -388,18 +391,19 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             // if we have labels, we need a label Mapping file, it will be a file with one label per line
             if (m_labelInfo[index].type != labelNone)
             {
-                string mode = labelConfig[index]("mode", "plain");//plain, class
+                wstring mode = labelConfig(L"mode", L"plain");//plain, class
 
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
 
-                if (mode == "class")
+                if (mode == L"class")
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
                 }
 
-                std::wstring wClassFile = labelConfig[index]("token", "");
-                if (wClassFile != L""){
+                std::wstring wClassFile = labelConfig(L"token", L"");
+                if (wClassFile != L"")
+                {
                     ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, 
                         m_labelInfo[index].readerMode == ReaderMode::Class, 
                         m_labelInfo[index].word4cls,
@@ -421,15 +425,13 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
 
-    ConfigArray wContext = readerConfig("wordContext", "0");
-    intargvector wordContext = wContext;
-    m_wordContext = wordContext;
+    m_wordContext = readerConfig(L"wordContext", ConfigRecordType::Array(intargvector(vector<int>{ 0 })));
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig(L"file");
     if (m_traceLevel > 0)
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
 
@@ -437,12 +439,12 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
 
-    mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
 
     mRandomize = false;
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
+        string randomizeString = readerConfig(L"randomize");
         if (randomizeString == "None")
         {
             ;
@@ -453,11 +455,10 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
 
-    mEqualLengthOutput = readerConfig("equalLength", "true");
-    mAllowMultPassData = readerConfig("dataMultiPass", "false");
+    mEqualLengthOutput = readerConfig(L"equalLength",   true);
+    mAllowMultPassData = readerConfig(L"dataMultiPass", false);
 
-    mIgnoreSentenceBeginTag = readerConfig("ignoresentencebegintag", "false");
-
+    mIgnoreSentenceBeginTag = readerConfig(L"ignoresentencebegintag", false);
 }
 
 template<class ElemType>
@@ -1141,16 +1142,21 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& readerConfig)
 {
-    mWordMappingFn = readerConfig("wordmap", "");
+    mWordMappingFn = (wstring)readerConfig(L"wordmap", L"");
     wstring si, so;
     wstring ss;
     vector<wstring> vs;
-    if (mWordMappingFn != "")
+    if (mWordMappingFn != L"")
     {
         wifstream fp;
+#ifdef _WIN32
         fp.open(mWordMappingFn.c_str(), wifstream::in);
+#else
+        fp.open(charpath(mWordMappingFn), wifstream::in);
+#endif
 
         while (fp.good())
         {
@@ -1164,9 +1170,8 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& re
         }
         fp.close();
     }
-    mUnkStr = (wstring)readerConfig("unk", "<unk>");
+    mUnkStr = (wstring)readerConfig(L"unk", L"<unk>");
 }
-
 
 template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
@@ -1226,15 +1231,16 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetRandomSeed(int us)
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
-    ConfigArray ioNames = readerConfig("ioNodeNames", "");
+    vector<wstring> ioNames = readerConfig(L"ioNodeNames", ConfigRecordType::Array(stringargvector()));
     if (ioNames.size() > 0)
     {
         /// newer code that explicitly place multiple streams for inputs
         foreach_index(i, ioNames) // inputNames should map to node names
         {
-            ConfigParameters thisIO = readerConfig(ioNames[i]);
+            const ConfigRecordType & thisIO = readerConfig(ioNames[i]);
 
             BatchLUSequenceReader<ElemType> *thisReader = new BatchLUSequenceReader<ElemType>();
             thisReader->Init(thisIO);

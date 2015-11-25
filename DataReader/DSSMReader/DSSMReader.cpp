@@ -136,7 +136,8 @@ void DSSMReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void DSSMReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     std::vector<std::wstring> features;
     std::vector<std::wstring> labels;
@@ -167,22 +168,23 @@ void DSSMReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_partialMinibatch = m_endReached = false;
     m_labelType = labelCategory;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel", "0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
+        // BUGBUG: reading out string and number... ugh
+        wstring randomizeString = readerConfig(L"randomize");
+        if (randomizeString == L"None")
         {
             m_randomizeRange = randomizeNone;
         }
-        else if (randomizeString == "Auto")
+        else if (randomizeString == L"Auto")
         {
             m_randomizeRange = randomizeAuto;
         }
         else
         {
-            m_randomizeRange = readerConfig("randomize");
+            m_randomizeRange = readerConfig(L"randomize");
         }
     }
     else
@@ -190,7 +192,7 @@ void DSSMReader<ElemType>::Init(const ConfigParameters& readerConfig)
         m_randomizeRange = randomizeNone;
     }
 
-    std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
+    std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
 

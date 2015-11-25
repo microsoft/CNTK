@@ -41,7 +41,8 @@ typedef unsigned int UNINT32;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::Init(const ConfigParameters& readerConfig)
+    template<class ConfigRecordType>
+    void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
     {
         m_mbiter = NULL;
         m_frameSource = NULL;
@@ -57,14 +58,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_doMinibatchBuffering = false;
         m_doMinibatchBufferTruncation = false;
 
-        if (readerConfig.Exists("legacyMode"))
+        if (readerConfig.Exists(L"legacyMode"))
         {
             RuntimeError("legacy mode has been deprecated\n");
         }
 
         // If <m_framemode> is false, throw away any utterance that is longer
         // than the specified <m_maxUtteranceLength>.
-        m_maxUtteranceLength = readerConfig("maxUtteranceLength", "10000");
+        m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", "10000");
 
         // m_truncated:
         //     If true, truncate utterances to fit the minibatch size. Otherwise
@@ -72,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // m_numberOfuttsPerMinibatch:
         //     If larger than one, then each minibatch contains multiple
         //     utterances.
-        m_truncated = readerConfig("Truncated", "false");
-        m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+        m_truncated = readerConfig(L"Truncated", "false");
+        m_numberOfuttsPerMinibatch = readerConfig(L"nbruttsineachrecurrentiter", "1");
         if (m_numberOfuttsPerMinibatch < 1)
         {
             LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.\n");
@@ -89,10 +90,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_uttInfo.resize(m_numberOfuttsPerMinibatch);
 
         // Checks if we need to do sequence training.
-        if (readerConfig.Exists("seqTrainCriterion"))
+        if (readerConfig.Exists(L"seqTrainCriterion"))
         {
             m_doSeqTrain = true;
-            m_seqTrainCriterion = wstring(readerConfig("seqTrainCriterion"));
+            m_seqTrainCriterion = wstring(readerConfig(L"seqTrainCriterion"));
             if ((m_seqTrainCriterion != L"mpfe")
                 && (m_seqTrainCriterion != L"smbr"))
             {
@@ -101,14 +102,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Checks if framemode is false in sequence training.
-        m_framemode = readerConfig("frameMode", "true");
+        m_framemode = readerConfig(L"frameMode", "true");
         if (m_framemode && m_doSeqTrain)
         {
             LogicError("frameMode has to be false in sequence training.\n");
         }
 
         // Checks if partial minibatches are allowed.
-        std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
+        std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
         m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
         // Figures out if we have to do minibatch buffering and how.
@@ -123,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Checks if we are in "write" mode or "train/test" mode.
-        string command(readerConfig("action",L""));
+        string command(readerConfig(L"action",L""));
         if (command == "write")
         {
             m_trainOrTest = false;
@@ -148,17 +149,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool oneSilenceClass;
 
         // Makes sure that "denlats" and "alignments" sections exist.
-        if (!readerConfig.Exists("denlats"))
+        if (!readerConfig.Exists(L"denlats"))
         {
             LogicError("Sequence training requested, but \"denlats\" section is not provided.\n");
         }
-        if (!readerConfig.Exists("alignments"))
+        if (!readerConfig.Exists(L"alignments"))
         {
             LogicError("Sequence training requested, but \"alignments\" section is not provided.\n");
         }
 
         // Processes "denlats" section. 
-        ConfigParameters denlatConfig = readerConfig("denlats");
+        ConfigParameters denlatConfig = readerConfig(L"denlats");
         if (!denlatConfig.Exists("rx"))
         {
             LogicError("Rspecifier is not provided for denominator lattices.\n");
@@ -176,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         oneSilenceClass = denlatConfig("oneSilenceClass", "true");
 
         // Processes "alignments" section.
-        ConfigParameters aliConfig = readerConfig("alignments");
+        ConfigParameters aliConfig = readerConfig(L"alignments");
         if (!aliConfig.Exists("rx"))
         {
             LogicError("Rspecifier is not provided for alignments.\n");
@@ -191,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
         {
             ConfigParameters temp = iter->second;
-            if (temp.ExistsCurrent("type"))
+            if (temp.ExistsCurrent(L"type"))
             {
                 if (temp("type") == "readerDeriv"
                     || temp("type") == "seqTrainDeriv" /*for back compatibility */)
@@ -402,9 +403,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Loads randomization method.
         size_t randomize = randomizeAuto;
-        if (readerConfig.Exists("randomize"))
+        if (readerConfig.Exists(L"randomize"))
         {
-            const std::string& randomizeString = readerConfig("randomize");
+            const std::string& randomizeString = readerConfig(L"randomize");
             if (randomizeString == "None")
             {
                 randomize = randomizeNone;
@@ -415,7 +416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                randomize = readerConfig("randomize");
+                randomize = readerConfig(L"randomize");
             }
         }
         
@@ -452,9 +453,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double htktimetoframe = 100000.0;           // default is 10ms 
         std::vector<std::map<std::wstring,std::vector<msra::asr::htkmlfentry>>> labelsmulti;
         int targets_delay = 0;
-        if (readerConfig.Exists("targets_delay"))
+        if (readerConfig.Exists(L"targets_delay"))
         {
-            targets_delay = readerConfig("targets_delay");
+            targets_delay = readerConfig(L"targets_delay");
         }
         foreach_index(i, mlfpathsmulti)
         {
@@ -467,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Get the readMethod, default value is "blockRandomize", the other
         // option is "rollingWindow". We only support "blockRandomize" in
         // sequence training.
-        std::string readMethod(readerConfig("readMethod", "blockRandomize"));
+        std::string readMethod(readerConfig(L"readMethod", "blockRandomize"));
         if (!_stricmp(readMethod.c_str(), "blockRandomize"))
         {
             // construct all the parameters we don't need, but need to be passed to the constructor...
@@ -490,9 +491,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             std::string pageFilePath;
             std::vector<std::wstring> pagePaths;
-            if (readerConfig.Exists("pageFilePath"))
+            if (readerConfig.Exists(L"pageFilePath"))
             {
-                pageFilePath = readerConfig("pageFilePath");
+                pageFilePath = readerConfig(L"pageFilePath");
 
                 // replace any '/' with '\' for compat with default path
                 std::replace(pageFilePath.begin(), pageFilePath.end(), '/','\\'); 
@@ -554,7 +555,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //m_frameSourceMultiIO = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, randomize, pagepath, mayhavenoframe, addEnergy);
             //m_frameSourceMultiIO->setverbosity(verbosity);
-            int verbosity = readerConfig("verbosity","2");
+            int verbosity = readerConfig(L"verbosity","2");
             m_frameSource = new msra::dbn::minibatchframesourcemulti(scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy);
             m_frameSource->setverbosity(verbosity);
         }
@@ -2096,11 +2097,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto pair = *iter;
             ConfigParameters temp = iter->second;
             // see if we have a config parameters that contains a "file" element, it's a sub key, use it
-            if (temp.ExistsCurrent("scpFile"))
+            if (temp.ExistsCurrent(L"scpFile"))
             {
                 features.push_back(msra::strfun::utf16(iter->first));
             }
-            else if (temp.ExistsCurrent("mlfFile"))
+            else if (temp.ExistsCurrent(L"mlfFile"))
             {
                 labels.push_back(msra::strfun::utf16(iter->first));
             }
