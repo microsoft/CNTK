@@ -186,10 +186,11 @@ CNTKMATH:=cntkmath
 ########################################
 
 BUILDINFO:= MachineLearning/CNTK/buildinfo.h
+GENBUILD:=Scripts/genrate_build_info 
 
 $(BUILDINFO): Scripts/genrate_build_info
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	@Scripts/genrate_build_info
+	@$(GENBUILD) $(BUILD_TOP)/Config.make
 
 
 ########################################

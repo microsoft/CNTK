@@ -12,7 +12,7 @@
 
 usage ()
 {
-	echo "usage: $0 "
+	echo "usage: $0 <Config.make>"
 	echo "-------------------------------------------------------------------"
 	echo "This script is used to generate buildinfo.h in MachineLearning/CNTK"
 	echo "This script needs to be called from the top level directory of CNTK project"
@@ -63,10 +63,11 @@ makebuildinfo()
 #//////////////////////////////////////////////////////#
 #		main function 			       #
 #//////////////////////////////////////////////////////#	
-if [ $# -ne 0 ]; then 
+if [ $# -ne 1 ]; then 
 	usage 
 fi
 
+config=$1
 
 # 1. check whether we have git and what is the sha-1 value 
 if Has_Git; then has_git=1; else has_git=0; usage "git not exist"; fi
@@ -74,10 +75,10 @@ GIT_COMMIT=`git rev-parse HEAD`
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 
 # 2. looking into Config.make
-if [ ! -e Config.make ] ; then 
+if [ ! -e $config ] ; then 
 	usage "Config.make not exists"
 fi
-source "Config.make"
+source $config
 
 # 3. whether we have CUDA_PATH 
 if [ -z "${CUDA_PATH+x}" ]; then 
