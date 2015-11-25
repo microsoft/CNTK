@@ -8,10 +8,10 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "commandArgUtil.h"
+#include "RandomOrdering.h"
 #include <string>
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

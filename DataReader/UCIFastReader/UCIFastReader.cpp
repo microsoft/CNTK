@@ -200,7 +200,7 @@ size_t UCIFastReader<ElemType>::UpdateDataVariables(size_t mbStartSample)
         if (m_randomizeRange > m_epochSize)
         {
             m_randomizeRange = m_epochSize;
-            m_randomordering.resize(m_randomizeRange,m_randomizeRange);
+            m_randomordering.Resize(m_randomizeRange,m_randomizeRange);
         }
 
         // write the label file if we hit the end of the file
@@ -416,7 +416,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
 
     // if we know the size of the randomization now, resize, otherwise wait until we know the epochSize in StartMinibatchLoop()
     if (Randomize() && m_randomizeRange != randomizeAuto)
-        m_randomordering.resize(m_randomizeRange, m_randomizeRange);
+        m_randomordering.Resize(m_randomizeRange, m_randomizeRange);
 
     // if the value they passed in as udim is not big enough, add something on
     if (udim < m_labelIdMax)
@@ -738,7 +738,7 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         {
             if ((m_epochSize != requestDataSize && m_epochSize % m_randomizeRange != 0) || (m_randomizeRange % m_mbSize != 0))
                 RuntimeError("randomizeRange must be an even multiple of mbSize and an integral factor of epochSize");
-            m_randomordering.resize(m_randomizeRange, m_randomizeRange);
+            m_randomordering.Resize(m_randomizeRange, m_randomizeRange);
         }
     }
 

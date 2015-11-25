@@ -9,10 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Common">
       <UniqueIdentifier>{b032f325-ad9c-49b8-8607-4ad5b4130f4f}</UniqueIdentifier>
     </Filter>
@@ -80,7 +76,7 @@
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

@@ -45,7 +45,7 @@
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
