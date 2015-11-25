@@ -6,14 +6,15 @@
 
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
-#include <algorithm>
-#include <fstream>
-#include <sstream>
-#include <opencv2/opencv.hpp>
 #include "DataReader.h"
 #include "ImageReader.h"
 #include "commandArgUtil.h"
 #include "ScriptableObjects.h"
+#include "ConcStack.h"
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <opencv2/opencv.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

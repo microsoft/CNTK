@@ -170,7 +170,6 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ProgressTracing.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
@@ -228,6 +227,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\Common\Include\ConcStack.h" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="..\..\Common\MPIWrapper.cpp" />
     <ClCompile Include="CNTK.cpp" />
