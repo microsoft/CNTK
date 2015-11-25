@@ -392,18 +392,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"Times"; }
     public:
 
-        // TODO: The createOutputMatrix parameter here is temporarily added to allow creating the function values
-        // matrix for the times node added during SVD decomposition. Since ValidateSubNetwork is called after addition
-        // of the times node, the validation crashes if the function values matrix has not yet been allocated
-        // This can be removed after the  Validation has been fixed to not access the function values matrix at all
         DeclareConstructorFromConfigWithNumInputs(TimesNode);
-        TimesNode(DEVICEID_TYPE deviceId, const wstring & name, bool createOutputMatrix = false) :
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
-            if (createOutputMatrix)
-            {
-                CreateMatrixIfNull(m_functionValues);
-            }
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
