@@ -5,9 +5,11 @@
 //
 
 #pragma once
+
+#include "Basics.h"
+#include "DataReader.h"
 #include <random>
 #include <memory>
-#include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

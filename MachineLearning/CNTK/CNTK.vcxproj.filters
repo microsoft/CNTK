@@ -56,6 +56,9 @@
     <ClCompile Include="..\..\Common\MPIWrapper.cpp">
       <Filter>MPI Interfacing</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\Include\ConcStack.h">
+      <Filter>Common\Include</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
@@ -104,9 +107,6 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Basics.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
