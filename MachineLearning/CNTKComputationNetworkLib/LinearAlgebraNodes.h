@@ -392,18 +392,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"Times"; }
     public:
 
-        // TODO: The createOutputMatrix parameter here is temporarily added to allow creating the function values
-        // matrix for the times node added during SVD decomposition. Since ValidateSubNetwork is called after addition
-        // of the times node, the validation crashes if the function values matrix has not yet been allocated
-        // This can be removed after the  Validation has been fixed to not access the function values matrix at all
         DeclareConstructorFromConfigWithNumInputs(TimesNode);
-        TimesNode(DEVICEID_TYPE deviceId, const wstring & name, bool createOutputMatrix = false) :
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
-            if (createOutputMatrix)
-            {
-                CreateMatrixIfNull(m_functionValues);
-            }
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
@@ -487,6 +479,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //after multiplication the structure is lost
             m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
+        }
+
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        {
+            //this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
+            if (m_children[0]->NeedGradient() && Inputs(1)->FunctionValues().GetMatrixType() == SPARSE)
+            {
+                CreateMatrixIfNull(Inputs(0)->GradientValuesPtr());
+                Inputs(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            }
+           
+            //we need to call base allocation at end since we will need to allocate special ones first 
+            //so that the default allocator will not allocate it again.
+            Base::AllocateGradientMatricesForChildren(matrixPool);
         }
     };
 
