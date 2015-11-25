@@ -181,7 +181,7 @@ static inline wchar_t*GetWC(const char *c)
 
     return wc;
 }
-#if 0
+#if 0   // needed with gcc because some regex function is not implemented properly there
 struct MatchPathSeparator
 {
     bool operator()( char ch ) const
