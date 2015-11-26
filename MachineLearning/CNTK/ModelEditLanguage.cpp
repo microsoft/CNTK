@@ -203,7 +203,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         NetNdl<ElemType>* netNdl = &m_mapNameToNetNdl[modelName];
         if (netNdl->cn == NULL)
-            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %ls.", modelName.c_str());
+            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %s.", modelName.c_str());
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);

@@ -314,7 +314,7 @@ public:
         if (m_parameters.size() < m_paramMacro.size())
         {
             RuntimeError("Parameter mismatch, %d parameters provided, %d expected in call to %s\n",
-                m_parameters.size(),m_paramMacro.size(),m_value.c_str());
+                         (int)m_parameters.size(), (int)m_paramMacro.size(), m_value.c_str());
         }
 
         // assign the actual parameters in the script so we can execute it

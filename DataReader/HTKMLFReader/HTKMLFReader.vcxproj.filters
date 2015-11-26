@@ -47,6 +47,9 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ssematrix.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

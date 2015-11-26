@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (T != nCols / nOrigParallelUtts)
                     LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
                 if (T * nOrigParallelUtts != nCols) // (should really not happen)
-                    LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", nCols, nOrigParallelUtts);
+                    LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", (int)nCols, (int)nOrigParallelUtts);
 
                 if (sent_end == sent_start)
                 {
@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // BUGBUG: Yes, this can happen if we got less parallel sequences than GPUs. But users wouldn't want that, so we should fail.
                     // BUGBUG: This can also happen for a very small minibatch at the end of the epoch.
                     fprintf(stderr, "DecimateMinibatch: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
-                        (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
+                            (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
                 }
 
                 // copy the respective columns

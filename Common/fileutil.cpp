@@ -95,7 +95,7 @@ void fgetText(FILE * f, char& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        RuntimeError ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %ls", formatString);
     else if (rc == EOF)
         RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
@@ -105,7 +105,7 @@ void fgetText(FILE * f, wchar_t& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        RuntimeError ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %ls", formatString);
     else if (rc == EOF)
         RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
@@ -148,7 +148,7 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : _wfopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-        RuntimeError ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
+        RuntimeError ("error opening file '%ls': %s", pathname.c_str(), strerror (errno));
     }
     if (strchr (mode, 'S'))
     {   // if optimized for sequential access then use large buffer
@@ -235,11 +235,10 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
         size_t n = fwrite ((const void *) p1, 1, wantWrite, f);
         if (n != wantWrite)
         {
-            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d,"
-                " count=%d, writing %d bytes after %d): %s",
-                ptr, size, count, (int) wantWrite,
-                (int) (size * count - totalBytes),
-                strerror (errno));
+            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d, count=%d, writing %d bytes after %d): %s",
+                          (unsigned long)(size_t)ptr, (int)size, (int)count, (int)wantWrite,
+                          (int)(size * count - totalBytes),
+                          strerror (errno));
         }
         totalBytes -= wantWrite;
         p1 += wantWrite;
@@ -460,7 +459,7 @@ void unlinkOrDie (const std::string & pathname)
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
-    RuntimeError ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%ls': %s", pathname.c_str(), strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -487,10 +486,10 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 #ifdef _WIN32
     // deleting destination file if exits (to match Linux semantic)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str())) 
-        RuntimeError("error deleting file '%S': %d", to.c_str(), GetLastError());
+        RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
 
     if (!MoveFileW(from.c_str(), to.c_str()))
-        RuntimeError ("error renaming file '%S': %d", from.c_str(), GetLastError());
+        RuntimeError ("error renaming file '%ls': %d", from.c_str(), GetLastError());
 #else
     renameOrDie (wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
@@ -639,7 +638,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
         uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]", filepos, size - 1, msra::strfun::utf8(example).c_str());
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
     }
 
     // remove newline at end
@@ -681,7 +680,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (n >= (size_t) size -1)
     {
         wstring example (buf, min (n, 100));
-        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
+        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%ls ...]",
                fgetpos (f), size -1, example.c_str());
     }
 
@@ -1266,10 +1265,10 @@ float fgetfloat_ascii (FILE * f)
     fskipspace (f);
     int rc = fscanf (f, "%f", &val); // security hint: safe overloads
     if (rc == 0)
-    RuntimeError ("error reading float value from file (invalid format): %s");
+        RuntimeError("error reading float value from file (invalid format): %s", strerror(errno));
     else if (rc == EOF)
-    RuntimeError ("error reading from file: %s", strerror (errno));
-    assert (rc == 1);
+        RuntimeError("error reading from file: %s", strerror(errno));
+    assert(rc == 1);
     return val;
 }
 
@@ -1996,13 +1995,13 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 #ifdef _WIN32
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        RuntimeError ("error in expanding wild cards '%S': Win32 error %d", path.c_str(), (int)::GetLastError());
+        RuntimeError ("error in expanding wild cards '%ls': Win32 error %d", path.c_str(), (int)::GetLastError());
 #else
     // On Linux we have just the function for the job: glob
     glob_t globResult;
     if (glob(wtocharpath(path.c_str()).c_str(), GLOB_TILDE, NULL, &globResult) != 0)
     {
-        RuntimeError("error in expanding wild cards '%S': %S", path.c_str(), strerror(errno));
+        RuntimeError("error in expanding wild cards '%ls': %s", path.c_str(), strerror(errno));
     }
     
     for(unsigned int i = 0; i < globResult.gl_pathc; ++i)
@@ -2031,7 +2030,7 @@ static void mkdir (const wstring & path)
             return; // ok
     }
 #endif
-    RuntimeError ("mkdir: error creating intermediate directory %S", path.c_str());
+    RuntimeError ("mkdir: error creating intermediate directory %ls", path.c_str());
 }
 
 // make subdir of a file including parents

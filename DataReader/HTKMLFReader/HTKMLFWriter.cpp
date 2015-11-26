@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             filelist.clear();
             std::wstring scriptPath = scriptpaths[i];
-            fprintf(stderr, "HTKMLFWriter::Init: reading output script file %S ...", scriptPath.c_str());
+            fprintf(stderr, "HTKMLFWriter::Init: reading output script file %ls ...", scriptPath.c_str());
             size_t n = 0;
             for (msra::files::textreader reader(scriptPath); reader && filelist.size() <= firstfilesonly/*optimization*/; )
             {
@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 numFiles=n;
             else
                 if (n!=numFiles)
-                    RuntimeError(msra::strfun::strprintf ("HTKMLFWriter:Init: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                    RuntimeError("HTKMLFWriter:Init: number of files in each scriptfile inconsistent (%d vs. %d)", (int)numFiles, (int)n);
 
             outputFiles.push_back(filelist);
         }
@@ -159,7 +159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
         const size_t nansinf = output.countnaninf();
         if (nansinf > 0)
-            fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%S' (%d frames)\n", (int) nansinf, outputFile.c_str(), (int) output.cols());
+            fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%ls' (%d frames)\n", (int) nansinf, outputFile.c_str(), (int) output.cols());
         // save it
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
@@ -167,7 +167,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             msra::asr::htkfeatwriter::write (outputFile, "USER", this->sampPeriod, output);
         });
                         
-        fprintf (stderr, "evaluate: writing %d frames of %S\n", (int)output.cols(), outputFile.c_str());
+        fprintf (stderr, "evaluate: writing %d frames of %ls\n", (int)output.cols(), outputFile.c_str());
 
 
     }

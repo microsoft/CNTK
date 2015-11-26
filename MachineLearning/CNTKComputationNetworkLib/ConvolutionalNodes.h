@@ -334,14 +334,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ValidateInferChildDims(0, m_imageLayout.GetNumChannels(), weightCols);
 
             if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_imageLayout.GetNumChannels()))
-                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_imageLayout.GetNumChannels(), weightCols);
+                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), (int)m_imageLayout.GetNumChannels(), (int)weightCols);
 
             size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();
             if (Inputs(1)->GetNumRows() == 0)
                 ValidateInferChildDims(1, inputDim, Inputs(1)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
-                LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
+                LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)inputDim);
 
             size_t outputDim = m_imageLayout.GetWidth() * m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels();
             SetDims(outputDim, Inputs(1)->GetNumCols());
@@ -518,7 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ValidateInferChildDims(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
-                LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
+                LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)m_inputSizePerSample);
 
             SetDims(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }

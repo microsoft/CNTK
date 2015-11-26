@@ -281,7 +281,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (cdphonetyingpaths.size() > 0 && statelistpaths.size() > 0 && transPspaths.size() > 0)
                 m_hset.loadfromfile(cdphonetyingpaths[0], statelistpaths[0], transPspaths[0]);
             if (iFeat!=scriptpaths.size() || iLabel!=mlfpathsmulti.size())
-                RuntimeError(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
+                RuntimeError("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n");
 
             if (readerConfig.Exists(L"randomize"))
             {
@@ -314,7 +314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 vector<wstring> filelist;
                 std::wstring scriptpath = scriptpaths[i];
-                fprintf(stderr, "reading script file %S ...", scriptpath.c_str());
+                fprintf(stderr, "reading script file %ls ...", scriptpath.c_str());
                 size_t n = 0;
                 for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly/*optimization*/; )
                 {
@@ -328,7 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numFiles=n;
                 else
                     if (n!=numFiles)
-                        RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", (int)numFiles, (int)n));
+                        RuntimeError("number of files in each scriptfile inconsistent (%d vs. %d)", (int)numFiles, (int)n);
 
                 // post processing file list : 
                 //  - if users specified PrefixPath, add the prefix to each of path in filelist
@@ -491,11 +491,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef _WIN32
                 if (pageFilePath.size()>MAX_PATH-14) // max length of input to GetTempFileName is MAX_PATH-14
-                    RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", MAX_PATH-14));
-#endif
-#ifdef __unix__
+                    RuntimeError("pageFilePath must be less than %d characters", MAX_PATH-14);
+#else
                 if (pageFilePath.size()>PATH_MAX-14) // max length of input to GetTempFileName is PATH_MAX-14
-                    RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
+                    RuntimeError("pageFilePath must be less than %d characters", PATH_MAX-14);
 #endif
                 foreach_index(i, infilesmulti)
                 {
@@ -524,7 +523,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 RuntimeError("readMethod must be 'rollingWindow' or 'blockRandomize'");
             }
-
         }
 
     // Load all input and output data. 
@@ -562,7 +560,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     size_t windowFrames = contextWindow[0];
                     if (windowFrames % 2 == 0)
-                        RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
+                        RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowFrames);
                     size_t context = windowFrames / 2;           // extend each side by this
                     numContextLeft.push_back(context);
                     numContextRight.push_back(context);
@@ -575,7 +573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
+                    RuntimeError("contextFrames must have 1 or 2 values specified, found %d", (int)contextWindow.size());
                 }
                 // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
                 // that is what the lower level feature readers expect
@@ -621,7 +619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numFiles=n;
                 else
                     if (n!=numFiles)
-                        RuntimeError(msra::strfun::strprintf ("HTKMLFReader::InitEvalReader: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                        RuntimeError("HTKMLFReader::InitEvalReader: number of files in each scriptfile inconsistent (%d vs. %d)", (int)numFiles, (int)n);
 
                 m_inputFilesMultiIO.push_back(std::move(filelist));
             }
@@ -1399,7 +1397,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                             reader.read (path, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                             });
-                    fprintf (stderr, "evaluate: reading %d frames of %S\n", (int)feat.cols(), ((wstring)path).c_str());
+                    fprintf (stderr, "evaluate: reading %d frames of %ls\n", (int)feat.cols(), ((wstring)path).c_str());
                     m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
                 }
                 m_inputFileIndex++;

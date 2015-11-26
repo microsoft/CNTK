@@ -478,7 +478,7 @@ public:
             return anotherNetwork->GetNodeFromName(name);
 
         if (bPanic)
-            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+            RuntimeError("GetNodeFromName: Node name %ls does not exist.", name.c_str());
         else
             return nullptr;
     }

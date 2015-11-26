@@ -258,7 +258,7 @@ void BestGpu::Init()
     {
         const char* errmsg = cudaGetErrorString(err);
         fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        RuntimeError(errmsg);
+        RuntimeError("%s", errmsg);
     }
 
     ProcessorData pdEmpty = { 0 };

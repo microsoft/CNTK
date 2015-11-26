@@ -91,7 +91,7 @@ int wmain(int argc, wchar_t* argv[])
         else if (type == "double")
             DoCommand<double>(config);
         else
-            RuntimeError("invalid precision specified: " + type);
+            RuntimeError("invalid precision specified: %s", type.c_str());
     }
     catch(std::exception &err)
     {

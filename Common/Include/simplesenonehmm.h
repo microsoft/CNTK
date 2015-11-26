@@ -75,7 +75,7 @@ public:
     {
         auto iter = symmap.find (name);
         if (iter == symmap.end())
-            LogicError("gethmm: unknown unit name: " + name);
+            LogicError("gethmm: unknown unit name: %s", name.c_str());
         return iter->second;
     }
 
@@ -113,19 +113,19 @@ public:
         {
             toks = transPlines[i];
             if (toks.size() < 3)
-                RuntimeError("simplesenonehmm: too few tokens in transP line: " + std::string (transPlines[i]));
+                RuntimeError("simplesenonehmm: too few tokens in transP line: %s", transPlines[i]);
             key = toks[0];  // transPname --using existing object to avoid malloc
             transPmap[key] = i;
             size_t numstates = msra::strfun::toint (toks[1]);
             if (numstates == 0)
-                RuntimeError("simplesenonehmm: invalid numstates: " + std::string (transPlines[i]));
+                RuntimeError("simplesenonehmm: invalid numstates: %s", transPlines[i]);
             auto & transP = transPs[i];
             transP.resize (numstates);
             size_t k = 2;   // index into tokens; transP values start at toks[2]
             for (int from = -1; from < (int) numstates; from++) for (size_t to = 0; to <= numstates; to++)
             {
                 if (k >= toks.size())
-                    RuntimeError("simplesenonehmm: not enough tokens on transP line: " + std::string (transPlines[i]));
+                    RuntimeError("simplesenonehmm: not enough tokens on transP line: %s", transPlines[i]);
                 const char * sval = toks[k++];
                 const double aij = msra::strfun::todouble (sval);
                 if (aij > 1e-10)    // non-0
@@ -134,7 +134,7 @@ public:
                     transP(from,to) = -1e30f;
             }
             if (toks.size() > k)
-                RuntimeError("simplesenonehmm: unexpected garbage at endof transP line: " + std::string (transPlines[i]));
+                RuntimeError("simplesenonehmm: unexpected garbage at endof transP line: %s", transPlines[i]);
         }
         // allocate inverse lookup
         senoneid2transPindex.resize (readstatenames.size(), -2);
@@ -151,7 +151,7 @@ public:
         {
             toks = lines[i];
             if (toks.size() < 3)
-                RuntimeError("simplesenonehmm: too few tokens in line: " + std::string (lines[i]));
+                RuntimeError("simplesenonehmm: too few tokens in line: %s", lines[i]);
             const char * hmmname = toks[0];
             const char * transPname = toks[1];
             // build the HMM structure
@@ -162,7 +162,7 @@ public:
             key = transPname;   // (reuse existing memory)
             auto iter = transPmap.find (key);
             if (iter == transPmap.end())
-                RuntimeError("simplesenonehmm: unknown transP name: " + std::string (lines[i]));
+                RuntimeError("simplesenonehmm: unknown transP name: %s", lines[i]);
             size_t transPindex = iter->second;
             hmm.transPindex = (unsigned char) transPindex;
             hmm.transP = &transPs[transPindex];
@@ -171,19 +171,19 @@ public:
             // get the senones
             hmm.numstates = (unsigned char) (toks.size() - 2);    // remaining tokens
             if (hmm.numstates != transPs[transPindex].getnumstates())
-                RuntimeError("simplesenonehmm: number of states mismatches that of transP: " + std::string (lines[i]));
+                RuntimeError("simplesenonehmm: number of states mismatches that of transP: %s", lines[i]);
             if (hmm.numstates > _countof (hmm.senoneids))
-                RuntimeError("simplesenonehmm: hmm.senoneids[MAXSTATES] is too small in line: " + std::string (lines[i]));
+                RuntimeError("simplesenonehmm: hmm.senoneids[MAXSTATES] is too small in line: %s", lines[i]);
             for (size_t s = 0; s < hmm.numstates; s++)
             {
                 const char * senonename = toks[s+2];
                 key = senonename;   // (reuse existing memory)
                 auto iter = statemap.find (key);
                 if (iter == statemap.end())
-                    RuntimeError("simplesenonehmm: unrecognized senone name in line: " + std::string (lines[i]));
+                    RuntimeError("simplesenonehmm: unrecognized senone name in line: %s", lines[i]);
                 hmm.senoneids[s] = (unsigned short) iter->second;
                 if (hmm.getsenoneid(s) != iter->second)
-                    RuntimeError("simplesenonehmm: not enough bits to store senone index in line: " + std::string (lines[i]));
+                    RuntimeError("simplesenonehmm: not enough bits to store senone index in line: %s", lines[i]);
                 // inverse lookup
                 if (senoneid2transPindex[hmm.senoneids[s]] == -2)   // no value yet
                     senoneid2transPindex[hmm.senoneids[s]] = hmm.transPindex;
@@ -199,7 +199,7 @@ public:
             // add to name-to-HMM hash
             auto ir = name2hmm.insert (std::make_pair (hmmname, hmm));    // insert into hash table
             if (!ir.second) // not inserted
-                RuntimeError("simplesenonehmm: duplicate unit name in line: " + std::string (lines[i]));
+                RuntimeError("simplesenonehmm: duplicate unit name in line: %s", lines[i]);
             // add to hmm-to-index hash
             // and update the actual lookup table
             size_t hmmindex = hmms.size();      // (assume it's a new entry)

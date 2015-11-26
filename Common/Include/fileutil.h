@@ -466,7 +466,7 @@ void fgetText(FILE * f, T& v)
     if (rc == 0)
         RuntimeError("error reading value from file (invalid format)");
     else if (rc == EOF)
-        RuntimeError(std::string("error reading from file: ") + strerror(errno));
+        RuntimeError("error reading from file: %s", strerror(errno));
     assert(rc == 1);
 }
 
@@ -499,7 +499,7 @@ void fputText(FILE * f, T v)
     if (rc == 0)
         RuntimeError("error writing value to file, no values written");
     else if (rc < 0)
-        RuntimeError(std::string("error writing to file: ") + strerror(errno));
+        RuntimeError("error writing to file: %s", strerror(errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -615,7 +615,7 @@ class auto_file_ptr
     void close()  throw() { if (f) try { if (f != stdin && f != stdout && f != stderr) ::fclose(f); } catch (...) {} f = NULL; }
 #pragma warning(push)
 #pragma warning(disable : 4996)
-    void openfailed(const std::string & path) { RuntimeError("auto_file_ptr: error opening file '" + path + "': " + strerror(errno)); }
+    void openfailed(const std::string & path) { RuntimeError("auto_file_ptr: error opening file '%s': %s", path.c_str(), strerror(errno)); }
 #pragma warning(pop)
 protected:
     friend int fclose(auto_file_ptr&); // explicit close (note: may fail)

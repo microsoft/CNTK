@@ -183,7 +183,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         //fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
 
                         std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
-                        RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int)epochSample);
                     }
 
                     if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
@@ -654,7 +654,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& class
  
     if (idx4class.size() < nwords)
     {
-        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", idx4class.size(), nwords);
+        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int)idx4class.size(), (int)nwords);
     }
     std::vector<double> counts(idx4cnt.size());
     for (const auto & p : idx4cnt)
@@ -1168,8 +1168,9 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         actualmbsize = m_sequence[0];
     }
 
-    if (actualmbsize > m_mbSize){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+    if (actualmbsize > m_mbSize)
+    {
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
     }
 
     // hit the end of the dataset, 
@@ -1263,9 +1264,10 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("Features size not sufficiently large. The asked minibatch size is %d. Check minibatchSize in the feature definition.", (int)actualmbsize);
     }
 
     try
@@ -1287,9 +1289,10 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
             Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
             labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
+        RuntimeError("cannot find matrices for %ls", m_labelsName[labelInfoOut].c_str());
     }
 
     // we read some records, so process them
@@ -1477,7 +1480,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & read
                         false);
                     if (word4idx.size() != nwords)
                     {
-                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file L%s is not consistent", nwords, word4idx.size(), wClassFile.c_str());
+                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file %ls is not consistent", (int)nwords, (int)word4idx.size(), wClassFile.c_str());
                     }
                     int iMax = -1, i; 
                     for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
@@ -1838,9 +1841,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size() ; 
-    if (actualmbsize > m_mbSize * mToProcess.size()){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
-    }
+    if (actualmbsize > m_mbSize * mToProcess.size())
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
 
     // now get the labels
     const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
@@ -1917,9 +1919,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %d. check minibatchSize in the feature definition", (int)actualmbsize);
     }
 
     // we read some records, so process them
@@ -2066,7 +2069,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
                     size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
                 if (wrd < lft || lft > rgt || wrd >= rgt)
                 {
-                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
+                               (int)wrd, (int)lft, (int)rgt, (int)lft, (int)wrd, (int)rgt);
                 }
                 labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
