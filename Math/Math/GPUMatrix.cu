@@ -721,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m = GetNumRows();
         size_t n = GetNumCols();
         if (m != n)
-            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m, n);
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", (int)m, (int)n);
 
         GPUMatrix<ElemType> diag(1, n, m_computeDevice);
 

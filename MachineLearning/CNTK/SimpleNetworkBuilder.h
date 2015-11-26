@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UNIDIRECTIONALLSTM = 19,
         BIDIRECTIONALLSTM = 20,
         ALIGNMENTSIMILARITYGENERATOR = 21,
-        ALIGNMENTSIMILARITYGFORWARDDECODER =22
+        ALIGNMENTSIMILARITYGFORWARDDECODER = 22
     };
 
     enum class TrainingCriterion : int  // TODO: camel-case these
@@ -316,7 +316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
             {
-                InvalidArgument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
+                InvalidArgument("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str());
             }
 
             if (numCols>1) // transpose W because dbn stores that way apparently

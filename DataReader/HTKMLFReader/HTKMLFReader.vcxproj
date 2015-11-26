@@ -102,6 +102,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
+    <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="basetypes.h" />
     <ClInclude Include="biggrowablevectors.h" />
     <ClInclude Include="chunkevalsource.h" />

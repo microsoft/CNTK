@@ -284,7 +284,7 @@ class mgram_map
     std::vector<int24_vector> ids;              // [M+1][i] ([0] = not used)
     bool level1nonsparse;                       // true: level[1] can be directly looked up
     std::vector<index_t> level1lookup;          // id->index for unigram level
-    static void fail (const char * msg) { RuntimeError(string ("mgram_map::") + msg); }
+    static void fail (const char * msg) { RuntimeError("mgram_map::%s", msg); }
 
     // mapping from w -> i -- users pass 'w', internally we use our own 'ids'
     std::vector<int> w2id;  // w -> id
@@ -821,7 +821,7 @@ public:
 template<class DATATYPE> class mgram_data
 {
     std::vector<std::vector<DATATYPE>> data;
-    static void fail (const char * msg) { RuntimeError(string ("mgram_data::") + msg); }
+    static void fail (const char * msg) { RuntimeError("mgram_data::%s", msg); }
 public:
     mgram_data(){}
     mgram_data (int M) { init (M); }
@@ -1128,7 +1128,7 @@ public:
     {
         int lineNo = 0;
         auto_file_ptr f(fopenOrDie (pathname, L"rbS"));
-        fprintf (stderr, "read: reading %S", pathname.c_str());
+        fprintf (stderr, "read: reading %ls", pathname.c_str());
         filename = pathname;            // (keep this info for debugging)
 
         // --- read header information
@@ -1156,7 +1156,7 @@ public:
 
         M = (int) dims.size() -1;
         if (M == 0)
-            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
+            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %ls", lineNo, pathname.c_str());
         int fileM = M;
         if (M > maxM)
             M = maxM;
@@ -1190,7 +1190,7 @@ public:
                 lineNo++, fgetline (f, buf);
 
             if (sscanf (buf, "\\%d-grams:", &n) != 1 || n != m)
-                RuntimeError ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, bad section header (%d): %ls", lineNo, pathname.c_str());
             lineNo++, fgetline (f, buf);
 
             std::vector<int> mgram (m +1, -1);      // current mgram being read ([0]=dummy)
@@ -1209,7 +1209,7 @@ public:
                 // -- parse the line
                 tokens = &buf[0];
                 if ((int) tokens.size() != ((m < fileM) ? m + 2 : m + 1))
-                    RuntimeError ("read: mal-formed LM file, incorrect number of tokens (%d): %S", lineNo, pathname.c_str());
+                    RuntimeError ("read: mal-formed LM file, incorrect number of tokens (%d): %ls", lineNo, pathname.c_str());
                 double scoreVal = atof (tokens[0]);     // ... use sscanf() instead for error checking?
                 double thisLogP = scoreVal * ln10xLMF;  // convert to natural log
 
@@ -1241,7 +1241,7 @@ public:
                         {
                             id = symbolToId (tok);
                             if (id == -1)
-                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
+                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %ls", lineNo, pathname.c_str());
                         }
                     }
                     mgram[n] = id;          // that's our id
@@ -1301,7 +1301,7 @@ skipMGram:
             while (buf[0] == 0 && !feof (f))
                 lineNo++, fgetline (f, buf);
             if (strcmp (buf, "\\end\\") != 0)
-                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %ls", lineNo, pathname.c_str());
         }
 
         // update zerogram score by one appropriate for OOVs

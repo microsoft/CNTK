@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
         size_t pos = how.find(L'%');
         if (pos != wstring::npos)
-            RuntimeError("FormatConfigValue: format string must not contain %");
+            RuntimeError("FormatConfigValue: format string must not contain %%");
         if (arg.Is<String>())
         {
             return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());

@@ -67,7 +67,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     wifstream vin; 
     vin.open(strFileName, wifstream::in);
     if (!vin.good())
-        LogicError("LUSequenceReader cannot open %ls \n", strFileName);
+        LogicError("LUSequenceReader cannot open %s\n", strFileName);
 
     wstring wstr = L" ";
     b = 0;
@@ -840,9 +840,8 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size();
-    if (actualmbsize > m_mbSize * mToProcess.size()){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
-    }
+    if (actualmbsize > m_mbSize * mToProcess.size())
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
 
     // now get the labels
     const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
@@ -860,7 +859,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            RuntimeError("LUsequence reader cannot find %s", m_featuresName.c_str());
+            RuntimeError("LUsequence reader cannot find %ls.", m_featuresName.c_str());
         }
 
         locObs.Resize(featInfo.dim * m_wordContext.size(), actualmbsize);
@@ -1020,12 +1019,12 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEndAt.size() != mToProcess.size())
-            LogicError("DataEnd: sentence ending vector size %d and the toprocess vector size %d should be the same", mSentenceEndAt.size(), mToProcess.size());
+            LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int)mSentenceEndAt.size(), (int)mToProcess.size());
         ret = true;
         for (size_t i = 0; i < mToProcess.size(); i++)
         {
             if (mSentenceEndAt[i] == ((int) MinibatchPackingFlags::NoInput))
-                LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
+                LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
             size_t k = mToProcess[i];
             mProcessed[k] = true;
         }
@@ -1067,7 +1066,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            RuntimeError("LUSequenceReader cannot find l%s", m_featuresName.c_str());
+            RuntimeError("LUSequenceReader cannot find %ls", m_featuresName.c_str());
         }
         locObs.Resize(featInfo.dim * m_wordContext.size(), mBlgSize);
 
@@ -1196,7 +1195,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
                 }
             }
             if (bFound == false)
-                RuntimeError("GetMinibatch: cannot find a node that can feed in features for L%s", iter->first.c_str());
+                RuntimeError("GetMinibatch: cannot find a node that can feed in features for %ls", iter->first.c_str());
         }
         mCheckDictionaryKeys = false;
     }

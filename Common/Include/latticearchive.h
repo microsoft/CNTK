@@ -851,7 +851,7 @@ public:
     {
         const size_t sz = freadtag (f, tag);
         if (expectedsize != SIZE_MAX && sz != expectedsize)
-            RuntimeError(std::string ("freadvector: malformed file, number of vector elements differs from head, for tag ") + tag);
+            RuntimeError("freadvector: malformed file, number of vector elements differs from head, for tag %s", tag);
         freadOrDie (v, sz, f);
     }
 
@@ -1032,7 +1032,7 @@ class archive
     {
         auto iter = symmap.find (key);
         if (iter == symmap.end())
-            RuntimeError(std::string ("getcachedidmap: symbol not found in user-supplied symbol map: ") + key);
+            RuntimeError("getcachedidmap: symbol not found in user-supplied symbol map: %s", key.c_str());
         return iter->second;
     }
     template<class SYMMAP> const symbolidmapping & getcachedidmap (size_t archiveindex, const SYMMAP & symmap/*[string] -> numeric id*/) const
@@ -1062,7 +1062,7 @@ class archive
                     symstring = sym;        // (reusing existing object to avoid malloc)
                     tosymstring = tosym;
                     if (getid (symmap, symstring) != getid (symmap, tosymstring))
-                        RuntimeError(std::string ("getcachedidmap: mismatching symbol id for ") + sym + " vs. " + tosym);
+                        RuntimeError("getcachedidmap: mismatching symbol id for %s vs. %s", sym, tosym);
                 }
                 else
                 {
@@ -1127,12 +1127,12 @@ public:
             const char * line = toclines[i];
             const char * p = strchr (line, '=');
             if (p == NULL)
-                RuntimeError("open: invalid TOC line (no = sign): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no = sign): %s", line);
             const std::wstring key = msra::strfun::utf16 (std::string (line, p - line));
             p++;
             const char * q = strchr (p, '[');
             if (q == NULL)
-                RuntimeError("open: invalid TOC line (no [): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no [): %s", line);
             if (q != p)
             {
                 const std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
@@ -1140,7 +1140,7 @@ public:
                 archiveindex = getarchiveindex (archivepath);
             }
             if (archiveindex == SIZE_MAX)
-                RuntimeError("open: invalid TOC line (empty archive pathname): " + std::string (line));
+                RuntimeError("open: invalid TOC line (empty archive pathname): %s", line);
             char c;
             uint64_t offset;
 #ifdef _WIN32
@@ -1149,9 +1149,9 @@ public:
 
             if (sscanf (q, "[%" PRIu64 "]%c", &offset, &c) != 1)
 #endif
-                RuntimeError("open: invalid TOC line (bad [] expression): " + std::string (line));
+                RuntimeError("open: invalid TOC line (bad [] expression): %s", line);
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)
-                RuntimeError("open: TOC entry leads to duplicate key: " + std::string (line));
+                RuntimeError("open: TOC entry leads to duplicate key: %s", line);
         }
 
         // initialize symmaps  --alloc the array, but actually read the symmap on demand

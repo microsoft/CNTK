@@ -31,23 +31,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ThrowFormatted() - template function to throw a std::exception with a formatted error string
     // -----------------------------------------------------------------------
 
-    // TODO: get rid of the versions without format string, so that we can use gcc annotations to discover argument errors
-    template<class E>
-    __declspec_noreturn static inline void ThrowFormatted()
-    {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw E();
-    }
-
-    template<class E>
-    __declspec_noreturn static inline void ThrowFormatted(const string & message)
-    {
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw E(message);
-    }
-
 #pragma warning(push)
 #pragma warning(disable : 4996)
+#ifndef _MSC_VER     // TODO: what is the correct trigger for gcc?
+    template<class E>
+    __declspec_noreturn void ThrowFormatted(const char * format, ...) __attribute__((format(printf, 1, 2)));
+#endif
     template<class E>
     __declspec_noreturn static inline void ThrowFormatted(const char * format, ...)
     {
@@ -58,28 +47,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vsprintf(buffer, format, args);
         Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
 #ifdef _DEBUG   // print this to log before throwing, so we can see what the error is
-        fprintf(stderr, "%s\n", buffer);
+        fprintf(stderr, "About to throw exception '%s'\n", buffer);
 #endif
         throw E(buffer);
     };
 #pragma warning(pop)
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
-    template<class... _Types>
-    __declspec_noreturn static inline void RuntimeError(_Types&&... _Args) { ThrowFormatted<std::runtime_error>(forward<_Types>(_Args)...); }
-    template<class... _Types>
-    __declspec_noreturn static inline void LogicError(_Types&&... _Args) { ThrowFormatted<std::logic_error>(forward<_Types>(_Args)...); }
-    template<class... _Types>
-    __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
-    template<class... _Types>
-    __declspec_noreturn static inline void BadExceptionError(_Types&&... _Args) 
-    {
-#ifdef _WIN32
-        ThrowFormatted<std::bad_exception>(forward<_Types>(_Args)...);   
+#ifndef _MSC_VER    // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
+#define RuntimeError      ThrowFormatted<std::runtime_error>
+#define LogicError        ThrowFormatted<std::logic_error>
+#define InvalidArgument   ThrowFormatted<std::invalid_argument>
+#define BadExceptionError(...) throw std::bad_exception()    // ThrowFormatted<std::bad_exception> does not exist on gcc
 #else
-        ThrowFormatted<std::bad_exception>();
+    template<class... _Types>
+    __declspec_noreturn static inline void RuntimeError(const char * format, _Types&&... _Args) { ThrowFormatted<std::runtime_error>(format, forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void LogicError(const char * format, _Types&&... _Args) { ThrowFormatted<std::logic_error>(format, forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void InvalidArgument(const char * format, _Types&&... _Args) { ThrowFormatted<std::invalid_argument>(format, forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void BadExceptionError(const char * format, _Types&&... _Args) { ThrowFormatted<std::bad_exception>(format, forward<_Types>(_Args)...); }
 #endif
-    }
 
     // Warning - warn with a formatted error string
 #pragma warning(push)
@@ -96,10 +85,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
 }}}
 
+#ifndef _MSC_VER
+using Microsoft::MSR::CNTK::ThrowFormatted;
+#else
 using Microsoft::MSR::CNTK::RuntimeError;
 using Microsoft::MSR::CNTK::LogicError;
 using Microsoft::MSR::CNTK::InvalidArgument;
 using Microsoft::MSR::CNTK::BadExceptionError;
+#endif
 
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8

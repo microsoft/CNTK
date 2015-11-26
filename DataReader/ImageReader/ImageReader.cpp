@@ -335,7 +335,7 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
         auto sect = std::find_if(config.begin(), config.end(),
             [&](const std::pair<std::string, ConfigValue>& p) { return ConfigParameters(p.second).ExistsCurrent(paramName); });
         if (sect == config.end())
-            RuntimeError("ImageReader requires " + paramName + " parameter.");
+            RuntimeError("ImageReader requires %s parameter.", paramName.c_str());
         return{ (*sect).first, ConfigParameters((*sect).second) };
     };
 
@@ -359,7 +359,7 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     std::string mapPath = config(L"file");
     std::ifstream mapFile(mapPath);
     if (!mapFile)
-        RuntimeError("Could not open " + mapPath + " for reading.");
+        RuntimeError("Could not open %s for reading.", mapPath.c_str());
 
     std::string line{ "" };
     for (size_t cline = 0; std::getline(mapFile, line); cline++)

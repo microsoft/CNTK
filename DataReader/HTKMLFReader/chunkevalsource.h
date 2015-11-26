@@ -60,12 +60,12 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", (int)n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %d frames to %ls\n", (int)n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();
                 if (nansinf > 0)
-                    fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%S' (%d frames)\n", (int) nansinf, outfile.c_str(), (int) thispred.cols());
+                    fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%ls' (%d frames)\n", (int) nansinf, outfile.c_str(), (int) thispred.cols());
                 // save it
                 msra::util::attempt (5, [&]()
                 {
@@ -173,12 +173,12 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[index][k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", (int)n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %d frames to %ls\n", (int)n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();
                 if (nansinf > 0)
-                    fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%S' (%d frames)\n", (int) nansinf, outfile.c_str(), (int) thispred.cols());
+                    fprintf (stderr, "chunkeval: %d NaNs or INF detected in '%ls' (%d frames)\n", (int) nansinf, outfile.c_str(), (int) thispred.cols());
                 // save it
                 msra::util::attempt (5, [&]()
                 {

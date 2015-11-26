@@ -864,11 +864,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int GetSegInfo(size_t t, size_t streamid)
         {
             if (streamid >= GetNumParallelSequences())
-                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, GetNumParallelSequences());
+                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int)streamid, (int)GetNumParallelSequences());
 
             size_t nT = Inputs(0)->GetNumCols();
             if (t >= nT)
-                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
+                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
 
             int utt_t = (int)t / GetNumParallelSequences();
             auto thisCol = m_pMBLayout->GetFrame(utt_t).first;

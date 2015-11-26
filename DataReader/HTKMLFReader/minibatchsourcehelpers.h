@@ -43,7 +43,7 @@ static size_t augmentationextent (size_t featdim/*augment from*/, size_t modeldi
     if (modeldim % featdim != 0)
         RuntimeError("augmentationextent: model vector size not multiple of input features");
     if (windowframes % 2 == 0)
-        RuntimeError(msra::strfun::strprintf ("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
+        RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowframes);
 
     return extent;
 }

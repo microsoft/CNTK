@@ -1172,7 +1172,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
                 int transPindex = hset.senonetransP (senoneid);
                 int sindex = hset.senonestate (senoneid);
                 if (transPindex == -1 || sindex == -1)
-                    RuntimeError("scoregroundtruth: failed to resolve ambiguous senone " + (string) hset.getsenonename (senoneid));
+                    RuntimeError("scoregroundtruth: failed to resolve ambiguous senone %s", hset.getsenonename (senoneid));
                 transP = &hset.transPs[transPindex];
                 s = sindex;
             }
@@ -1333,7 +1333,7 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     backpointers thisbackpointers (*this, hset);        // memory for forwardbackward
 
     if (info.numframes != logLLs.cols())
-        LogicError(msra::strfun::strprintf ("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols()));
+        LogicError("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols());
     // TODO: the following checks should throw, but I don't dare in case this will crash a critical job... if we never see this warning, then 
     if (info.numframes != uids.size())
         fprintf (stderr, "forwardbackward: #frames mismatch between lattice (%d) and uids (%d)\n", (int) info.numframes, (int) uids.size());
