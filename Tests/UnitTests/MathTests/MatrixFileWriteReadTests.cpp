@@ -41,7 +41,7 @@ namespace Microsoft
 					CPUMatrix<float> matrixCpuRead;
 					fileCpu >> matrixCpuRead;
 
-					BOOST_CHECK(matrixCpuCopy.IsEqualTo(matrixCpuRead, 0.00001f));
+                    BOOST_CHECK(matrixCpuCopy.IsEqualTo(matrixCpuRead, c_epsilonFloatE5));
 				}
 
 				BOOST_AUTO_TEST_CASE(MatrixFileWriteRead)
@@ -59,7 +59,7 @@ namespace Microsoft
 					Matrix<float> matrixRead;
 					file >> matrixRead;
 
-					BOOST_CHECK(matrixRead.IsEqualTo(matrixCopy, 0.00001f));
+                    BOOST_CHECK(matrixRead.IsEqualTo(matrixCopy, c_epsilonFloatE5));
 
 					//Test Matrix in Sparse mode
 					Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
@@ -77,7 +77,7 @@ namespace Microsoft
 					fileSparse >> matrixSparseRead;
 
 					BOOST_CHECK(MatrixType::SPARSE == matrixSparseRead.GetMatrixType());
-					BOOST_CHECK(matrixSparseRead.IsEqualTo(matrixSparseCopy, 0.00001f));
+                    BOOST_CHECK(matrixSparseRead.IsEqualTo(matrixSparseCopy, c_epsilonFloatE5));
 				}
 
 				BOOST_AUTO_TEST_SUITE_END()
@@ -98,7 +98,7 @@ namespace Microsoft
 					GPUMatrix<float> matrixGpuRead(c_deviceIdZero);
 					fileGpu >> matrixGpuRead;
 
-					BOOST_CHECK(matrixGpuCopy.IsEqualTo(matrixGpuRead, 0.00001f));
+                    BOOST_CHECK(matrixGpuCopy.IsEqualTo(matrixGpuRead, c_epsilonFloatE5));
 				}
 				
 				BOOST_AUTO_TEST_SUITE_END()

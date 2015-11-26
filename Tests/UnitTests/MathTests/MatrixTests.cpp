@@ -188,13 +188,15 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(MatrixInitRandomUniform)
                 {
-                    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, -26.3f, 30.2f);
+                    const float low = -26.3f;
+                    const float high = 30.2f;
+                    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, low, high, 4711uL);
                     bool has_small = false;
                     bool has_big = false;
                     foreach_coord(i, j, a)
                     {
-                        BOOST_CHECK(a(i, j) >= -26.3);
-                        BOOST_CHECK(a(i, j) <= 30.2);
+                        BOOST_CHECK_GE(a(i, j), low);
+                        BOOST_CHECK_LE(a(i, j), high);
                         if (a(i, j) < -3)
                         {
                             has_small = true;
@@ -210,10 +212,13 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(MatrixInitRandomUniformSeed)
                 {
-                    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, -0.01f, 0.01f, 4711uL);
+                    const float low = -0.01f;
+                    const float high = 0.01f;
+                    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, low, high, 4711uL);
                     foreach_coord(i, j, a)
                     {
-                        BOOST_CHECK(a(i, j) >= -0.01 && a(i, j) <= 0.01);
+                        BOOST_CHECK_GE(a(i, j), low);
+                        BOOST_CHECK_LE(a(i, j), high);
                     }
 
                     // SingleMatrix b = SingleMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, (unsigned long)4711);
@@ -227,7 +232,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(32, a.GetNumRows());
                     BOOST_CHECK_EQUAL(12, a.GetNumCols());
                     BOOST_CHECK_EQUAL(12 * 32, a.GetNumElements());
-                    float v = -32.3451f;
+                    const float v = -32.3451f;
                     a.SetValue(v);
                     foreach_coord(i, j, a)
                     {
@@ -265,7 +270,7 @@ namespace Microsoft
 
                     //void SetDiagonalValue(const ElemType v);            
                     SingleMatrix c(4, 4, AUTOPLACEMATRIX);
-                    float val = -0.00332f;
+                    const float val = -0.00332f;
                     c.SetDiagonalValue(val);
                     foreach_coord(i, j, c)
                     {
@@ -277,7 +282,7 @@ namespace Microsoft
 
                     //void SetDiagonalValue(const Matrix<ElemType>& vector);
                     SingleMatrix d(4, 1, AUTOPLACEMATRIX);
-                    float val1 = 43.324f;
+                    const float val1 = 43.324f;
                     d.SetValue(val1);
                     c.SetDiagonalValue(d);
                     foreach_coord(i, j, c)
