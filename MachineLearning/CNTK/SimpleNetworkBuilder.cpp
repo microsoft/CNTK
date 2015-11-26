@@ -447,7 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
             if (numHiddenLayers > 0)
             {
-                //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                //           output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
@@ -595,8 +595,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (; i < numHiddenLayers; i++)
                         {
-                            output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                            //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                             if (m_addDropoutNodes)
                                 input = builder.Dropout(output);
@@ -724,8 +724,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (; i < numHiddenLayers; i++)
                         {
-                            output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                            //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                             if (m_addDropoutNodes)
                                 input = builder.Dropout(output);
@@ -1428,6 +1428,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_net;
     }
 
+#if 1
+    template<class ElemType>
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &, size_t , size_t , size_t , ComputationNodePtr )
+    {
+        InvalidArgument("BuildLSTMNodeComponent: LSTMNode is no longer available. You should not get here.");
+    }
+#else
     template<class ElemType>
     shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
@@ -1469,6 +1476,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return output;
     }
+#endif
 
     template<class ElemType>
     ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription(size_t mbSize)
@@ -1530,8 +1538,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numHiddenLayers > 0)
             {
 
-                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-//                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
                 outputFromEachLayer[offset + 1] = input;
@@ -1541,8 +1549,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
                     {
 
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-//                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                        //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                         // previously used function, now uses LSTMnode, which is fast and correct
 
                         recur_idx++;
@@ -1768,7 +1776,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     switch (m_rnnType){
                     case UNIDIRECTIONALLSTM:
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
+                        //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
                         break;
                     default:
                         LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");

@@ -349,6 +349,7 @@ public:
     vector<size_t> mSentenceLength;
     size_t mMaxSentenceLength;
     vector<int> mSentenceBeginAt;
+    const int NO_INPUT = -2;
     vector<int> mSentenceEndAt;
 
     MBLayoutPtr m_pMBLayout;

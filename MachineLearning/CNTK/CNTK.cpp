@@ -1953,6 +1953,8 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 {
     try
     {
+        if (argc <= 1)
+            InvalidArgument("No command-line argument given.");
         // detect legacy CNTK configuration
         bool isOldCNTKConfig = false;
         for (int i = 0; i < argc && !isOldCNTKConfig; i++)
