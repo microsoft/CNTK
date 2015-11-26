@@ -130,6 +130,7 @@ void BatchLUSequenceReader<ElemType>::GetClassInfo(LabelInfo& lblInfo)
 
     lblInfo.m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     lblInfo.m_classInfoLocal->Resize(2, lblInfo.mNbrClasses);
+    lblInfo.m_classInfoLocal->SetValue(0);  // TODO: needed? (left-over of refactoring)
 
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = lblInfo.m_classInfoLocal->GetDeviceId();
@@ -867,6 +868,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
         }
 
         locObs.Resize(featInfo.dim * m_wordContext.size(), actualmbsize);
+        locObs.SetValue(0);
 
         size_t utt_id = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
@@ -1072,6 +1074,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
             RuntimeError("LUSequenceReader cannot find %ls", m_featuresName.c_str());
         }
         locObs.Resize(featInfo.dim * m_wordContext.size(), mBlgSize);
+        locObs.SetValue(0);
 
         assert(mBlgSize == 1); /// currently only support one utterance a time
 
