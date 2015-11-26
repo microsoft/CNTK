@@ -510,7 +510,8 @@ public:
                     const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
 
                     if (customSeperators.find(stringParse[tokenStart]) != npos
-                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0         // [fseide] otherwise this will nuke leading . or .. in a pathname... Aargh!
+                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0
+                        && stringParse.substr(tokenStart).find("./") != 0 && stringParse.substr(tokenStart).find("\\\\") != 0         // [fseide] otherwise this will nuke leading . or .. or \\ in a pathname... Aargh!
                         )
                     {
                         char separator = stringParse[tokenStart];
