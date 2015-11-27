@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
     public:
-        static int SetNumThreads(int numThreads);
+        static int SetNumThreads(int numThreads);   // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 
         //static BLAS functions
         static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);

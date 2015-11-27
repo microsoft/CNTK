@@ -4,6 +4,7 @@
 // </copyright>
 //
 
+#include "Basics.h"
 #include "BestGpu.h"
 #include "DebugUtil.h"
 
@@ -19,6 +20,8 @@
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
 #include <assert.h>
+
+typedef unsigned char byte;
 
 #pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this

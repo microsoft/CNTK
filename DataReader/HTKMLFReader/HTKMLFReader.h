@@ -60,10 +60,10 @@ private:
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
     //for lattice uids and phoneboundaries
-    std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_latticeBufferMultiUtt;
+    std::vector<shared_ptr<const msra::dbn::latticepair>>  m_latticeBufferMultiUtt;
     std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
-    std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_extraLatticeBufferMultiUtt;
+    std::vector<shared_ptr<const msra::dbn::latticepair>>  m_extraLatticeBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
 
@@ -90,11 +90,11 @@ private:
     
     int m_verbosity;
 
-    void PrepareForTrainingOrTesting(const ConfigParameters& config);
-    void PrepareForWriting(const ConfigParameters& config);
+    template<class ConfigRecordType> void PrepareForTrainingOrTesting(const ConfigRecordType & config);
+    template<class ConfigRecordType> void PrepareForWriting(const ConfigRecordType & config);
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
-    bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
+    bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
     void fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
@@ -106,8 +106,8 @@ private:
     size_t GetNumParallelSequences();
     void SetNumParallelSequences(const size_t) { };
 
-    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
-                                std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
+    template<class ConfigRecordType> void GetDataNamesFromConfig(const ConfigRecordType & readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
+                                                                 std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     
@@ -138,7 +138,9 @@ public:
     HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>())
     {
     }
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy() { delete this; }
     virtual ~HTKMLFReader() { }
 
@@ -158,7 +160,7 @@ public:
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     virtual bool DataEnd(EndDataType endDataType);

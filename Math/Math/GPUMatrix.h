@@ -11,11 +11,13 @@
 #include "CommonMatrix.h"
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
+#include "ConcStack.h"
 #include <string>
 #include <vector>
 #include <ctime>
-#include <limits.h>     // for ULONG_MAX
 #include <iostream>     // for cout/cerr
+#include <memory>       // for unique_ptr
+#include <limits.h>     // for ULONG_MAX
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -45,9 +47,10 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
-    void PrepareDevice(DEVICEID_TYPE deviceId);
+    // -----------------------------------------------------------------------
+    // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
+    // -----------------------------------------------------------------------
 
-    //This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
     template<class ElemType>
     class MATH_API DeviceBoundNumber
     {
@@ -64,6 +67,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
+
+    // -----------------------------------------------------------------------
+    // GPUMatrix
+    // -----------------------------------------------------------------------
+
+    void PrepareDevice(DEVICEID_TYPE deviceId);
 
     template<class ElemType>
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>

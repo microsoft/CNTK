@@ -250,8 +250,8 @@ public:
 	std::vector<size_t> & bounds(size_t i) { checkhasdata(); assert(phoneboundaries.size() >= i + 1); return phoneboundaries[i]; }
 
     // return a lattice for an utterance (caller should first get total through currentmblattices())
-    shared_ptr<const msra::dbn::latticesource::latticepair> lattice(size_t uttindex) const { return lattices[uttindex]; }    // lattices making up the current 
-	bool haslattice() 	{ return	lattices.size() > 0 ? true : false; }
+    shared_ptr<const msra::dbn::latticepair> lattice(size_t uttindex) const { return lattices[uttindex]; }    // lattices making up the current 
+    bool haslattice() 	{ return	lattices.size() > 0 ? true : false; }
     // return the reference transcript labels (words with alignments) for current minibatch (or empty if no transcripts requested)
     const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word> transcript (size_t uttindex) { return transcripts.empty() ? const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>() : transcripts[uttindex]; }
 };

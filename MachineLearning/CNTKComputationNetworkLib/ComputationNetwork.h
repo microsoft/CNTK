@@ -67,6 +67,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
+public:
+    typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
 protected:
 
     // FlowControlNodes for internal use by this class:
@@ -359,6 +361,17 @@ public:
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
+    // static helper to instantiate a network from a file
+    template<class ElemType>
+    static ComputationNetworkPtr CreateFromFile(DEVICEID_TYPE deviceId, const std::wstring& fileName,
+                                                const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+                                                const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    {
+        auto net = make_shared<ComputationNetwork>(deviceId);
+        net->LoadFromFile<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+        return net;
+    }
+
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
@@ -465,7 +478,7 @@ public:
             return anotherNetwork->GetNodeFromName(name);
 
         if (bPanic)
-            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+            RuntimeError("GetNodeFromName: Node name %ls does not exist.", name.c_str());
         else
             return nullptr;
     }
@@ -547,10 +560,10 @@ public:
     // -----------------------------------------------------------------------
 
     template<class ElemType> // TODO: dropoutRate change to double
-    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template<class ElemType>
-    static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-    static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
+    static void SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -984,5 +997,6 @@ private:    // TODO: make all private that can be made private
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
 };
+typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
 }}}

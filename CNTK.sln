@@ -19,8 +19,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403
 		Tests\TestDriver.py = Tests\TestDriver.py
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMathTest", "Math\CNTKMathTest\CNTKMathTest.vcxproj", "{6CEE834A-8104-46A8-8902-64C81BD7928F}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTKMLFReader", "DataReader\HTKMLFReader\HTKMLFReader.vcxproj", "{33D2FD22-DEF2-4507-A58A-368F641AEBE5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
@@ -196,7 +194,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
-		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
+		Tests\Speech\LSTM\lstm.bs = Tests\Speech\LSTM\lstm.bs
+		Tests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\Speech\DNN\DiscriminativePreTraining\macros.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
@@ -381,11 +380,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelNoQuantization", "P
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DiscriminativePreTraining", "DiscriminativePreTraining", "{39B9BB97-D0E8-439A-8A1B-8DB8E7CF73C3}"
 	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\DNN\DiscriminativePreTraining\add_layer.mel = Tests\Speech\DNN\DiscriminativePreTraining\add_layer.mel
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.cpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.cpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config = Tests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config
+		Tests\Speech\DNN\DiscriminativePreTraining\dnn.txt = Tests\Speech\DNN\DiscriminativePreTraining\dnn.txt
+		Tests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt = Tests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt
+		Tests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\Speech\DNN\DiscriminativePreTraining\macros.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\run-test = Tests\Speech\DNN\DiscriminativePreTraining\run-test
 		Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml = Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml
 	EndProjectSection
@@ -413,6 +416,44 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIFastReaderTests", "Tests
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceTraining", "SequenceTraining", "{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\DNN\SequenceTraining\add_layer.mel = Tests\Speech\DNN\SequenceTraining\add_layer.mel
+		Tests\Speech\DNN\SequenceTraining\baseline.gpu.txt = Tests\Speech\DNN\SequenceTraining\baseline.gpu.txt
+		Tests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt = Tests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt
+		Tests\Speech\DNN\SequenceTraining\cntk_sequence.config = Tests\Speech\DNN\SequenceTraining\cntk_sequence.config
+		Tests\Speech\DNN\SequenceTraining\dnn.txt = Tests\Speech\DNN\SequenceTraining\dnn.txt
+		Tests\Speech\DNN\SequenceTraining\dnn_1layer.txt = Tests\Speech\DNN\SequenceTraining\dnn_1layer.txt
+		Tests\Speech\DNN\SequenceTraining\macros.txt = Tests\Speech\DNN\SequenceTraining\macros.txt
+		Tests\Speech\DNN\SequenceTraining\replace_ce_with_sequence_criterion.mel = Tests\Speech\DNN\SequenceTraining\replace_ce_with_sequence_criterion.mel
+		Tests\Speech\DNN\SequenceTraining\run-test = Tests\Speech\DNN\SequenceTraining\run-test
+		Tests\Speech\DNN\SequenceTraining\testcases.yml = Tests\Speech\DNN\SequenceTraining\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{76F9323D-34A1-43A5-A594-C4798931FF21}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Image\Data\labelsmap.txt = Tests\Image\Data\labelsmap.txt
+		Tests\Image\Data\Test.txt = Tests\Image\Data\Test.txt
+		Tests\Image\Data\Train.txt = Tests\Image\Data\Train.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{2A884EB5-037C-481E-8170-BCDC8B3EDD93}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Image\QuickE2E\baseline.linux.debug.gpu.txt = Tests\Image\QuickE2E\baseline.linux.debug.gpu.txt
+		Tests\Image\QuickE2E\baseline.linux.release.gpu.txt = Tests\Image\QuickE2E\baseline.linux.release.gpu.txt
+		Tests\Image\QuickE2E\baseline.windows.debug.cpu.txt = Tests\Image\QuickE2E\baseline.windows.debug.cpu.txt
+		Tests\Image\QuickE2E\baseline.windows.debug.gpu.txt = Tests\Image\QuickE2E\baseline.windows.debug.gpu.txt
+		Tests\Image\QuickE2E\baseline.windows.release.cpu.txt = Tests\Image\QuickE2E\baseline.windows.release.cpu.txt
+		Tests\Image\QuickE2E\baseline.windows.release.gpu.txt = Tests\Image\QuickE2E\baseline.windows.release.gpu.txt
+		Tests\Image\QuickE2E\cntk.config = Tests\Image\QuickE2E\cntk.config
+		Tests\Image\QuickE2E\Convolution.ndl = Tests\Image\QuickE2E\Convolution.ndl
+		Tests\Image\QuickE2E\Macros.ndl = Tests\Image\QuickE2E\Macros.ndl
+		Tests\Image\QuickE2E\run-test = Tests\Image\QuickE2E\run-test
+		Tests\Image\QuickE2E\testcases.yml = Tests\Image\QuickE2E\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -445,14 +486,6 @@ Global
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|Win32.ActiveCfg = Release|x64
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|x64.ActiveCfg = Release|x64
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|x64.Build.0 = Release|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|Win32.ActiveCfg = Debug|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.ActiveCfg = Debug|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.Build.0 = Debug|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|Mixed Platforms.ActiveCfg = Release|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|Win32.ActiveCfg = Release|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|x64.ActiveCfg = Release|x64
-		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|x64.Build.0 = Release|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Mixed Platforms.Build.0 = Debug|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Win32.ActiveCfg = Debug|x64
@@ -661,7 +694,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
-		{6CEE834A-8104-46A8-8902-64C81BD7928F} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -710,5 +742,9 @@ Global
 		{4701E678-5E6F-470D-B348-9CD1A2C095D1} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{B97BDF88-F6B5-4F3A-BD8E-45F787D0C3C3} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{8071EF60-30F7-4A77-81AA-ADCA0E18B1E3} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{76F9323D-34A1-43A5-A594-C4798931FF21} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
+		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 	EndGlobalSection
 EndGlobal

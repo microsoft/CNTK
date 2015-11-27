@@ -26,7 +26,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -90,7 +90,7 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init=fixedvalue, value=0.1)
+        B=Parameter(rowCount, init="fixedValue", value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
         S = Sigmoid(BFF_final);

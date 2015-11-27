@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass)
     {
-        ComputationNetworkBuilder<ElemType> builder(m_net);
+        ComputationNetworkBuilder<ElemType> builder(*m_net);
 
         // constants don't need to be evaluated, they just translate into numbers...
         if (node->GetType() == ndlTypeConstant 
@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nodePtr = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
             if (!nodePtr)
             {
-                nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
+                nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 node->SetEvalValue(nodePtr.get());
             }
         }
@@ -71,8 +71,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net.NodeNameExist(name))
-                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
+                if (m_net->NodeNameExist(name))
+                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateInputNode(name, rows, cols);
             }
@@ -90,8 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net.NodeNameExist(name))
-                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
+                if (m_net->NodeNameExist(name))
+                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateSparseInputNode(name, rows, cols);
             }
@@ -151,20 +151,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (pass == ndlPassFinal)
             {
                 static int randomSeed = 1;
-                std::string initString = node->GetOptionalParameter("init", "uniform");
+                wstring initString = node->GetOptionalParameter("init", "uniform");
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
                 bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
                 int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1"/*disabled*/);
 
-                msra::strfun::tolower_ascii (initString);
-                if (initString == "fixedvalue")
+                if (!_wcsicmp(initString.c_str(), L"fixedValue"))
                     nodePtr->FunctionValues().SetValue(value);
-                else if (initString == "uniform")
-                    m_net.InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
-                else if (initString == "gaussian")
-                    m_net.InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
-                else if (initString == "fromfile")
+                else if (!_wcsicmp(initString.c_str(), L"uniform"))
+                    m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
+                else if (!_wcsicmp(initString.c_str(), L"gaussian"))
+                    m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
+                else if (!_wcsicmp(initString.c_str(), L"fromFile"))
                 {
                     std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                     if (initFromFilePath == "")
@@ -177,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
                 }
                 else
-                    RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                    RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
         else if (OperationNameOf(SparseLearnableParameter) == cnNodeType)
@@ -201,18 +200,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (pass == ndlPassFinal)
             {
                 static int randomSeed = 1;
-                std::string initString = node->GetOptionalParameter("init", "uniform");
+                wstring initString = node->GetOptionalParameter("init", "uniform");
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
                 
-                msra::strfun::tolower_ascii(initString);
-                if (initString == "fixedvalue")
+                if (!_wcsicmp(initString.c_str(), L"fixedValue"))
                     nodePtr->FunctionValues().SetValue(value);
-                else if (initString == "uniform")
-                    m_net.InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
-                else if (initString == "gaussian")
-                    m_net.InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
-                else if (initString == "fromfile")
+                else if (!_wcsicmp(initString.c_str(), L"uniform"))
+                    m_net->InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
+                else if (!_wcsicmp(initString.c_str(), L"gaussian"))
+                    m_net->InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
+                else if (!_wcsicmp(initString.c_str(), L"fromFile"))
                 {
                     std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                     if (initFromFilePath == "")
@@ -225,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     dynamic_pointer_cast<SparseLearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
                 }
                 else
-                    RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                    RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
         else if (cnNodeType == L"Constant")

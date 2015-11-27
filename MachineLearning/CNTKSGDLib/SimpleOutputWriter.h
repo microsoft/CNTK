@@ -26,7 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        SimpleOutputWriter(ComputationNetwork & net, int verbosity = 0) :
+        SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0) :
             m_net(net), m_verbosity(verbosity)
         { }
 
@@ -39,20 +39,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_verbosity > 0)
                     fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-                if (m_net.OutputNodes().size() == 0)
+                if (m_net->OutputNodes().size() == 0)
                     LogicError("There is no default output node specified in the network.");
 
-                outputNodes = m_net.OutputNodes();
+                outputNodes = m_net->OutputNodes();
             }
             else
             {
                 for (int i=0; i<outputNodeNames.size(); i++)
-                    outputNodes.push_back(m_net.GetNodeFromName(outputNodeNames[i]));
+                    outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
             }
 
             //specify feature value nodes
-            std::vector<ComputationNodeBasePtr>& featureNodes = m_net.FeatureNodes();
-            std::vector<ComputationNodeBasePtr>& labelNodes = m_net.LabelNodes();
+            std::vector<ComputationNodeBasePtr>& featureNodes = m_net->FeatureNodes();
+            std::vector<ComputationNodeBasePtr>& labelNodes = m_net->LabelNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
             dataReader.SetNumParallelSequences(1);
 
-            m_net.StartEvaluateMinibatchLoop(outputNodes);
+            m_net->StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
@@ -76,13 +76,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
+                //size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
+                //m_net->VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
-                    m_net.Evaluate(outputNodes[i]);
+                    m_net->Evaluate(outputNodes[i]);
                     outputMatrices[outputNodes[i]->NodeName()] = (void *)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues());
                 }
 
@@ -119,15 +119,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (outputNodeNames.size() == 0)
             {
                 fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-                if (m_net.OutputNodes().size() == 0)
+                if (m_net->OutputNodes().size() == 0)
                     LogicError("There is no default output node specified in the network.");
 
-                outputNodes = m_net.OutputNodes();
+                outputNodes = m_net->OutputNodes();
             }
             else
             {
                 for (int i=0; i<outputNodeNames.size(); i++)
-                    outputNodes.push_back(m_net.GetNodeFromName(outputNodeNames[i]));
+                    outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
             }
 
             std::vector<ofstream *> outputStreams;
@@ -135,11 +135,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _MSC_VER
                 outputStreams.push_back(new ofstream ((outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #else
-                outputStreams.push_back(new ofstream(charpath(outputPath + L"." + outputNodes[i]->NodeName())));
+                outputStreams.push_back(new ofstream(wtocharpath(outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #endif
 
             //specify feature value nodes
-            auto & featureNodes = m_net.FeatureNodes();
+            auto & featureNodes = m_net->FeatureNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
@@ -147,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
 
-            m_net.StartEvaluateMinibatchLoop(outputNodes);
+            m_net->StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             size_t numMBsRun = 0;
@@ -159,13 +159,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
+                //size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
+                //m_net->VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
-                    m_net.Evaluate(outputNodes[i]);
+                    m_net->Evaluate(outputNodes[i]);
                     
                     Matrix<ElemType> & outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues();
                     ofstream & outputStream = *outputStreams[i];
@@ -198,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete [] tempArray;
         }
     private:
-        ComputationNetwork& m_net;
+        ComputationNetworkPtr m_net;
         int m_verbosity;
         void operator=(const SimpleOutputWriter&); // (not assignable)
     };

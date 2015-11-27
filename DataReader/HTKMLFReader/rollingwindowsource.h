@@ -129,15 +129,15 @@ namespace msra { namespace dbn {
         {
             openpagefile (false);
             if (paging())
-                fprintf (stderr, "biggrowablevectorarray: creating disk backup store at '%S'\n", pagepath.c_str());
+                fprintf (stderr, "biggrowablevectorarray: creating disk backup store at '%ls'\n", pagepath.c_str());
         }
         ~biggrowablevectorarray() { // clean up the big temp file 
             if (paging()) {
                 fclose (f); 
                 if (_wunlink (pagepath.c_str())==0)
-                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
+                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%ls'\n", pagepath.c_str());
                 else
-                    fprintf (stderr, "biggrowablevectorarray: unable to delete disk backup store at '%S'\n", pagepath.c_str());
+                    fprintf (stderr, "biggrowablevectorarray: unable to delete disk backup store at '%ls'\n", pagepath.c_str());
             }
         }            
         
@@ -225,10 +225,10 @@ namespace msra { namespace dbn {
             if (paging()) {
                 fclose (f); 
                 if (_wunlink (pagepath.c_str())==0){
-                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
+                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%ls'\n", pagepath.c_str());
                 }
                 else{
-                    fprintf (stderr, "biggrowablevectorarray: could NOT delete disk backup store at '%S'\n", pagepath.c_str());
+                    fprintf (stderr, "biggrowablevectorarray: could NOT delete disk backup store at '%ls'\n", pagepath.c_str());
                 }
             }
         }
@@ -287,16 +287,15 @@ namespace msra { namespace dbn {
                 wstring key;
                 if (!labels.empty())    // empty means unsupervised mode (don't load any)
                 {
-#ifdef _WIN32
-                    key = regex_replace ((wstring)ppath, wregex (L"\\.[^\\.\\\\/:]*$"), wstring());  // delete extension (or not if none)
-#endif
-#ifdef __unix__
+#ifdef _MSC_VER
+                    key = regex_replace((wstring)ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring());  // delete extension (or not if none)
+#else
                     key = removeExtension(basename(ppath));
 #endif
                     if (labels.find (key) == labels.end())
                     {
                         if (notfound < 5)
-                            fprintf (stderr, "\nminibatchframesource: %d-th file not found in MLF label set: %S", i, key.c_str());
+                            fprintf (stderr, "\nminibatchframesource: %d-th file not found in MLF label set: %ls", i, key.c_str());
                         notfound++;
                         continue;   // skip this utterance at all
                     }
@@ -320,7 +319,7 @@ namespace msra { namespace dbn {
                         size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                         if (abs ((int) labframes - (int) feat.cols()) > 0)
                         {
-                            fprintf (stderr, "\nminibatchframesource: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %S", i, (int)labframes, (int)feat.cols(), key.c_str());
+                            fprintf (stderr, "\nminibatchframesource: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %ls", i, (int)labframes, (int)feat.cols(), key.c_str());
                             notfound++;
                             continue;   // skip this utterance at all
                         }
@@ -349,11 +348,11 @@ namespace msra { namespace dbn {
                     {
                         const auto & e = labseq[i];
                         if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                            RuntimeError(msra::strfun::strprintf ("minibatchframesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                            RuntimeError("minibatchframesource: labels not in consecutive order MLF in label set: %ls", key.c_str());
                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                         {
                             if (e.classid >= udim)
-                                RuntimeError(msra::strfun::strprintf ("minibatchframesource: class id exceeds model dimension in file %S", key.c_str()));
+                                RuntimeError("minibatchframesource: class id exceeds model dimension in file %ls", key.c_str());
                             if (e.classid != (CLASSIDTYPE) e.classid)
                                 RuntimeError("CLASSIDTYPE has too few bits");
                             classids.push_back ((CLASSIDTYPE) e.classid);
@@ -363,7 +362,7 @@ namespace msra { namespace dbn {
                     if (vdim == 0)
                         numframes = classids.size();
                     if (numframes != classids.size())   // TODO: remove this once we are confident
-                        RuntimeError(msra::strfun::strprintf ("minibatchframesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                        RuntimeError("minibatchframesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
                     assert (numframes == classids.size());
                 }
                 else
@@ -590,7 +589,7 @@ namespace msra { namespace dbn {
                             if (labels[0].find (key) == labels[0].end())
                             {
                                 if (notfound < 5)
-                                    fprintf (stderr, "\nminibatchframesourcemulti: %d-th file not found in MLF label set: %S", i, key.c_str());
+                                    fprintf (stderr, "\nminibatchframesourcemulti: %d-th file not found in MLF label set: %ls", i, key.c_str());
                                 notfound++;
                                 continue;   // skip this utterance at all
                             }
@@ -614,7 +613,7 @@ namespace msra { namespace dbn {
                             size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                             if (abs ((int) labframes - (int) feat.cols()) > 0)
                             {
-                                fprintf (stderr, "\nminibatchframesourcemulti: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %S", i, (int)labframes, (int)feat.cols(), key.c_str());
+                                fprintf (stderr, "\nminibatchframesourcemulti: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %ls", i, (int)labframes, (int)feat.cols(), key.c_str());
                                 notfound++;
                                 continue;   // skip this utterance at all
                             }
@@ -656,11 +655,11 @@ namespace msra { namespace dbn {
                                 {
                                     const auto & e = labseq[i];
                                     if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                        RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                        RuntimeError("minibatchframesourcemulti: labels not in consecutive order MLF in label set: %ls", key.c_str());
                                     for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                     {
                                         if (e.classid >= udim[j])
-                                            RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: class id exceeds model dimension in file %S", key.c_str()));
+                                            RuntimeError("minibatchframesourcemulti: class id exceeds model dimension in file %ls", key.c_str());
                                         if (e.classid != (CLASSIDTYPE) e.classid)
                                             RuntimeError("CLASSIDTYPE has too few bits");
                                         classids[j].push_back ((CLASSIDTYPE) e.classid);
@@ -670,7 +669,7 @@ namespace msra { namespace dbn {
                                 if (vdim[m] == 0)
                                     numframes = classids[j].size();
                                 if (numframes != classids[j].size())   // TODO: remove this once we are confident
-                                    RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                    RuntimeError("minibatchframesourcemulti: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
                                 assert (numframes == classids[j].size());
 
                             }

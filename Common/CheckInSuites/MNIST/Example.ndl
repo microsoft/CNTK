@@ -41,7 +41,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -300,14 +300,14 @@ ndlMacroUseNoBase=[
     LDim=10
 
     # Weight, Bias, features and label inputs
-    B0=Parameter(HDim, init=fixedvalue, value=0)
-    W0=Parameter(HDim, SDim, init=uniform)
-    B1=Parameter(HDim, init=fixedvalue, value=0)
-    W1=Parameter(HDim, HDim, init=uniform)
-    B2=Parameter(HDim, init=fixedvalue, value=0)
-    W2=Parameter(HDim, HDim, init=uniform)
-    BTop=Parameter(LDim, init=fixedvalue, value=0)
-    WTop=Parameter(LDim, HDim, init=uniform)
+    B0=Parameter(HDim, 1,    init="fixedValue", value=0)
+    W0=Parameter(HDim, SDim, init="uniform")
+    B1=Parameter(HDim, 1,    init="fixedValue", value=0)
+    W1=Parameter(HDim, HDim, init="uniform")
+    B2=Parameter(HDim, 1,    init="fixedValue", value=0)
+    W2=Parameter(HDim, HDim, init="uniform")
+    BTop=Parameter(LDim, 1,    init="fixedValue", value=0)
+    WTop=Parameter(LDim, HDim, init="uniform")
 
     features=Input(SDim, tag=feature)
     labels=Input(LDim, tag=label)

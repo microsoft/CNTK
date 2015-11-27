@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
         size_t pos = how.find(L'%');
         if (pos != wstring::npos)
-            RuntimeError("FormatConfigValue: format string must not contain %");
+            RuntimeError("FormatConfigValue: format string must not contain %%");
         if (arg.Is<String>())
         {
             return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
@@ -669,7 +669,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
-    // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
+    // Evaluation converts a parse tree from ParseConfigDictFromString/File() into a graph of live C++ objects.
     // =======================================================================
 
     // -----------------------------------------------------------------------
@@ -881,13 +881,14 @@ namespace Microsoft { namespace MSR { namespace BS {
     typedef function<ConfigValuePtr(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)> InfixOp /*const*/;
     struct InfixOps
     {
-        InfixOp NumbersOp;            // number OP number -> number
-        InfixOp StringsOp;            // string OP string -> string
-        InfixOp BoolOp;               // bool OP bool -> bool
-        InfixOp ComputeNodeOp;        // one operand is ComputeNode -> ComputeNode
-        InfixOp DictOp;               // dict OP dict
-        InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
-            : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp) { }
+        wstring prettyName;             // pretty-printable name of this op, e.g. "Plus" for +
+        InfixOp NumbersOp;              // number OP number -> number
+        InfixOp StringsOp;              // string OP string -> string
+        InfixOp BoolOp;                 // bool OP bool -> bool
+        InfixOp ComputeNodeOp;          // one operand is ComputeNode -> ComputeNode
+        InfixOp DictOp;                 // dict OP dict
+        InfixOps(const wchar_t * name, InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
+            : prettyName(name), NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp) { }
     };
 
     // functions that implement infix operations
@@ -1000,29 +1001,39 @@ namespace Microsoft { namespace MSR { namespace BS {
             valueWithName->SetName(value.GetExpressionName());
         return value;
     };
+    static ConfigValuePtr DictOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    {
+        if(e->op != L"with")
+            LogicError("unexpected infix op");
+        let left  = leftVal.AsPtr<ConfigRecord>();
+        let right = rightVal.AsPtr<ConfigRecord>();
+        left; right; scope; exprPath;  // TODO: create a composite dictionary
+        return leftVal;
+    };
     static ConfigValuePtr BadOp(const ExpressionPtr & e, ConfigValuePtr, ConfigValuePtr, const IConfigRecordPtr &, const wstring &) { InvalidInfixOpTypes(e); };
 
     // lookup table for infix operators
     // This lists all infix operators with lambdas for evaluating them.
     static map<wstring, InfixOps> infixOps =
     {
-        // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp  TODO: this comment is incomplete
-        { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp) },
-        { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
-        { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
-        { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) }
+        // PrettyName NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+        { L"with", InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, DictOp) },
+        { L"*",    InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"/",    InfixOps(L"Div",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L".*",   InfixOps(L"DotTimes", BadOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"**",   InfixOps(L"Pow",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L"%",    InfixOps(L"Mod",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L"+",    InfixOps(L"Plus",     NumOp, StrOp, BadOp,  NodeOp, BadOp)  },
+        { L"-",    InfixOps(L"Minus",    NumOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"==",   InfixOps(L"Equal",    NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"!=",   InfixOps(L"NotEqual", NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"<",    InfixOps(L"LT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L">",    InfixOps(L"GT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"<=",   InfixOps(L"LE",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L">=",   InfixOps(L"GT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"&&",   InfixOps(L"And",      BadOp, BadOp, BoolOp, BadOp,  BadOp)  },
+        { L"||",   InfixOps(L"Or",       BadOp, BadOp, BoolOp, BadOp,  BadOp)  },
+        { L"^",    InfixOps(L"Xor",      BadOp, BadOp, BoolOp, BadOp,  BadOp)  }
     };
 
     // -----------------------------------------------------------------------
@@ -1255,11 +1266,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
                 {
                     let & expr = e->args[i];
-                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"[%d]", i));           // result can be an item or a vector
-                    if (item.Is<ConfigArray>())
-                        arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
-                    else
-                        arr->Append(item);
+                    arr->Append(move(MakeEvaluateThunkPtr(expr, scope, msra::strfun::wstrprintf(L"%ls[%d]", exprPath.c_str(), i), L"")));
                 }
                 return ConfigValuePtr(arr, MakeFailFn(e->location), exprPath);  // location will be that of the first ':', not sure if that is best way
             }
@@ -1333,12 +1340,12 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 let opIter = infixOps.find(e->op);
                 if (opIter == infixOps.end())
-                    LogicError("e->op " + utf8(e->op) + " not implemented");
+                    LogicError("e->op '%ls' not implemented", e->op.c_str());
                 let & functions = opIter->second;
                 let & leftArg = e->args[0];
                 let & rightArg = e->args[1];
-                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"/*" + e->op + L"*/left");
-                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"/*" + e->op + L"*/right");
+                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, functions.prettyName + L"_left");
+                let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"_right");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -1352,7 +1359,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNodeObject>())
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
-                // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
+                else if (leftValPtr.Is<ConfigRecord>() && rightValPtr.Is<ConfigRecord>())
+                    return functions.DictOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else
                     InvalidInfixOpTypes(e);
             }

@@ -18,12 +18,12 @@ ndlCreateNetwork=[
 	labels=Input(4, tag=label)
 
 	# define network
-    WFeat2Hid=Parameter(hiddenDim, featDim, init=uniform, initValueScale=initScale)
-	WHid2Hid=Parameter(hiddenDim, hiddenDim, init=uniform, initValueScale=initScale)
-	
+	WFeat2Hid=Parameter(hiddenDim, featDim, init="uniform", initValueScale=initScale)
+	WHid2Hid=Parameter(hiddenDim, hiddenDim, init="uniform", initValueScale=initScale)
+
 	# WHid2Word is special that it is hiddenSize X labelSize
-    WHid2Word=Parameter(hiddenDim, labelDim, init=uniform, initValueScale=initScale)	
- 	WHid2Class=Parameter(nbrClass, hiddenDim, init=uniform, initValueScale=initScale)
+	WHid2Word=Parameter(hiddenDim, labelDim, init="uniform", initValueScale=initScale)
+ 	WHid2Class=Parameter(nbrClass, hiddenDim, init="uniform", initValueScale=initScale)
    
 	PastHid = Delay(hiddenDim, HidAfterSig, delayTime=1, needGradient=true)	
 	HidFromHeat = Times(WFeat2Hid, features)

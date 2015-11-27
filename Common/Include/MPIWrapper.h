@@ -46,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: or does that only signal an issue, and we should still terminate ourselves?
             // BUGBUG: We'd also need to Abort through the other sub-set communicator
         }
-        RuntimeError(what);
+        RuntimeError("%s", what.c_str());
     }
 
     class MPIWrapper

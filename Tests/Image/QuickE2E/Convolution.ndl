@@ -1,15 +1,15 @@
-load=ndlMnistMacros
-run=DNN
+load = ndlMnistMacros
+run = DNN
 
 ndlMnistMacros = [
     ImageW = 28
     ImageH = 28
     LabelDim = 10
 
-    features = ImageInput(ImageW, ImageH, 1, tag = feature)
+    features = ImageInput(ImageW, ImageH, 1, tag=feature)
     featScale = Const(0.00390625)
     featScaled = Scale(featScale, features)
-    labels = Input(LabelDim, tag = label)
+    labels = Input(LabelDim, tag=label)
 ]
 
 DNN=[
@@ -45,15 +45,14 @@ DNN=[
     pool2H = 2
     pool2hStride = 2
     pool2vStride = 2
-    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+    pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
 
     h1Dim = 128
     # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
     h1 = DNNSigmoidLayer(512, h1Dim, pool2, 1)
     ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
-    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
-    Err = ErrorPrediction(labels, ol, tag = Eval)
-    OutputNodes = ol
+    ce = CrossEntropyWithSoftmax(labels, ol, tag=criterion)
+    err = ErrorPrediction(labels, ol, tag=eval)
+    outputNodes = ol
 ]
-

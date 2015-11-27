@@ -1194,7 +1194,7 @@ B0=Parameter(HDim, init=zero)
 
 \begin_layout Plain Layout
 
-W0=Parameter(HDim, SDim, init=uniform)
+W0=Parameter(HDim, SDim, init="uniform")
 \end_layout
 
 \end_inset
@@ -1700,7 +1700,7 @@ LearnableParameter(row, [cols=1],
 
 \begin_layout Plain Layout
 
-         init=fixedValue|Uniform|Gaussian|fromFile, 
+         init="fixedValue"|"uniform"|"gaussian"|"fromFile", 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1715,7 +1715,7 @@ Parameter(row, [cols=1], {needGradient=true|false,
 
 \begin_layout Plain Layout
 
-          init=fixedValue|Uniform|Gaussian|fromFile, 
+          init="fixedValue"|Uniform|Gaussian|fromFile, 
 \end_layout
 
 \begin_layout Plain Layout
