@@ -351,7 +351,7 @@ namespace msra { namespace strfun { // TODO: rename this
     {
         wchar_t * endptr;
         double value = wcstod(s.c_str(), &endptr);
-        if (*endptr) RuntimeError("todouble: invalid input string '%s'", s.c_str());
+        if (*endptr) RuntimeError("todouble: invalid input string '%ls'", s.c_str());
         return value;
     }
 
