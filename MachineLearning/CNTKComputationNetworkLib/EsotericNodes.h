@@ -611,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_strideDim == 0) // by row
             {
                 if (isFinalValidationPass && rows1 != cols0)
-                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_strideDim, cols0, rows1);
+                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 size_t T1 = rows0 / m_stride;
                 SetDims(T1, cols1);
             }
@@ -619,7 +619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else // by col
             {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
-                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_strideDim, cols0, rows1);
+                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 SetDims(rows0, cols1);
             }
             LinkToMBLayout(Inputs(1)->GetMBLayout());   // retains the layout of the right input

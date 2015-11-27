@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InitFromFile(initFromFilePath);
             }
             else
-                RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
+                RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -148,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numRows != nRows || numCols != nCols)
             {
                 RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                    m_nodeName.c_str(), reviseFromFilePath.c_str(), nRows, nCols, numRows, numCols);
+                    m_nodeName.c_str(), reviseFromFilePath.c_str(), (int)nRows, (int)nCols, (int)numRows, (int)numCols);
             }
 
             FunctionValues().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);

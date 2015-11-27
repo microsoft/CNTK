@@ -99,12 +99,14 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
+    <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="basetypes.h" />
     <ClInclude Include="biggrowablevectors.h" />
     <ClInclude Include="chunkevalsource.h" />
-    <ClInclude Include="fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="htkfeatio.h" />
     <ClInclude Include="HTKMLFReader.h" />
@@ -131,10 +133,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="fileutil.cpp" />
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="HTKMLFWriter.cpp" />

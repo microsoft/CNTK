@@ -670,7 +670,7 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-        labelMappingFile=SimpleMapping.txt
+        labelMappingFile="SimpleMapping.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -780,7 +780,7 @@ Simple_Demo_Output=[
 
 \begin_layout Plain Layout
 
-        labelMappingFile=SimpleMapping.txt
+        labelMappingFile="SimpleMapping.txt"
 \end_layout
 
 \begin_layout Plain Layout

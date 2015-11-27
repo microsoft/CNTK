@@ -11,16 +11,16 @@
 #ifndef CPUONLY
 
 #include "cublas_v2.h"
+#include "Basics.h"
+#include "GPUMatrix.h"
+#include "GPUMatrixCUDAKernels.cuh"
+#include "GPUSparseMatrix.h"
+#include "device_launch_parameters.h"
 #include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
-#include "device_launch_parameters.h"
-#include "GPUMatrix.h"
-#include "GPUMatrixCUDAKernels.cuh"
-#include "GPUSparseMatrix.h"
-#include <iostream> // for cout
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
@@ -721,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m = GetNumRows();
         size_t n = GetNumCols();
         if (m != n)
-            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m, n);
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", (int)m, (int)n);
 
         GPUMatrix<ElemType> diag(1, n, m_computeDevice);
 

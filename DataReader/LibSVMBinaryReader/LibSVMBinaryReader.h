@@ -7,11 +7,11 @@
 #pragma once
 #include "DataReader.h"
 #include "DataWriter.h"
-#include <string>
 #include "commandArgUtil.h"
+#include "RandomOrdering.h"
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
+#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -95,7 +95,7 @@ private:
     bool m_labelFirst;  // the label is the first element in a line
     bool m_partialMinibatch;    // a partial minibatch is allowed
     LabelKind m_labelType;  // labels are categories, create mapping table
-    msra::dbn::randomordering m_randomordering;   // randomizing class
+    RandomOrdering m_randomordering;   // randomizing class
     MBLayoutPtr m_pMBLayout;
 
     std::wstring m_labelsName;
@@ -137,7 +137,9 @@ private:
 
     virtual bool ReadRecord(size_t readSample);
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     virtual void Destroy();
     LibSVMBinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
     virtual ~LibSVMBinaryReader();

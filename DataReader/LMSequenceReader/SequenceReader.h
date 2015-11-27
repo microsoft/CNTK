@@ -11,10 +11,10 @@
 #include "DataWriter.h"
 #include "commandArgUtil.h"
 #include "SequenceParser.h"
+#include "RandomOrdering.h"
 #include <string>
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
 #include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -100,9 +100,8 @@ protected:
     bool   m_idx2probRead;
     std::wstring m_file; 
 public:
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-
+    using LabelType   = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
     map<string, int> word4idx;
     map<int, string> idx4word;
@@ -218,7 +217,9 @@ protected:
     bool SentenceEnd();
 
 public:
-    virtual void Init(const ConfigParameters& config);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     static void ReadClassInfo(const wstring & vocfile, int& class_size,
         map<string, int>& word4idx,
         map<int, string>& idx4word,
@@ -271,74 +272,71 @@ template<class ElemType>
 class BatchSequenceReader : public SequenceReader<ElemType>
 {
 public:
-	using LabelType = typename SequenceReader<ElemType>::LabelType;
-	using LabelIdType = typename SequenceReader<ElemType>::LabelIdType;
-	using LabelInfo = typename SequenceReader<ElemType>::LabelInfo;
-	using SequenceReader<ElemType>::m_cachingReader;
-	using SequenceReader<ElemType>::m_cachingWriter;
-	using SequenceReader<ElemType>::m_featuresName;
-	using SequenceReader<ElemType>::labelInfoMin;
-	using SequenceReader<ElemType>::labelInfoMax;
-	using SequenceReader<ElemType>::m_labelsName;
-	using SequenceReader<ElemType>::m_featureDim;
-	using SequenceReader<ElemType>::class_size;
-	using SequenceReader<ElemType>::m_labelInfo;
-	using SequenceReader<ElemType>::labelInfoIn;
-	using SequenceReader<ElemType>::nwords;
-	using SequenceReader<ElemType>::ReadClassInfo;
-	using SequenceReader<ElemType>::LoadLabelFile;
-	using SequenceReader<ElemType>::word4idx;
+    using LabelType = typename SequenceReader<ElemType>::LabelType;
+    using LabelIdType = typename SequenceReader<ElemType>::LabelIdType;
+    using LabelInfo = typename SequenceReader<ElemType>::LabelInfo;
+    using SequenceReader<ElemType>::m_cachingReader;
+    using SequenceReader<ElemType>::m_cachingWriter;
+    using SequenceReader<ElemType>::m_featuresName;
+    using SequenceReader<ElemType>::labelInfoMin;
+    using SequenceReader<ElemType>::labelInfoMax;
+    using SequenceReader<ElemType>::m_labelsName;
+    using SequenceReader<ElemType>::m_featureDim;
+    using SequenceReader<ElemType>::class_size;
+    using SequenceReader<ElemType>::m_labelInfo;
+    using SequenceReader<ElemType>::labelInfoIn;
+    using SequenceReader<ElemType>::nwords;
+    using SequenceReader<ElemType>::ReadClassInfo;
+    using SequenceReader<ElemType>::LoadLabelFile;
+    using SequenceReader<ElemType>::word4idx;
     using SequenceReader<ElemType>::idx4word;
     using SequenceReader<ElemType>::idx4cnt;
     using SequenceReader<ElemType>::mUnk;
     using SequenceReader<ElemType>::m_mbStartSample;
-	using SequenceReader<ElemType>::m_epoch;
-	using SequenceReader<ElemType>::m_totalSamples;
-	using SequenceReader<ElemType>::m_epochStartSample;
-	using SequenceReader<ElemType>::m_seqIndex;
-	using SequenceReader<ElemType>::m_readNextSampleLine;
-	using SequenceReader<ElemType>::m_readNextSample;
-	using SequenceReader<ElemType>::m_traceLevel;
-	using SequenceReader<ElemType>::m_featureCount;
-	using SequenceReader<ElemType>::m_endReached;
-//	using IDataReader<ElemType>::labelIn;
-//	using IDataReader<ElemType>::labelOut;
-	using SequenceReader<ElemType>::InitCache;
-	using SequenceReader<ElemType>::m_readerConfig;
-	using SequenceReader<ElemType>::ReleaseMemory;
-	using SequenceReader<ElemType>::m_featuresBuffer;
-	using SequenceReader<ElemType>::m_featuresBufferRow;
-	using SequenceReader<ElemType>::m_labelsBuffer;
-	using SequenceReader<ElemType>::m_labelsIdBuffer;
-//	using IDataReader<ElemType>::labelInfo;
-//	using SequenceReader<ElemType>::m_featuresBufferRowIndex;
-	using SequenceReader<ElemType>::m_labelsIdBufferRow;
-	using SequenceReader<ElemType>::m_labelsBlock2Id;
-	using SequenceReader<ElemType>::m_labelsBlock2UniqId;
-	using SequenceReader<ElemType>::m_id2classLocal;
-	using SequenceReader<ElemType>::m_classInfoLocal;
-	using SequenceReader<ElemType>::m_mbSize;
-	using SequenceReader<ElemType>::m_epochSize;
-	using SequenceReader<ElemType>::m_featureData;
-	using SequenceReader<ElemType>::labelInfoOut;
-	using SequenceReader<ElemType>::m_labelData;
-	using SequenceReader<ElemType>::m_labelIdData;
-	using SequenceReader<ElemType>::LMSetupEpoch;
-	using SequenceReader<ElemType>::m_clsinfoRead;
-	using SequenceReader<ElemType>::m_idx2clsRead;
-	using SequenceReader<ElemType>::m_featuresBufferRowIdx;
-	using SequenceReader<ElemType>::m_sequence;
-	using SequenceReader<ElemType>::idx4class;
-	using SequenceReader<ElemType>::m_indexer;
-	using SequenceReader<ElemType>::m_noiseSampler;
-	using SequenceReader<ElemType>::readerMode;
-	using SequenceReader<ElemType>::GetIdFromLabel;
-	using SequenceReader<ElemType>::GetInputToClass;
-	using SequenceReader<ElemType>::GetClassInfo;
+    using SequenceReader<ElemType>::m_epoch;
+    using SequenceReader<ElemType>::m_totalSamples;
+    using SequenceReader<ElemType>::m_epochStartSample;
+    using SequenceReader<ElemType>::m_seqIndex;
+    using SequenceReader<ElemType>::m_readNextSampleLine;
+    using SequenceReader<ElemType>::m_readNextSample;
+    using SequenceReader<ElemType>::m_traceLevel;
+    using SequenceReader<ElemType>::m_featureCount;
+    using SequenceReader<ElemType>::m_endReached;
+    //	using IDataReader<ElemType>::labelIn;
+    //	using IDataReader<ElemType>::labelOut;
+    using SequenceReader<ElemType>::InitCache;
+    using SequenceReader<ElemType>::m_readerConfig;
+    using SequenceReader<ElemType>::ReleaseMemory;
+    using SequenceReader<ElemType>::m_featuresBuffer;
+    using SequenceReader<ElemType>::m_featuresBufferRow;
+    using SequenceReader<ElemType>::m_labelsBuffer;
+    using SequenceReader<ElemType>::m_labelsIdBuffer;
+    //	using IDataReader<ElemType>::labelInfo;
+    //	using SequenceReader<ElemType>::m_featuresBufferRowIndex;
+    using SequenceReader<ElemType>::m_labelsIdBufferRow;
+    using SequenceReader<ElemType>::m_labelsBlock2Id;
+    using SequenceReader<ElemType>::m_labelsBlock2UniqId;
+    using SequenceReader<ElemType>::m_id2classLocal;
+    using SequenceReader<ElemType>::m_classInfoLocal;
+    using SequenceReader<ElemType>::m_mbSize;
+    using SequenceReader<ElemType>::m_epochSize;
+    using SequenceReader<ElemType>::m_featureData;
+    using SequenceReader<ElemType>::labelInfoOut;
+    using SequenceReader<ElemType>::m_labelData;
+    using SequenceReader<ElemType>::m_labelIdData;
+    using SequenceReader<ElemType>::LMSetupEpoch;
+    using SequenceReader<ElemType>::m_clsinfoRead;
+    using SequenceReader<ElemType>::m_idx2clsRead;
+    using SequenceReader<ElemType>::m_featuresBufferRowIdx;
+    using SequenceReader<ElemType>::m_sequence;
+    using SequenceReader<ElemType>::idx4class;
+    using SequenceReader<ElemType>::m_indexer;
+    using SequenceReader<ElemType>::m_noiseSampler;
+    using SequenceReader<ElemType>::readerMode;
+    using SequenceReader<ElemType>::GetIdFromLabel;
+    using SequenceReader<ElemType>::GetInputToClass;
+    using SequenceReader<ElemType>::GetClassInfo;
     using IDataReader<ElemType>::mBlgSize;
-    using IDataReader<ElemType>::mDoRandomize;
-
-
 
 private:
     size_t mLastProcssedSentenceId ; 
@@ -366,7 +364,6 @@ public:
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false; 
-        mDoRandomize = false; 
     }
     ~BatchSequenceReader() {
         if (m_labelTemp.size() > 0)
@@ -375,7 +372,9 @@ public:
             m_featureTemp.clear();
     };
    
-    void Init(const ConfigParameters& readerConfig);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     void Reset();
 
     /// return length of sentences size

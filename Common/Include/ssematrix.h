@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "Basics.h"
+#include "Platform.h"
 #include "simple_checked_arrays.h"  // ... for dotprod(); we can eliminate this I believe
 #include "ssefloat4.h"
 #include <stdexcept>
@@ -21,7 +23,10 @@
 #include "fileutil.h"   // for saving and reading matrices
 #include <limits>       // for NaN
 #include <malloc.h>
-#include "Platform.h"
+
+#ifdef min
+#undef min      // some garbage from some Windows header that conflicts with std::min()
+#endif
 
 namespace msra { namespace math {
 
@@ -52,7 +57,7 @@ protected:
     inline array_ref<float> col (size_t j) { return array_ref<float> (&p[locate(0,j)], numrows); }
     inline const_array_ref<float> col (size_t j) const { return const_array_ref<float> (&p[locate(0,j)], numrows); }
     void clear() { p = NULL; numrows = 0; numcols = 0; colstride = 0; }
-    void swap (ssematrixbase & other) { ::swap (p, other.p); ::swap (numrows, other.numrows); ::swap (numcols, other.numcols); ::swap (colstride, other.colstride); }
+    void swap (ssematrixbase & other) { std::swap (p, other.p); std::swap (numrows, other.numrows); std::swap (numcols, other.numcols); std::swap (colstride, other.colstride); }
     void move (ssematrixbase & other) { p = other.p; numrows = other.numrows; numcols = other.numcols; colstride = other.colstride; other.clear(); }
 
     inline const_array_ref<msra::math::float4> col4 (size_t j) const { return const_array_ref<msra::math::float4> ((const msra::math::float4*) &p[locate(0,j)], colstride/4); }
@@ -409,7 +414,7 @@ public:
         assert (i < rows() && j < cols());
         for (size_t n = 0; n < rows(); n ++)
         {
-            ::swap(p[locate (n, i)], p[locate (n, j)]);
+            std::swap(p[locate (n, i)], p[locate (n, j)]);
         }
     }
 
@@ -503,13 +508,13 @@ public:
         // loop over col stripes of V
         for (size_t j0 = 0; j0 < V.cols(); j0 += colstripewV)
         {
-            const size_t j1 = min (j0 + colstripewV, V.cols());
+            const size_t j1 = std::min (j0 + colstripewV, V.cols());
             // stripe of V is columns [j0,j1)
 
             // loop over row stripes of M
             for (size_t i0 = beginrow; i0 < endrow; i0 += rowstripehM)
             {
-                const size_t i1 = min (i0 + rowstripehM, endrow);
+                const size_t i1 = std::min (i0 + rowstripehM, endrow);
 
                 // loop over sub-ranges of the dot product (full dot product will exceed the L1 cache)
                 float patchbuffer[rowstripehM * colstripewV + 3];    // note: don't forget column rounding
@@ -518,7 +523,7 @@ public:
 
                 for (size_t k0 = 0; k0 < V.rows(); k0 += dotprodstep)
                 {
-                    const size_t k1 = min (k0 + dotprodstep, V.rows());
+                    const size_t k1 = std::min (k0 + dotprodstep, V.rows());
                     const bool first = k0 == 0;
                     //const bool last = k0 + dotprodstep >= V.rows();
 
@@ -838,7 +843,7 @@ public:
         // loop over stripes of V
         for (size_t j0 = 0; j0 < V.cols(); j0 += cacheablecolsV)
         {
-            const size_t j1 = min (j0 + cacheablecolsV, V.cols());
+            const size_t j1 = std::min (j0 + cacheablecolsV, V.cols());
             // loop over rows of result = rows of M = cols of Mt
             for (size_t i = i0; i < i1; i++)
             {
@@ -1222,7 +1227,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixfrombuffer(ssematrixfrombuffer && other) noexcept { move(other); }
+    ssematrixfrombuffer(ssematrixfrombuffer && other) noexcept { std::move(other); }
 };
 
 
@@ -1252,11 +1257,11 @@ public:
     }
 
     // only assignment is by rvalue reference
-    ssematrixstriperef & operator= (ssematrixstriperef && other) { move (other); }
+    ssematrixstriperef & operator= (ssematrixstriperef && other) { std::move (other); }
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixstriperef(ssematrixstriperef && other) noexcept { move(other); }
+    ssematrixstriperef(ssematrixstriperef && other) noexcept{ std::move(other); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }
@@ -1327,7 +1332,7 @@ public:
         const size_t totalelem = newcolstride * m;
         //fprintf (stderr, "resize (%d, %d) allocating %d elements\n", n, m, totalelem);
         float * pnew = totalelem > 0 ? new_sse<float> (totalelem) : NULL;
-        ::swap (this->p, pnew);
+        std::swap (this->p, pnew);
         delete_sse (pnew);    // pnew is now the old p
         this->numrows = n; this->numcols = m;
         this->colstride = newcolstride;
@@ -1410,7 +1415,7 @@ public:
         char namebuf[80];
         const char * nameread = fgetstring (f, namebuf);
         if (strcmp (name, nameread) != 0)
-            RuntimeError(string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
+            RuntimeError("unexpected matrix name tag '%s', expected '%s'", nameread, name);
         size_t n = fgetint (f);
         size_t m = fgetint (f);
         resize (n, m);
@@ -1423,14 +1428,15 @@ public:
         fcheckTag (f, "EMAT");
     }
 
+    // TODO: should this be a function template?
     void read (const HANDLE f, const char * name)
     {
         fcheckTag (f, "BMAT");
         char namebuf[80];
         const char * nameread = fgetstring (f, namebuf);
         if (strcmp (name, nameread) != 0)
-            RuntimeError(string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
-        size_t n = fgetint (f);
+            RuntimeError("unexpected matrix name tag '%s', expected '%s'", nameread, name);
+        size_t n = fgetint(f);
         size_t m = fgetint (f);
         resize (n, m);
         auto & us = *this;
@@ -1510,10 +1516,10 @@ static inline int floatcompare (const void * a, const void * b)
 
 // print model stats
 // Returns a pair (model params, non-null model params) for aggregate statistics printing.
-template<class M> pair<unsigned int,unsigned int> printmatvaluedistributionf (const char * name, const M & m)
+template<class M> std::pair<unsigned int,unsigned int> printmatvaluedistributionf (const char * name, const M & m)
 {
     const unsigned int num = (unsigned int) (m.rows() * m.cols());
-    if (num == 0) return make_pair (0UL, 0UL);
+    if (num == 0) return std::make_pair (0UL, 0UL);
     fprintf (stderr, "\n###### absolute weight value distribution %s (%d, %d) ######\n", name, m.rows(), m.cols());
 
     std::vector<float> vals (num);
@@ -1558,7 +1564,7 @@ template<class M> pair<unsigned int,unsigned int> printmatvaluedistributionf (co
     const size_t numparts = 100;
     for (size_t i=1; i<=numparts; i++)
     {
-        fprintf (stderr, "%.5f%% absolute values are under %.10f\n", i*100.0/numparts, vals[min((size_t)num-1,i*num/numparts)]);
+        fprintf (stderr, "%.5f%% absolute values are under %.10f\n", i*100.0/numparts, vals[std::min((size_t)num-1,i*num/numparts)]);
     }
     fprintf (stderr, "\n%.5f%% values are zero\n\n", 100.0*numzeros/num);
 #endif
@@ -1599,7 +1605,7 @@ template<class M> pair<unsigned int,unsigned int> printmatvaluedistributionf (co
     }
 #endif
 
-    return make_pair (num, num - numzeros);
+    return std::make_pair (num, num - numzeros);
 }
 #define printmatvaluedistribution(m) msra::math::printmatvaluedistributionf(#m, m)
 

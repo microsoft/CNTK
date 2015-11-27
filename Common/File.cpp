@@ -11,7 +11,6 @@
 
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
-#include "fileutil.h"
 #include "File.h"
 #include <string>
 #include <stdint.h>
@@ -628,7 +627,7 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
     string str;
     *this >> str;
     if (str != section)
-        RuntimeError(std::string("section name mismatch ") + str + " != " + section);
+        RuntimeError("section name mismatch %s != %s", str.c_str(), section.c_str());
     return *this;
 }
 
@@ -641,7 +640,7 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
     wstring str;
     *this >> str;
     if (str != section)
-        RuntimeError(std::string("section name mismatch ") + msra::strfun::utf8(str) + " != " + msra::strfun::utf8(section));
+        RuntimeError("section name mismatch %ls != %ls", str.c_str(), section.c_str());
     return *this;
 }
 

@@ -104,7 +104,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModel(). newly created model always becomes the new default.");
 
-        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     if (EqualInsensitive(name, "CreateModelWithName"))  //create a blank model
@@ -113,7 +113,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModelWithName(modelName). newly created model always becomes the new default.");
 
-        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadModel"))
@@ -124,7 +124,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         cn->LoadFromFile<ElemType>(params[0]);
         OverrideModelNameAndSetDefaultModel(cn);
     }
@@ -136,7 +136,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         cn->LoadFromFile<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
@@ -148,7 +148,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         string modelName = params[0];
         wstring ndlSnippetFileName = params[1];
-        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         NDLScript<ElemType> script;
         ConfigParameters ndlScript (script.ReadConfigFile(ndlSnippetFileName));
 
@@ -181,7 +181,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring fileName = params[0];
 
-        ComputationNetwork* cn = m_netNdlDefault->cn;
+        auto cn = m_netNdlDefault->cn;
         if (cn == NULL)
             RuntimeError("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
 
@@ -203,7 +203,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         NetNdl<ElemType>* netNdl = &m_mapNameToNetNdl[modelName];
         if (netNdl->cn == NULL)
-            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %ls.", modelName.c_str());
+            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %s.", modelName.c_str());
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
@@ -396,35 +396,35 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         
         std::string propName = params[1];
         MELProperty prop=melPropNull;
-        if (EqualInsensitive(propName, "ComputeGradient", "NeedsGradient"))
+        if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
         {
             prop = melPropComputeGradient;
         }
-        else if (EqualInsensitive(propName, "Feature"))
+        else if (EqualInsensitive(propName, "feature"))
         {
             prop = melPropFeature;
         }
-        else if (EqualInsensitive(propName, "Label"))
+        else if (EqualInsensitive(propName, "label"))
         {
             prop = melPropLabel;
         }
-        else if (EqualInsensitive(propName, "FinalCriterion", "Criteria"))
+        else if (EqualInsensitive(propName, "finalCriterion", "criterion") || EqualInsensitive(propName, "finalCriterion", "Criteria"))
         {
             prop = melPropFinalCriterion;
         }
-        else if (EqualInsensitive(propName, "MultiSeq", "ReqMultiSeqHandling"))
+        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling"))
         {
             fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
-        else if (EqualInsensitive(propName, "Evaluation", "Eval"))
+        else if (EqualInsensitive(propName, "evaluation", "eval"))
         {
             prop = melPropEvaluation;
         }
-        else if (EqualInsensitive(propName, "Output"))
+        else if (EqualInsensitive(propName, "output"))
         {
             prop = melPropOutput;
         }
-        else if (EqualInsensitive(propName, "Recurrent"))
+        else if (EqualInsensitive(propName, "recurrent"))
         {
             prop = melPropRecurrent;
         }
@@ -440,7 +440,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // this probabably won't do anything, but make sure all NDL has been created
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
-        ComputationNetwork* cn = netNdl->cn;
+        auto cn = netNdl->cn;
         for (auto & node : nodes)
         {
             switch(prop)
@@ -605,7 +605,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 continue;
             }
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
-            pParamNode->ReviseFromFile(msra::strfun::mbstowcs(paramPath));
+            pParamNode->ReviseFromFile(msra::strfun::utf16(paramPath));
             fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
         }
     }

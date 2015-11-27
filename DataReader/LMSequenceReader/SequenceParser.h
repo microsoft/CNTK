@@ -577,7 +577,7 @@ public:
         /// get line
         char ch2[MAXSTRING]; 
         if (mFile == nullptr)
-            Microsoft::MSR::CNTK::RuntimeError("File L%s to read can not be load\n", mFileName.c_str());
+            Microsoft::MSR::CNTK::RuntimeError("File %ls can not be loaded\n", mFileName.c_str());
 
         while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {

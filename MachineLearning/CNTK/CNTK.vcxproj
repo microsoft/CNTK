@@ -160,7 +160,6 @@
     <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h" />
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h" />
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
@@ -171,7 +170,6 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ProgressTracing.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
@@ -197,7 +195,6 @@
     <ClInclude Include="MPIWrapper.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h" />
-    <ClInclude Include="ExperimentalNetworkBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h" />
@@ -230,6 +227,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\Common\Include\ConcStack.h" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="..\..\Common\MPIWrapper.cpp" />
     <ClCompile Include="CNTK.cpp" />

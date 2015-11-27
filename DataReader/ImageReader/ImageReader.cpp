@@ -6,13 +6,16 @@
 
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
-#include <algorithm>
-#include <fstream>
-#include <sstream>
-#include <opencv2/opencv.hpp>
 #include "DataReader.h"
 #include "ImageReader.h"
 #include "commandArgUtil.h"
+#include "ScriptableObjects.h"
+#include "ConcStack.h"
+#include <algorithm>
+#include <fstream>
+#include <sstream>  // TODO: this should go away once we update the parameter parsing
+#include <unordered_map>
+#include <opencv2/opencv.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -27,7 +30,8 @@ static bool AreEqual(const std::string& s1, const std::string& s2)
 class ITransform
 {
 public:
-    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Init(const ConfigParameters & config) = 0;
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
     virtual void Apply(cv::Mat& mat) = 0;
 
     ITransform() {};
@@ -46,17 +50,24 @@ public:
     {
     }
 
-    void Init(const ConfigParameters& config)
+    template<class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType & config)
     {
-        m_cropType = ParseCropType(config("cropType", ""));
+        m_cropType = ParseCropType(config(L"cropType", ""));
 
-        std::stringstream ss{ config("cropRatio", "1") };
+#if 1
+        floatargvector cropRatio = config(L"cropRatio", "1.0");
+        m_cropRatioMin = cropRatio[0];
+        m_cropRatioMax = cropRatio[1];
+#else
+        std::stringstream ss{ config(L"cropRatio", "1") };
         std::string token{ "" };
         if (std::getline(ss, token, ':'))
         {
             m_cropRatioMin = std::stof(token);
             m_cropRatioMax = std::getline(ss, token, ':') ? std::stof(token) : m_cropRatioMin;
         }
+#endif
 
         if (!(0 < m_cropRatioMin && m_cropRatioMin <= 1.0) || 
             !(0 < m_cropRatioMax && m_cropRatioMax <= 1.0) ||
@@ -65,13 +76,15 @@ public:
             RuntimeError("Invalid cropRatio value, must be > 0 and <= 1. cropMin must <= cropMax");
         }
 
-        m_jitterType = ParseJitterType(config("jitterType", ""));
+        m_jitterType = ParseJitterType(config(L"jitterType", ""));
 
-        if (!config.ExistsCurrent("hflip"))
+        if (!config.ExistsCurrent(L"hflip"))
             m_hFlip = m_cropType == CropType::Random;
         else
-            m_hFlip = std::stoi(config("hflip")) != 0;
+            m_hFlip = std::stoi(config(L"hflip")) != 0;
     }
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -187,17 +200,18 @@ public:
         m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
     }
 
-    void Init(const ConfigParameters& config)
+    template<class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType & config)
     {
-        m_imgWidth = config("width");
-        m_imgHeight = config("height");
-        m_imgChannels = config("channels");
+        m_imgWidth = config(L"width");
+        m_imgHeight = config(L"height");
+        m_imgChannels = config(L"channels");
         size_t cfeat = m_imgWidth * m_imgHeight * m_imgChannels;
         if (cfeat == 0 || cfeat > std::numeric_limits<size_t>().max() / 2)
             RuntimeError("Invalid image dimensions.");
 
         m_interp.clear();
-        std::stringstream ss{ config("interpolations", "") };
+        std::stringstream ss{ config(L"interpolations", "") };
         for (std::string token = ""; std::getline(ss, token, ':');)
         {
             // Explicit cast required for GCC.
@@ -210,6 +224,8 @@ public:
         if (m_interp.size() == 0)
             m_interp.push_back(cv::INTER_LINEAR);
     }
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -251,7 +267,8 @@ public:
     {
     }
 
-    void Init(const ConfigParameters& config)
+    template<class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType & config)
     {
         std::wstring meanFile = config(L"meanFile", L"");
         if (meanFile.empty())
@@ -259,11 +276,10 @@ public:
         else
         {
             cv::FileStorage fs;
-            // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...
-            auto fname = msra::strfun::utf8(meanFile);
-            fs.open(fname, cv::FileStorage::READ);
+            // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...  [fseide] no, only OpenCV has this problem.
+            fs.open(msra::strfun::utf8(meanFile).c_str(), cv::FileStorage::READ);
             if (!fs.isOpened())
-                RuntimeError("Could not open file: " + fname);
+                RuntimeError("Could not open file: %ls", meanFile.c_str());
             fs["MeanImg"] >> m_meanImg;
             int cchan;
             fs["Channel"] >> cchan;
@@ -272,11 +288,13 @@ public:
             int ccol;
             fs["Col"] >> ccol;
             if (cchan * crow * ccol != m_meanImg.channels() * m_meanImg.rows * m_meanImg.cols)
-                RuntimeError("Invalid data in file: " + fname);
+                RuntimeError("Invalid data in file: %ls", meanFile.c_str());
             fs.release();
             m_meanImg = m_meanImg.reshape(cchan, crow);
         }
     }
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    //virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
     void Apply(cv::Mat& mat)
     {
@@ -308,15 +326,16 @@ ImageReader<ElemType>::~ImageReader()
 }
 
 template<class ElemType>
-void ImageReader<ElemType>::Init(const ConfigParameters& config)
+template<class ConfigRecordType>
+void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
 {
-    using SectionT = std::pair<std::string, ConfigParameters>;
+    using SectionT = std::pair<std::string, ConfigParameters>;      // TODO: does not work for BrainScript, since configs cannot be copied
     auto gettter = [&](const std::string& paramName) -> SectionT
     {
         auto sect = std::find_if(config.begin(), config.end(),
             [&](const std::pair<std::string, ConfigValue>& p) { return ConfigParameters(p.second).ExistsCurrent(paramName); });
         if (sect == config.end())
-            RuntimeError("ImageReader requires " + paramName + " parameter.");
+            RuntimeError("ImageReader requires %s parameter.", paramName.c_str());
         return{ (*sect).first, ConfigParameters((*sect).second) };
     };
 
@@ -337,10 +356,10 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     m_labName = msra::strfun::utf16(labSect.first);
     m_labDim = labSect.second("labelDim");
 
-    std::string mapPath = config("file");
+    std::string mapPath = config(L"file");
     std::ifstream mapFile(mapPath);
     if (!mapFile)
-        RuntimeError("Could not open " + mapPath + " for reading.");
+        RuntimeError("Could not open %s for reading.", mapPath.c_str());
 
     std::string line{ "" };
     for (size_t cline = 0; std::getline(mapFile, line); cline++)
@@ -353,7 +372,7 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
         files.push_back({ imgPath, std::stoi(clsId) });
     }
 
-    std::string rand = config("randomize", "auto");
+    std::string rand = config(L"randomize", "auto");
     if (AreEqual(rand, "none"))
         m_imgListRand = false;
     else if (!AreEqual(rand, "auto"))
@@ -362,6 +381,8 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     m_epochStart = 0;
     m_mbStart = 0;
 }
+template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
+//template<class ElemType> virtual void ImageReader<ElemType>::Init(const ScriptableObjects::IConfigRecord & config);
 
 template<class ElemType>
 void ImageReader<ElemType>::Destroy()

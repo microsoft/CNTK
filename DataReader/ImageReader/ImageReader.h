@@ -5,9 +5,11 @@
 //
 
 #pragma once
+
+#include "Basics.h"
+#include "DataReader.h"
 #include <random>
 #include <memory>
-#include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -26,7 +28,14 @@ public:
     ImageReader(ImageReader&&) = delete;
     ImageReader& operator=(ImageReader&&) = delete;
 
-    void Init(const ConfigParameters& config) override;
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+#if 1
+    // ImageReader does not follow standard ConfigParameters conventions, so it cannot be easily adapted to BrainScript.
+    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { NOT_IMPLEMENTED; }
+#else
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+#endif
     void Destroy() override;
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;

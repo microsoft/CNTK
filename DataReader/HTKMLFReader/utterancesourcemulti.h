@@ -54,12 +54,11 @@ class minibatchutterancesourcemulti : public minibatchsource
         size_t numframes() const { return parsedpath.numframes(); }
         wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
-#ifdef _WIN32
+#ifdef _MSC_VER
             static const wstring emptywstring;
             static const wregex deleteextensionre (L"\\.[^\\.\\\\/:]*$");
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
-#endif
-#ifdef __unix__
+#else
             return removeExtension(logicalpath());
 #endif
         }
@@ -372,7 +371,7 @@ public:
                     RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %ls\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
@@ -433,7 +432,7 @@ public:
                         //    RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                         //if (uttframes > frameref::maxframesperutterance)
                         //{
-                        //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                        //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %ls", i, uttframes, frameref::maxframesperutterance, key.c_str());
                         //    continue;
                         //}
 
@@ -449,13 +448,13 @@ public:
                         lacksmlf = (labelsiter == labels[0].end());
                         if (lacksmlf)
                             if (nomlf++ < 5)
-                                fprintf (stderr, " [no labels for  %S]", key.c_str());
+                                fprintf (stderr, " [no labels for  %ls]", key.c_str());
                         // check if lattice is available (when in lattice mode)
                         // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
                         const bool lackslat = !lattices.empty() && !lattices.haslattice (key); // ('true' if we have no lattices)
                         if (lackslat)
                             if (nolat++ < 5)
-                                fprintf (stderr, " [no lattice for %S]", key.c_str());
+                                fprintf (stderr, " [no lattice for %ls]", key.c_str());
                         // skip if either one is missing
                             if (lacksmlf || lackslat){
                                 uttisvalid[i] = false;
@@ -480,7 +479,7 @@ public:
                                 size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                                 if (labframes != uttframes)
                                 {
-                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", (int)labframes, (int)uttframes, key.c_str());
+                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %ls]", (int)labframes, (int)uttframes, key.c_str());
                                     nomlf++;
                                     uttisvalid[i] = false;
                                     //continue;   // skip this utterance at all
@@ -501,11 +500,11 @@ public:
                                         const auto & e = labseq[i];
                                         if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
                                         {
-                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                            RuntimeError("minibatchutterancesource: labels not in consecutive order MLF in label set: %ls", key.c_str());
                                         }
                                         if (e.classid >= udim[j])
                                         {
-                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim[j], key.c_str()));
+                                            RuntimeError("minibatchutterancesource: class id %d exceeds model output dimension %d in file %ls", (int)e.classid, (int)udim[j], key.c_str());
                                         }
                                         if (e.classid != (CLASSIDTYPE) e.classid)
                                             RuntimeError("CLASSIDTYPE has too few bits");
@@ -526,7 +525,7 @@ public:
                                     phoneboundaries[j]->push_back((HMMIDTYPE)-1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                        LogicError(msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                        LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
                                     assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                                 }
                             }
@@ -647,7 +646,7 @@ private:
     static void checkoverflow (size_t fieldval, size_t targetval, const char * fieldname)
     {
         if (fieldval != targetval)
-            RuntimeError(msra::strfun::strprintf ("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, targetval, fieldval));
+            RuntimeError("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (int)targetval, (int)fieldval);
     }
 
     // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')

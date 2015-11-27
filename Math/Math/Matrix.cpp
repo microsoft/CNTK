@@ -11,7 +11,7 @@
 #include "CPUSparseMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
-#include "fileutil.h"
+#include "File.h"
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
@@ -803,7 +803,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
-        ASSERT(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
+        assert(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
         // must already been allocated 
 
         DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
@@ -820,7 +820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
     {
-        ASSERT(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
+        assert(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
 
         DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
             this,

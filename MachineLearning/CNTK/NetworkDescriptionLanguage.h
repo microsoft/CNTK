@@ -108,12 +108,12 @@ template <typename ElemType>
 class NetNdl // class to associate a network with an NDLScript
 {
 public:
-    ComputationNetwork* cn;
+    ComputationNetworkPtr cn;
     NDLScript<ElemType>* ndl;  // NDLScript we are using for this network. NOTE: the actual script used 
     NDLNode<ElemType>* lastNode[ndlPassMax]; // last node we evaluated for each pass
     NetNdl(): cn(nullptr), ndl(nullptr) {ClearLastNodes();}
-    NetNdl(ComputationNetwork*p_cn): cn(p_cn), ndl(nullptr) {ClearLastNodes();}
-    NetNdl(ComputationNetwork*p_cn, NDLScript<ElemType>* p_ndl): cn(p_cn), ndl(p_ndl) {ClearLastNodes();}
+    NetNdl(ComputationNetworkPtr p_cn): cn(p_cn), ndl(nullptr) {ClearLastNodes();}
+    NetNdl(ComputationNetworkPtr p_cn, NDLScript<ElemType>* p_ndl): cn(p_cn), ndl(p_ndl) {ClearLastNodes();}
     ~NetNdl()
     {}
 
@@ -130,9 +130,8 @@ public:
     // NOTE: this deletes the network and the NDLScript, use with care!
     void Clear()
     {
-        delete cn;
+        cn.reset();
         delete ndl;
-        cn = nullptr;
         ndl = nullptr;
         ClearLastNodes();
     }
@@ -315,7 +314,7 @@ public:
         if (m_parameters.size() < m_paramMacro.size())
         {
             RuntimeError("Parameter mismatch, %d parameters provided, %d expected in call to %s\n",
-                m_parameters.size(),m_paramMacro.size(),m_value.c_str());
+                         (int)m_parameters.size(), (int)m_paramMacro.size(), m_value.c_str());
         }
 
         // assign the actual parameters in the script so we can execute it
@@ -385,7 +384,7 @@ private:
     bool m_noDefinitions; // no definitions can be made in this script, interpret all macro/function names as calls
     static NDLScript<ElemType> s_global; //("global"); // global script for storing macros and global nodes
     std::vector<NDLNode<ElemType>*> m_children; // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
-    ComputationNetwork* m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    ComputationNetworkPtr m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
     bool m_definingMacro; // currently defining a macro, flag to determine if we are defining or interpretting a macro call
 
 public:
@@ -518,7 +517,7 @@ public:
     }
 
     // SetComputationNetwork - set the computation network this NDL is associated with
-    void SetComputationNetwork(ComputationNetwork* cn)
+    void SetComputationNetwork(ComputationNetworkPtr cn)
     {
         m_cn = cn;
     }
@@ -811,6 +810,7 @@ public:
                 Trim(name);
                 std::string value = token.substr(foundEqual+1);
                 Trim(value);
+                TrimQuotes(value);  // strip enclosing quotes
                 
                 ndlNode = new NDLNode<ElemType>(name, value, this, ndlTypeOptionalParameter);
             }

@@ -557,7 +557,7 @@ private:
         std::vector<unsigned short> & getalignmentsbuffer() { allalignments.resize(alignoffsets.back()) ; return allalignments; }       // for retrieving it from the GPU
         const std::vector<unsigned short> & getalignmentsbuffer() const {
             if(allalignments.size() != alignoffsets.back() )
-                throw::runtime_error("getalignmentsbuffer: allalignments not allocated!\n");
+                RuntimeError("getalignmentsbuffer: allalignments not allocated!\n");
             return allalignments; }       // for retrieving it from the GPU
         size_t getalignbuffersize() const {return alignoffsets.back();}
     };
@@ -688,10 +688,10 @@ private:
                                    double & logEframescorrecttotal) const;
 public:
     // construct from a HTK lattice file
-    void fromhtklattice (const wstring & path, const std::unordered_map<std::string,size_t> & unitmap);
+    void fromhtklattice (const std::wstring & path, const std::unordered_map<std::string,size_t> & unitmap);
 
     // construct from an MLF file (numerator lattice)
-    void frommlf (const wstring & key, const std::unordered_map<std::string,size_t> & unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry,lattice::htkmlfwordsequence> & labels,
+    void frommlf (const std::wstring & key, const std::unordered_map<std::string,size_t> & unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry,lattice::htkmlfwordsequence> & labels,
                   const msra::lm::CMGramLM & lm, const msra::lm::CSymbolSet & unigramsymbols);
 
     // check consistency
@@ -851,7 +851,7 @@ public:
     {
         const size_t sz = freadtag (f, tag);
         if (expectedsize != SIZE_MAX && sz != expectedsize)
-            RuntimeError(std::string ("freadvector: malformed file, number of vector elements differs from head, for tag ") + tag);
+            RuntimeError("freadvector: malformed file, number of vector elements differs from head, for tag %s", tag);
         freadOrDie (v, sz, f);
     }
 
@@ -1000,7 +1000,7 @@ public:
 							const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, array_ref<size_t> uids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                             const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float> & transcriptunigrams = std::vector<float>()) const;
 
-    wstring key;        // (keep our own name (key) so we can identify ourselves for diagnostics messages)
+    std::wstring key;        // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t * getkey() const { return key.c_str(); }
 };
 
@@ -1032,7 +1032,7 @@ class archive
     {
         auto iter = symmap.find (key);
         if (iter == symmap.end())
-            RuntimeError(std::string ("getcachedidmap: symbol not found in user-supplied symbol map: ") + key);
+            RuntimeError("getcachedidmap: symbol not found in user-supplied symbol map: %s", key.c_str());
         return iter->second;
     }
     template<class SYMMAP> const symbolidmapping & getcachedidmap (size_t archiveindex, const SYMMAP & symmap/*[string] -> numeric id*/) const
@@ -1043,11 +1043,11 @@ class archive
             // get the symlist file
             const std::wstring symlistpath = archivepaths[archiveindex] + L".symlist";
             fprintf (stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
-            vector<char> textbuffer;
+            std::vector<char> textbuffer;
             auto lines = msra::files::fgetfilelines (symlistpath, textbuffer);
             // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
             idmap.reserve (lines.size() +1);    // last entry is a fake entry to return the /sp/ unit
-            string symstring, tosymstring;
+            std::string symstring, tosymstring;
             symstring.reserve (100); tosymstring.reserve (100);
             foreach_index (i, lines)
             {
@@ -1062,7 +1062,7 @@ class archive
                     symstring = sym;        // (reusing existing object to avoid malloc)
                     tosymstring = tosym;
                     if (getid (symmap, symstring) != getid (symmap, tosymstring))
-                        RuntimeError(std::string ("getcachedidmap: mismatching symbol id for ") + sym + " vs. " + tosym);
+                        RuntimeError("getcachedidmap: mismatching symbol id for %s vs. %s", sym, tosym);
                 }
                 else
                 {
@@ -1088,7 +1088,7 @@ class archive
 
     mutable size_t currentarchiveindex;             // which archive is open
     mutable auto_file_ptr f;                        // cached archive file handle of currentarchiveindex
-    unordered_map<std::wstring, latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
+    std::unordered_map<std::wstring, latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
 public:
     // construct = open the archive
     //archive() : currentarchiveindex (SIZE_MAX) {}
@@ -1127,12 +1127,12 @@ public:
             const char * line = toclines[i];
             const char * p = strchr (line, '=');
             if (p == NULL)
-                RuntimeError("open: invalid TOC line (no = sign): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no = sign): %s", line);
             const std::wstring key = msra::strfun::utf16 (std::string (line, p - line));
             p++;
             const char * q = strchr (p, '[');
             if (q == NULL)
-                RuntimeError("open: invalid TOC line (no [): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no [): %s", line);
             if (q != p)
             {
                 const std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
@@ -1140,7 +1140,7 @@ public:
                 archiveindex = getarchiveindex (archivepath);
             }
             if (archiveindex == SIZE_MAX)
-                RuntimeError("open: invalid TOC line (empty archive pathname): " + std::string (line));
+                RuntimeError("open: invalid TOC line (empty archive pathname): %s", line);
             char c;
             uint64_t offset;
 #ifdef _WIN32
@@ -1149,9 +1149,9 @@ public:
 
             if (sscanf (q, "[%" PRIu64 "]%c", &offset, &c) != 1)
 #endif
-                RuntimeError("open: invalid TOC line (bad [] expression): " + std::string (line));
+                RuntimeError("open: invalid TOC line (bad [] expression): %s", line);
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)
-                RuntimeError("open: TOC entry leads to duplicate key: " + std::string (line));
+                RuntimeError("open: TOC entry leads to duplicate key: %s", line);
         }
 
         // initialize symmaps  --alloc the array, but actually read the symmap on demand

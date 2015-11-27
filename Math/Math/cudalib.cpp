@@ -30,11 +30,7 @@ static int devicesallocated = -1;    // -1 means not initialized
 static void operator|| (cudaError_t rc, const char * msg)
 {
     if (rc != cudaSuccess)
-    {
-        char buf[1000];
-        sprintf(buf, "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
-        RuntimeError(buf);
-    }
+        RuntimeError("%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), (int)rc);
 }
 
 cudaStream_t GetCurrentStream() { return cudaStreamDefault; }

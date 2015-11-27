@@ -74,14 +74,14 @@
     <ClInclude Include="SparsePCReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="minibatchsourcehelpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

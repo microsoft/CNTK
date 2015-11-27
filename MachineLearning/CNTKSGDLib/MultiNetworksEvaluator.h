@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
     public:
-        MultiNetworksEvaluator(ComputationNetwork& net, const size_t numMBsToShowResult = 100, const int traceLevel = 0) : Base(net, numMBsToShowResult, traceLevel) { }
+        MultiNetworksEvaluator(ComputationNetworkPtr net, const size_t numMBsToShowResult = 100, const int traceLevel = 0) : Base(net, numMBsToShowResult, traceLevel) { }
         
         //returns error rate
         // This was a special early implementation of RNNs by emulating them as a DNN.
@@ -63,10 +63,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: can probably be removed.
         double EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, double &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
         {
-            std::vector<ComputationNodeBasePtr> & featureNodes = m_net.FeatureNodes();
-            std::vector<ComputationNodeBasePtr> & labelNodes = m_net.LabelNodes();
-            std::vector<ComputationNodeBasePtr> & criterionNodes = m_net.FinalCriterionNodes();
-            std::vector<ComputationNodeBasePtr> & evaluationNodes = m_net.EvaluationNodes();
+            std::vector<ComputationNodeBasePtr> & featureNodes = m_net->FeatureNodes();
+            std::vector<ComputationNodeBasePtr> & labelNodes = m_net->LabelNodes();
+            std::vector<ComputationNodeBasePtr> & criterionNodes = m_net->FinalCriterionNodes();
+            std::vector<ComputationNodeBasePtr> & evaluationNodes = m_net->EvaluationNodes();
 
             if (criterionNodes.size() == 0)
                 RuntimeError("No CrossEntropyWithSoftmax node found\n");
@@ -78,10 +78,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
             for (size_t i = 0; i < labelNodes.size(); i++)
                 inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
-            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceId());
+            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net->GetDeviceId());
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
-            m_net.StartEvaluateMinibatchLoop(criterionNodes, evaluationNodes);
+            m_net->StartEvaluateMinibatchLoop(criterionNodes, evaluationNodes);
 
             double epochEvalError = 0;
             double epochCrossEntropy = 0;
@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _MSC_VER
                 outputStream.open(output);
 #else
-                outputStream.open(charpath(output));    // GCC does not implement wide-char pathnames here
+                outputStream.open(wtocharpath(output).c_str());    // GCC does not implement wide-char pathnames here
 #endif
             }
 
@@ -117,9 +117,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     featureNodes[npos]->UpdateEvalTimeStamp();
                     labelNodes[npos]->UpdateEvalTimeStamp();
 
-                    m_net.Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
+                    m_net->Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
 
-                    m_net.Evaluate(evaluationNodes[npos]);
+                    m_net->Evaluate(evaluationNodes[npos]);
 
                     double mbCrossEntropy = (double)criterionNodes[npos]->Get00Element(); // criterionNode should be a scalar
                     epochCrossEntropy += mbCrossEntropy;
@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (outputStream.is_open())
                 {
                     //TODO: add support to dump multiple outputs
-                    ComputationNodePtr outputNode = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.OutputNodes()[0]);
+                    ComputationNodePtr outputNode = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->OutputNodes()[0]);
                     foreach_column(j, outputNode->FunctionValues())
                     {
                         foreach_row(i, outputNode->FunctionValues())
@@ -200,14 +200,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         only beam search decoding is applied to the last network
         */
         double EvaluateEncoderDecoderWithHiddenStates(
-            vector<ComputationNetwork*> nets,
+            vector<ComputationNetworkPtr> nets,
             vector<IDataReader<ElemType>*> dataReaders,
             const size_t mbSize,
             const size_t testSize = requestDataSize)
         {
             size_t iNumNets = nets.size();
 
-            ComputationNetwork* decoderNet = nullptr;
+            ComputationNetworkPtr decoderNet = nullptr;
             IDataReader<ElemType>* decoderDataReader = dataReaders[iNumNets - 1];
             decoderNet = nets[iNumNets - 1];
 
@@ -360,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This stuff must all be removed from SimpleEvaluator, as this is not simple at all!!
         void InitTrainEncoderDecoderWithHiddenStates(const ConfigParameters& readerConfig)
         {
-            ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
+            ConfigArray arrEncoderNodeNames = readerConfig(L"encoderNodes", "");
             vector<wstring> encoderNodeNames;
 
             m_lst_pair_encoder_decode_node_names.clear();;
@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            ConfigArray arrDecoderNodeNames = readerConfig("decoderNodes", "");
+            ConfigArray arrDecoderNodeNames = readerConfig(L"decoderNodes", "");
             vector<wstring> decoderNodeNames;
             if (arrDecoderNodeNames.size() > 0)
             {
@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EncodingEvaluateDecodingBeamSearch(
-            vector<ComputationNetwork*> nets,
+            vector<ComputationNetworkPtr> nets,
             vector<IDataReader<ElemType>*> readers,
             IDataWriter<ElemType>& dataWriter,
             const vector<wstring>& evalNodeNames,
@@ -409,7 +409,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Has to have at least two networks");
             }
 
-            ComputationNetwork* decoderNet = nets[iNumNets - 1];
+            ComputationNetworkPtr decoderNet = nets[iNumNets - 1];
             IDataReader<ElemType>* encoderDataReader = readers[iNumNets - 2];
             IDataReader<ElemType>* decoderDataReader = readers[iNumNets - 1];
             vector<ComputationNodeBasePtr> & decoderFeatureNodes = decoderNet->FeatureNodes();
@@ -422,7 +422,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //specify nodes to write to file
             std::vector<ComputationNodeBasePtr> writeNodes;
             for (int i = 0; i < writeNodeNames.size(); i++)
-                writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
+                writeNodes.push_back(m_net->GetNodeFromName(writeNodeNames[i]));
 
             //prepare features and labels
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
@@ -458,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*ptr)->SetNumParallelSequences(1);
             }
 
-            Matrix<ElemType> historyMat(m_net.GetDeviceId());
+            Matrix<ElemType> historyMat(m_net->GetDeviceId());
 
             bool bDecoding = true;
             while (bDecoding)
@@ -516,6 +516,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
                     (*ptr)->DataEnd(endDataSentence);
             }
+        }
+
+        template<class F>
+        static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+        {
+            return l.second > r.second;
         }
 
         bool GetCandidatesAtOneTimeInstance(const Matrix<ElemType>& score,
@@ -640,16 +646,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //specify output nodes and files
             std::vector<ComputationNodeBasePtr> outputNodes;
             for (int i = 0; i < outputNodeNames.size(); i++)
-                outputNodes.push_back(m_net.GetNodeFromName(outputNodeNames[i]));
+                outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
 
             //specify nodes to write to file
             std::vector<ComputationNodeBasePtr> writeNodes;
             for (int i = 0; i < writeNodeNames.size(); i++)
-                writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
+                writeNodes.push_back(m_net->GetNodeFromName(writeNodeNames[i]));
 
             //prepare features and labels
-            /*const*/ auto & featureNodes = m_net.FeatureNodes();
-            const auto & labelNodes = m_net.LabelNodes();
+            /*const*/ auto & featureNodes = m_net->FeatureNodes();
+            const auto & labelNodes = m_net->LabelNodes();
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
@@ -671,11 +677,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // note: GetMinibatchIntoNetwork() will also fetch the MBLayout although we don't need ithere. This should not hurt.
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
 
                 vector<size_t> best_path;
 
-                FindBestPath(&m_net, dataReader,
+                FindBestPath(m_net, dataReader,
                              dataWriter, outputNodes,
                              writeNodes, featureNodes,
                              beam, &inputMatrices, best_path);
@@ -704,7 +710,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "done decoding\n");
         }
 
-        void FindBestPath(ComputationNetwork* evalnet,
+        void FindBestPath(ComputationNetworkPtr evalnet,
                           IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter,
                           const std::vector<ComputationNodeBasePtr>& evalNodes,
                           const std::vector<ComputationNodeBasePtr>& outputNodes,
@@ -865,7 +871,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
             beam search decoder
             */
-        double FindBestPathWithVariableLength(ComputationNetwork* evalnet,
+        double FindBestPathWithVariableLength(ComputationNetworkPtr evalnet,
             size_t inputLength,
             IDataReader<ElemType>* dataReader,
             IDataWriter<ElemType>& dataWriter,

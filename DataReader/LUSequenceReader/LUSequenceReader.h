@@ -7,15 +7,15 @@
 #pragma once
 //#define LEAKDETECT
 
+#include "Basics.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "LUSequenceParser.h"
 #include "commandArgUtil.h" // for intargvector
+#include "ScriptableObjects.h"
 #include <string>
 #include <map>
 #include <vector>
-#include "minibatchsourcehelpers.h"
-
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -65,7 +65,7 @@ public:
 public:
     /// deal with OOV
     map<LabelType, LabelType> mWordMapping;
-    string mWordMappingFn;
+    wstring mWordMappingFn;
     LabelType mUnkStr;
 
 public:
@@ -172,6 +172,7 @@ protected:
 
 public:
     void Init(const ConfigParameters& ){};
+    void Init(const ScriptableObjects::IConfigRecord&){};
     void ChangeMaping(const map<LabelType, LabelType>& maplist,
         const LabelType& unkstr,
         map<LabelType, LabelIdType> & word4idx);
@@ -278,7 +279,9 @@ public:
 
     ~BatchLUSequenceReader();
    
-    void Init(const ConfigParameters& readerConfig);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
     void Reset();
 
     /// return length of sentences size
@@ -313,7 +316,8 @@ public:
         map<long, long>& idx4class,
         int & mNbrCls);
 
-    void LoadWordMapping(const ConfigParameters& readerConfig);
+    template<class ConfigRecordType>
+    void LoadWordMapping(const ConfigRecordType& config);
     bool CanReadFor(wstring nodeName);  /// return true if this reader can output for a node with name nodeName
 
     vector<size_t> ReturnToProcessId() { return mToProcess; }
@@ -345,6 +349,7 @@ public:
     vector<size_t> mSentenceLength;
     size_t mMaxSentenceLength;
     vector<int> mSentenceBeginAt;
+    const int NO_INPUT = -2;
     vector<int> mSentenceEndAt;
 
     MBLayoutPtr m_pMBLayout;
@@ -388,7 +393,9 @@ public:
 
     size_t GetNumParallelSequences();
 
-    void Init(const ConfigParameters& readerConfig);
+    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
+    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 
 public:
     void SetRandomSeed(int);

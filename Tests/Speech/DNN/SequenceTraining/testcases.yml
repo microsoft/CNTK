@@ -1,0 +1,32 @@
+dataDir: ../../Data
+tags:
+     # Note: Sequence training is currently not supported on the CPU
+     # running on every BVT job in 'S' (Speech) leg in Debug-GPU configuration:
+     - bvt-s  (flavor=='debug') and (device=='gpu')
+     # running GPU configuration on every Nightly job in 'S' leg
+     - nightly-s (device=='gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - ^Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - ^Finished Epoch[{{integer}} of {{integer}}]
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - EvalErrPerSample = {{float,tolerance=.25%}}
+      - Ave LearnRatePerSample = {{float,tolerance=0%}}
+
+  Per-minibatch training results must match:
+    patterns:
+      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=.2%}}
+

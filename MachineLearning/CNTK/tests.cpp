@@ -71,13 +71,13 @@ void TestBing(const ConfigParameters& config)
 #endif
 
 template <typename ElemType> void DoEval(const ConfigParameters& config);
-template <typename ElemType> void DoTrain(const ConfigParameters& config);
+template <class ConfigRecordType, typename ElemType> void DoTrain(const ConfigRecordType & config);
 
 template <typename ElemType>
 void TestMNist(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("mnistTrain"));
-    DoTrain<ElemType>(config);
+    DoTrain<ConfigParameters, ElemType>(config);
     ConfigParameters configTest (configBase("mnistTest"));
     DoEval<ElemType>(configTest);
 }
@@ -86,7 +86,7 @@ template <typename ElemType>
 void TestSpeech(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("speechTrain"));
-    DoTrain<ElemType>(config);
+    DoTrain<ConfigParameters, ElemType>(config);
     ConfigParameters configTest (configBase("speechTest"));
     DoEval<ElemType>(configTest);
 }
@@ -173,7 +173,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
 
         // get names of features and labels
         std::vector<std::wstring> files;
-        files.push_back(readerConfig("file"));
+        files.push_back(readerConfig(L"file"));
 
         // setup minibatch matrices
         Matrix<ElemType> featuresMatrix;
@@ -212,7 +212,7 @@ template <typename ElemType>
 void TestMacros(const ConfigParameters& configBase)
 {
     NDLScript<ElemType> script = configBase("ndlFull");
-    ComputationNetwork net;
+    ComputationNetworkPtr net = make_shared<ComputationNetwork>();
     SynchronousNodeEvaluator<ElemType> nodeEvaluator(net);
     script.Evaluate(nodeEvaluator, L"", ndlPassInitial);
 }

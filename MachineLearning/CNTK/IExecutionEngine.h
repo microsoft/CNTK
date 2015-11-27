@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class IExecutionEngine
     {
     public:
-        virtual ComputationNetwork & GetComputationNetwork() = 0;
+        virtual ComputationNetworkPtr GetComputationNetwork() = 0;
 
         virtual NDLNodeEvaluator<ElemType> & GetNodeEvaluator() = 0;
 
