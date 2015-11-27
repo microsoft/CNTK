@@ -396,35 +396,35 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         
         std::string propName = params[1];
         MELProperty prop=melPropNull;
-        if (EqualInsensitive(propName, "ComputeGradient", "NeedsGradient"))
+        if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
         {
             prop = melPropComputeGradient;
         }
-        else if (EqualInsensitive(propName, "Feature"))
+        else if (EqualInsensitive(propName, "feature"))
         {
             prop = melPropFeature;
         }
-        else if (EqualInsensitive(propName, "Label"))
+        else if (EqualInsensitive(propName, "label"))
         {
             prop = melPropLabel;
         }
-        else if (EqualInsensitive(propName, "FinalCriterion", "Criteria"))
+        else if (EqualInsensitive(propName, "finalCriterion", "criterion") || EqualInsensitive(propName, "finalCriterion", "Criteria"))
         {
             prop = melPropFinalCriterion;
         }
-        else if (EqualInsensitive(propName, "MultiSeq", "ReqMultiSeqHandling"))
+        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling"))
         {
             fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
-        else if (EqualInsensitive(propName, "Evaluation", "Eval"))
+        else if (EqualInsensitive(propName, "evaluation", "eval"))
         {
             prop = melPropEvaluation;
         }
-        else if (EqualInsensitive(propName, "Output"))
+        else if (EqualInsensitive(propName, "output"))
         {
             prop = melPropOutput;
         }
-        else if (EqualInsensitive(propName, "Recurrent"))
+        else if (EqualInsensitive(propName, "recurrent"))
         {
             prop = melPropRecurrent;
         }

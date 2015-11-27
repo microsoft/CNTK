@@ -194,7 +194,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
-		..\..\..\..\..\work\cntk-public\Tests\Speech\LSTM\lstm.bs = ..\..\..\..\..\work\cntk-public\Tests\Speech\LSTM\lstm.bs
+		Tests\Speech\LSTM\lstm.bs = Tests\Speech\LSTM\lstm.bs
+		Tests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\Speech\DNN\DiscriminativePreTraining\macros.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
@@ -379,11 +380,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelNoQuantization", "P
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DiscriminativePreTraining", "DiscriminativePreTraining", "{39B9BB97-D0E8-439A-8A1B-8DB8E7CF73C3}"
 	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\DNN\DiscriminativePreTraining\add_layer.mel = Tests\Speech\DNN\DiscriminativePreTraining\add_layer.mel
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.cpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.cpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.gpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.cpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt = Tests\Speech\DNN\DiscriminativePreTraining\baseline.windows.gpu.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config = Tests\Speech\DNN\DiscriminativePreTraining\cntk_dpt.config
+		Tests\Speech\DNN\DiscriminativePreTraining\dnn.txt = Tests\Speech\DNN\DiscriminativePreTraining\dnn.txt
+		Tests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt = Tests\Speech\DNN\DiscriminativePreTraining\dnn_1layer.txt
+		Tests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\Speech\DNN\DiscriminativePreTraining\macros.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\run-test = Tests\Speech\DNN\DiscriminativePreTraining\run-test
 		Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml = Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml
 	EndProjectSection
@@ -411,6 +416,20 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIFastReaderTests", "Tests
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceTraining", "SequenceTraining", "{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\DNN\SequenceTraining\add_layer.mel = Tests\Speech\DNN\SequenceTraining\add_layer.mel
+		Tests\Speech\DNN\SequenceTraining\baseline.gpu.txt = Tests\Speech\DNN\SequenceTraining\baseline.gpu.txt
+		Tests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt = Tests\Speech\DNN\SequenceTraining\baseline.windows.gpu.txt
+		Tests\Speech\DNN\SequenceTraining\cntk_sequence.config = Tests\Speech\DNN\SequenceTraining\cntk_sequence.config
+		Tests\Speech\DNN\SequenceTraining\dnn.txt = Tests\Speech\DNN\SequenceTraining\dnn.txt
+		Tests\Speech\DNN\SequenceTraining\dnn_1layer.txt = Tests\Speech\DNN\SequenceTraining\dnn_1layer.txt
+		Tests\Speech\DNN\SequenceTraining\macros.txt = Tests\Speech\DNN\SequenceTraining\macros.txt
+		Tests\Speech\DNN\SequenceTraining\replace_ce_with_sequence_criterion.mel = Tests\Speech\DNN\SequenceTraining\replace_ce_with_sequence_criterion.mel
+		Tests\Speech\DNN\SequenceTraining\run-test = Tests\Speech\DNN\SequenceTraining\run-test
+		Tests\Speech\DNN\SequenceTraining\testcases.yml = Tests\Speech\DNN\SequenceTraining\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -699,5 +718,6 @@ Global
 		{4701E678-5E6F-470D-B348-9CD1A2C095D1} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{B97BDF88-F6B5-4F3A-BD8E-45F787D0C3C3} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 	EndGlobalSection
 EndGlobal

@@ -15,7 +15,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-
     // ParseCommandLine - parse the command line parameters
     // argc - count of arguments
     // argv - array of argument parameters
@@ -113,10 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // Ensure that the same config file isn't included twice, by keeping track of the config
                         // files that have already been resolved in the resolvedPaths vector.
                         resolvedConfigFiles.push_back(filePath);
-                        newConfigString += ResolveIncludeStatements(
-                                               ReadConfigFile(filePath), 
-                                               resolvedConfigFiles
-                                           );
+                        newConfigString += ResolveIncludeStatements(ReadConfigFile(filePath), resolvedConfigFiles);
                     }
                     else
                     {
