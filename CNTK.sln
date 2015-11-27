@@ -432,6 +432,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SequenceTraining", "Sequenc
 		Tests\Speech\DNN\SequenceTraining\testcases.yml = Tests\Speech\DNN\SequenceTraining\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{76F9323D-34A1-43A5-A594-C4798931FF21}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Image\Data\labelsmap.txt = Tests\Image\Data\labelsmap.txt
+		Tests\Image\Data\Test.txt = Tests\Image\Data\Test.txt
+		Tests\Image\Data\Train.txt = Tests\Image\Data\Train.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{2A884EB5-037C-481E-8170-BCDC8B3EDD93}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Image\QuickE2E\baseline.linux.debug.gpu.txt = Tests\Image\QuickE2E\baseline.linux.debug.gpu.txt
+		Tests\Image\QuickE2E\baseline.linux.release.gpu.txt = Tests\Image\QuickE2E\baseline.linux.release.gpu.txt
+		Tests\Image\QuickE2E\baseline.windows.debug.cpu.txt = Tests\Image\QuickE2E\baseline.windows.debug.cpu.txt
+		Tests\Image\QuickE2E\baseline.windows.debug.gpu.txt = Tests\Image\QuickE2E\baseline.windows.debug.gpu.txt
+		Tests\Image\QuickE2E\baseline.windows.release.cpu.txt = Tests\Image\QuickE2E\baseline.windows.release.cpu.txt
+		Tests\Image\QuickE2E\baseline.windows.release.gpu.txt = Tests\Image\QuickE2E\baseline.windows.release.gpu.txt
+		Tests\Image\QuickE2E\cntk.config = Tests\Image\QuickE2E\cntk.config
+		Tests\Image\QuickE2E\Convolution.ndl = Tests\Image\QuickE2E\Convolution.ndl
+		Tests\Image\QuickE2E\Macros.ndl = Tests\Image\QuickE2E\Macros.ndl
+		Tests\Image\QuickE2E\run-test = Tests\Image\QuickE2E\run-test
+		Tests\Image\QuickE2E\testcases.yml = Tests\Image\QuickE2E\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -719,5 +743,8 @@ Global
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{B97BDF88-F6B5-4F3A-BD8E-45F787D0C3C3} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{BB8B9FC5-C4B3-477F-80E2-665DC8E431BD} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{8071EF60-30F7-4A77-81AA-ADCA0E18B1E3} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{76F9323D-34A1-43A5-A594-C4798931FF21} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
+		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 	EndGlobalSection
 EndGlobal
