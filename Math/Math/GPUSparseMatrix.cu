@@ -563,27 +563,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<ElemType>&& moveFrom)
     {
-        Clear();
-        m_computeDevice=moveFrom.m_computeDevice;
-        m_numRows=moveFrom.m_numRows;
-        m_numCols=moveFrom.m_numCols;
-        m_nz=moveFrom.m_nz;
-        m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
-        m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
-        m_pArray = moveFrom.m_pArray;
-        m_format = moveFrom.m_format;
-        m_externalBuffer = moveFrom.m_externalBuffer;
+        if (this != &moveFrom)
+        {
+            if (OwnBuffer())
+                Clear();  //always delete the data pointer since we will use the pointer from moveFrom
+            m_computeDevice = moveFrom.m_computeDevice;
+            m_numRows = moveFrom.m_numRows;
+            m_numCols = moveFrom.m_numCols;
+            m_nz = moveFrom.m_nz;
+            m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
+            m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
+            m_pArray = moveFrom.m_pArray;
+            m_format = moveFrom.m_format;
+            m_externalBuffer = moveFrom.m_externalBuffer;
 
-        m_matrixName=moveFrom.m_matrixName;
+            m_matrixName = moveFrom.m_matrixName;
 
-        m_blockSize = moveFrom.m_blockSize;
+            m_blockSize = moveFrom.m_blockSize;
 
-        m_rowToId = moveFrom.m_rowToId;
+            m_rowToId = moveFrom.m_rowToId;
 
-        m_tempHostBuffer = moveFrom.m_tempHostBuffer;
-        m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
+            m_tempHostBuffer = moveFrom.m_tempHostBuffer;
+            m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
 
-        moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice);
+            moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice);
+        }
 
         return *this;
     }
@@ -603,9 +607,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (OwnBuffer())
         {
             delete[] m_matrixName;
+            m_matrixName = nullptr;
+
             delete[](byte*)m_tempHostBuffer;
+            m_tempHostBuffer = nullptr;
+
             CUDA_CALL(cudaFree(m_pArray));
+            m_pArray = nullptr;
+
             CUDA_CALL(cudaFree(m_rowToId));
+            m_rowToId = nullptr;
+
             ZeroInit(m_format, m_computeDevice);
         }
     }
