@@ -118,8 +118,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void VerifySize(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
-                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+                LogicError("VerifySize: expected m_functionValues size %lu x %lu, but it is %lu x %lu",
+                rows, cols, GetNumRows(), GetNumCols());
         }
         void SetMatrixName(const wchar_t* s) 
         { 
