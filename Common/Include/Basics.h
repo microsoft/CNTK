@@ -317,7 +317,7 @@ namespace msra { namespace strfun { // TODO: rename this
         char * ep;          // will be set to point to first character that failed parsing
         double value = strtod(s, &ep);
         if (*s == 0 || *ep != 0)
-            RuntimeError("todouble: invalid input string");
+            RuntimeError("todouble: invalid input string '%s'", s);
         return value;
     }
 
@@ -333,7 +333,7 @@ namespace msra { namespace strfun { // TODO: rename this
 #if _MSC_VER > 1400 // VS 2010+
         size_t * idx = 0;
         value = std::stod(s, idx);
-        if (idx) RuntimeError("todouble: invalid input string");
+        if (idx) RuntimeError("todouble: invalid input string '%s'", s.c_str());
 #else
         char *ep = 0;   // will be updated by strtod to point to first character that failed parsing
         value = strtod(s.c_str(), &ep);
@@ -341,7 +341,7 @@ namespace msra { namespace strfun { // TODO: rename this
         // strtod documentation says ep points to first unconverted character OR 
         // return value will be +/- HUGE_VAL for overflow/underflow
         if (ep != s.c_str() + s.length() || value == HUGE_VAL || value == -HUGE_VAL)
-            RuntimeError("todouble: invalid input string");
+            RuntimeError("todouble: invalid input string '%s'", s.c_str());
 #endif
 
         return value;
@@ -351,7 +351,7 @@ namespace msra { namespace strfun { // TODO: rename this
     {
         wchar_t * endptr;
         double value = wcstod(s.c_str(), &endptr);
-        if (*endptr) RuntimeError("todouble: invalid input string");
+        if (*endptr) RuntimeError("todouble: invalid input string '%s'", s.c_str());
         return value;
     }
 

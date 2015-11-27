@@ -144,7 +144,7 @@ public:
             {
                 return std::numeric_limits<double>::infinity();
             }
-            RuntimeError("ConfigValue (double): invalid input string");
+            RuntimeError("ConfigValue (double): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -163,7 +163,7 @@ private:
         long value = strtol(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (long): invalid input string");
+            RuntimeError("ConfigValue (long): invalid input string '%s'", c_str());
         }
 
         return value;
@@ -176,7 +176,7 @@ private:
         unsigned long value = strtoul(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (unsigned long): invalid input string");
+            RuntimeError("ConfigValue (unsigned long): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -246,7 +246,7 @@ public:
         int64_t value = _strtoi64(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (int64_t): invalid input string");
+            RuntimeError("ConfigValue (int64_t): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -258,7 +258,7 @@ public:
 
         uint64_t value = _strtoui64(c_str(), &ep, 10);
         if (empty() || *ep != 0) {
-            RuntimeError("ConfigValue (uint64_t): invalid input string");
+            RuntimeError("ConfigValue (uint64_t): invalid input string '%s'", c_str());
         }
 
         return value;
