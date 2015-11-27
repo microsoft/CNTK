@@ -12,7 +12,7 @@ DNNLastLayer(hiddenDim, LabelDim, x) = [
     #W = Parameter(LabelDim, hiddenDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
     #b = Parameter(LabelDim, 1,         init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
     W = Parameter(LabelDim, hiddenDim);
-    b = Parameter(LabelDim 1,);
+    b = Parameter(LabelDim, 1);
     t = Times(W, x);
     z = Plus(t, b);
 ]
