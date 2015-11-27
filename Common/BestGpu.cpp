@@ -121,17 +121,31 @@ private:
 // 'auto' - automatically pick a single GPU based on ?BestGpu? score
 // 'cpu'  - use the CPU
 // 0      - or some other single number, use a single GPU with CUDA ID same as the number
+// This can only be called with the same parameters each time, and 'auto' is determined upon first call.
 static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 {
-    //recommend to use CPU. Adding -1 for backward compatability
+    // This can only be called with the same parameter.
+    static DEVICEID_TYPE lastDeviceId = DEVICEID_NOTYETDETERMINED;
+    if (lastDeviceId == DEVICEID_NOTYETDETERMINED)
+        lastDeviceId = deviceId;
+    else if (lastDeviceId != deviceId)
+        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)lastDeviceId, (int)deviceId, (int)DEVICEID_AUTO);
+
     if (deviceId == DEVICEID_AUTO)
     {
-        // GPU device to be auto-selected, so init our class
-        static BestGpu* g_bestGpu = nullptr;
-        if (g_bestGpu == nullptr)
-            g_bestGpu = new BestGpu();
-        deviceId = (DEVICEID_TYPE)
-            g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
+        static DEVICEID_TYPE bestDeviceId = DEVICEID_NOTYETDETERMINED;
+        if (bestDeviceId == DEVICEID_NOTYETDETERMINED)      // we only choose once
+        {
+            // GPU device to be auto-selected, so init our class
+            static BestGpu* g_bestGpu = nullptr;
+            if (g_bestGpu == nullptr)
+                g_bestGpu = new BestGpu();
+            deviceId = (DEVICEID_TYPE)
+                g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
+            bestDeviceId = deviceId;
+        }
+        else            // already chosen
+            deviceId = bestDeviceId;
     }
     // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
     return EnforceOneGPUOnly(deviceId);
@@ -141,8 +155,6 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 //#endif
 DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config)
 {
-    static DEVICEID_TYPE deviceId = CPUDEVICE;
-
     bool bLockGPU = config(L"lockGPU", true);
     // we need to deal with the old CNTK config semantics where 'deviceId' can be either a string or an int
     auto valpp = config.Find(L"deviceId");
@@ -168,8 +180,6 @@ DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config)
 //#endif
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
-    static DEVICEID_TYPE deviceId = CPUDEVICE;
-
     ConfigValue val = config("deviceId", "auto");
     bool bLockGPU = config(L"lockGPU", true);
 
