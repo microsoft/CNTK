@@ -361,9 +361,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_GPUMatrix = new GPUMatrix<ElemType>(numRows, numCols, m_preferredDeviceId);
                 SetDataLocation(GPU, DENSE);
             }
-        }
 
-        SetValue(0);
+            SetValue(0);
+        }
     }
 
     template<class ElemType>
@@ -1065,9 +1065,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
             this->m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix), 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
+            this->m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix),
+            NOT_IMPLEMENTED,
+            this->m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix)
             );
 
         return *this;
@@ -2859,6 +2859,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
 
         return *this;
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::InplaceTranspose()
+    {
+        if (IsEmpty())
+            return;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            this->m_GPUSparseMatrix->InplaceTranspose()
+            );
     }
 
     template<class ElemType>
