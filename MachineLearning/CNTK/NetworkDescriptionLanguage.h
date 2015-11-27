@@ -810,6 +810,7 @@ public:
                 Trim(name);
                 std::string value = token.substr(foundEqual+1);
                 Trim(value);
+                TrimQuotes(value);  // strip enclosing quotes
                 
                 ndlNode = new NDLNode<ElemType>(name, value, this, ndlTypeOptionalParameter);
             }

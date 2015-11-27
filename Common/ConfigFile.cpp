@@ -298,4 +298,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             str.erase(found+1);
     }
 
+    // TrimQuotes - trim surrounding quotation marks
+    // str - string to trim
+    void TrimQuotes(std::string& str)
+    {
+        if (str.empty())
+            return;
+        if (str.front() == '"' && str.back() == '"')
+            str = str.substr(1, str.size() - 2);
+    }
+
 }}}

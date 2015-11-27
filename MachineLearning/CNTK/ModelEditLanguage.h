@@ -576,6 +576,7 @@ public:
             Trim(name);
             value = token.substr(foundEqual+1);
             Trim(value);
+            TrimQuotes(value);
         }
         return optional;
     }

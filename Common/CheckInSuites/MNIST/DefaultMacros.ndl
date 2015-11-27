@@ -11,7 +11,7 @@
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }

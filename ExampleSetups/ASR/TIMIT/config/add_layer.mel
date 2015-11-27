@@ -1,8 +1,8 @@
-m1=LoadModel($CurrModel$, format=cntk)
+m1 = LoadModel("$currModel$", format="cntk")
 SetDefaultModel(m1)
-HDim=512
-L$NewLayer$=SBFF(L$CurrLayer$.S,HDim,HDim)
-SetInput(CE.*.T, 1, L$NewLayer$.S)
-SetInput(L$NewLayer$.*.T, 1, L$CurrLayer$.S)
-SaveModel(m1,$NewModel$, format=cntk)
-Dump(m1,$NewModel$.dump.txt)
+HDim = 512
+L$newLayer$ = SBFF(L$currLayer$.S, HDim, HDim)
+SetInput(CE.*.T, 1, L$newLayer$.S)
+SetInput(L$newLayer$.*.T, 1, L$currLayer$.S)
+SaveModel(m1, "$newModel$", format="cntk")
+Dump(m1, "$newModel$.dump.txt")
