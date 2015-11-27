@@ -1520,11 +1520,11 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & read
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (randomizeString == "None")
+        if (!_stricmp(randomizeString.c_str(), "none"))
         {
             ;
         }
-        else if (randomizeString == "Auto")
+        else if (!_stricmp(randomizeString.c_str(), "auto"))
         {
             ;
         }
