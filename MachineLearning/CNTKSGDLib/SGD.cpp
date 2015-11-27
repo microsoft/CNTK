@@ -46,13 +46,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return ParallelizationMethod::None;
-        else if (!_wcsicmp(s.c_str(), L"dataParallelSGD"))
+        else if (!_wcsicmp(s.c_str(), L"DataParallelSGD"))
             return ParallelizationMethod::DataParallelSGD;
-        else if (!_wcsicmp(s.c_str(), L"modelAveragingSGD"))
+        else if (!_wcsicmp(s.c_str(), L"ModelAveragingSGD"))
             return ParallelizationMethod::ModelAveragingSGD;
         else
             InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
-        }
+    }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
@@ -247,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_needAdaptRegularization = false;
 
         // BUGBUG: these are not passed to Init()
-        m_doUnitTest = configSGD(L"unittest", false);
+        m_doUnitTest = configSGD(L"unitTest", false);
 
         // parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
@@ -260,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
         {
             const ConfigRecordType & configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
-            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"None"));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
             m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
 
@@ -279,8 +279,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (configParallelTrain.Exists(L"ModelAveragingSGD") )
             {
                 const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-                m_nFramesBetweenMASync = configMASGD(L"SyncFrequencyInFrames", (size_t)40000);
-                m_iMASyncStatsTrace = configMASGD(L"MAPerfStats", (int)0);
+                m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
+                m_iMASyncStatsTrace = configMASGD(L"maPerfStats", (int)0);
             }
         }
     }

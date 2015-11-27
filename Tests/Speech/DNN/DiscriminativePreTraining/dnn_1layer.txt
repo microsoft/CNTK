@@ -19,9 +19,10 @@ DNN = [
     features = Input(featDim, tag=feature)
     labels = Input(LabelDim, tag=label)
 
-    globalMean   = Parameter(featDim,  1, init=fromFile, initFromFilePath=$GlobalMean$,   computeGradient=false) 
-    globalInvStd = Parameter(featDim,  1, init=fromFile, initFromFilePath=$GlobalInvStd$, computeGradient=false)
-    globalPrior  = Parameter(LabelDim, 1, init=fromFile, initFromFilePath=$GlobalPrior$,  computeGradient=false)
+    # TODO: not a good idea to use the same variable name for the pathname and the node
+    globalMean   = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalMeanPath$",   computeGradient=false) 
+    globalInvStd = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalInvStdPath$", computeGradient=false)
+    globalPrior  = Parameter(LabelDim, 1, init="fromFile", initFromFilePath="$globalPriorPath$",  computeGradient=false)
     logPrior = Log(globalPrior)
 
     # define network
@@ -33,6 +34,6 @@ DNN = [
     OL = DNNLastLayer(hiddenDim, LabelDim, HL1);
 
     cr = CrossEntropyWithSoftmax(labels, OL, tag=criterion);
-    err = ErrorPrediction(labels, OL, tag=Eval);
-    scaledLogLikelihood = Minus(OL, logPrior, tag=Output)
+    err = ErrorPrediction(labels, OL, tag=eval);
+    scaledLogLikelihood = Minus(OL, logPrior, tag=output)
 ]

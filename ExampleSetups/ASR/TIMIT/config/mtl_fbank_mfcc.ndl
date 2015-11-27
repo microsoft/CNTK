@@ -6,7 +6,7 @@ ndlMacroDefine=[
     #Sigmoid Base Feed Forward Two Inputs
     SBFF2(input1,rowCount,colCount1,input2,colCount2)
     {
-        B=Parameter(rowCount, init=fixedvalue, value=0)
+        B=Parameter(rowCount, init="fixedValue", value=0)
         W1=Parameter(rowCount, colCount1)
         W2=Parameter(rowCount, colCount2)
         T1=Times(W1,input1)

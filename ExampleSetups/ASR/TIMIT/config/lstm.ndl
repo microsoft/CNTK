@@ -28,10 +28,10 @@ ndlMacroDefine=[
         Wxf = Parameter(outputDim, inputDim)
         Wxc = Parameter(outputDim, inputDim)
 
-        bo = Parameter(outputDim, init=fixedvalue, value=-1.0)
-        bc = Parameter(outputDim, init=fixedvalue, value=0.0)
-        bi = Parameter(outputDim, init=fixedvalue, value=-1.0)
-        bf = Parameter(outputDim, init=fixedvalue, value=-1.0)
+        bo = Parameter(outputDim, init="fixedValue", value=-1.0)
+        bc = Parameter(outputDim, init="fixedValue", value=0.0)
+        bi = Parameter(outputDim, init="fixedValue", value=-1.0)
+        bf = Parameter(outputDim, init="fixedValue", value=-1.0)
 
         Whi = Parameter(outputDim, outputDim)
         Wci = Parameter(outputDim)
