@@ -509,6 +509,56 @@ namespace Microsoft
                     }
                 }
 
+                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop)
+                {
+                    const int inChannels = 50653;
+                    const int inWidth = 10;
+                    const int inHeight = 1;
+                    const int batchSize =20;
+                    const int kernelWidth = 3;
+                    const int kernelHeight = inHeight;
+                    const int horizontalSubsample = 1;
+                    const int verticalSubsample = 1;
+                    bool zeroPadding = false;
+                    const int outChannels = 300;
+                    const int outWidth = zeroPadding ? inWidth : (inWidth >= kernelWidth ? 1 + (inWidth - kernelWidth) / horizontalSubsample : 0);
+                    const int outHeight = inHeight;
+                    const int packedInputRows = kernelWidth * kernelHeight * inChannels;
+                    const int packedInputColsPerSample = outWidth * outHeight;
+                    const float randomInitLowerBound = -1.0f;
+                    const float randomInitUpperBound = 1.0f;
+                    Matrix<float> outputGradientSubBatch = Matrix<float>::RandomUniform(outChannels, batchSize*outWidth, randomInitLowerBound, randomInitUpperBound, c_deviceIdZero);
+                    Matrix<float> inputSubBatch = Matrix<float>::RandomUniform(inChannels*inWidth, batchSize, randomInitLowerBound, randomInitUpperBound, c_deviceIdZero);
+                    Matrix<float> tempMatrix(1, 1, c_deviceIdZero);
+                    Matrix<float> inputGradientValues1 = Matrix<float>::Zeros(outChannels, inChannels*kernelWidth, c_deviceIdZero);
+                    Matrix<float> inputGradientValues2 = Matrix<float>::Zeros(outChannels, inChannels*kernelWidth, c_deviceIdZero);
+
+
+                    // Baseline
+                    tempMatrix.Resize(packedInputRows, packedInputColsPerSample * batchSize);
+                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                        inWidth, inHeight, inChannels, outWidth, outHeight, outChannels,
+                        kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
+                    Matrix<float>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues1);
+
+
+                    // Optimized code path for 1-D convolution on GPU + Sparse
+                    Matrix<float> inputSubBatchSparse(inputSubBatch.GetNumRows(), inputSubBatch.GetNumCols(), c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                    Matrix<float> inputSubBatchReordered(batchSize * inWidth, inChannels, c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+
+                    inputSubBatch.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, true);
+                    inputSubBatchSparse.SetValue(inputSubBatch);
+                    inputSubBatchSparse.InplaceTranspose();
+                    inputSubBatchSparse.Reshape(batchSize * inWidth, inChannels);
+                    Matrix<float>::TensorShuffleScaleAndAdd(0.0f, inputSubBatchSparse, 1, batchSize, 1, inWidth, inChannels, 1.0f, inputSubBatchReordered, inputSubBatchReordered);
+                    inputGradientValues2.Reshape(inputGradientValues2.GetNumRows() * inputGradientValues2.GetNumCols() / inChannels, inChannels);
+                    Matrix<float>::ConvolveAndWeightedAdd(1, outputGradientSubBatch, false, inputSubBatchReordered, false, 1, inputGradientValues2,
+                        batchSize, horizontalSubsample, zeroPadding, false);
+                    inputGradientValues2.Reshape(outChannels, inputGradientValues2.GetNumRows() * inputGradientValues2.GetNumCols() / outChannels);
+
+                    BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE2));
+                }
+
                 BOOST_AUTO_TEST_CASE(GPUSSparseMatrixReshape)
                 {
                     const int oldRowCount = 10;

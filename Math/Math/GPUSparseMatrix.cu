@@ -655,7 +655,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int blocksPerGrid = (int)ceil(1.0*numCols/ threadsPerBlock);
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _reshape<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+            _reshape<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
                 m_numRows,                  // old row count
                 m_numCols,                  // old col count
                 numRows,                    // new row count
@@ -974,9 +974,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
-        if (!c.OwnBuffer())
-            LogicError("Cannot modify externally managed matrix");
-
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
 
@@ -1015,7 +1012,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
                 cudaEvent_t done = nullptr;
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-                _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
                     m,          // rowDense
                     k,          // colDense
                     n,          // colSparse
@@ -1048,7 +1045,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
                 for (int rowInB = 0; rowInB < l; rowInB++)
                 {
-                    _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                    _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
                         m,          // rowDense
                         k,          // colDense
                         n,          // colSparse
@@ -1108,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         CUDA_LONG N = (CUDA_LONG)c.GetNumCols();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
-        _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
+        _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
             reinterpret_cast<const ElemType*>(a.NzValues()),  // source nz values
             a.RowLocation(),
             a.ColLocation(),
