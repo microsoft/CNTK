@@ -328,11 +328,11 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (randomizeString == "None")
+        if (!_stricmp(randomizeString.c_str(), "none"))
         {
             m_randomizeRange = randomizeNone;
         }
-        else if (randomizeString == "Auto")
+        else if (!_stricmp(randomizeString.c_str(), "auto"))
         {
             m_randomizeRange = randomizeAuto;
         }
@@ -347,8 +347,8 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     }
 
     // determine if we partial minibatches are desired
-    std::string minibatchMode(readerConfig(L"minibatchMode","Partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
+    std::string minibatchMode(readerConfig(L"minibatchMode","partial"));
+    m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"partial");
 
     // get start and dimensions for labels and features
     size_t startLabels = configLabels(L"start", (size_t)0);

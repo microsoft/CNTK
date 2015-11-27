@@ -246,11 +246,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (readerConfig.Exists(L"randomize"))
             {
                 const std::string& randomizeString = readerConfig(L"randomize");
-                if (randomizeString == "None")
+                if (!_stricmp(randomizeString.c_str(), "none"))
                 {
                     randomize = randomizeNone;
                 }
-                else if (randomizeString == "Auto")
+                else if (!_stricmp(randomizeString.c_str(), "auto"))
                 {
                     randomize = randomizeAuto;
                 }

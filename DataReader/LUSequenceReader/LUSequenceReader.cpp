@@ -445,11 +445,11 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
     if (readerConfig.Exists(L"randomize"))
     {
         string randomizeString = readerConfig(L"randomize");
-        if (randomizeString == "None")
+        if (!_stricmp(randomizeString.c_str(), "none"))
         {
             ;
         }
-        else if (randomizeString == "Auto" || randomizeString == "True")
+        else if (!_stricmp(randomizeString.c_str(), "auto") || randomizeString == "True")
         {
             mRandomize = true;
         }
