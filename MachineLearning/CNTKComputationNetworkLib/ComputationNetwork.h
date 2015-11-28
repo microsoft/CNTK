@@ -20,7 +20,6 @@
 //     EvaluateThisNode()           -> ForwardProp()        // the familiar names
 //     ComputeInputPartial()        -> BackpropTo()
 //     OnEvaluateBeginIteration()   -> BeginForwardProp()   // and similar functions likewise
-//     m_children                   -> m_inputs             // likewise related functions
 //     Inputs()                     -> Input()              // or In()? or GetInput()?
 //     Children()                   -> Inputs()
 //     ChildrenSize()               -> NumInputs()
@@ -573,7 +572,7 @@ public:
     void ClearCaches()
     {
         m_built.clear();
-        m_inputs.clear();
+        m_inputValues.clear();
         m_learnableParameters.clear();
         ClearCalcOrderCaches();
     }
@@ -594,7 +593,7 @@ public:
     {
         if (bNoBuild == false)
             BuildAndValidateSubNetwork(rootNode);
-        return m_inputs[rootNode];
+        return m_inputValues[rootNode];
     }
 
     std::list<ComputationNodeBasePtr>& LearnableNodes(const ComputationNodeBasePtr& rootNode)
@@ -990,7 +989,7 @@ private:    // TODO: make all private that can be made private
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
     std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_cachedOuterLoopNodes;
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes feeding into out node
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;                 // [out node] -> all input nodes feeding into out node
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node
 
     // pool for matrices that can be shared across nodes

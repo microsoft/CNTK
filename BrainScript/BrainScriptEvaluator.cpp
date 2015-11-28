@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
         // inputs and output
-        vector<ComputationNodePtr> m_children;  // these are the inputs
+        vector<ComputationNodePtr> m_inputs;  // these are the inputs
         MatrixPtr m_functionValue;              // this is the result
 
         // other
@@ -183,29 +183,29 @@ namespace Microsoft { namespace MSR { namespace BS {
 
         virtual void AttachInputs(ComputationNodePtr arg)
         {
-            m_children.resize(1);
-            m_children[0] = arg;
+            m_inputs.resize(1);
+            m_inputs[0] = arg;
         }
         virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
         {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
+            m_inputs.resize(2);
+            m_inputs[0] = leftNode;
+            m_inputs[1] = rightNode;
         }
         virtual void AttachInputs(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
         {
-            m_children.resize(3);
-            m_children[0] = arg1;
-            m_children[1] = arg2;
-            m_children[2] = arg3;
+            m_inputs.resize(3);
+            m_inputs[0] = arg1;
+            m_inputs[1] = arg2;
+            m_inputs[2] = arg3;
         }
         void AttachInputs(vector<ComputationNodePtr> && inputs, size_t num = 0/*0 means all OK*/)
         {
             if (num != 0 && inputs.size() != num)
                 LogicError("AttachInputs: called with incorrect number of arguments");
-            m_children = inputs;
+            m_inputs = inputs;
         }
-        const std::vector<ComputationNodePtr> & GetChildren() const { return m_children; }
+        const std::vector<ComputationNodePtr> & GetChildren() const { return m_inputs; }
 
         /*HasToString::*/ wstring ToString() const
         {
@@ -213,12 +213,12 @@ namespace Microsoft { namespace MSR { namespace BS {
             wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
             if (!m_tag.empty())
                 result += L" {tag: " + m_tag + L"}";
-            if (m_children.empty()) result.append(L"()");
+            if (m_inputs.empty()) result.append(L"()");
             else
             {
                 wstring args;
                 bool first = true;
-                for (auto & child : m_children)
+                for (auto & child : m_inputs)
                 {
                     if (first)
                         first = false;

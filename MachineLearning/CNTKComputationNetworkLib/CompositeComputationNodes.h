@@ -114,13 +114,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = c1;
-        //    m_children[1] = c2;
-        //}
-
     public:
         virtual bool UnitTest() {
             size_t nT = 3;
