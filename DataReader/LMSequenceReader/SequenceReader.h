@@ -336,7 +336,7 @@ public:
     using SequenceReader<ElemType>::GetIdFromLabel;
     using SequenceReader<ElemType>::GetInputToClass;
     using SequenceReader<ElemType>::GetClassInfo;
-    using IDataReader<ElemType>::mBlgSize;
+    using IDataReader<ElemType>::mRequestedNumParallelSequences;
 
 private:
     size_t mLastProcssedSentenceId ; 
@@ -360,17 +360,11 @@ public:
     BatchSequenceReader() : m_pMBLayout(make_shared<MBLayout>())
     {
         mLastProcssedSentenceId  = 0;
-        mBlgSize = 1;
+        mRequestedNumParallelSequences = 1;
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false; 
     }
-    ~BatchSequenceReader() {
-        if (m_labelTemp.size() > 0)
-            m_labelTemp.clear();
-        if (m_featureTemp.size() > 0)
-            m_featureTemp.clear();
-    };
    
     template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
     virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
