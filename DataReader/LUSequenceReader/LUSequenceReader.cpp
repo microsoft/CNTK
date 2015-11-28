@@ -59,7 +59,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     vin.open(wtocharpath(vocfile), wifstream::in);
 #endif
     if (!vin.good())
-        LogicError("LUSequenceReader cannot open %ls\n", vocfile);
+        LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
     wstring wstr = L" ";
     long b = 0;
