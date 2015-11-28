@@ -302,22 +302,4 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
 }
 #endif
 
-#ifdef _WIN32
-// ----------------------------------------------------------------------------
-// frequently missing Win32 functions
-// ----------------------------------------------------------------------------
-
-// strerror() for Win32 error codes
-static inline std::wstring FormatWin32Error(DWORD error)
-{
-	wchar_t buf[1024] = { 0 };
-	::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, "", error, 0, buf, sizeof (buf) / sizeof (*buf) - 1, NULL);
-	std::wstring res(buf);
-	// eliminate newlines (and spaces) from the end
-	size_t last = res.find_last_not_of(L" \t\r\n");
-	if (last != std::string::npos) res.erase(last + 1, res.length());
-	return res;
-}
-#endif // _WIN32
-
 #endif    // _BASETYPES_
