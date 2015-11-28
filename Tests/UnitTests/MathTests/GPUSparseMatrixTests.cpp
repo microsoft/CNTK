@@ -32,7 +32,7 @@ namespace Microsoft
 
 				BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-					BOOST_AUTO_TEST_CASE(GPUSparseMatrixConstructorsAndInitializers)
+					BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixConstructorsAndInitializers, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> m;
 					BOOST_CHECK(m.IsEmpty());
@@ -53,7 +53,7 @@ namespace Microsoft
 					BOOST_CHECK(!m2.IsEmpty());
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseMatrixScaleAndAdd)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixScaleAndAdd, RandomSeedFixture)
 				{
 					const int m = 4;
 					const int n = 5;
@@ -89,13 +89,13 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseDensePlusSparse)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseDensePlusSparse, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> sparseMatrix;
 
 					sparseMatrix.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
 
-					GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -2, 45);
+					GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -2, 45, IncrementCounter());
 					GPUMatrix<float> resultMatrix(denseMatrixB.GetNumRows(), denseMatrixB.GetNumCols(), c_deviceIdZero);
 
 					const float alpha = 0.53f;
@@ -107,12 +107,12 @@ namespace Microsoft
 					BOOST_CHECK(denseMatrixB.IsEqualTo(resultMatrix, c_epsilonFloatE5));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseElementwiseTimesDense)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseElementwiseTimesDense, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> lhs;
 					lhs.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
 
-					const GPUMatrix<float> rhs = GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -2, 45);
+					const GPUMatrix<float> rhs = GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -2, 45, IncrementCounter());
 
 					const GPUMatrix<float> product = GPUSparseMatrix<float>::ElementProductOf(lhs, rhs);
 
@@ -122,7 +122,7 @@ namespace Microsoft
 					BOOST_CHECK(product.IsEqualTo(denseProduct));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseTimesDense)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseTimesDense, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> lhs;
 					BOOST_CHECK(lhs.IsEmpty());
@@ -149,7 +149,7 @@ namespace Microsoft
 #if 0
 // TODO commented temporarily, this test (or underlying code) needs fixes
 
-				BOOST_AUTO_TEST_CASE(GPUDenseTimesSparse)
+				BOOST_FIXTURE_TEST_CASE(GPUDenseTimesSparse, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> sparseMatrixA(matrixFormatSparseCSR, 0);
 					BOOST_CHECK(sparseMatrixA.IsEmpty());
@@ -175,7 +175,7 @@ namespace Microsoft
 					GPUSparseMatrix<float>::Multiply(denseTransposeA, sparseMatrixA, cres1);
 					BOOST_CHECK(cres1.IsEqualTo(cet1));
 
-					const GPUMatrix<float> matrixB = GPUMatrix<float>::RandomUniform(c_rowCount + c_colCount, c_rowCount, c_deviceIdZero, -100, 100, 0);
+					const GPUMatrix<float> matrixB = GPUMatrix<float>::RandomUniform(c_rowCount + c_colCount, c_rowCount, c_deviceIdZero, -100, 100, IncrementCounter());
 					GPUMatrix<float> matrixC(c_size, c_colCount, c_deviceIdZero);
 					GPUSparseMatrix<float>::Multiply(matrixB, sparseMatrixA, matrixC); // C=BA
 
@@ -188,7 +188,7 @@ namespace Microsoft
 					BOOST_CHECK(twiceTransposeC.IsEqualTo(matrixC, c_epsilonFloatE4));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseTimesSparse)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseTimesSparse, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> matrixA;
 					BOOST_CHECK(matrixA.IsEmpty());
@@ -208,7 +208,7 @@ namespace Microsoft
 
 #endif
 
-				BOOST_AUTO_TEST_CASE(GPUSparseElementWise)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseElementWise, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> matrixA;
 					BOOST_CHECK(matrixA.IsEmpty());
@@ -236,7 +236,7 @@ namespace Microsoft
 					delete[] jj;
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseIsEqual)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseIsEqual, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> firstMatrix;
 					firstMatrix.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
@@ -249,7 +249,7 @@ namespace Microsoft
 					BOOST_CHECK(!emptyMatrix.IsEqualTo(firstMatrix));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseDenseConversions)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseDenseConversions, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> sparseMatrixA;
 					BOOST_CHECK(sparseMatrixA.IsEmpty());
@@ -299,7 +299,7 @@ namespace Microsoft
 #if 0
 // TODO commented temporarily
 
-				BOOST_AUTO_TEST_CASE(GPUSparseTranspose)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseTranspose, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> sparseMatrix;
 					BOOST_CHECK(sparseMatrix.IsEmpty());
@@ -324,7 +324,7 @@ namespace Microsoft
 
 #endif
 
-				BOOST_AUTO_TEST_CASE(GPUSparseNormTests)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseNormTests, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> matrix;
 					BOOST_CHECK(matrix.IsEmpty());
@@ -340,13 +340,13 @@ namespace Microsoft
 					BOOST_CHECK_EQUAL(45, n1);
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUSparseMatrixInnerProduct)
+				BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixInnerProduct, RandomSeedFixture)
 				{
 					GPUSparseMatrix<float> matrixOp1;
 					BOOST_CHECK(matrixOp1.IsEmpty());
 					matrixOp1.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
 
-					const GPUMatrix<float> matrixOp2(GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -3, 4));
+					const GPUMatrix<float> matrixOp2(GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -3, 4, IncrementCounter()));
 					const float x = GPUSparseMatrix<float>::InnerProductOfMatrices(matrixOp1, matrixOp2);
 					const float y = GPUMatrix<float>::InnerProductOfMatrices(matrixOp1.CopyToDenseMatrix(), matrixOp2);
 					BOOST_CHECK(fabsf(x - y) < c_epsilonFloatE5);
@@ -355,7 +355,7 @@ namespace Microsoft
 #if 0
 // TODO commented temporarily
 
-                BOOST_AUTO_TEST_CASE(GPUSparseMatrixColumnSlice)
+                BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixColumnSlice, RandomSeedFixture)
 				{
 					float values[6] = { 1, 4, 2, 5, 3, 6 };
 					GPUMatrix<float> denseA(2, 3, c_deviceIdZero, values, MatrixFlags::matrixFlagNormal);
@@ -376,7 +376,7 @@ namespace Microsoft
 
 #endif
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseMatrixCopyColumnSliceToDense)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixCopyColumnSliceToDense, RandomSeedFixture)
 				{
 					float values[6] = { 1, 4, 2, 5, 3, 6 };
 					GPUMatrix<float> denseA(2, 3, c_deviceIdZero, values, MatrixFlags::matrixFlagNormal);
