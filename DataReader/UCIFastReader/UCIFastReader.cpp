@@ -648,9 +648,9 @@ size_t RoundUp(size_t value, size_t size)
 template<class ElemType>
 void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz) 
 {
-    mBlgSize = sz; 
+    mRequestedNumParallelSequences = sz; 
     if (mOneLinePerFile)
-        m_mbSize = mBlgSize;
+        m_mbSize = mRequestedNumParallelSequences;
 };
 
 //StartMinibatchLoop - Startup a minibatch loop 
@@ -662,7 +662,7 @@ template<class ElemType>
 void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     if (mOneLinePerFile)
-        mbSize = mBlgSize; /// each file has only one observation, therefore the number of data to read is the number of files
+        mbSize = mRequestedNumParallelSequences; /// each file has only one observation, therefore the number of data to read is the number of files
 
     // if we aren't currently caching, see if we can use a cache
     if (!m_cachingReader && !m_cachingWriter)
