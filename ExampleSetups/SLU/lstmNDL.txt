@@ -185,8 +185,8 @@ ndlCreateNetwork=[
 	labelDim=127
 	hiddenDim=300
 
-	features=Input(featDim, tag=feature)
-	labels=Input(labelDim, tag=label)
+	features=Input(featDim, tag="feature")
+	labels=Input(labelDim, tag="label")
 
 	# define network
     Wlookup = Parameter(lookupDim, inputDim, init="uniform", initValueScale=6);
@@ -195,14 +195,14 @@ ndlCreateNetwork=[
     LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, init="uniform", initValueScale=6);
     W1 = Parameter(labelDim, hiddenDim, init="uniform", initValueScale=6);
 
-    LSTMoutputW1 = Times(W1, LSTMoutput, tag=outputs);
+    LSTMoutputW1 = Times(W1, LSTMoutput, tag="outputs");
 
-    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Criteria);
-    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag=Eval);
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
+    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="eval");
     
 #    logPrior = LogPrior(labels)	 
 
-#    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag=Output)
-    outputs=SoftMax(LSTMoutputW1,tag=Output)
+#    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag="output")
+    outputs=SoftMax(LSTMoutputW1,tag="output")
 
 ]
