@@ -1283,27 +1283,27 @@ status open
 
 \begin_layout Plain Layout
 
-features=Input(SDim, tag=feature)
+features=Input(SDim, tag="feature")
 \end_layout
 
 \begin_layout Plain Layout
 
-labels=Input(LDim, tag=label)
+labels=Input(LDim, tag="label")
 \end_layout
 
 \begin_layout Plain Layout
 
-CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
+CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 \end_layout
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag=Eval)
+Err=ErrorPrediction(labels, CE.F, tag="eval")
 \end_layout
 
 \begin_layout Plain Layout
 
-CE = SMBFF(L3, LDim, HDim, labels, tag=MultiSeq)
+CE = SMBFF(L3, LDim, HDim, labels, tag="multiSeq")
 \end_layout
 
 \end_inset
@@ -1524,12 +1524,12 @@ status open
 
 \begin_layout Plain Layout
 
-InputValue(rows, [cols=1], {tag=feature|label})
+InputValue(rows, [cols=1], {tag="feature"|label})
 \end_layout
 
 \begin_layout Plain Layout
 
-Input(rows, [cols=1], {tag=feature|label})  #deprecated
+Input(rows, [cols=1], {tag="feature"|"label"})  #deprecated
 \end_layout
 
 \end_inset
@@ -1598,7 +1598,7 @@ ImageInput(width, height, channels, [numImages=1],
 
 \begin_layout Plain Layout
 
-          {tag=feature|label})
+          {tag="feature"|"label"})
 \end_layout
 
 \begin_layout Plain Layout
@@ -1608,7 +1608,7 @@ Image(width, height, channels, [numImages=1],
 
 \begin_layout Plain Layout
 
-          {tag=feature|label}) #deprecated
+          {tag="feature"|"label"}) #deprecated
 \end_layout
 
 \end_inset
@@ -4030,12 +4030,12 @@ LDim=10
 
 \begin_layout Plain Layout
 
-features=Input(SDim, tag=feature)
+features=Input(SDim, tag="feature")
 \end_layout
 
 \begin_layout Plain Layout
 
-labels=Input(LDim, tag=label)
+labels=Input(LDim, tag="label")
 \end_layout
 
 \begin_layout Plain Layout
@@ -4064,12 +4064,12 @@ L3 = RBFF(L2, HDim, HDim)
 
 \begin_layout Plain Layout
 
-CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
+CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 \end_layout
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag=Eval)
+Err=ErrorPrediction(labels, CE.F, tag="eval")
 \end_layout
 
 \begin_layout Plain Layout

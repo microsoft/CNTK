@@ -26,8 +26,8 @@ ndlCreateNetwork=[
 	featOutDim=792
 	hiddenDim=512
 	bottleneckDim=64
-	featIn=Input(featInDim,tag=feature)
-	featOut=Input(featOutDim,tag=feature)
+	featIn=Input(featInDim,tag="feature")
+	featOut=Input(featOutDim,tag="feature")
 			       			       
 	 # define network
 	 featNormIn = MeanVarNorm(featIn)
@@ -35,7 +35,7 @@ ndlCreateNetwork=[
 	 L1 = SBFF(featNormIn,hiddenDim,featInDim)
 	 L2 = SBFF(L1,bottleneckDim,hiddenDim)
 	 L3 = SBFF(L2,hiddenDim,bottleneckDim)
-	 MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag=criteria)
+	 MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag="criterion")
  	 OutputNodes=(MeanSqErr.BFF.FF.P)
 	 EvalNodes=(MeanSqErr)
 	 
