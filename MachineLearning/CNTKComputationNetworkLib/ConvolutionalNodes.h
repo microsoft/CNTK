@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ValidateInferChildDims(0, m_imageLayout.GetNumChannels(), weightCols);
 
             if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_imageLayout.GetNumChannels()))
-                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), (int)m_imageLayout.GetNumChannels(), (int)weightCols);
+                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_inputs[0]->NodeName().c_str(), (int)m_imageLayout.GetNumChannels(), (int)weightCols);
 
             size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();
             if (Inputs(1)->GetNumRows() == 0)

@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_topK = 1;
             // TODO: Make topK a constructor parameter
-            if (m_children.size() == 3)
+            if (m_inputs.size() == 3)
             {
                 if (Inputs(2)->GetNumRows() != 1 || Inputs(2)->GetNumCols() != 1)
                     throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");

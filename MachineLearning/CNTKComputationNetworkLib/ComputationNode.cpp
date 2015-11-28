@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //wstring name = NodeName(); name;
         //fprintf(stderr, "\nDetermining Layout --> %ls:", name.c_str());
         MBLayoutPtr pMBLayout;  // starts with NULL layout
-        for (auto child : m_children)
+        for (auto child : m_inputs)
         {
             //wstring cname = child->NodeName(); cname;
             //fprintf(stderr, "  %ls(%s)", cname.c_str(), child->m_pMBLayout ? "." : "NULL");
@@ -54,10 +54,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // single input that maps its input element-wise (e.g. Sigmoid)
     void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     {
-        assert(m_children.size() == 1);
+        assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        SetDims(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
+        SetDims(m_inputs[0]->GetNumRows(), DetermineNumCols(m_inputs[0]));
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus
@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This also helpfully resizes the children if not yet sized.
     void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
     {
-        assert(m_children.size() == 2);
+        assert(m_inputs.size() == 2);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
     void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
     {
-        assert(m_children.size() == 1);
+        assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
         SetDims(1, 1);
@@ -121,7 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if dimension not specified we assume two operands' dimensions should be the same
         // NOTE: The assert is set to check if >= 2 since this is called from nodes which have more than two children.
         //      The number of children is formally verified elsewhere, so this will not break consistency. 
-        assert(m_children.size() >= 2);
+        assert(m_inputs.size() >= 2);
         for (size_t index = 0; index < 2; index++)
         {
             auto in = Inputs(index);

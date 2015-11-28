@@ -1393,16 +1393,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false);
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
-        //{
-        //    m_children.resize(5);
-        //    m_children[0] = obs;
-        //    m_children[1] = inputGate;
-        //    m_children[2] = forgetGate;
-        //    m_children[3] = outputGate;
-        //    m_children[4] = memoryCellWgt;
-        //}
-
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
