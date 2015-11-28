@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="constants.h" />
+    <ClInclude Include="fixtures.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -120,6 +121,7 @@
     <ClCompile Include="constants.cpp" />
     <ClCompile Include="CPUSparseMatrixTests.cpp" />
     <ClCompile Include="DebugUtil.cpp" />
+    <ClCompile Include="fixtures.cpp" />
     <ClCompile Include="GPUMatrixCudaBlasTests.cpp" />
     <ClCompile Include="GPUMatrixTests.cpp" />
     <ClCompile Include="GPUSparseMatrixTests.cpp" />

@@ -24,7 +24,7 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixConstructorNoFlags)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixConstructorNoFlags, RandomSeedFixture)
                 {
                     DMatrix m;
                     BOOST_CHECK(m.IsEmpty());
@@ -44,7 +44,7 @@ namespace Microsoft
                     BOOST_CHECK(m1.IsEqualTo(m));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixConstructorFlagNormal)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixConstructorFlagNormal, RandomSeedFixture)
                 {
                     std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
                     SMatrix m(2, 3, array.data(), matrixFlagNormal);
@@ -56,7 +56,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(m(1, 2), 6);
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixConstructorFormatRowMajor)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixConstructorFormatRowMajor, RandomSeedFixture)
                 {
                     std::array<double, 6> array = { 7, 8, 9, 10, 11, 12 };
                     DMatrix m(2, 3, array.data(), matrixFormatRowMajor);
@@ -68,7 +68,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(m(1, 2), 12);
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixAddAndSub)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixAddAndSub, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -132,7 +132,7 @@ namespace Microsoft
                     BOOST_CHECK(m3.IsEqualTo(m0));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixMultiplyAndDiv)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixMultiplyAndDiv, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -190,7 +190,7 @@ namespace Microsoft
                     BOOST_CHECK(m3.IsEqualTo(m2));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixElementOperations)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
                 {
                     // TODO: consider splitting this large test
                     DMatrix m0(2, 3);
@@ -331,7 +331,7 @@ namespace Microsoft
                     BOOST_CHECK(m_NegSine.IsEqualTo(m_NegSine_expected, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixNorms)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixNorms, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -398,7 +398,7 @@ namespace Microsoft
                     BOOST_CHECK(mResult.IsEqualTo(m2, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixSetValues)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixSetValues, RandomSeedFixture)
                 {
                     DMatrix m0(3, 3);
                     m0(0, 0) = 10; m0(1, 1) = 10; m0(2, 2) = 10;
@@ -412,18 +412,18 @@ namespace Microsoft
                     m1.SetDiagonalValue(m2);
                     BOOST_CHECK(m1.IsEqualTo(m0, c_epsilonFloatE4));
 
-                    m1.SetUniformRandomValue(-0.01, 0.01);
+                    m1.SetUniformRandomValue(-0.01, 0.01, IncrementCounter());
                     foreach_coord(i, j, m1) 
                     {
                         BOOST_CHECK(m1(i, j) >= -0.01 && m1(i, j) < 0.01);
                     }
 
                     m1.Resize(20, 20);
-                    m1.SetGaussianRandomValue(1.0, 0.01);
+                    m1.SetGaussianRandomValue(1.0, 0.01, IncrementCounter());
                     BOOST_CHECK_CLOSE(m1.SumOfElements(), static_cast<double>(m1.GetNumElements()), 1);
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixTranspose)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixTranspose, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -441,7 +441,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(m0, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixColumnSlice)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixColumnSlice, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -468,13 +468,13 @@ namespace Microsoft
                     size_t m = 5;
 
                     DMatrix mA(k, n);
-                    mA.SetUniformRandomValue(-1, 1);
+                    mA.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     DMatrix mB(n, m);
-                    mB.SetUniformRandomValue(-1, 1);
+                    mB.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     DMatrix mC(k, m);
-                    mC.SetUniformRandomValue(-1, 1);
+                    mC.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     DMatrix mD(k, m);
                     mD.SetValue(mC);
@@ -491,7 +491,7 @@ namespace Microsoft
                     BOOST_CHECK(mC.IsEqualTo(mD, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUKhatriRaoProduct)
+                BOOST_FIXTURE_TEST_CASE(CPUKhatriRaoProduct, RandomSeedFixture)
                 {
                     DMatrix mA(3, 4);
                     mA(0, 0) = 0.8147; mA(0, 1) = 0.9134; mA(0, 2) = 0.2785; mA(0, 3) = 0.9649;
@@ -515,7 +515,7 @@ namespace Microsoft
                     BOOST_CHECK(mC.IsEqualTo(mD, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUAddColumnReshapeProductOf)
+                BOOST_FIXTURE_TEST_CASE(CPUAddColumnReshapeProductOf, RandomSeedFixture)
                 {
                     DMatrix mA(6, 2);
                     mA(0, 0) = 0.6557; mA(0, 1) = 0.7431;
@@ -548,7 +548,7 @@ namespace Microsoft
                     BOOST_CHECK(mC.IsEqualTo(mE, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixRowSliceAndStack)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixRowSliceAndStack, RandomSeedFixture)
                 {
                     DMatrix m0(5, 3);
                     m0(0, 0) = 1; m0(0, 1) = 6; m0(0, 2) = 11;
@@ -583,7 +583,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(m4, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUAssignRepeatOf)
+                BOOST_FIXTURE_TEST_CASE(CPUAssignRepeatOf, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);
                     m0(0, 0) = 1; m0(0, 1) = 6; m0(0, 2) = 11;
@@ -605,10 +605,10 @@ namespace Microsoft
                     BOOST_CHECK(m1.IsEqualTo(m2, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPURowElementOperations)
+                BOOST_FIXTURE_TEST_CASE(CPURowElementOperations, RandomSeedFixture)
                 {
-                    DMatrix m0 = DMatrix::RandomUniform(20, 28, -1, 1);
-                    DMatrix m1 = DMatrix::RandomUniform(1, 28, 1, 2);
+                    DMatrix m0 = DMatrix::RandomUniform(20, 28, -1, 1, IncrementCounter());
+                    DMatrix m1 = DMatrix::RandomUniform(1, 28, 1, 2, IncrementCounter());
 
                     DMatrix m2;
                     m2.SetValue(m0);
@@ -618,10 +618,10 @@ namespace Microsoft
                     BOOST_CHECK(m0.IsEqualTo(m2, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUColumnElementOperations)
+                BOOST_FIXTURE_TEST_CASE(CPUColumnElementOperations, RandomSeedFixture)
                 {
-                    DMatrix m0 = DMatrix::RandomUniform(20, 28, -1, 1);
-                    DMatrix m1 = DMatrix::RandomUniform(20, 1, 1, 2);
+                    DMatrix m0 = DMatrix::RandomUniform(20, 28, -1, 1, IncrementCounter());
+                    DMatrix m1 = DMatrix::RandomUniform(20, 1, 1, 2, IncrementCounter());
 
                     DMatrix m2;
                     m2.SetValue(m0);
@@ -629,6 +629,30 @@ namespace Microsoft
                     m2.ColumnElementDivideBy(m1);
 
                     BOOST_CHECK(m0.IsEqualTo(m2, c_epsilonFloatE4));
+                }
+
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixSeedingFloat, RandomSeedFixture)
+                {
+                    const float low = 0;
+                    const float high = 1;
+                    const unsigned long seed = 4711;
+
+                    auto m1 = CPUMatrix<float>::RandomUniform(16, 16, low, high, seed);
+                    auto m2 = CPUMatrix<float>::RandomUniform(16, 16, low, high, seed);
+
+                    BOOST_CHECK(m1.IsEqualTo(m2));
+                }
+
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixSeedingDouble, RandomSeedFixture)
+                {
+                    const double low = 0;
+                    const double high = 1;
+                    const unsigned long seed = 4711;
+
+                    auto m1 = CPUMatrix<double>::RandomUniform(16, 16, low, high, seed);
+                    auto m2 = CPUMatrix<double>::RandomUniform(16, 16, low, high, seed);
+
+                    BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
                 BOOST_AUTO_TEST_SUITE_END()

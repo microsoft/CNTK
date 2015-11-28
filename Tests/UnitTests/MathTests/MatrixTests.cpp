@@ -25,7 +25,7 @@ namespace Microsoft
             {
                 BOOST_AUTO_TEST_SUITE(MatrixUnitTests)
 
-                BOOST_AUTO_TEST_CASE(MatrixConstructors)
+                BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
                 {
                     SingleMatrix a0;
                     SingleMatrix a1(AUTOPLACEMATRIX);
@@ -45,7 +45,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(a3.GetDeviceId(), c_deviceIdZero);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixMoveTest1)
+                BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
                 {
                     //no moves required
                     SingleMatrix a;
@@ -64,7 +64,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(b.GetDeviceId(), c_deviceIdZero);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixMoveTest2)
+                BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
                 {
                     //potentially a move is required
                     SingleMatrix a;
@@ -87,7 +87,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(b.GetDeviceId(), 0);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixDeepCopy)
+                BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
                 {
                     //This is deep copy, not move
                     SingleMatrix a;
@@ -121,7 +121,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(b.GetNumCols(), 0);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitZero)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitZero, RandomSeedFixture)
                 {
                     SingleMatrix a = SingleMatrix::Zeros(12, 32);
                     BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
@@ -132,7 +132,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitEye)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitEye, RandomSeedFixture)
                 {
                     SingleMatrix a = SingleMatrix::Eye(56);
                     BOOST_CHECK_EQUAL(a.GetNumRows(), 56);
@@ -151,7 +151,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitOnes)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitOnes, RandomSeedFixture)
                 {
                     SingleMatrix a = SingleMatrix::Ones(12, 56);
                     BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
@@ -162,9 +162,9 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitGaussianRand)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitGaussianRand, RandomSeedFixture)
                 {
-                    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, 0.0f, 2.0f, static_cast<unsigned long>(-1));
+                    SingleMatrix a = SingleMatrix::RandomGaussian(640, 230, 0.0f, 2.0f, IncrementCounter());
                     BOOST_CHECK_EQUAL(a.GetNumRows(), 640);
                     BOOST_CHECK_EQUAL(a.GetNumCols(), 230);
 
@@ -186,15 +186,17 @@ namespace Microsoft
                     BOOST_CHECK_LE(fabs(std - 2), c_epsilonFloatE1);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitRandomUniform)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniform, RandomSeedFixture)
                 {
-                    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, -26.3f, 30.2f);
+                    const float low = -26.3f;
+                    const float high = 30.2f;
+                    SingleMatrix a = SingleMatrix::RandomUniform(435, 100, low, high,  IncrementCounter());
                     bool has_small = false;
                     bool has_big = false;
                     foreach_coord(i, j, a)
                     {
-                        BOOST_CHECK(a(i, j) >= -26.3);
-                        BOOST_CHECK(a(i, j) <= 30.2);
+                        BOOST_CHECK_GE(a(i, j), low);
+                        BOOST_CHECK_LE(a(i, j), high);
                         if (a(i, j) < -3)
                         {
                             has_small = true;
@@ -208,26 +210,29 @@ namespace Microsoft
                     BOOST_CHECK(has_big);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixInitRandomUniformSeed)
+                BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
                 {
-                    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, -0.01f, 0.01f, 4711uL);
+                    const float low = -0.01f;
+                    const float high = 0.01f;
+                    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, low, high, IncrementCounter());
                     foreach_coord(i, j, a)
                     {
-                        BOOST_CHECK(a(i, j) >= -0.01 && a(i, j) <= 0.01);
+                        BOOST_CHECK_GE(a(i, j), low);
+                        BOOST_CHECK_LE(a(i, j), high);
                     }
 
-                    // SingleMatrix b = SingleMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, (unsigned long)4711);
+                    // SingleMatrix b = SingleMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, IncrementCounter());
                     // BOOST_CHECK(a.IsEqualTo(b));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSetValueMethods)
+                BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
                 {
                     //void SetValue(const ElemType v);
                     SingleMatrix a(32, 12, AUTOPLACEMATRIX);
                     BOOST_CHECK_EQUAL(32, a.GetNumRows());
                     BOOST_CHECK_EQUAL(12, a.GetNumCols());
                     BOOST_CHECK_EQUAL(12 * 32, a.GetNumElements());
-                    float v = -32.3451f;
+                    const float v = -32.3451f;
                     a.SetValue(v);
                     foreach_coord(i, j, a)
                     {
@@ -265,7 +270,7 @@ namespace Microsoft
 
                     //void SetDiagonalValue(const ElemType v);            
                     SingleMatrix c(4, 4, AUTOPLACEMATRIX);
-                    float val = -0.00332f;
+                    const float val = -0.00332f;
                     c.SetDiagonalValue(val);
                     foreach_coord(i, j, c)
                     {
@@ -277,7 +282,7 @@ namespace Microsoft
 
                     //void SetDiagonalValue(const Matrix<ElemType>& vector);
                     SingleMatrix d(4, 1, AUTOPLACEMATRIX);
-                    float val1 = 43.324f;
+                    const float val1 = 43.324f;
                     d.SetValue(val1);
                     c.SetDiagonalValue(d);
                     foreach_coord(i, j, c)
@@ -303,9 +308,9 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixTransposeTest)
+                BOOST_FIXTURE_TEST_CASE(MatrixTransposeTest, RandomSeedFixture)
                 {
-                    SingleMatrix a = SingleMatrix::RandomGaussian(64, 23, 0, 2);
+                    SingleMatrix a = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
                     BOOST_CHECK_EQUAL(64, a.GetNumRows());
                     BOOST_CHECK_EQUAL(23, a.GetNumCols());
 
@@ -320,7 +325,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixMultiAndDiv)
+                BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
                 {
                     SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -398,7 +403,7 @@ namespace Microsoft
                     BOOST_CHECK(c.IsEqualTo(d));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixTranspose)
+                BOOST_FIXTURE_TEST_CASE(MatrixTranspose, RandomSeedFixture)
                 {
                     SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -416,7 +421,7 @@ namespace Microsoft
                     BOOST_CHECK(m2.IsEqualTo(m0, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixAddAndSub)
+                BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
                 {
                     SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -466,7 +471,7 @@ namespace Microsoft
                     BOOST_CHECK(m33.IsEqualTo(m1));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixElementOps)
+                BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
                 {
                     SingleMatrix m0(2, 3, AUTOPLACEMATRIX);
                     m0(0, 0) = 1; m0(0, 1) = 2; m0(0, 2) = 3;
@@ -578,24 +583,24 @@ namespace Microsoft
                     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixColumnElementMultiply)
+                BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
                 {
-                    CPUMatrix<float> mcpu = CPUMatrix<float>::RandomUniform(429, 1024, -3.4f, 1);
+                    CPUMatrix<float> mcpu = CPUMatrix<float>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
                     CPUMatrix<float> acpu = CPUMatrix<float>::Ones(429, 1);
                     CPUMatrix<float> mcpuCopy(mcpu);
 
                     mcpu.ColumnElementMultiplyWith(acpu);
                     BOOST_CHECK(mcpuCopy.IsEqualTo(mcpu, c_epsilonFloatE4));
 
-                    Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, -3.4f, 1);
+                    Matrix<float> m = Matrix<float>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
                     Matrix<float> a = Matrix<float>::Ones(429, 1);
                     Matrix<float> mCopy(m);
 
                     m.ColumnElementMultiplyWith(a);
                     BOOST_CHECK(mCopy.IsEqualTo(m, c_epsilonFloatE4));
 
-                    CPUMatrix<float> mc1 = CPUMatrix<float>::RandomUniform(429, 1024, -3.4f, 1);
-                    CPUMatrix<float> mc2 = CPUMatrix<float>::RandomUniform(429, 1, 0, 3);
+                    CPUMatrix<float> mc1 = CPUMatrix<float>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
+                    CPUMatrix<float> mc2 = CPUMatrix<float>::RandomUniform(429, 1, 0, 3, IncrementCounter());
                     mc1.ColumnElementMultiplyWith(mc2);
 
                     Matrix<float> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.GetArray(), matrixFlagNormal);
@@ -608,11 +613,11 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixAssignXOf)
+                BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
                 {
                     //AssignDifferenceOf
-                    Matrix<float> a = Matrix<float>::RandomUniform(429, 1024, 5, 32);
-                    Matrix<float> b = Matrix<float>::RandomUniform(429, 1024, 5, 32);
+                    Matrix<float> a = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
+                    Matrix<float> b = Matrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
                     Matrix<float> c;
 
                     c.AssignDifferenceOf(a, b);
@@ -657,8 +662,8 @@ namespace Microsoft
                     }
 
                     //AssignSigmoidOf
-                    CPUMatrix<float> ac = CPUMatrix<float>::RandomUniform(429, 1024, 5, 32);
-                    CPUMatrix<float> bc = CPUMatrix<float>::RandomUniform(429, 1024, -5, 12);
+                    CPUMatrix<float> ac = CPUMatrix<float>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
+                    CPUMatrix<float> bc = CPUMatrix<float>::RandomUniform(429, 1024, -5, 12, IncrementCounter());
                     Matrix<float> d(ac.GetNumRows(), ac.GetNumCols(), ac.GetArray(), matrixFlagNormal);
                     Matrix<float> e(bc.GetNumRows(), bc.GetNumCols(), bc.GetArray(), matrixFlagNormal);
                     ac.AssignSigmoidOf(bc);
@@ -669,7 +674,7 @@ namespace Microsoft
                     }
 
                     //AssignSignOf
-                    Matrix<float> m1 = Matrix<float>::RandomUniform(42, 12, -5, 12);
+                    Matrix<float> m1 = Matrix<float>::RandomUniform(42, 12, -5, 12, IncrementCounter());
                     Matrix<float> m2(4, 5, AUTOPLACEMATRIX);
                     m2.AssignSignOf(m1);
                     foreach_coord(i, j, m1)
@@ -680,7 +685,7 @@ namespace Microsoft
                         BOOST_CHECK_EQUAL(expected, actual);
                     }
 
-                    Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, -5, 2);
+                    Matrix<float> m3 = Matrix<float>::RandomUniform(42, 12, -5, 2, IncrementCounter());
                     Matrix<float> m4(m3);
                     m3.AddSignOf(m1);
                     foreach_coord(i, j, m3)
@@ -710,7 +715,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(3, m7(1, 1));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSumOfElements)
+                BOOST_FIXTURE_TEST_CASE(MatrixSumOfElements, RandomSeedFixture)
                 {
                     Matrix<float> m = Matrix<float>::Ones(429, 1024, 0);
                     float sum = m.SumOfElements();
@@ -731,7 +736,7 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(-1 * 3 * 2, sum2);
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixColumnSlice)
+                BOOST_FIXTURE_TEST_CASE(MatrixColumnSlice, RandomSeedFixture)
                 {
                     std::array<float, 6> arr = { 1, 2, 3, 4, 5, 6 };
                     auto * fArray = arr.data();
@@ -751,13 +756,13 @@ namespace Microsoft
                     size_t k = 100, n = 20, m = 50;
 
                     Matrix<float> ag(k, n, AUTOPLACEMATRIX);
-                    ag.SetUniformRandomValue(-1, 1);
+                    ag.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     Matrix<float> bg(n, m, AUTOPLACEMATRIX);
-                    bg.SetUniformRandomValue(-1, 1);
+                    bg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     Matrix<float> cg(k, m, AUTOPLACEMATRIX);
-                    cg.SetUniformRandomValue(-1, 1);
+                    cg.SetUniformRandomValue(-1, 1, IncrementCounter());
 
                     Matrix<float> dg(k, m, AUTOPLACEMATRIX);
                     dg.SetValue(cg);
@@ -773,7 +778,7 @@ namespace Microsoft
                     BOOST_CHECK(cg.IsEqualTo(dg, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixKhatriRaoProduct)
+                BOOST_FIXTURE_TEST_CASE(MatrixKhatriRaoProduct, RandomSeedFixture)
                 {
                     std::array<float, 24> arr =
                     { 0, 0, 0, 0, 0, 0,
@@ -804,7 +809,7 @@ namespace Microsoft
                     BOOST_CHECK(c.IsEqualTo(d, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixAddColumnReshapeProductOf)
+                BOOST_FIXTURE_TEST_CASE(MatrixAddColumnReshapeProductOf, RandomSeedFixture)
                 {
                     std::array<float, 12> arr =
                     { 0, 0, 0, 0, 0, 0,
@@ -842,7 +847,7 @@ namespace Microsoft
                     BOOST_CHECK(c.IsEqualTo(d1, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixCopy)
+                BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
                 {
                     const size_t crow = 3;
                     const size_t ccol = 2;
@@ -870,7 +875,7 @@ namespace Microsoft
                     BOOST_CHECK(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixHasElement)
+                BOOST_FIXTURE_TEST_CASE(MatrixHasElement, RandomSeedFixture)
                 {
                     for (auto deviceId : { CPUDEVICE, c_deviceIdZero })
                     {
@@ -893,7 +898,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixVectorMax)
+                BOOST_FIXTURE_TEST_CASE(MatrixVectorMax, RandomSeedFixture)
                 {
                     // Matrices are stored as column-major so below is 3x2 matrix.
                     float src[] = {
@@ -924,7 +929,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixAssignNumOfDiff)
+                BOOST_FIXTURE_TEST_CASE(MatrixAssignNumOfDiff, RandomSeedFixture)
                 {
                     float labels[] = { 1.0f, 2.0f, 3.0f };
 

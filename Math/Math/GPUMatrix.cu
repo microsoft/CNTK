@@ -1206,26 +1206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
         PrepareDevice();
-#if 0   // to change the seed, we must tear down the random generator
-        // This is not efficient, but for correctness, we must do it.
-        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
-        {
-            fprintf(stderr, "SetUniformRandomValue (GPU): destroying curand object\n");
-            CURAND_CALL(curandDestroyGenerator(((curandGenerator_t*)s_curandGenerator)[0]));    // TODO: what is this typecast business??
-            delete s_curandGenerator;
-            s_curandGenerator = NULL;
-        }
-#endif
-        if (s_curandGenerator==NULL)
-        {
-            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-            fprintf(stderr, "SetUniformRandomValue (GPU): creating curand object with seed %llu\n", cudaSeed);
-            s_curandGenerator = new curandGenerator_t;
-            /* Create pseudo-random number generator */
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW));
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
-            CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
-        }
+        CreateCurandObject(seed, __FUNCTION__);
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
@@ -1256,26 +1237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         PrepareDevice();
-#if 0   // to change the seed, we must tear down the random generator
-        // This is not efficient, but for correctness, we must do it.
-        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
-        {
-            fprintf(stderr, "SetGaussianRandomValue (GPU): destroying curand object\n");
-            CURAND_CALL(curandDestroyGenerator(((curandGenerator_t*)s_curandGenerator)[0]));    // TODO: what is this typecast business??
-            delete s_curandGenerator;
-            s_curandGenerator = NULL;
-        }
-#endif
-        if (s_curandGenerator==NULL)
-        {
-            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-            fprintf(stderr, "SetGaussianRandomValue (GPU): creating curand object with seed %llu\n", cudaSeed);
-            s_curandGenerator = new curandGenerator_t;
-            /* Create pseudo-random number generator */        
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW)); 
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
-            CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
-        }
+        CreateCurandObject(seed, __FUNCTION__);
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -1294,14 +1256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         PrepareDevice();
-        if (s_curandGenerator==NULL)
-        {            
-            s_curandGenerator = new curandGenerator_t;
-            /* Create pseudo-random number generator */        
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW));        
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed==USE_TIME_BASED_SEED ? time(NULL) : seed));       
-            CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
-        }
+        CreateCurandObject(seed, __FUNCTION__);
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
@@ -4077,6 +4032,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         delete [] res;
         return bResult;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char *caller)
+    {
+        assert(caller != nullptr);
+
+        if (s_curandGenerator==NULL)
+        {
+            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
+            fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%u\n",
+                caller, cudaSeed, sizeof(ElemType));
+            s_curandGenerator = new curandGenerator_t;
+            // Create pseudo-random number generator
+            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
+            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
+            CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0], CURAND_ORDERING_PSEUDO_SEEDED));
+        }
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ResetCurandObject(unsigned long seed, const char *caller)
+    {
+        assert(caller != nullptr);
+
+        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
+        {
+            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed));
+            CURAND_CALL(curandSetGeneratorOffset(((curandGenerator_t*)s_curandGenerator)[0], 0));
+        }
+        else
+        {
+            CreateCurandObject(seed, caller);
+        }
+
     }
 
     template<class ElemType>
