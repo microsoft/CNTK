@@ -70,7 +70,7 @@ public:
     typedef std::string LabelType;
     typedef unsigned int LabelIdType;
     unsigned m_seed;
-    size_t   mBlgSize;  /// number of utterances per minibatch
+    size_t   mRequestedNumParallelSequences;  // number of desired parallel sequences in each minibatch
 
     virtual void Init(const ConfigParameters & config) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord & config) = 0;
@@ -93,7 +93,7 @@ public:
     virtual bool GetHmmData(msra::asr::simplesenonehmm * /*hmm*/) { NOT_IMPLEMENTED; };
     virtual size_t GetNumParallelSequences() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
-    virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; }
+    virtual void SetNumParallelSequences(const size_t sz) { mRequestedNumParallelSequences = sz; }
     virtual bool RequireSentenceSeg() const { return false; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; }
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; }
