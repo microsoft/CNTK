@@ -548,10 +548,14 @@ public:
     // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
     // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
     // Remove this function after a few weeks of not firing.
-    void VerifyActualNumParallelSequences(const size_t aSize)
+    void VerifyActualNumParallelSequences(const size_t expectedNumSeq)
     {
-        if (GetNumParallelSequences() != aSize)
-            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
+        size_t actualNumSeq = GetNumParallelSequences();
+        if (actualNumSeq != expectedNumSeq)
+        {
+            LogicError("VerifyActualNumParallelSequences: Number of parallel sequences in MBLayout (%d) not matching expected value (%d).",
+                (int)actualNumSeq, (int)expectedNumSeq);
+        }
     }
 
     // -----------------------------------------------------------------------

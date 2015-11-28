@@ -74,7 +74,7 @@ public:
 
 protected:
 
-    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
+    BatchLUSequenceParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;    // size of minibatch requested
     size_t m_mbStartSample; // starting sample # of the next minibatch
     size_t m_epochSize; // size of an epoch
@@ -266,7 +266,7 @@ private:
 
 public:
     vector<bool> mProcessed; 
-    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
+    BatchLUSequenceParser<ElemType, LabelType> m_parser;
     BatchLUSequenceReader() : m_pMBLayout(make_shared<MBLayout>())
     {
         mLastProcessedSentenceId = 0;
