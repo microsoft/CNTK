@@ -47,7 +47,7 @@ template class LUSequenceParser<double, std::string>;
 template class LUSequenceParser<double, std::wstring>;
 
 template<class NumType, class LabelType>
-long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool canMultiplePassData)
+long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool canMultiplePassData)
 {
     // transfer to member variables
     m_inputs = input;
@@ -141,13 +141,13 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         prvat = (int)ptr->labelPos;
     }
 
-    fprintf(stderr, "LUBatchLUSequenceParser: parse %ld lines\n", lineCount);
+    fprintf(stderr, "BatchLUSequenceParser: Parsed %ld lines.\n", (long)lineCount);
     return lineCount;
 }
 
+template class BatchLUSequenceParser<float, std::string>;
+template class BatchLUSequenceParser<double, std::string>;
+template class BatchLUSequenceParser<float, std::wstring>;
+template class BatchLUSequenceParser<double, std::wstring>;
 
-template class LUBatchLUSequenceParser<float, std::string>;
-template class LUBatchLUSequenceParser<double, std::string>;
-template class LUBatchLUSequenceParser<float, std::wstring>;
-template class LUBatchLUSequenceParser<double, std::wstring>;
 }}}

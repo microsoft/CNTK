@@ -638,7 +638,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
     if (mTotalSentenceSofar > m_epochSize)
     {
-        m_pMBLayout->Init(0, 0);
+        m_pMBLayout->Init(1, 0);
         return false;
     }
     else
@@ -660,7 +660,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             if (mNumRead == 0)
             {
                 fprintf(stderr, "EnsureDataAvailable: No more data.\n");
-                m_pMBLayout->Init(0, 0);
+                m_pMBLayout->Init(1, 0);
                 return false;
             }
             mProcessed.assign(mNumRead, false);
@@ -678,7 +678,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             nbrSentenceRead = FindNextSentences(mRequestedNumParallelSequences);
             if (nbrSentenceRead == 0)
             {
-                m_pMBLayout->Init(0, 0);
+                m_pMBLayout->Init(1, 0);
                 return false;
             }
         }
@@ -793,12 +793,16 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 template<class ElemType>
 size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
+#if 1
+    return m_pMBLayout->GetNumParallelSequences();  // (this function is only used for validation anyway)
+#else
     size_t sz = (mSentenceBeginAt.size() == 0) ? mRequestedNumParallelSequences/*not initialized yet?*/ : mSentenceBeginAt.size();
     if (mSentenceBeginAt.size() == 0)
         mSentenceBeginAt.assign(sz, -1);
     if (mSentenceEndAt.size() == 0)
         mSentenceEndAt.assign(sz, -1);
     return sz;
+#endif
 }
 
 template<class ElemType>
