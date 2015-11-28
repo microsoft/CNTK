@@ -9,6 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
 
+#include "Basics.h"
 #include "DebugUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -31,7 +32,13 @@ void DebugUtil::PrintCallStack()
     HANDLE process;
 
     process = GetCurrentProcess();
-    SymInitialize(process, NULL, TRUE);
+    if (!SymInitialize(process, NULL, TRUE))
+    {
+        DWORD error = GetLastError();
+        std::cerr << "Failed to print CALL STACK! SymInitialize error : " << msra::strfun::utf8(FormatWin32Error(error)) << std::endl;
+        return;
+    }
+
     frames = (func)(0, MAX_CALLERS, callStack, NULL);
     symbolInfo = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO)+256 * sizeof(char), 1);
     symbolInfo->MaxNameLen = 255;
@@ -42,8 +49,6 @@ void DebugUtil::PrintCallStack()
 
     for (unsigned int i = 1; i < frames; i++)
     {
-        SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo);
-
         if (i == 1)
         {
             std::cerr << "    >";
@@ -53,12 +58,22 @@ void DebugUtil::PrintCallStack()
             std::cerr << "    -";
         }
 
-        std::cerr << symbolInfo->Name << std::endl;
+        if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
+        {
+            std::cerr << symbolInfo->Name << std::endl;
+        }
+        else
+        {
+            DWORD error = GetLastError();
+            std::cerr << callStack[i] << " (SymFromAddr error : " << msra::strfun::utf8(FormatWin32Error(error)) << ")" << std::endl;
+        }
     }
 
     std::cerr << std::endl;
 
     free(symbolInfo);
+
+    SymCleanup(process);
 #else
     std::cerr << std::endl << "[CALL STACK]" << std::endl;
     
