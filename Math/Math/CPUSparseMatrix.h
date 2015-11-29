@@ -54,6 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
+        inline size_t GetNumElemAllocated() const { return m_elemSizeAllocated; }
 
         CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;

@@ -1256,6 +1256,7 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     int start = aColCSCIndex[col];
     int end = aColCSCIndex[col + 1];
     int current = start;
+
     for (size_t nc = 0; nc < N; nc++)
     {
         // recover the 5 indices from the loop counter
@@ -1278,6 +1279,9 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
             }
         }
     }
+
+    cColCSCIndex[col] = start;
+    cColCSCIndex[col + 1] = end;
 }
 
 template<class ElemType>

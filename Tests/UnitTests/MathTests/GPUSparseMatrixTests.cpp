@@ -222,8 +222,8 @@ namespace Microsoft
 					float *arr = nullptr;
 					int *ii = nullptr;
 					int *jj = nullptr;
-					size_t nz, nr, nc;
-					poweredMatrix.GetMatrixFromCSRFormat(ii, jj, arr, nz, nr, nc);
+					size_t ea, nz, nr, nc;
+					poweredMatrix.GetMatrixFromCSRFormat(ii, jj, arr, ea, nz, nr, nc);
 
 					for (int index = 0; index < c_size; ++index)
 					{

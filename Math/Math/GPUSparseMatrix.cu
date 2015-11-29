@@ -128,14 +128,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_nz, deepCopy.m_format, true, false);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_elemSizeAllocated, deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
-        CUDA_CALL(cudaMemcpy(NzValues(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+        m_sliceViewOffset = deepCopy.m_sliceViewOffset;
+
+        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
         m_externalBuffer = false;
-        m_sliceViewOffset = 0;
         SetMatrixName(deepCopy.m_matrixName);
 
         //TODO: to copy other varibles used only for class based LM
@@ -165,12 +166,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (deepCopy.GetFormat() == matrixFormatSparseCSR)
         {
-            SetMatrixFromCSRFormat(deepCopy.RowLocation(), deepCopy.ColLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
-
+            SetMatrixFromCSRFormat(deepCopy.RowLocation(), deepCopy.ColLocation(), deepCopy.BufferPointer(), deepCopy.GetNumElemAllocated(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
         }
         else if (deepCopy.GetFormat() == matrixFormatSparseCSC)
         {
-            SetMatrixFromCSCFormat(deepCopy.ColLocation(), deepCopy.RowLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
+            SetMatrixFromCSCFormat(deepCopy.ColLocation(), deepCopy.RowLocation(), deepCopy.BufferPointer(), deepCopy.GetNumElemAllocated(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
         }
         else
             NOT_IMPLEMENTED;
@@ -189,7 +189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this->GetFormat() == matrixFormatSparseCSR)
         {
             //we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
-            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
+            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
             cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
             PrepareDevice();
@@ -210,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 CopyBuffer(cpuSparseMatrix.ColLocation(), h_Col, MajorIndexCount());
             }
 
-            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.NzValues(), NzValues(), NzSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.BufferPointer(), BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
 
         }
         else if (this->GetFormat() == matrixFormatSparseCSC)
@@ -236,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 CopyBuffer(cpuSparseMatrix.RowLocation(), h_Row, MajorIndexCount());
             }
 
-            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.NzValues(), NzValues(), NzSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.BufferPointer(), BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
         }
         else
             NOT_IMPLEMENTED;
@@ -269,22 +269,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (float*)NzValues(), RowLocation(), ColLocation(), (float*)denseMatrix.BufferPointer(), int(m_numRows)));
+                CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (float*)BufferPointer(), RowLocation(), ColLocation(), (float*)denseMatrix.BufferPointer(), int(m_numRows)));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (double*)NzValues(), RowLocation(), ColLocation(), (double*)denseMatrix.BufferPointer(), int(m_numRows)));
+                CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (double*)BufferPointer(), RowLocation(), ColLocation(), (double*)denseMatrix.BufferPointer(), int(m_numRows)));
             }
         }
         else if (m_format == MatrixFormat::matrixFormatSparseCSC)
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (float*)NzValues(), RowLocation(), ColLocation(), (float*)denseMatrix.BufferPointer(), int(m_numRows)));
+                CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (float*)BufferPointer(), RowLocation(), ColLocation(), (float*)denseMatrix.BufferPointer(), int(m_numRows)));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (double*)NzValues(), RowLocation(), ColLocation(), (double*)denseMatrix.BufferPointer(), int(m_numRows)));
+                CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(m_numRows), int(m_numCols), descr, (double*)BufferPointer(), RowLocation(), ColLocation(), (double*)denseMatrix.BufferPointer(), int(m_numRows)));
             }
         }
         else
@@ -333,14 +333,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, int(m_numRows), int(m_numCols), int(m_nz),
-                    (float*)NzValues(), RowLocation(), ColLocation(), (float*)outMatrix.NzValues(),
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, int(m_numRows), int(m_numCols), int(m_elemSizeAllocated),
+                    (float*)BufferPointer(), RowLocation(), ColLocation(), (float*)outMatrix.BufferPointer(),
                     outMatrix.RowLocation(), outMatrix.ColLocation(), CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, int(m_numRows), int(m_numCols), int(m_nz),
-                    (double*)NzValues(), RowLocation(), ColLocation(), (double*)outMatrix.NzValues(),
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, int(m_numRows), int(m_numCols), int(m_elemSizeAllocated),
+                    (double*)BufferPointer(), RowLocation(), ColLocation(), (double*)outMatrix.BufferPointer(),
                     outMatrix.RowLocation(), outMatrix.ColLocation(), CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO));
             }
         }
@@ -499,12 +499,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (sizeof(ElemType) == sizeof(float))
             {
                 CUSPARSE_CALL(cusparseSdense2csr(cusparseHandle, (int)m_numRows, (int)m_numCols, descr, reinterpret_cast<float*>(denseMatrix.BufferPointer()),
-                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<float*>(NzValues()), RowLocation(), ColLocation()));
+                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<float*>(BufferPointer()), RowLocation(), ColLocation()));
             }
             else
             {
                 CUSPARSE_CALL(cusparseDdense2csr(cusparseHandle, (int)m_numRows, (int)m_numCols, descr, reinterpret_cast<double*>(denseMatrix.BufferPointer()),
-                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(NzValues()), RowLocation(), ColLocation()));
+                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(BufferPointer()), RowLocation(), ColLocation()));
             }
         }
         else if (m_format == MatrixFormat::matrixFormatSparseCSC)
@@ -512,12 +512,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (sizeof(ElemType) == sizeof(float))
             {
                 CUSPARSE_CALL(cusparseSdense2csc(cusparseHandle, (int)m_numRows, (int)m_numCols, descr, reinterpret_cast<float*>(denseMatrix.BufferPointer()),
-                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<float*>(NzValues()), RowLocation(), ColLocation()));
+                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<float*>(BufferPointer()), RowLocation(), ColLocation()));
             }
             else
             {
                 CUSPARSE_CALL(cusparseDdense2csc(cusparseHandle, (int)m_numRows, (int)m_numCols, descr, reinterpret_cast<double*>(denseMatrix.BufferPointer()),
-                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(NzValues()), RowLocation(), ColLocation()));
+                    (int)m_numRows, nnzPerRowOrCol, reinterpret_cast<double*>(BufferPointer()), RowLocation(), ColLocation()));
             }
         }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
@@ -529,11 +529,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
     {
+        Clear();
         if (this != &deepCopy)
-        {
             SetValue(deepCopy);
-        }
-        return *this;       
+
+        SetMatrixName(deepCopy.m_matrixName);
+        return *this;
     }
 
     template<class ElemType>
@@ -566,7 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &moveFrom)
         {
             if (OwnBuffer())
-                Clear();  //always delete the data pointer since we will use the pointer from moveFrom
+                ReleaseMemory();  //always delete the data pointer since we will use the pointer from moveFrom
             m_computeDevice = moveFrom.m_computeDevice;
             m_numRows = moveFrom.m_numRows;
             m_numCols = moveFrom.m_numCols;
@@ -595,13 +596,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
     {
-        Clear();
+        ReleaseMemory();
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Clear()
+    void GPUSparseMatrix<ElemType>::ReleaseMemory()
     {
-        // If m_externalBuffer is true then this matrix
+        // If OwnBuffer() is false then this matrix
         // is simply a view over another matrix. In that
         // case we shouldn't free anything.
         if (OwnBuffer())
@@ -617,9 +618,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             CUDA_CALL(cudaFree(m_rowToId));
             m_rowToId = nullptr;
-
-            ZeroInit(m_format, m_computeDevice);
         }
+
+        ZeroInit(m_format, m_computeDevice);
     }
 
     //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
@@ -662,7 +663,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (m_pArray != nullptr)
         {
-            CUDA_CALL(cudaMemcpy(pArray, NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+            CUDA_CALL(cudaMemcpy(pArray, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
 
             GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + m_elemSizeAllocated);
             GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_elemSizeAllocated, m_format);
@@ -734,7 +735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_nz > numNZElemToReserve || m_totalBufferSizeAllocated > bufferSizeNeeded)
                         LogicError("Resize: To keep values m_nz should <= numNZElemToReserve.");
 
-                    CUDA_CALL(cudaMemcpy(pArray, NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+                    CUDA_CALL(cudaMemcpy(pArray, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
 
                     GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + numNZElemToReserve);
 
@@ -795,7 +796,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-        CUDA_CALL(cudaMemcpy(NzValues(), h_Val, NzSize(), kind));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), h_Val, NzSize(), kind));
 
         if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
         {
@@ -817,7 +818,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // this function will allocate memory while the caller needs to release it
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
+    void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (!OwnBuffer())
             LogicError("Cannot Set since the buffer is managed externally.");
@@ -825,6 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
             LogicError("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
 
+        numElemAllocated = GetNumElemAllocated();
         nz = GetNumNZElements();
         numRows = GetNumRows();
         numCols = GetNumCols();
@@ -833,12 +835,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         else
         {
-            h_Val = new ElemType[nz];
+            h_Val = new ElemType[numElemAllocated];
             h_CSRRow = new CPUSPARSE_INDEX_TYPE[m_numRows + 1];
             h_Col = new CPUSPARSE_INDEX_TYPE[nz];
 
             PrepareDevice();
-            CUDA_CALL(cudaMemcpy(h_Val, NzValues(), NzSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(h_Val, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
 
             if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
             {
@@ -875,7 +877,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-        CUDA_CALL(cudaMemcpy(NzValues(), h_Val, NzSize(), kind));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), h_Val, NzSize(), kind));
 
         if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
         {
@@ -897,11 +899,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // this function will allocate memory while the caller needs to release it
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
+    void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (h_CSCCol != nullptr || h_Row != nullptr || h_Val != nullptr)
             LogicError("GetMatrixFromCSCFormat: Passed pointers must be nullptr");
 
+        numElemAllocated = GetNumElemAllocated();
         nz = GetNumNZElements();
         numRows = GetNumRows();
         numCols = GetNumCols();
@@ -910,12 +913,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         else
         {
-            h_Val = new ElemType[nz];
+            h_Val = new ElemType[numElemAllocated];
             h_CSCCol = new GPUSPARSE_INDEX_TYPE[m_numRows + 1];
             h_Row = new GPUSPARSE_INDEX_TYPE[nz];
 
             PrepareDevice();
-            CUDA_CALL(cudaMemcpy(h_Val, NzValues(), NzSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(h_Val, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
 
             if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
             {
@@ -1038,7 +1041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     alpha,
                     reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                     transposeA,
-                    reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                    reinterpret_cast<const ElemType*>(rhs.BufferPointer()),  //sparse nz values
                     rhs.RowLocation(),
                     rhs.ColLocation(),
                     beta,
@@ -1072,7 +1075,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         alpha,
                         reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                         transposeA,
-                        reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                        reinterpret_cast<const ElemType*>(rhs.BufferPointer()),  //sparse nz values
                         rhs.RowLocation(),
                         rhs.ColLocation(),
                         reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
@@ -1121,10 +1124,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_LONG N = (CUDA_LONG)c.GetNumCols();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
-            reinterpret_cast<const ElemType*>(a.NzValues()),  // source nz values
+            reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
             a.RowLocation(),
             a.ColLocation(),
-            reinterpret_cast<ElemType*>(c.NzValues()),  // target nz values
+            reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
             c.RowLocation(),
             c.ColLocation(),
             D, S, M, K, T);
@@ -1204,7 +1207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nnz = m*c.m_blockSize;
                 c.Resize(m, n, nnz, true, true);  //we need to keep the col2blockid and blockid2col info when resizing.
                 c.m_nz = nnz;
-                CUDA_CALL(cudaMemset(c.NzValues(), 0, sizeof(ElemType)*(c.m_nz)));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, sizeof(ElemType)*(c.m_elemSizeAllocated)));
 
                 LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
                 blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
@@ -1213,11 +1216,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     lhs.BufferPointer(),
                     m,
                     l,
-                    rhs.NzValues(),
+                    rhs.BufferPointer(),
                     rhs.RowLocation(),
                     rhs.ColLocation(),
                     c.ColOrRow2BlockId(),
-                    c.NzValues());
+                    c.BufferPointer());
             }
             else
             {
@@ -1225,7 +1228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nnz = m*c.m_blockSize;
                 c.Resize(m, n, nnz, true, false);
                 c.m_nz = nnz;
-                CUDA_CALL(cudaMemset(c.NzValues(), 0, sizeof(ElemType)*(c.m_nz)));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, sizeof(ElemType)*(c.m_elemSizeAllocated)));
                 CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE)*(c.m_blockSize)));
 
                 LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
@@ -1235,11 +1238,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     lhs.BufferPointer(),
                     m,
                     l,
-                    rhs.NzValues(),
+                    rhs.BufferPointer(),
                     rhs.RowLocation(),
                     rhs.ColLocation(),
                     rhs.m_rowToId,
-                    c.NzValues(),
+                    c.BufferPointer(),
                     c.BlockId2ColOrRow());
             }
 
@@ -1307,7 +1310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 lhs.GetNumRows(),
                 lhs.GetNumCols(),
                 lhs.m_blockSize,
-                lhs.NzValues(),
+                lhs.BufferPointer(),
                 lhs.BlockId2ColOrRow(),
                 rhs.BufferPointer());
 
@@ -1388,7 +1391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GetNumRows(),
                 GetNumCols(),
                 m_blockSize,
-                NzValues(),
+                BufferPointer(),
                 BlockId2ColOrRow(),
                 c.BufferPointer());
 
@@ -1435,7 +1438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int blocksPerGrid = (m_nz + threadsPerBlock - 1) / threadsPerBlock;
             bool colMajor = (m_format == MatrixFormat::matrixFormatSparseBlockCol ? true : false);
             size_t len = colMajor ? GetNumRows() : GetNumCols();
-            _adagrad4BlockSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(c.GetArray(), c.GetNumRows(), NzValues(), BlockId2ColOrRow(), multipliers, colMajor, len, m_nz);
+            _adagrad4BlockSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(c.GetArray(), c.GetNumRows(), BufferPointer(), BlockId2ColOrRow(), multipliers, colMajor, len, m_nz);
         }
         else
             NOT_IMPLEMENTED;
@@ -1494,13 +1497,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
-            CUSPARSE_CALL(cusparseScsrmm(cusparseHandle,oper,m,n,k,(int)a.GetNumNZElements(),reinterpret_cast <float*>(&alpha),descr,reinterpret_cast <const float*>(a.NzValues()),
+            CUSPARSE_CALL(cusparseScsrmm(cusparseHandle,oper,m,n,k,(int)a.GetNumElemAllocated(),reinterpret_cast <float*>(&alpha),descr,reinterpret_cast <const float*>(a.BufferPointer()),
                 a.RowLocation(), a.ColLocation(), reinterpret_cast <float*>(b.BufferPointer()),
                 (int)b.GetNumRows(),reinterpret_cast <float*>(&beta),reinterpret_cast <float*>(c.BufferPointer()),(int)c.GetNumRows()));
         }
         else 
         {
-            CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle,oper,m,n,k,(int)a.GetNumNZElements(),reinterpret_cast <double*>(&alpha),descr,reinterpret_cast <const double*>(a.NzValues()),
+            CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int)a.GetNumElemAllocated(), reinterpret_cast <double*>(&alpha), descr, reinterpret_cast <const double*>(a.BufferPointer()),
                 a.RowLocation(), a.ColLocation(), reinterpret_cast <double*>(b.BufferPointer()),
                 (int)b.GetNumRows(),reinterpret_cast <double*>(&beta),reinterpret_cast <double*>(c.BufferPointer()),(int)c.GetNumRows()));
         }
@@ -1586,9 +1589,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool allocatedBuffer = false;
 
         // do we have enough memory to store just the row buffer?
-        if (cSize >= rowBufferRequired && c.NzValues() != nullptr && canReuseBuffer)
+        if (cSize >= rowBufferRequired && c.BufferPointer() != nullptr && canReuseBuffer)
         {
-            csrRowPtrC = (GPUSPARSE_INDEX_TYPE*)c.NzValues();
+            csrRowPtrC = (GPUSPARSE_INDEX_TYPE*)c.BufferPointer();
         }
         else
         {
@@ -1665,15 +1668,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //Step 2
         if (sizeof(float)==sizeof(ElemType))
         {
-            CUSPARSE_CALL(cusparseScsrgemm(cusparseHandle,operA,operB,m,n,k,descrA,nnzA,(const float*)S1.NzValues(),S1.RowLocation(),S1.ColLocation(),
-                descrB,nnzB,(const float*)S2.NzValues(),S2.RowLocation(),S2.ColLocation(),
-                descrC,(float*)c.NzValues(),c.RowLocation(),c.ColLocation()));
+            CUSPARSE_CALL(cusparseScsrgemm(cusparseHandle, operA, operB, m, n, k, descrA, nnzA, (const float*)S1.BufferPointer(), S1.RowLocation(), S1.ColLocation(),
+                descrB, nnzB, (const float*)S2.BufferPointer(), S2.RowLocation(), S2.ColLocation(),
+                descrC, (float*)c.BufferPointer(), c.RowLocation(), c.ColLocation()));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsrgemm(cusparseHandle,operA,operB,m,n,k,descrA,nnzA,(const double*)S1.NzValues(),S1.RowLocation(),S1.ColLocation(),
-                descrB,nnzB,(const double*)S2.NzValues(),S2.RowLocation(),S2.ColLocation(),
-                descrC,(double*)c.NzValues(),c.RowLocation(),c.ColLocation()));
+            CUSPARSE_CALL(cusparseDcsrgemm(cusparseHandle, operA, operB, m, n, k, descrA, nnzA, (const double*)S1.BufferPointer(), S1.RowLocation(), S1.ColLocation(),
+                descrB, nnzB, (const double*)S2.BufferPointer(), S2.RowLocation(), S2.ColLocation(),
+                descrC, (double*)c.BufferPointer(), c.RowLocation(), c.ColLocation()));
         }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
@@ -1731,13 +1734,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //Step 2
         if (sizeof(ElemType)==sizeof(float))
         {
-            CUSPARSE_CALL(cusparseScsrgeam(cusparseHandle,m,n,reinterpret_cast <const float*>(&alpha),descrA,nnzA,reinterpret_cast <const float*>(a.NzValues()),a.RowLocation(),a.ColLocation(),
-                reinterpret_cast <const float*>(&beta),descrB,nnzB,reinterpret_cast <const float*>(b.NzValues()),b.RowLocation(),b.ColLocation(),descrC,reinterpret_cast <float*>(c.NzValues()),c.RowLocation(),c.ColLocation()));
+            CUSPARSE_CALL(cusparseScsrgeam(cusparseHandle, m, n, reinterpret_cast <const float*>(&alpha), descrA, nnzA, reinterpret_cast <const float*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(),
+                reinterpret_cast <const float*>(&beta), descrB, nnzB, reinterpret_cast <const float*>(b.BufferPointer()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast <float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation()));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsrgeam(cusparseHandle,m,n,reinterpret_cast <const double*>(&alpha),descrA,nnzA,reinterpret_cast <const double*>(a.NzValues()),a.RowLocation(),a.ColLocation(),
-                reinterpret_cast <const double*>(&beta),descrB,nnzB,reinterpret_cast <const double*>(b.NzValues()),b.RowLocation(),b.ColLocation(),descrC,reinterpret_cast <double*>(c.NzValues()),c.RowLocation(),c.ColLocation()));
+            CUSPARSE_CALL(cusparseDcsrgeam(cusparseHandle, m, n, reinterpret_cast <const double*>(&alpha), descrA, nnzA, reinterpret_cast <const double*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(),
+                reinterpret_cast <const double*>(&beta), descrB, nnzB, reinterpret_cast <const double*>(b.BufferPointer()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast <double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation()));
         }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
@@ -1766,7 +1769,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         CUDA_LONG M=(CUDA_LONG)a.GetNumRows();
         int blocksPerGrid =(int)ceil(1.0*M/threadsPerBlock);        
-        _sparseCSRPlusDense<ElemType><<<blocksPerGrid,threadsPerBlock>>>(alpha,a.NzValues(),a.RowLocation(),a.ColLocation(),c.BufferPointer(),M);
+        _sparseCSRPlusDense<ElemType><<<blocksPerGrid,threadsPerBlock>>>(alpha,a.BufferPointer(),a.RowLocation(),a.ColLocation(),c.BufferPointer(),M);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1859,11 +1862,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(a.NzValues()), a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(a.NzValues()), a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(a.BufferPointer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
             }
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));
             if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
@@ -1871,7 +1874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (a.m_format == matrixFormatSparseCSC)
         {
-            cscValA = (ElemType*)a.NzValues();
+            cscValA = (ElemType*)a.BufferPointer();
             cscRowIndA = a.RowLocation();
             cscColPtrA = a.ColLocation();
         }
@@ -2023,7 +2026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         CUDA_LONG M=(CUDA_LONG)a.GetNumRows();
         int blocksPerGrid =(int)ceil(1.0*M/threadsPerBlock);        
-        _sparseCSRElemMulDense<ElemType><<<blocksPerGrid,threadsPerBlock>>>(a.NzValues(),a.RowLocation(),a.ColLocation(),b.BufferPointer(),c.BufferPointer(),M);
+        _sparseCSRElemMulDense<ElemType> << <blocksPerGrid, threadsPerBlock >> >(a.BufferPointer(), a.RowLocation(), a.ColLocation(), b.BufferPointer(), c.BufferPointer(), M);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -2120,26 +2123,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->NzValues()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<float*>(c.NzValues()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                    reinterpret_cast<float*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->NzValues()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<double*>(c.NzValues()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                    reinterpret_cast<double*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
             }
         }
         else if (m_format == matrixFormatSparseCSC)
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->NzValues()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<float*>(c.NzValues()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                    reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->NzValues()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<double*>(c.NzValues()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                    reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
         }
         else
@@ -2191,7 +2194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.m_computeDevice = m_computeDevice;
         slice.m_numRows = m_numRows;
         slice.m_numCols = numCols;
-        slice.m_nz = m_nz;
+        slice.m_nz = SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
         slice.m_elemSizeAllocated = m_elemSizeAllocated;
         slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
         slice.m_pArray = m_pArray;
@@ -2237,11 +2240,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
         if (sizeof(ElemType) == sizeof(float))
         {
-            CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, m, numCols, descr, (float*)NzValues(), RowLocation(), ColLocation() + startColumn, (float*)slice.BufferPointer(), m));
+            CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, m, numCols, descr, (float*)BufferPointer(), RowLocation(), ColLocation() + startColumn, (float*)slice.BufferPointer(), m));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, m, numCols, descr, (double*)NzValues(), RowLocation(), ColLocation() + startColumn, (double*)slice.BufferPointer(), m));
+            CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, m, numCols, descr, (double*)BufferPointer(), RowLocation(), ColLocation() + startColumn, (double*)slice.BufferPointer(), m));
         }
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
@@ -2787,7 +2790,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stream<<us.GetMatrixName();
         }
 
-        size_t nz = us.GetNumNZElements(), numRows=us.GetNumRows(), numCols=us.GetNumCols();
+        size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
         size_t compressedSize = us.SecondaryIndexCount();
         int format = us.GetFormat();
 
@@ -2800,9 +2803,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
 
             if (us.m_format == matrixFormatSparseCSC)
-                us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, numRows, numCols);
+                us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
             else if (us.m_format == matrixFormatSparseCSR)
-                us.GetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, numRows, numCols);
+                us.GetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
             else
                 NOT_IMPLEMENTED;
 
