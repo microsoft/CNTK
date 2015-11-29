@@ -69,8 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // in memory format is always in the following order:
         // Non-zero data elements, Full index locations, compressed index locations
         // In CSR row data is compressed, in CSC col data is compressed
-        inline const ElemType* NzValues() const {return m_pArray;}
-        inline ElemType* NzValues() {return m_pArray;}
+        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
         inline size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
@@ -134,6 +134,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
         inline ElemType* BufferPointer() const { return m_pArray; }
+        inline size_t GetNumElemAllocated() const { return m_elemSizeAllocated; }
+        inline size_t GetSizeElemAllocated() const { return sizeof(ElemType)*m_elemSizeAllocated; }
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
         GPUSPARSE_INDEX_TYPE* RowLocation() const 
@@ -163,7 +165,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
             return (m_format&matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
-        } 
+        }
+        GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const
+        {
+            GPUSPARSE_INDEX_TYPE value;
+            CUDA_CALL(cudaMemcpy(&value, SecondaryIndexLocation() + idx, sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyDeviceToHost));
+
+            return value;
+        }
         GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
         {
             //not a valid function for other formats
@@ -225,9 +234,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
 
         //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
-        void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
+        void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const;
 
-        void GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
+        void GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const;
 
         void ConvertToSparseFormat(MatrixFormat newFormat);
         void ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const;
@@ -326,7 +335,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void performInplaceFunction(const int kind);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-        void Clear();
+        void ReleaseMemory();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
 
         size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;
