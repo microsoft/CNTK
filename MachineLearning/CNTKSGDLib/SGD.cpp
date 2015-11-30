@@ -1679,6 +1679,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
                     (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
+
+            if (m_bufferedAsyncGradientAggregation)
+            {
+                fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
+            }
         }
 
         if (useDistributedMBReading)
