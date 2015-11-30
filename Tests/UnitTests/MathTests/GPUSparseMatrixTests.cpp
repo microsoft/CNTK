@@ -544,15 +544,16 @@ namespace Microsoft
 
                     // Optimized code path for 1-D convolution on GPU + Sparse
                     Matrix<float> inputSubBatchSparse(inputSubBatch.GetNumRows(), inputSubBatch.GetNumCols(), c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-                    Matrix<float> inputSubBatchReordered(batchSize * inWidth, inChannels, c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                    Matrix<float> inputSubBatchSparseTransposed(inputSubBatch.GetNumRows(), inputSubBatch.GetNumCols(), c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                    Matrix<float> inputSubBatchSparseReordered(batchSize * inWidth, inChannels, c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
 
                     inputSubBatch.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, true);
                     inputSubBatchSparse.SetValue(inputSubBatch);
                     inputSubBatchSparse.InplaceTranspose();
                     inputSubBatchSparse.Reshape(batchSize * inWidth, inChannels);
-                    Matrix<float>::TensorShuffleScaleAndAdd(0.0f, inputSubBatchSparse, 1, batchSize, 1, inWidth, inChannels, 1.0f, inputSubBatchReordered, inputSubBatchReordered);
+                    Matrix<float>::TensorShuffleScaleAndAdd(0.0f, inputSubBatchSparse, 1, batchSize, 1, inWidth, inChannels, 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
                     inputGradientValues2.Reshape(inputGradientValues2.GetNumRows() * inputGradientValues2.GetNumCols() / inChannels, inChannels);
-                    Matrix<float>::ConvolveAndWeightedAdd(1, outputGradientSubBatch, false, inputSubBatchReordered, false, 1, inputGradientValues2,
+                    Matrix<float>::ConvolveAndWeightedAdd(1, outputGradientSubBatch, false, inputSubBatchSparseReordered, false, 1, inputGradientValues2,
                         batchSize, horizontalSubsample, zeroPadding, false);
                     inputGradientValues2.Reshape(outChannels, inputGradientValues2.GetNumRows() * inputGradientValues2.GetNumCols() / outChannels);
 
