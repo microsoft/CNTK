@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cacheGradientCalcOrders.clear();
         m_cachedOuterLoopNodes.clear();
 
-        m_inputs.clear();
+        m_inputValues.clear();
         m_learnableParameters.clear();
 
         m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
@@ -551,12 +551,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cachedOuterLoopNodes.clear();
     }
 
-    // lazily reate the m_inputs[] and m_learnableParameters lists
+    // lazily reate the m_inputValues[] and m_learnableParameters lists
     // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
     void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
     {
         //not found
-        if (m_inputs.find(rootNode) == m_inputs.end())
+        if (m_inputValues.find(rootNode) == m_inputValues.end())
         {
             list<ComputationNodeBasePtr> inputs;
 
@@ -570,7 +570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputs.push_back(node);
                 }
             }
-            m_inputs[rootNode] = inputs;
+            m_inputValues[rootNode] = inputs;
         }
 
         //not found

@@ -399,9 +399,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SparseInputValue<double>;
 
     // -----------------------------------------------------------------------
-    // LookupTableNode (weight matrix, bag-of-word representation of the inputs)
-    // originally designed to extract word embedding representation from bag-of-word
-    // TODO: what does this do?
+    // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
+    // implements an embedding, assuming a specific representation of the input data
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -415,42 +414,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
+        //void ComputeInputPartialMap(const size_t inputIndex)
+        //{
+        //    if (inputIndex > 1)
+        //        InvalidArgument("LookupTable operation only takes two inputs.");
+        //
+        //    //DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
+        //    //DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
+        //    //Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+        //
+        //    if (inputIndex == 0)  //left derivative
+        //    {
+        //        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+        //    }
+        //    else  //right derivative
+        //    {
+        //        ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
+        //    }
+        //    //Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
+        //}
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & t) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("LookupTable operation only takes two inputs.");
-
-            DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
-            DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
-            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
-
-            if (inputIndex == 0)  //left derivative
+            //if (t.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            if (inputIndex == 0)        // left derivative (embedding matrix)
             {
-                ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-            }
-            else  //right derivative
-            {
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
-            }
-            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
-        }
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
-        {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
-            if (inputIndex > 1)
-                InvalidArgument("LookupTable operation only takes two inputs.");
-
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            if (inputIndex == 0)  //left derivative
-            {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                // This is a reduction operation, hence we need to mask out gaps.
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->MaskedValueSlice(t);
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(t);
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
-            else  //right derivative
+            else if (inputIndex == 1)   // right derivative (input)
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(t);
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(t);
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
@@ -458,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
         {
-            size_t rows1 =inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
+            size_t rows1 = inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
             int wordsInEachSample = rows1 / inputGradientValues.GetNumCols();
 
@@ -486,49 +484,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Reshape(rowsp, colsp);
         }
 
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & t) override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-#ifdef DEBUG_DECODER
-            fprintf(stderr, "LookupTableNode node %ls: Input[0]=%.8e Input[1]=%.8e output = %.8e\n", this->NodeName().c_str(), Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm(), FunctionValues().FrobeniusNorm());
-#endif
-        }
+            // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
+            Matrix<ElemType> functionValues = ValueSlice(t);
+            const Matrix<ElemType>&  input0 = Inputs(0)->FunctionValues();
+            Matrix<ElemType>         input1 = Inputs(1)->ValueSlice(t);
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
-        {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-        }
-
-        //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
-        {
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
 
             if (rows1 % cols0 != 0)
-                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size. ");
+                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
             int wordsInEachSample = rows1 / cols0;
 
-            input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+            auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
-            DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
-            DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
-            input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+            //DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
+            //DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
+            //input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
 
-            functionValues.AssignProductOf(input0, false, input1, false);
+            auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
+            functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
+            //size_t rows = functionValues.GetNumRows();
+            //functionValues.Reshape(rows * wordsInEachSample, cols1);
 
-            input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
+            //input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
 
-            input1.Reshape(rows1, cols1);
-            size_t rows = functionValues.GetNumRows();
-            functionValues.Reshape(rows * wordsInEachSample, cols1);
+            //input1.Reshape(rows1, cols1);
         }
-            
+
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
