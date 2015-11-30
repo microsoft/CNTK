@@ -15,68 +15,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*static*/ struct DataReaderHelpers
     {
         // -------------------------------------------------------------------
-        // DecimateMinibatch - decimate minibatch for parallelization
-        // -------------------------------------------------------------------
-
-        // We sub-sample the parallel utterances.
-        template<class ElemType> 
-        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
-                                      int numprocs, int rank,                           // rank info
-                                      MBLayoutPtr pMBLayout)                            // gets decimated as well
-        {
-            if (numprocs == 1)
-                return;
-
-            // For RNN, a input Matrix is organized in the following way: 
-            //   | x_t^1  x_t^2 ... x_t^N | ... | x_{t+T-1}^1 ... x_{t+T-1}^N |
-            //   |<--- micro-batch 1  --->| ... |<------ micro-batch T ------>|
-            // N is the number of parallel sequences.
-            // The decimation here is to split each block to individual GPUs 
-            // Decimation will select a sub-range st..en of parallel sequences from each micro-batch:
-            //   | x_t^{st} ... x_t^{en}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en} | 
-            // This function will update the MB data and also the MBLayout.
-
-            size_t nOrigParallelUtts = pMBLayout->GetNumParallelSequences();
-            size_t T = pMBLayout->GetNumTimeSteps();
-
-            // decide new parallel utterances
-            size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
-            size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
-            size_t newNumParallelSequences = sent_end - sent_start;
-
-            // decimate data
-            size_t rv = 0;
-            for (auto & it : mb)
-            {
-                MSR::CNTK::Matrix<ElemType> &mat = *it.second;
-                size_t nCols = mat.GetNumCols();
-
-                // assert the cols are even among nodes 
-                if (rv == 0)
-                    rv = nCols;
-                else if (rv != nCols)
-                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
-
-                if (T != nCols / nOrigParallelUtts)
-                    LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
-                if (T * nOrigParallelUtts != nCols) // (should really not happen)
-                    LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", (int)nCols, (int)nOrigParallelUtts);
-
-                // copy the respective columns
-                // TODO: not efficient. We should use a special row-slice assignment function that allows overlapping input/output.
-                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
-                for (size_t t = 0; t < T; t++)
-                    tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
-                mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
-            }
-            // decimate layout
-            auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
-            for (size_t t = 0; t < T; t++) for (size_t id = 0; id < newNumParallelSequences; id++)
-                pNewMBLayout->Set(id, t, pMBLayout->Get(id + sent_start, t));
-            pMBLayout->MoveFrom(pNewMBLayout);  // update layout in-place
-        }
-
-        // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
         // Returns false if end of epoch has been reached.
         // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
@@ -163,6 +101,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
 
             return true;
+        }
+
+        // -------------------------------------------------------------------
+        // DecimateMinibatch - decimate minibatch for parallelization
+        // -------------------------------------------------------------------
+
+        // We sub-sample the parallel utterances.
+        template<class ElemType> 
+        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
+                                      int numprocs, int rank,                           // rank info
+                                      MBLayoutPtr pMBLayout)                            // gets decimated as well
+        {
+            if (numprocs == 1)
+                return;
+
+            // For RNN, a input Matrix is organized in the following way: 
+            //   | x_t^1  x_t^2 ... x_t^N | ... | x_{t+T-1}^1 ... x_{t+T-1}^N |
+            //   |<--- micro-batch 1  --->| ... |<------ micro-batch T ------>|
+            // N is the number of parallel sequences.
+            // The decimation here is to split each block to individual GPUs 
+            // Decimation will select a sub-range st..en of parallel sequences from each micro-batch:
+            //   | x_t^{st} ... x_t^{en}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en} | 
+            // This function will update the MB data and also the MBLayout.
+
+            size_t nOrigParallelUtts = pMBLayout->GetNumParallelSequences();
+            size_t T = pMBLayout->GetNumTimeSteps();
+
+            // decide new parallel utterances
+            size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
+            size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
+            size_t newNumParallelSequences = sent_end - sent_start;
+
+            // decimate data
+            size_t rv = 0;
+            for (auto & it : mb)
+            {
+                MSR::CNTK::Matrix<ElemType> &mat = *it.second;
+                size_t nCols = mat.GetNumCols();
+
+                // assert the cols are even among nodes 
+                if (rv == 0)
+                    rv = nCols;
+                else if (rv != nCols)
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
+
+                if (T != nCols / nOrigParallelUtts)
+                    LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
+                if (T * nOrigParallelUtts != nCols) // (should really not happen)
+                    LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", (int)nCols, (int)nOrigParallelUtts);
+
+                // copy the respective columns
+                // TODO: not efficient. We should use a special row-slice assignment function that allows overlapping input/output.
+                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
+                for (size_t t = 0; t < T; t++)
+                    tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
+                mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
+            }
+            // decimate layout
+            auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
+            for (size_t t = 0; t < T; t++) for (size_t id = 0; id < newNumParallelSequences; id++)
+                pNewMBLayout->Set(id, t, pMBLayout->Get(id + sent_start, t));
+            pMBLayout->MoveFrom(pNewMBLayout);  // update layout in-place
         }
     };
 
