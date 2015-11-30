@@ -113,7 +113,7 @@ public:
     static const int RequeryDevices = -2;  // Requery refreshing statistics and picking the same number as last query
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal ); // get multiple devices
 private:
-    bool LockDevice(int deviceID, bool trial = true);
+    bool LockDevice(int deviceId, bool trial = true);
 };
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
@@ -612,28 +612,28 @@ void BestGpu::QueryNvmlData()
     return;
 }
 
-bool BestGpu::LockDevice(int deviceID, bool trial)
+bool BestGpu::LockDevice(int deviceId, bool trial)
 {
-    if (deviceID < 0) // don't lock CPU, always return true 
+    if (deviceId < 0) // don't lock CPU, always return true 
     {
         return true;
     }    
     // ported from dbn.exe, not perfect but it works in practice 
     char buffer[80];
-    sprintf (buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceID);
+    sprintf (buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceId);
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
     if (!mutex->Acquire(false))  // failure  --this should not really happen
     {
-        fprintf(stderr, "LockDevice: can't lock the device %d\n", deviceID);
+        fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
         return false;
     }
     else
     {
-        fprintf(stderr, "LockDevice: Capture device %d and lock it for exclusive use\n", deviceID);
+        fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
         if (!trial)
-        {
-            m_GPUMutex[deviceID] = std::move(mutex);
-        }
+            m_GPUMutex[deviceId] = std::move(mutex);
+        else
+            fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
     }
     return true;
 }
