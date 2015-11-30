@@ -150,6 +150,7 @@ ifeq ("$(BUILDTYPE)","debug")
   endif
 
   CXXFLAGS += -g
+  LDFLAGS += -rdynamic
   CPPFLAGS += -D_DEBUG
   CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
@@ -179,6 +180,19 @@ ORIGINLIBDIR:='$$ORIGIN/../lib'
 ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
+
+
+########################################
+# Build info 
+########################################
+
+BUILDINFO:= MachineLearning/CNTK/buildinfo.h
+GENBUILD:=Scripts/genrate_build_info 
+
+$(BUILDINFO): Scripts/genrate_build_info
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@$(GENBUILD) $(BUILD_TOP)/Config.make
+
 
 ########################################
 # Math library
@@ -451,11 +465,11 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
 
 ########################################
 # General compile and dependency rules
@@ -485,7 +499,10 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: clean buildall all
+.PHONY: force clean buildall all
+
+force:	$(BUILDINFO)
+	
 
 clean:
 	@echo $(SEPARATOR)

@@ -114,13 +114,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = c1;
-        //    m_children[1] = c2;
-        //}
-
     public:
         virtual bool UnitTest() {
             size_t nT = 3;
@@ -279,6 +272,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_hasComputed = m_hasComputed;
             }
         }
+
+        // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
+        virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
+        {
+            CreateMatrixIfNull(m_functionValues); 
+            m_functionValues->SetValue(value);
+            m_hasComputed = true; 
+        }
     public:
         bool m_hasComputed;
     };
@@ -306,8 +307,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::LoadFromFile(fstream, modelVersion);
             m_numSamples = SIZE_MAX;
         }
+    
+        // this is used by convertDBN
+        virtual void SideLoadFromMatrix(const Matrix<ElemType>& m)
+        {
+            Base::SideLoadFromMatrix(m);
+            m_numSamples = SIZE_MAX;
+        }
 
-        virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed)
+        virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed , size_t numSamples = 0)
         {
             Base::MarkComputed(hasComputed);
             if (!m_hasComputed)     // initialize
@@ -364,6 +372,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
+        MeanNode(DEVICEID_TYPE deviceId, const wstring & name, size_t) : Base(deviceId, name)
+        {
+
+        }
         virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed)
         {
             Base::MarkComputed(hasComputed);

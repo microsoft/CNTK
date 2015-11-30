@@ -12,12 +12,11 @@
 #pragma warning (disable: 4996)     // ^^ this does not seem to work--TODO: make it work
 #define _FILE_OFFSET_BITS 64        // to force fseeko() and ftello() 64 bit in Linux
 
-#ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
-#endif
+#include "Basics.h"
 #include "fileutil.h"
 #ifdef __unix__
 #include <sys/types.h>
@@ -36,6 +35,7 @@
 #include <algorithm>    // for std::find
 #include <limits.h>
 #include <memory>
+#include <cwctype>
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
@@ -95,7 +95,7 @@ void fgetText(FILE * f, char& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        RuntimeError ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %ls", formatString);
     else if (rc == EOF)
         RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
@@ -105,7 +105,7 @@ void fgetText(FILE * f, wchar_t& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        RuntimeError ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %ls", formatString);
     else if (rc == EOF)
         RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
@@ -148,7 +148,7 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : _wfopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-        RuntimeError ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
+        RuntimeError ("error opening file '%ls': %s", pathname.c_str(), strerror (errno));
     }
     if (strchr (mode, 'S'))
     {   // if optimized for sequential access then use large buffer
@@ -235,11 +235,10 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
         size_t n = fwrite ((const void *) p1, 1, wantWrite, f);
         if (n != wantWrite)
         {
-            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d,"
-                " count=%d, writing %d bytes after %d): %s",
-                ptr, size, count, (int) wantWrite,
-                (int) (size * count - totalBytes),
-                strerror (errno));
+            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d, count=%d, writing %d bytes after %d): %s",
+                          (unsigned long)(size_t)ptr, (int)size, (int)count, (int)wantWrite,
+                          (int)(size * count - totalBytes),
+                          strerror (errno));
         }
         totalBytes -= wantWrite;
         p1 += wantWrite;
@@ -460,7 +459,7 @@ void unlinkOrDie (const std::string & pathname)
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
-    RuntimeError ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%ls': %s", pathname.c_str(), strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -487,12 +486,12 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 #ifdef _WIN32
     // deleting destination file if exits (to match Linux semantic)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str())) 
-        RuntimeError("error deleting file '%S': %d", to.c_str(), GetLastError());
+        RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
 
     if (!MoveFileW(from.c_str(), to.c_str()))
-        RuntimeError ("error renaming file '%S': %d", from.c_str(), GetLastError());
+        RuntimeError ("error renaming file '%ls': %d", from.c_str(), GetLastError());
 #else
-    renameOrDie (charpath(from), charpath(to));
+    renameOrDie (wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
 }
 
@@ -639,7 +638,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
         uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]", filepos, size - 1, msra::strfun::utf8(example).c_str());
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
     }
 
     // remove newline at end
@@ -681,7 +680,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (n >= (size_t) size -1)
     {
         wstring example (buf, min (n, 100));
-        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
+        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%ls ...]",
                fgetpos (f), size -1, example.c_str());
     }
 
@@ -710,14 +709,14 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
 // STL string version
 std::string fgetline (FILE * f)
 {
-    fixed_vector<char> buf (1000000);
+    vector<char> buf (1000000);
     return fgetline (f, &buf[0], (int) buf.size());
 }
 
 // STL string version
 std::wstring fgetlinew (FILE * f)
 {
-    fixed_vector<wchar_t> buf (1000000);
+    vector<wchar_t> buf (1000000);
     return fgetline (f, &buf[0], (int) buf.size());
 }
 
@@ -1266,10 +1265,10 @@ float fgetfloat_ascii (FILE * f)
     fskipspace (f);
     int rc = fscanf (f, "%f", &val); // security hint: safe overloads
     if (rc == 0)
-    RuntimeError ("error reading float value from file (invalid format): %s");
+        RuntimeError("error reading float value from file (invalid format): %s", strerror(errno));
     else if (rc == EOF)
-    RuntimeError ("error reading from file: %s", strerror (errno));
-    assert (rc == 1);
+        RuntimeError("error reading from file: %s", strerror(errno));
+    assert(rc == 1);
     return val;
 }
 
@@ -1361,8 +1360,8 @@ void WAVEHEADER::write (FILE * f)
     fputint (f, nAvgBytesPerSec);
     fputshort (f, nBlockAlign);
     fputshort (f, wBitsPerSample);
-    ASSERT (FmtLength == 16);
-    ASSERT (wFormatTag == 1);
+    assert (FmtLength == 16);
+    assert (wFormatTag == 1);
     fputTag (f, "data");
     fputint (f, DataLength);
     fflushOrDie (f);
@@ -1455,14 +1454,14 @@ static short toolULawToLinear(unsigned char p_ucULawByte)
 
 // fgetwavraw(): only read data of .wav file. For multi-channel data, samples
 // are kept interleaved.
-static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
+static void fgetwavraw(FILE * f, std::vector<short> & wav, const WAVEHEADER & wavhd)
 {
     int bytesPerSample = wavhd.wBitsPerSample / 8;  // (sample size on one channel)
     wav.resize (wavhd.DataLength / bytesPerSample);
     if (wavhd.wFormatTag == 7)    // mulaw
     {
         (wavhd.nChannels == 1) || RuntimeError ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
-        ARRAY<unsigned char> data;
+        std::vector<unsigned char> data;
         int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
         data.resize (numSamples);
         freadOrDie (&data[0], sizeof (data[0]), numSamples, f);
@@ -1486,7 +1485,7 @@ static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
 // fgetwav(): read an entire .wav file. Stereo is mapped to mono.
 // ----------------------------------------------------------------------------
 
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
 {
     WAVEHEADER wavhd;           // will be filled in for 16-bit PCM!!
     signed short wFormatTag;    // real format tag as found in data
@@ -1502,7 +1501,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     else if (wavhd.nChannels == 2)
     {
         //read raw data        
-        ARRAY<short> buf;
+        std::vector<short> buf;
         buf.resize(numSamples * 2);
         fgetwavraw(f, buf, wavhd);
         
@@ -1523,7 +1522,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     }
 }
 
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate)
 {
     auto_file_ptr f = fopenOrDie (fn, L"rbS");
     fgetwav (f, wav, sampleRate);
@@ -1538,13 +1537,13 @@ void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
 
-void fgetraw (FILE *f, ARRAY< ARRAY<short> > & data, const WAVEHEADER & wavhd)
+void fgetraw (FILE *f, std::vector< std::vector<short> > & data, const WAVEHEADER & wavhd)
 {
-    ARRAY<short> wavraw;
+    std::vector<short> wavraw;
     fgetwavraw (f, wavraw, wavhd);
     data.resize (wavhd.nChannels);
     int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-    ASSERT (numSamples == (int) wavraw.size() / wavhd.nChannels);
+    assert (numSamples == (int) wavraw.size() / wavhd.nChannels);
 
     for (int i = 0; i < wavhd.nChannels; i++)
     {
@@ -1599,7 +1598,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
     unsigned int RiffLength = 36 + DataLength;
     unsigned int FmtLength  = 16; 
     // file header
-    ASSERT (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
+    assert (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
     fputTag (f, "RIFF");
     fputint (f, RiffLength);
     fputTag (f, "WAVE");
@@ -1861,11 +1860,24 @@ bool operator>= (const FILETIME & targettime, const FILETIME & inputtime)   // f
 }
 #endif
 
-bool getfiletime (const wstring & path, FILETIME & time)
+#ifdef _WIN32
+class auto_find_handle
+{
+    HANDLE h;
+    auto_find_handle operator= (const auto_find_handle &);
+    auto_find_handle(const auto_find_handle &);
+public:
+    auto_find_handle(HANDLE p_h) : h(p_h) {}
+    ~auto_find_handle() { if (h != INVALID_HANDLE_VALUE) ::FindClose(h); }
+    operator HANDLE () const { return h; }
+};
+#endif
+
+bool getfiletime(const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
 #ifdef _WIN32
     WIN32_FIND_DATAW findFileData;
-    auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
+    auto_find_handle hFind (FindFirstFileW (path.c_str(), &findFileData));
     if (hFind != INVALID_HANDLE_VALUE)
     {
         time = findFileData.ftLastWriteTime;
@@ -1878,7 +1890,7 @@ bool getfiletime (const wstring & path, FILETIME & time)
     int result;
 
     // Get data associated with "crt_stat.c": 
-    result = stat(charpath(path), &buf);
+    result = stat(wtocharpath(path.c_str()).c_str(), &buf);
     // Check if statistics are valid: 
     if (result != 0)
         return false;
@@ -1891,7 +1903,7 @@ bool getfiletime (const wstring & path, FILETIME & time)
 #if 0
 void setfiletime (const wstring & path, const FILETIME & time)
 {   // update the file modification time of an existing file
-    auto_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
+    auto_find_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
                                 FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (h == INVALID_HANDLE_VALUE)
@@ -1947,7 +1959,7 @@ static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
 
     // crawl folder
     WIN32_FIND_DATAW ffdata;
-    auto_handle hFind (::FindFirstFileW (path.c_str(), &ffdata), ::FindClose);
+    auto_find_handle hFind (::FindFirstFileW (path.c_str(), &ffdata));
     if (hFind == INVALID_HANDLE_VALUE) 
     {
         DWORD err = ::GetLastError();
@@ -1983,13 +1995,13 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 #ifdef _WIN32
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        RuntimeError ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
+        RuntimeError ("error in expanding wild cards '%ls': Win32 error %d", path.c_str(), (int)::GetLastError());
 #else
     // On Linux we have just the function for the job: glob
     glob_t globResult;
-    if (glob(charpath(path), GLOB_TILDE, NULL, &globResult) != 0)
+    if (glob(wtocharpath(path.c_str()).c_str(), GLOB_TILDE, NULL, &globResult) != 0)
     {
-        RuntimeError("error in expanding wild cards '%S': %S", path.c_str(), strerror(errno));
+        RuntimeError("error in expanding wild cards '%ls': %s", path.c_str(), strerror(errno));
     }
     
     for(unsigned int i = 0; i < globResult.gl_pathc; ++i)
@@ -2018,7 +2030,7 @@ static void mkdir (const wstring & path)
             return; // ok
     }
 #endif
-    RuntimeError ("mkdir: error creating intermediate directory %S", path.c_str());
+    RuntimeError ("mkdir: error creating intermediate directory %ls", path.c_str());
 }
 
 // make subdir of a file including parents
@@ -2126,17 +2138,17 @@ vector<wstring> wsep_string(const wstring & istr, const wstring & sep)
 static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill(buf.begin(), buf.end(), 0);
+    vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    fill(buf.begin(), buf.end(), 0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }
 static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
-    std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    fill(buf.begin(), buf.end(), (wchar_t)0);
+    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }

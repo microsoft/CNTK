@@ -6,18 +6,16 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#include "SimpleNetworkBuilder.h"
+#include "ComputationNetworkBuilder.h"
+
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-
-#include "SimpleEvaluator.h"
-#include "IComputationNetBuilder.h"
-#include "ComputationNetworkBuilder.h"
-#include "SGD.h"
-#include "SimpleNetworkBuilder.h"
+#include "CompositeComputationNodes.h"
 
 #pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
 
@@ -447,7 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
             if (numHiddenLayers > 0)
             {
-                //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                //           output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
@@ -595,8 +593,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (; i < numHiddenLayers; i++)
                         {
-                            output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                            //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                             if (m_addDropoutNodes)
                                 input = builder.Dropout(output);
@@ -724,8 +722,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (; i < numHiddenLayers; i++)
                         {
-                            output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                            //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                            output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                             if (m_addDropoutNodes)
                                 input = builder.Dropout(output);
@@ -1428,6 +1426,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_net;
     }
 
+#if 1
+    template<class ElemType>
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &, size_t , size_t , size_t , ComputationNodePtr )
+    {
+        InvalidArgument("BuildLSTMNodeComponent: LSTMNode is no longer available. You should not get here.");
+    }
+#else
     template<class ElemType>
     shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
@@ -1469,6 +1474,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return output;
     }
+#endif
 
     template<class ElemType>
     ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription(size_t mbSize)
@@ -1530,8 +1536,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numHiddenLayers > 0)
             {
 
-                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-//                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
                 outputFromEachLayer[offset + 1] = input;
@@ -1541,8 +1547,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
                     {
 
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-//                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                        //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                         // previously used function, now uses LSTMnode, which is fast and correct
 
                         recur_idx++;
@@ -1768,7 +1774,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     switch (m_rnnType){
                     case UNIDIRECTIONALLSTM:
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
+                        //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
                         break;
                     default:
                         LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
@@ -2354,16 +2361,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 contextStdDev.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
 
                 w = builder.Mean(input, L"MeanOfFeatures");
-                w->FunctionValues().SetValue(contextMean);
+                static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(contextMean);
                 w->SetParameterUpdateRequired(false);
-                pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
-                pcNodePtr->MarkComputed(true);
 
                 b = builder.InvStdDev(input, L"InvStdOfFeatures");
-                b->FunctionValues().SetValue(contextStdDev);
+                static_pointer_cast<PreComputedNode<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
                 b->SetParameterUpdateRequired(false);
-                pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(b);
-                pcNodePtr->MarkComputed(true);
 
                 output = builder.PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
                 input = output;
@@ -2422,10 +2425,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
             w = builder.Mean(label, L"Prior");
-            w->FunctionValues().SetValue(priorVals);
+            static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(priorVals);
             w->SetParameterUpdateRequired(false);
-            pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
-            pcNodePtr->MarkComputed(true);
         }
         else // pretrained network - need to add output layer, initalize
         {
@@ -2456,9 +2457,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
                 prior = builder.Mean(label, L"Prior");
+                static_pointer_cast<PreComputedNode<ElemType>>(prior)->MarkComputed(false);
                 prior->FunctionValues().SetValue(zeros);
-                pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(prior);
-                pcNodePtr->MarkComputed(false);
             }
         }
 

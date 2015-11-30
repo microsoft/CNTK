@@ -25,10 +25,10 @@ namespace Microsoft
 
 				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
-					BOOST_AUTO_TEST_CASE(MatrixMultiplyTest)
+					BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
 				{
 					//Part 1: Multiply with identity matrix
-					SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2);
+					SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
 					SingleMatrix matrixB = SingleMatrix::Eye(23);
 					SingleMatrix matrixC = matrixA * matrixB;
 					foreach_coord(i, j, matrixA)
@@ -52,13 +52,13 @@ namespace Microsoft
 					BOOST_CHECK_EQUAL(53, matrix2(2, 0)); BOOST_CHECK_EQUAL(140, matrix2(2, 1)); BOOST_CHECK_EQUAL(487, matrix2(2, 2)); BOOST_CHECK_EQUAL(377, matrix2(2, 3));
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixMultiplyAndPlusAndMinus)
+				BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
 				{
 					//Part 1: Multiply with identity matrix
-					SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2);
+					SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
 					SingleMatrix matrixB = SingleMatrix::Eye(23);
-					SingleMatrix matrixB1 = SingleMatrix::RandomUniform(64, 23, -95.23f, 43.5f);
-					SingleMatrix matrixB2 = SingleMatrix::RandomUniform(64, 23, 23.23f, 143.5f);
+					SingleMatrix matrixB1 = SingleMatrix::RandomUniform(64, 23, -95.23f, 43.5f, IncrementCounter());
+					SingleMatrix matrixB2 = SingleMatrix::RandomUniform(64, 23, 23.23f, 143.5f, IncrementCounter());
 					SingleMatrix C = ((matrixA * matrixB) + matrixB1) - matrixB2;
 					foreach_coord(i, j, matrixA)
 					{
@@ -67,9 +67,9 @@ namespace Microsoft
 
 					//Part 3: compare with CPUMatrix results
 					// TODO: Split into separate test case WI# 82
-					CPUMatrix<float> cpuMatrix1 = CPUMatrix<float>::RandomUniform(429, 1024, -1, 1);
-					CPUMatrix<float> cpuMatrix2 = CPUMatrix<float>::RandomUniform(429, 1024, -2, 2);
-					CPUMatrix<float> cpuMatrix3 = CPUMatrix<float>::RandomUniform(429, 1024, -3, 1);
+					CPUMatrix<float> cpuMatrix1 = CPUMatrix<float>::RandomUniform(429, 1024, -1, 1, IncrementCounter());
+					CPUMatrix<float> cpuMatrix2 = CPUMatrix<float>::RandomUniform(429, 1024, -2, 2, IncrementCounter());
+					CPUMatrix<float> cpuMatrix3 = CPUMatrix<float>::RandomUniform(429, 1024, -3, 1, IncrementCounter());
 					CPUMatrix<float> copyCpuMatrix3(cpuMatrix3);
 					CPUMatrix<float>::MultiplyAndAdd(cpuMatrix1, true, cpuMatrix2, false, cpuMatrix3);
 
@@ -100,7 +100,7 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd)
+				BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 				{
 					const int seed = rand();
 					const SingleMatrix singleMatrixA = SingleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 0, 0);
@@ -140,7 +140,7 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixScaleAndAdd_double)
+				BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 				{
 					const int seed = rand();
 					DoubleMatrix matrixA = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 0, 0);
@@ -180,7 +180,7 @@ namespace Microsoft
 					}
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixNorms)
+				BOOST_FIXTURE_TEST_CASE(MatrixNorms, RandomSeedFixture)
 				{
 					SingleMatrix matrix0(c_value_2, c_value_3);
 					matrix0(0, 0) = 1; matrix0(0, 1) = 2; matrix0(0, 2) = 3;
@@ -252,7 +252,7 @@ namespace Microsoft
 					BOOST_CHECK_EQUAL(5, matrixB.MatrixNorm0());
 				}
 
-				BOOST_AUTO_TEST_CASE(MatrixInnerProductOfMatrices)
+				BOOST_FIXTURE_TEST_CASE(MatrixInnerProductOfMatrices, RandomSeedFixture)
 				{
 					SingleMatrix vector1(c_value_2, c_value_3);
 					vector1(0, 0) = 1; vector1(0, 1) = 2; vector1(0, 2) = 3;

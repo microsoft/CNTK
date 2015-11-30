@@ -249,7 +249,7 @@ public:
             p[0] = (unsigned char) value;
             p[1] = (unsigned char) (value >> 8);
             p[2] = (unsigned char) (value >> 16);
-            ASSERT (value == (int) *this);
+            assert (value == (int) *this);
             return value;
         }
     };
@@ -268,7 +268,7 @@ public:
         base.resize (newsize);
         uint24_ref r = uint24_ref (&base[cursize]);
         r = value;
-        ASSERT (value == back());
+        assert (value == back());
     }
 };
 
@@ -284,7 +284,7 @@ class mgram_map
     std::vector<int24_vector> ids;              // [M+1][i] ([0] = not used)
     bool level1nonsparse;                       // true: level[1] can be directly looked up
     std::vector<index_t> level1lookup;          // id->index for unigram level
-    static void fail (const char * msg) { RuntimeError(string ("mgram_map::") + msg); }
+    static void fail (const char * msg) { RuntimeError("mgram_map::%s", msg); }
 
     // mapping from w -> i -- users pass 'w', internally we use our own 'ids'
     std::vector<int> w2id;  // w -> id
@@ -313,7 +313,7 @@ class mgram_map
                 if ((size_t) id >= level1lookup.size()) return nindex;
                 i = level1lookup[id];
             }
-            ASSERT (i == nindex || ids[1][i] == id);
+            assert (i == nindex || ids[1][i] == id);
             return i;
         }
         index_t beg = firsts[m][i];
@@ -736,11 +736,11 @@ public:
 
         coord c (k.m, (index_t) ids[k.m].size());
 
-        ASSERT (firsts[k.m-1].back() == (index_t) ids[k.m].size());
+        assert (firsts[k.m-1].back() == (index_t) ids[k.m].size());
         ids[k.m].push_back (thisid);        // create value
         firsts[k.m-1].back() = (index_t) ids[k.m].size();
         if (firsts[k.m-1].back() != (index_t) ids[k.m].size()) fail ("create() numeric overflow--index_t too small");
-        ASSERT (k.m == M || firsts[k.m].back() == (index_t) ids[k.m+1].size());
+        assert (k.m == M || firsts[k.m].back() == (index_t) ids[k.m+1].size());
 
         // optimization: level1nonsparse flag
         // If unigram level is entirely non-sparse, we can save the search
@@ -772,10 +772,10 @@ public:
             firsts[m].resize (ids[m].size() +1, (int) ids[m+1].size());
         foreach_index (m, firsts)
         {
-            ASSERT (firsts[m][0] == 0);
+            assert (firsts[m][0] == 0);
             foreach_index (i, ids[m])
-                ASSERT (firsts[m][i] <= firsts[m][i+1]);
-            ASSERT ((size_t) firsts[m].back() == ids[m+1].size());
+                assert (firsts[m][i] <= firsts[m][i+1]);
+            assert ((size_t) firsts[m].back() == ids[m+1].size());
         }
         // id mapping
         // user-provided w->id map
@@ -821,7 +821,7 @@ public:
 template<class DATATYPE> class mgram_data
 {
     std::vector<std::vector<DATATYPE>> data;
-    static void fail (const char * msg) { RuntimeError(string ("mgram_data::") + msg); }
+    static void fail (const char * msg) { RuntimeError("mgram_data::%s", msg); }
 public:
     mgram_data(){}
     mgram_data (int M) { init (M); }
@@ -1042,7 +1042,7 @@ public:
                     continue;
 
                 const mgram_map::key key = *iter;
-                ASSERT (m == key.order());
+                assert (m == key.order());
 
                 // --- output m-gram to ARPA file
                 fprintfOrDie (outf, "%.4f", logP[iter] / log10);
@@ -1068,7 +1068,7 @@ public:
                 numMGramsWritten++;
             }
             fflushOrDie (outf);
-            ASSERT (numMGramsWritten == map.size (m));
+            assert (numMGramsWritten == map.size (m));
             fprintf (stderr, "\n");
         }
 
@@ -1127,8 +1127,8 @@ public:
     void read (const std::wstring & pathname, SYMMAP & userSymMap, bool filterVocabulary, int maxM)
     {
         int lineNo = 0;
-        msra::basetypes::auto_file_ptr f(fopenOrDie (pathname, L"rbS"));
-        fprintf (stderr, "read: reading %S", pathname.c_str());
+        auto_file_ptr f(fopenOrDie (pathname, L"rbS"));
+        fprintf (stderr, "read: reading %ls", pathname.c_str());
         filename = pathname;            // (keep this info for debugging)
 
         // --- read header information
@@ -1156,7 +1156,7 @@ public:
 
         M = (int) dims.size() -1;
         if (M == 0)
-            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
+            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %ls", lineNo, pathname.c_str());
         int fileM = M;
         if (M > maxM)
             M = maxM;
@@ -1190,7 +1190,7 @@ public:
                 lineNo++, fgetline (f, buf);
 
             if (sscanf (buf, "\\%d-grams:", &n) != 1 || n != m)
-                RuntimeError ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, bad section header (%d): %ls", lineNo, pathname.c_str());
             lineNo++, fgetline (f, buf);
 
             std::vector<int> mgram (m +1, -1);      // current mgram being read ([0]=dummy)
@@ -1209,7 +1209,7 @@ public:
                 // -- parse the line
                 tokens = &buf[0];
                 if ((int) tokens.size() != ((m < fileM) ? m + 2 : m + 1))
-                    RuntimeError ("read: mal-formed LM file, incorrect number of tokens (%d): %S", lineNo, pathname.c_str());
+                    RuntimeError ("read: mal-formed LM file, incorrect number of tokens (%d): %ls", lineNo, pathname.c_str());
                 double scoreVal = atof (tokens[0]);     // ... use sscanf() instead for error checking?
                 double thisLogP = scoreVal * ln10xLMF;  // convert to natural log
 
@@ -1241,7 +1241,7 @@ public:
                         {
                             id = symbolToId (tok);
                             if (id == -1)
-                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
+                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %ls", lineNo, pathname.c_str());
                         }
                     }
                     mgram[n] = id;          // that's our id
@@ -1301,7 +1301,7 @@ skipMGram:
             while (buf[0] == 0 && !feof (f))
                 lineNo++, fgetline (f, buf);
             if (strcmp (buf, "\\end\\") != 0)
-                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %ls", lineNo, pathname.c_str());
         }
 
         // update zerogram score by one appropriate for OOVs
@@ -1355,7 +1355,7 @@ protected:
                 int newid = w2id[w];        // map to new id space
                 mgram[m-1] = newid;
             }
-            for (int k = 0; k < m; k++) ASSERT (mgram[k] == w2id[key[k]]);
+            for (int k = 0; k < m; k++) assert (mgram[k] == w2id[key[k]]);
             // insert new key into sortedMap
             mgram_map::coord c = sortedMap.create (mgram_map::unmapped_key (&mgram[0], m), createCache);
             // copy over logP and logB
@@ -1481,7 +1481,7 @@ protected:
             if (m == 0) continue;
 
             const mgram_map::key key = *iter;
-            ASSERT (m == key.order());
+            assert (m == key.order());
 
             float thisP = P[iter];
             if (islog)
@@ -1606,6 +1606,7 @@ public:
     }
 };
 
+#if 0
 // ===========================================================================
 // CMGramLMEstimator -- estimator for CMGramLM
 // Implements Kneser-Ney discounting with Goodman/Chen modification, as well
@@ -1970,7 +1971,7 @@ public:
         // estimate
         vector<bool> dropWord (userSymMap.size(), false);
         dropWord.push_back (true);  // filtering but no <UNK>: 
-        ASSERT (!filterVocabulary || unkId != -1 || dropWord[dropId]);
+        assert (!filterVocabulary || unkId != -1 || dropWord[dropId]);
 
         //std::vector<unsigned int> minObs (2, 0);
         //std::vector<unsigned int> iMinObs (3, 0);
@@ -2105,7 +2106,7 @@ public:
                 if (m < M && m < 3)      // for comments see where we estimate the discounted probabilities
                 {   //    ^^ seems not to work for 4-grams...
                     const mgram_map::key key = *iter;   // needed to check for startId
-                    ASSERT (key.order() == m);
+                    assert (key.order() == m);
 
                     if (m < 2 || key.pop_w().back() != startId)
                     {
@@ -2249,7 +2250,7 @@ public:
                 }
 
                 const mgram_map::key key = *iter;
-                ASSERT (key.order() == iter.order());   // (remove this check once verified)
+                assert (key.order() == iter.order());   // (remove this check once verified)
 
                 // get history's count
                 const mgram_map::coord j = histCoord[m-1];  // index of parent entry
@@ -2282,7 +2283,7 @@ public:
                         histCount = KNTotalCounts[c_h];     // (u,v,w) -> count (*,v,*)
                         if (histCount == 0)                 // must exist
                             RuntimeError ("estimate: malformed data: back-off value not found (denominator)");
-                        ASSERT (histCount >= count);
+                        assert (histCount >= count);
                     }
                 }
 
@@ -2423,7 +2424,9 @@ skippruned:;    // m-gram was pruned
         fprintf (stderr, "\n");
     }
 };
+#endif
 
+#if 0
 // ===========================================================================
 // CMGramLMClone -- create CMGramLM from sub-LMs through ILM and ILM::IIter
 //  - create in memory into a CMGramLM
@@ -2538,539 +2541,9 @@ skipMGram:
         lmpath = msra::strfun::utf16 (lmpath8);
     }
 };
-
-#if 0   // old version  --remove once we are fully tested and comfortable
-class OldCMGramLM : public ILM
-{
-protected:
-    // representation of LM in memory
-    // For each order, there is a flattened array of LMSCORE tokens.
-    // For each history order, there is a flattened array of LMHISTs.
-    // E.g. a trigram's history's LMHIST entry (somewhere in refs[2]) denotes
-    // the start index of the first LMSCORE entry (in entries[3]). The end
-    // index is denoted by the start index of the next LMHIST entry (for this
-    // purpose, the LMHIST arrays have one extra entry at the end).
-    struct LMSCORE      // an LM score, plus its word id for sparse storage
-    {
-        int id;         // token id (in LM space)
-        float logP;     // and its score
-        LMSCORE (int p_id, double p_logP) : id (p_id), logP ((float) p_logP) { }
-    };
-    struct LMHIST       // an LM history -- index corresponds to LMSCORE index
-    {
-        int firstEntry; // index of first entry (end entry known from next LMHIST)
-        float logB;     // back-off weight
-        LMHIST (int p_firstEntry, double p_logB) : firstEntry (p_firstEntry), logB ((float) p_logB) { }
-    };
-    int M;
-    std::vector<std::vector<LMHIST>> refs;      // [M] e.g. [2] for trigram history
-    std::vector<std::vector<LMSCORE>> entries;  // [M+1] e.g. [3] for trigrams. [0]=dummy
-
-    // mapping of numeric word ids from external (user-defined) space to the internal LM's
-    std::vector<int> userToLMSymMap;    // map to ids used in LM
-
-    // map user id to LM id, return -1 for anything unknown
-    inline int mapId (int userId) const
-    {
-        if (userId < 0 || userId >= (int) userToLMSymMap.size()) return -1;
-        else return userToLMSymMap[userId];
-    }
-
-    bool entries1Unmapped;              // if true then findEntry(id) == i for entries[1]
-
-    // search in an LMSCORE array
-    // This is a relatively generic binary search.
-    inline int findEntry (const std::vector<LMSCORE> & entries, int beg, int end, int id) const
-    {
-        while (beg < end)
-        {
-            int i = (beg + end) / 2;
-            int v = entries[i].id;
-            if (id == v) return i;      // found it
-            else if (id < v) end = i;   // id is left of i
-            else beg = i + 1;           // id is right of i
-        }
-        return -1;  // not found
-    }
-
-    // diagnostics of previous score() call
-    mutable int longestMGramFound;      // longest m-gram (incl. predicted token) found
-    mutable int longestHistoryFound;    // longest history (excl. predicted token) found
-
-public:
-    virtual int getLastLongestHistoryFound() const { return longestHistoryFound; }
-    virtual int getLastLongestMGramFound() const { return longestMGramFound; }
-    virtual int order() const { return M; }
-
-    // mgram[m-1] = word to predict, tokens before that are history
-    // m=3 means trigram
-    virtual double score (const int * mgram, int m) const
-    {
-        longestHistoryFound = 0;    // (diagnostics)
-
-        if (m > M) // too long a history for this model
-        {
-            mgram += (m - M);
-            m = M;
-        }
-        double totalLogB = 0.0;                     // accumulated back-off
-
-        for (;;)
-        {
-            longestMGramFound = m;  // (diagnostics)
-
-            if (m == 0)                                 // not really defined in ARPA format
-                return totalLogB + entries[0][0].logP;
-
-            if (m == 1)
-            {
-                // find the actual score
-                // [beg, end) is the sub-range in entries array.
-                int id = mapId (mgram[0]);
-                const char * sym = idToSymbol (id); sym;// (debugging)
-
-                const std::vector<LMSCORE> & entries_1 = entries[1];
-                int i = entries1Unmapped ? id : findEntry (entries_1, refs[0][0].firstEntry, refs[0][1].firstEntry, id);
-                if (i == -1)
-                    goto backoff0;
-
-                ASSERT (entries_1[i].id == id);         // verify unmapped unigram case
-                double logP = entries_1[i].logP;
-                return totalLogB + logP;
-            }
-
-            // locate LMHIST and LMSCORE
-            // We traverse history one by one.
-
-            int id = mapId (mgram[0]);                  // start with unigram history
-            const char * sym = idToSymbol (id);         // (debugging)
-            int i = (entries1Unmapped) ? id : findEntry (entries[1], refs[0][0].firstEntry, refs[0][1].firstEntry, id);
-            if (i == -1)    // unknown history: fall back
-                goto fallback;
-            ASSERT (entries[1][i].id == id);         // verify unmapped unigram case
-
-            // found it: advance search by one history token
-            const std::vector<LMHIST> & refs_1 = refs[1];
-            float logB = refs_1[i].logB;
-            int beg  = refs_1[i].firstEntry;            // sub-array range for next level
-            int end  = refs_1[i+1].firstEntry;
-            for (int n = 2; n < m; n++)
-            {
-                if (beg == end)
-                    goto fallback;                      // unseen history: fall back
-                int id = mapId (mgram[n -1]);
-                const char * sym = idToSymbol (id); sym;   // (debugging)
-                int i = findEntry (entries[n], beg, end, id);
-                if (i == -1)                            // unseen history: fall back
-                    goto fallback;
-                ASSERT (entries[n][i].id == id);         // verify unmapped unigram case
-
-                // found it: advance search by one history token
-                const std::vector<LMHIST> & refs_n = refs[n];
-                logB = refs_n[i].logB;
-                beg  = refs_n[i].firstEntry;            // sub-array range for next level
-                end  = refs_n[i+1].firstEntry;
-            }
-
-            // we found the entire history: now find the actual score
-            // [beg, end) is the sub-range in entries array.
-            if (m -1 > longestHistoryFound)
-                longestHistoryFound = m -1;
-
-            if (beg == end) // history has no successors (but a back-off weight)
-                goto backoff;
-
-            id = mapId (mgram[m -1]);
-            sym = idToSymbol (id);                  // (debugging)
-            const std::vector<LMSCORE> & entries_m = entries[m];
-            i = findEntry (entries_m, beg, end, id);
-            if (i == -1)
-                goto backoff;
-            ASSERT (entries_m[i].id == id);         // verify unmapped unigram case
-
-            longestMGramFound = m;
-
-            double logP = entries_m[i].logP;
-            return totalLogB + logP;
-
-backoff:    // found history but not predicted token: back-off
-            totalLogB += logB;
-
-backoff0:   // back-off knowing that logB == 0
-
-fallback:   // we get here in case of fallback (no back-off weight) or back-off
-            mgram++;
-            m--;
-        }   // and go again with the shortened history
-    }
-
-    // same as score() but without optimizations (for reference)
-    double score_unoptimized (const int * mgram, int m) const
-    {
-        if (m == 0)                                 // not really defined in ARPA format
-            return entries[0][0].logP;
-        else if (m > M) // too long a history for this model
-        {
-            mgram += (m - M);
-            m = M;
-        }
-
-        // locate LMHIST and LMSCORE
-        // We traverse history one by one.
-        int beg = refs[0][0].firstEntry;            // start with the unigram array
-        int end = refs[0][1].firstEntry;
-        float logB = 0.0f;      // remember in the loop in case we need it
-        for (int n = 1; n < m; n++)
-        {
-            int userId = mgram[n -1];   // may be -1 for unknown word
-            int id = mapId (userId);
-            const char * sym = idToSymbol (id); sym;   // (debugging)
-            const std::vector<LMSCORE> & entries_n = entries[n];
-            int i = findEntry (entries_n, beg, end, id);
-            if (i == -1)    // unknown history: fall back
-                return score_unoptimized (mgram +1, m -1);      // tail recursion
-            ASSERT (entries_n[i].id == id);         // verify unmapped unigram case
-            // found it: advance search by one history token
-            const std::vector<LMHIST> & refs_n = refs[n];
-            logB = refs_n[i].logB;
-            beg  = refs_n[i].firstEntry;            // sub-array range for next level
-            end  = refs_n[i+1].firstEntry;
-        }
-
-        // we found the entire history: now find the actual score
-        // [beg, end) is the sub-range in entries array.
-        int userId = mgram[m -1];   // word to predict
-        int id = mapId (userId);
-        const char * sym = idToSymbol (id); sym;   // (debugging)
-        const std::vector<LMSCORE> & entries_m1 = entries[m];
-        int i = findEntry (entries_m1, beg, end, id);
-        if (i != -1)
-        {
-            ASSERT (entries_m1[i].id == id);        // verify unmapped unigram case
-            double logP = entries_m1[i].logP;
-            return logP;
-        }
-
-        // found history but not predicted token: back-off
-        return logB + score_unoptimized (mgram + 1, m -1);
-    }
-
-    // test for OOV word (OOV w.r.t. LM)
-    virtual bool oov (int id) const { return mapId (id) < 0; }
-
-    virtual void adapt (const int *, size_t) { }   // this LM does not adapt
-private:
-
-    // keep this for debugging
-    std::wstring filename;          // input filename
-    struct SYMBOL
-    {
-        string symbol;              // token
-        int id;                     // numeric id in LM space (index of word read)
-        bool operator< (const SYMBOL & other) const { return symbol < other.symbol; }
-        SYMBOL (int p_id, const char * p_symbol) : id (p_id), symbol (p_symbol) { }
-    };
-    std::vector<SYMBOL> lmSymbols;  // (id, word) symbols used in LM
-    std::vector<int> idToSymIndex;  // map LM id to index in lmSymbols[] array
-
-    // search for a word in the sorted word array.
-    // Only use this after sorting, i.e. after full 1-gram section has been read.
-    // Only really used in read().
-    inline int symbolToId (const char * word) const
-    {
-        int beg = 0;
-        int end = (int) lmSymbols.size();
-        while (beg < end)
-        {
-            int i = (beg + end) / 2;
-            const char * v = lmSymbols[i].symbol.c_str();
-            int cmp = strcmp (word, v);
-            if (cmp == 0) return lmSymbols[i].id;   // found it
-            else if (cmp < 0) end = i;              // id is left of i
-            else beg = i + 1;                       // id is right of i
-        }
-        return -1;  // not found
-    }
-
-    inline const char * idToSymbol (int id) const
-    {
-        if (id < 0) return NULL;    // empty string for unknown ids
-        int i = idToSymIndex[id];
-        return lmSymbols[i].symbol.c_str();
-    }
-
-public:
-
-    // read an ARPA (text) file.
-    // Words do not need to be sorted in the unigram section, but the m-gram
-    // sections have to be in the same order as the unigrams.
-    // The 'userSymMap' defines the vocabulary space used in score().
-    // If 'filterVocabulary' then LM entries for words not in userSymMap are skipped.
-    // Otherwise the userSymMap is updated with the words from the LM.
-    // 'maxM' allows to restrict the loading to a smaller LM order.
-    // SYMMAP can be e.g. CSymMap or CSymbolSet.
-    template<class SYMMAP>
-    void read (const std::wstring & pathname, SYMMAP & userSymMap, bool filterVocabulary, int maxM)
-    {
-        int lineNo = 0;
-        msra::basetypes::auto_file_ptr f = fopenOrDie (pathname, L"rbS");
-        fprintf (stderr, "read: reading %S", pathname.c_str());
-        filename = pathname;            // (keep this info for debugging)
-
-        // --- read header information
-
-        // search for header line
-        char buf[1024];
-        lineNo++, fgetline (f, buf);
-        while (strcmp (buf, "\\data\\") != 0 && !feof (f))
-            lineNo++, fgetline (f, buf);
-        lineNo++, fgetline (f, buf);
-
-        // get the dimensions
-        std::vector<int> dims; dims.reserve (4);
-
-        while (buf[0] == 0 && !feof (f))
-            lineNo++, fgetline (f, buf);
-
-        int n, dim;
-        dims.push_back (1); // dummy zerogram entry
-        while (sscanf (buf, "ngram %d=%d", &n, &dim) == 2 && n == (int) dims.size())
-        {
-            dims.push_back (dim);
-            lineNo++, fgetline (f, buf);
-        }
-
-        M = (int) dims.size() -1;
-        if (M == 0)
-            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
-        int fileM = M;
-        if (M > maxM)
-            M = maxM;
-
-        // allocate main storage
-        refs.resize (M);
-        for (int m = 0; m < M; m++)
-            refs[m].reserve (dims[m] +1);
-        entries.resize (M +1);
-        for (int m = 0; m <= M; m++)
-            entries[m].reserve (dims[m]);
-        lmSymbols.reserve (dims[0]);
-
-        refs[0].push_back (LMHIST (0, 0.0));
-        refs[0].push_back (LMHIST (0, -99.0));  // this one gets updated
-        entries[0].push_back (LMSCORE (-1, -99.0));    // zerogram score -- gets updated later
-
-        std::vector<bool> skipWord; // true: skip entry containing this word
-        skipWord.reserve (lmSymbols.capacity());
-
-        // --- read main sections
-
-        const double ln10xLMF = log (10.0);     // ARPA scores are strangely scaled
-        for (int m = 1; m <= M; m++)
-        {
-            while (buf[0] == 0 && !feof (f))
-                lineNo++, fgetline (f, buf);
-
-            if (sscanf (buf, "\\%d-grams:", &n) != 1 || n != m)
-                RuntimeError ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
-            lineNo++, fgetline (f, buf);
-
-            std::vector<int> mgram (m +1);          // current mgram being read
-            std::vector<int> prevmgram (m +1, -1);  // previous mgram read
-            std::vector<int> histEntry (m);         // sub-array ranges
-
-            histEntry[0] = 0;
-
-            // read all the m-grams
-            while (buf[0] != '\\')
-            {
-                if (buf[0] == 0)
-                {
-                    lineNo++, fgetline (f, buf);
-                    continue;
-                }
-
-                // -- parse the line
-                const char * delim = " \t\n\r";
-                const char * score = strtok (&buf[0], delim);
-                if (score == NULL || score[0] == 0) // not checking whether it is numeric
-                    RuntimeError ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
-                double scoreVal = atof (score);
-                double logP = scoreVal * ln10xLMF;  // convert to natural log
-
-                bool skipEntry = false;
-                for (int n = 1; n <= m; n++)
-                {
-                    /*const*/ char * tok = strtok (NULL, delim);
-                    if (tok == NULL)
-                        RuntimeError ("read: mal-formed LM file, not enough words in mgram (%d): %S", lineNo, pathname.c_str());
-                    // map to id
-                    int id;
-                    if (m == 1)     // unigram: build vocab table
-                    {
-                        id = (int) lmSymbols.size();        // unique id for this symbol
-                        lmSymbols.push_back (SYMBOL (id, tok));
-                        bool toSkip = false;
-                        if (userSymMap.sym2existingId (lmSymbols.back().symbol) == -1)
-                        {
-                            if (filterVocabulary)
-                                toSkip = true;              // unknown word
-                            else
-                                userSymMap.sym2id (lmSymbols.back().symbol);    // create it in user's space
-                        }
-                        skipWord.push_back (toSkip);
-                    }
-                    else            // mgram: look up word in vocabulary
-                    {
-                        if (prevmgram[n] >= 0 && strcmp (idToSymbol (prevmgram[n]), tok) == 0)
-                            id = prevmgram[n];
-                        else
-                        {
-                            id = symbolToId (tok);
-                            if (id == -1)
-                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
-                        }
-                    }
-                    mgram[n] = id;          // that's our id
-                    skipEntry |= skipWord[id];   // skip entry if any token is unknown
-                }
-
-                double logB = 0.0;
-                if (m < M)
-                {
-                    const char * bo = strtok (NULL, delim);
-                    if (score == NULL || score[0] == 0) // not checking whether it is numeric
-                        RuntimeError ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
-                    double boVal = atof (bo);
-                    logB = boVal * ln10xLMF;        // convert to natural log
-                }
-
-                lineNo++, fgetline (f, buf);
-
-                if (skipEntry)                      // word contained unknown vocabulary: skip entire entry
-                    goto skipMGram;
-
-                // -- enter the information into our data structure
-
-                // locate the corresponding entries
-                // histEntry[n] are valid iff mgram[n'] == prevmgram[n'] for all n' <= '
-
-                bool prevValid = true;
-                for (int n = 1; n < m; n++)
-                {
-                    if (prevValid && mgram[n] == prevmgram[n])
-                        continue;
-
-                    if (prevValid && mgram[n] < prevmgram[n])
-                        RuntimeError ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
-
-                    // a history token differs from previous mgram. That history must exist.
-                    const std::vector<LMSCORE> & entries_n = entries[n];
-                    const std::vector<LMHIST> & refs_h = refs[n -1];    // history
-                    int beg = refs_h[histEntry[n -1]].firstEntry;       // sub-array range for next level
-                    int end = refs_h[histEntry[n -1] +1].firstEntry;
-                    int i = findEntry (entries_n, beg, end, mgram[n]);
-                    if (i == -1)    // unknown history: fall back
-                        RuntimeError ("read: mal-formed LM file, m-gram history not defined (%d): %S", lineNo, pathname.c_str());
-                    // found it: narrow down search range
-                    histEntry[n] = i;
-                    prevValid = false;
-                }
-
-                if (prevValid && mgram[m] <= prevmgram[m])
-                    RuntimeError ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
-
-                if (m < M)              // create history entry
-                    refs[m].push_back (LMHIST (0, logB));
-                entries[m].push_back (LMSCORE (mgram[m], logP));   // score entry
-
-                refs[m-1][histEntry[m-1]].firstEntry++;     // for now count how many histories we got
-
-skipMGram:
-                // remember current mgram for next iteration
-                ::swap (mgram, prevmgram);
-            }
-
-            // Update previous level history from #entries to firstEntry.
-            // We do this afterwards because some histories may not be used and
-            // therefore not occur in higher-order m-grams, such that we cannot
-            // rely on touching them in the loop above. Counting entries instead
-            // leaves those at 0, which is correct.
-            std::vector<LMHIST> & refs_h = refs[m -1];    // history
-            int n0 = 0;
-            for (int i = 0; i < (int) refs_h.size(); i++)
-            {
-                int num = refs_h[i].firstEntry;
-                refs_h[i].firstEntry =  n0;
-                n0 += num;
-            }
-            ASSERT (refs_h.back().firstEntry == (int) entries[m].size());
-
-            // create closing history entry
-            if (m < M)
-                refs[m].push_back (LMHIST (0, -99.0));
-
-            // fix the symbol set -- now we can binary-search in them with symbolToId()
-            if (m == 1)
-            {
-                std::sort (lmSymbols.begin(), lmSymbols.end());
-                idToSymIndex.resize (lmSymbols.size(), -1);
-                for (int i = 0; i < (int) lmSymbols.size(); i++)
-                {
-                    idToSymIndex[lmSymbols[i].id] = i;
-                }
-            }
-
-            fprintf (stderr, ", %d %d-grams", entries[m].size(), m);
-        }
-        fprintf (stderr, "\n");
-
-        // check end tag
-        if (M == fileM)
-        {   // only if caller did not restrict us to a lower order
-            while (buf[0] == 0 && !feof (f))
-                lineNo++, fgetline (f, buf);
-            if (strcmp (buf, "\\end\\") != 0)
-                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
-        }
-
-        // update zerogram score
-        // We use the minimum of all unigram scores.
-        const std::vector<LMSCORE> & entries_1 = entries[1];
-        float unknownLogP = 0.0f;
-        for (int i = 0; i < (int) entries_1.size(); i++)
-        {
-            if (entries_1[i].logP < -98.9f) continue;   // disabled token does not count
-            if (entries_1[i].logP < unknownLogP)
-                unknownLogP = entries_1[i].logP;
-        }
-        entries[0][0].logP = unknownLogP;;
-        //= (float) -log ((double) lmSymbols.size());         // zerogram score
-
-        // establish mapping of word ids from user to LM space
-        userToLMSymMap.resize (userSymMap.size());
-        for (int i = 0; i < userSymMap.size(); i++)
-        {
-            const char * sym = userSymMap.id2sym (i);
-            int id = symbolToId (sym);    // may be -1 if not found
-            userToLMSymMap[i] = id;
-        }
-
-        // check whether first-level unigrams need mapping
-        // We don't unless user provided a dictionary to filter.
-        entries1Unmapped = true;    // assume findEntry (id) == id
-        for (int i = 0; i < (int) entries_1.size(); i++)
-        {
-            if (entries_1[i].id != i)
-            {
-                entries1Unmapped = false;
-                break;
-            }
-        }
-    }
-};
 #endif
 
+#if 0
 // ===========================================================================
 // CPerplexity -- helper to measure perplexity
 // ===========================================================================
@@ -3172,5 +2645,6 @@ public:
     // return number of utterances
     int getNumUtterances() const { return numUtterances; }
 };
+#endif
 
 };};    // namespace

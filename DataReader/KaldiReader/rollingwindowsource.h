@@ -245,7 +245,7 @@ namespace msra { namespace dbn {
         std::vector<char> boundaryflags;    // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
         std::vector<CLASSIDTYPE> classids;  // [t] the state that the frame belongs to
         size_t numframes;                   // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
-        msra::dbn::randomordering randomordering;  // [t] -> t'
+        msra::dbn::RandomOrdering RandomOrdering;  // [t] -> t'
         double timegetbatch;
         int verbosity;
     public:
@@ -385,7 +385,7 @@ namespace msra { namespace dbn {
 
             // initialize randomizer
             if (numframes > 0) 
-                randomordering.resize (numframes, randomizationrange);
+                RandomOrdering.resize (numframes, randomizationrange);
         }
         virtual ~minibatchframesource() {}
         size_t totalframes() const { assert (vdim == 0 || numframes == frames.size()); assert (!issupervised() || numframes == classids.size()); return numframes; }
@@ -430,11 +430,11 @@ namespace msra { namespace dbn {
 
             // get random sequence (each time index occurs exactly once)
             // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
-            const auto & tmap = randomordering (sweep);
+            const auto & tmap = RandomOrdering (sweep);
 
             // page in the needed range of frames
             const size_t extent = augmentationextent (frames.dim(), vdim);
-            bool readfromdisk = frames.require (randomordering.bounds (max (ts, extent) - extent, te + 1 + extent));
+            bool readfromdisk = frames.require (RandomOrdering.bounds (max (ts, extent) - extent, te + 1 + extent));
 
             // generate features and uids
             feat.resize (vdim, te - ts);    // note: special mode vdim == 0 means no features to be loaded
@@ -498,7 +498,7 @@ namespace msra { namespace dbn {
         std::vector<char> boundaryflags;    // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
         std::vector<std::vector<CLASSIDTYPE>> classids;  // [t] the state that the frame belongs to
         size_t numframes;                   // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
-        msra::dbn::randomordering randomordering;  // [t] -> t'
+        msra::dbn::RandomOrdering RandomOrdering;  // [t] -> t'
         double timegetbatch;
         int verbosity;
 
@@ -706,7 +706,7 @@ namespace msra { namespace dbn {
 
             // initialize randomizer
             if (numframes > 0) 
-                randomordering.resize (numframes, randomizationrange);
+                RandomOrdering.resize (numframes, randomizationrange);
 
         }
         virtual ~minibatchframesourcemulti() {}
@@ -755,7 +755,7 @@ namespace msra { namespace dbn {
 
             // get random sequence (each time index occurs exactly once)
             // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
-            const auto & tmap = randomordering (sweep);
+            const auto & tmap = RandomOrdering (sweep);
 
             feat.resize(pframes.size());
             uids.resize(classids.size());
@@ -772,7 +772,7 @@ namespace msra { namespace dbn {
                     leftextent = leftcontext[i];
                     rightextent = rightcontext[i];
                 }
-                readfromdisk = pframes[i]->require (randomordering.bounds (max (ts, leftextent) - leftextent, te + 1 + rightextent));
+                readfromdisk = pframes[i]->require (RandomOrdering.bounds (max (ts, leftextent) - leftextent, te + 1 + rightextent));
                 // generate features and uids
                 feat[i].resize (vdim[i], te - ts);    // note: special mode vdim == 0 means no features to be loaded
                 if (issupervised())             // empty means unsupervised training -> return empty uids

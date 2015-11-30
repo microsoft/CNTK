@@ -27,11 +27,11 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-                BOOST_AUTO_TEST_CASE(MatrixChangeModesBetweenDenseAndSparse)
+                BOOST_FIXTURE_TEST_CASE(MatrixChangeModesBetweenDenseAndSparse, RandomSeedFixture)
                 {
                     //This test should fail if you don't have CUDA GPU
                     Matrix<float> mA;
-                    mA.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mA.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
                     float n0 = mA.MatrixNorm0();
                     BOOST_CHECK_EQUAL(MatrixType::DENSE, mA.GetMatrixType());
@@ -46,19 +46,19 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(MatrixType::DENSE, mA.GetMatrixType());
                 }
                 
-                BOOST_AUTO_TEST_CASE(MatrixSparseTimesDense)
+                BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
                 {
                     //DENSE
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
                     // MATRIX mAsparse becomes sparse
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
                     //DENSE
-                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim3, 1.0f, 4.0f);
-                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim3, 1.0f, 2.0f);
+                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim3, 1.0f, 4.0f, IncrementCounter());
+                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim3, 1.0f, 2.0f, IncrementCounter());
                     Matrix<float> mD(mC);
 
                     float alpha = 0.3f; 
@@ -74,16 +74,16 @@ namespace Microsoft
                     BOOST_CHECK(mD.IsEqualTo(mC, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixDenseTimesSparse)
+                BOOST_FIXTURE_TEST_CASE(MatrixDenseTimesSparse, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
-                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, 1.0f, 4.0f);
-                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, 1.0f, 2.0f);
+                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, 1.0f, 4.0f, IncrementCounter());
+                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, 1.0f, 2.0f, IncrementCounter());
                     Matrix<float> mD(mC);
 
                     bool transposeA = false, transposeB = false;
@@ -102,18 +102,18 @@ namespace Microsoft
                     BOOST_CHECK(mD.IsEqualTo(mC, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixDenseTimesSparse)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixDenseTimesSparse, RandomSeedFixture)
                 {
                     // TODO: test fails with large dimensions
                     size_t dim1 = 4, dim2 = 2;
                     Matrix<float> mAdense(CPUDEVICE);
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
                     
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
-                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
-                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
+                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim2, dim1, 1, 4, IncrementCounter(), CPUDEVICE);
+                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim2, dim2, 1, 2, IncrementCounter(), CPUDEVICE);
                     Matrix<float> mD(mC);
 
                     bool transposeA = false, transposeB = false;
@@ -132,18 +132,18 @@ namespace Microsoft
                     BOOST_CHECK(mD.IsEqualTo(mC, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(CPUMatrixDenseTimesSparseAsSparse)
+                BOOST_FIXTURE_TEST_CASE(CPUMatrixDenseTimesSparseAsSparse, RandomSeedFixture)
                 {
 #if 0
 // TODO commented temporarily since 'IsEqualTo' is not yet implemented
                     Matrix<float> mAdense(CPUDEVICE);
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
-                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim1, dim2, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
-                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim1, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
+                    Matrix<float> mB = Matrix<float>::RandomGaussian(dim1, dim2, 1, 4, IncrementCounter(), CPUDEVICE);
+                    Matrix<float> mC = Matrix<float>::RandomGaussian(dim1, dim1, 1, 2, IncrementCounter(), CPUDEVICE);
                     Matrix<float> mDblock(CPUDEVICE);
                     mDblock.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, true);
 
@@ -160,20 +160,20 @@ namespace Microsoft
 #endif
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSparseTimesSparse)
+                BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesSparse, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
                     Matrix<float> mBdense;
-                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim2, dim1, -5.0f, 0.4f, 0), 0);
+                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim2, dim1, -5.0f, 0.4f, IncrementCounter()), 0);
                     Matrix<float> mBsparse(mBdense);
                     mBsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
                     Matrix<float> mCdense;
-                    mCdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim1, -4.0f, 0.2f, 0), 0);
+                    mCdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim1, -4.0f, 0.2f, IncrementCounter()), 0);
                     Matrix<float> mCsparse(mCdense);
                     mCsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
@@ -195,14 +195,14 @@ namespace Microsoft
                     //BOOST_CHECK(mCsparse.IsEqualTo(mCdense, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSparsePlusSparse)
+                BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
                     Matrix<float> mAsparse(mAdense);
 
                     Matrix<float> mBdense;
-                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, 0), 0);
+                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, IncrementCounter()), 0);
                     Matrix<float> mBsparse(mBdense);
 
                     float alpha = 1.0f * rand() / RAND_MAX;
@@ -216,13 +216,13 @@ namespace Microsoft
                     BOOST_CHECK(mBsparse.IsEqualTo(mBdense, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixDensePlusSparse)
+                BOOST_FIXTURE_TEST_CASE(MatrixDensePlusSparse, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
 
                     Matrix<float> mBdense;
-                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, 0), 0);
+                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, IncrementCounter()), 0);
                     Matrix<float> mBsparse(mBdense);
 
                     float alpha = 1.0f * rand() / RAND_MAX;
@@ -235,14 +235,14 @@ namespace Microsoft
                     BOOST_CHECK(mBsparse.IsEqualTo(mBdense, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSparsePlusDense)
+                BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusDense, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
                     Matrix<float> mAsparse(mAdense);
 
                     Matrix<float> mBdense;
-                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, 0), 0);
+                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, IncrementCounter()), 0);
                     Matrix<float> Bd1(mBdense);
 
                     float alpha = 1.0f * rand() / RAND_MAX;
@@ -254,15 +254,15 @@ namespace Microsoft
                     BOOST_CHECK(Bd1.IsEqualTo(mBdense, c_epsilonFloatE4));
                 }
 
-                BOOST_AUTO_TEST_CASE(MatrixSparseElementWisePower)
+                BOOST_FIXTURE_TEST_CASE(MatrixSparseElementWisePower, RandomSeedFixture)
                 {
                     Matrix<float> mAdense;
-                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, 0), 0);
+                    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -3.0f, 0.1f, IncrementCounter()), 0);
                     Matrix<float> mAsparse(mAdense);
                     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
                     Matrix<float> mBdense;
-                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, 0), 0);
+                    mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, -5.0f, 0.4f, IncrementCounter()), 0);
                     Matrix<float> mBsparse(mBdense);
                     mBsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 

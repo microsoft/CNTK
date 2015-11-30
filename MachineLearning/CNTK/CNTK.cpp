@@ -17,8 +17,8 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
-#include "buildinfo.h"
 #endif
+#include "buildinfo.h"
 #include "hostname.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
@@ -336,39 +336,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     TrainingCriterion ParseTrainingCriterionString(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"crossentropywithsoftmax")
+        if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
             return TrainingCriterion::CrossEntropyWithSoftmax;
-        if (s == L"SequenceWithSoftmax")
+        if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
             return TrainingCriterion::SequenceWithSoftmax;
-        else if (s == L"squareerror")
+        else if (!_wcsicmp(s.c_str(), L"squareError"))
             return TrainingCriterion::SquareError;
-        else if (s == L"logistic")
+        else if (!_wcsicmp(s.c_str(), L"logistic"))
             return TrainingCriterion::Logistic;
-        else if (s == L"noisecontrastiveestimationnode")
+        else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode"/*spelling error, deprecated*/))
             return TrainingCriterion::NCECrossEntropyWithSoftmax;
-        else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-            LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | Logistic | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
+        else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+            LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
         return TrainingCriterion::ClassCrossEntropyWithSoftmax;
     }
 
     EvalCriterion ParseEvalCriterionString(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"errorprediction")
+        if (!_wcsicmp(s.c_str(), L"errorPrediction"))
             return EvalCriterion::ErrorPrediction;
-        else if (s == L"crossentropywithsoftmax")
+        else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
             return EvalCriterion::CrossEntropyWithSoftmax;
-        else if (s == L"SequenceWithSoftmax")
+        else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
             return EvalCriterion::SequenceWithSoftmax;
-        else if (s == L"classcrossentropywithsoftmax")
+        else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))
             return EvalCriterion::ClassCrossEntropyWithSoftmax;
-        else if (s == L"noisecontrastiveestimationnode")
+        else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode"/*spelling error, deprecated*/))
             return EvalCriterion::NCECrossEntropyWithSoftmax;
-        else if (s == L"logistic")
+        else if (!_wcsicmp(s.c_str(), L"logistic"))
             return EvalCriterion::Logistic;
-        else if (s != L"squareerror")
-            LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | Logistic | SequenceWithSoftmax)");
+        else if (!!_wcsicmp(s.c_str(), L"squareError"))
+            LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
         return EvalCriterion::SquareError;
     }
 
@@ -408,11 +406,11 @@ void DoCreateLabelMap(const ConfigParameters& config)
         // get the label mapping file name
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
-        if (labelConfig.ExistsCurrent("labelMappingFile"))
+        if (labelConfig.ExistsCurrent(L"labelMappingFile"))
         {
             labelMappingFile = labelConfig(L"labelMappingFile");
         }
-        else if (readerConfig.ExistsCurrent("labelMappingFile"))
+        else if (readerConfig.ExistsCurrent(L"labelMappingFile"))
         {
             labelMappingFile = labelConfig(L"labelMappingFile");
         }
@@ -1436,7 +1434,7 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
 static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
 {
-    if (TopLevelConfig.ExistsCurrent("Truncated"))
+    if (TopLevelConfig.ExistsCurrent(L"Truncated"))
     {
         return;
     }
@@ -1643,24 +1641,36 @@ std::string TimeDateStamp()
     return buf;
 }
 
-#ifdef _WIN32
 void PrintBuiltInfo()
 {
     fprintf(stderr, "-------------------------------------------------------------------\n");
     fprintf(stderr, "Build info: \n\n");
     fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
-    fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-    fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#ifdef _BUILDTYPE_ 
+    fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif 
+#ifdef _MATHLIB_
+    fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
     fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+#endif 
+#ifdef _CUB_PATH_
+    fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUB_PATH_);
+#endif 
 #ifdef _GIT_EXIST
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
     fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
 #endif
-    fprintf(stderr, "-------------------------------------------------------------------\n");
-
-}
+#ifdef _BUILDER_ 
+    fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+#endif 
+#ifdef _BUILDPATH_
+    fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+}
 
 void PrintUsageInfo()
 {
@@ -1779,9 +1789,7 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     }
 
     // echo config info to log
-#ifdef _WIN32
     PrintBuiltInfo();
-#endif
 
     // execute the actions
     //std::string type = config(L"precision", "float");
@@ -1867,9 +1875,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         RedirectStdErr(logpath);
     }
 
-#ifdef _WIN32
     PrintBuiltInfo();
-#endif
     std::string timestamp = TimeDateStamp();
 
     //dump config info
@@ -1947,6 +1953,8 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 {
     try
     {
+        if (argc <= 1)
+            InvalidArgument("No command-line argument given.");
         // detect legacy CNTK configuration
         bool isOldCNTKConfig = false;
         for (int i = 0; i < argc && !isOldCNTKConfig; i++)

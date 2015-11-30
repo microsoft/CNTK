@@ -172,7 +172,7 @@ template<class MATRIX> static void augmentneighbors(const std::vector<std::vecto
 }
 
 // ---------------------------------------------------------------------------
-// randomordering -- class to help manage randomization of input data
+// RandomOrdering -- class to help manage randomization of input data
 // ---------------------------------------------------------------------------
 
 static inline size_t rand (const size_t begin, const size_t end)
@@ -181,7 +181,7 @@ static inline size_t rand (const size_t begin, const size_t end)
     return begin + randno % (end - begin);
 }
 
-class randomordering                // note: NOT thread-safe at all
+class RandomOrdering                // note: NOT thread-safe at all
 {
     // constants for randomization
     const static size_t randomizeAuto=0;
@@ -194,7 +194,7 @@ class randomordering                // note: NOT thread-safe at all
                                     // special values (randomizeAuto, randomizeDisable)
     void invalidate() { currentseed = (size_t) -1; }
 public:
-    randomordering() { invalidate(); }
+    RandomOrdering() { invalidate(); }
 
     void resize (size_t len, size_t p_randomizationrange) { randomizationrange = p_randomizationrange>0?p_randomizationrange:len; map.resize (len); invalidate(); }
 
@@ -214,7 +214,7 @@ public:
         {
             // test for numeric overflow
             if (map.size()-1 != (INDEXTYPE) (map.size()-1))
-                throw std::runtime_error ("randomordering: INDEXTYPE has too few bits for this corpus");
+                throw std::runtime_error ("RandomOrdering: INDEXTYPE has too few bits for this corpus");
             // 0, 1, 2...
             foreach_index (t, map) map[t] = (INDEXTYPE) t;
             // now randomize them
@@ -222,7 +222,7 @@ public:
             {
     #if 1       // change to 0 to disable randomizing
                 if (map.size() > RAND_MAX * (size_t) RAND_MAX)
-                    throw std::runtime_error ("randomordering: too large training set: need to change to different random generator!");
+                    throw std::runtime_error ("RandomOrdering: too large training set: need to change to different random generator!");
                 srand ((unsigned int) seed);
                 size_t retries = 0;
                 foreach_index (t, map)
@@ -249,14 +249,14 @@ public:
                         retries++;
                     }
                 }
-                fprintf (stderr, "randomordering: %zu retries for %zu elements (%.1f%%) to ensure window condition\n", retries, map.size(), 100.0 * retries / map.size());
+                fprintf (stderr, "RandomOrdering: %zu retries for %zu elements (%.1f%%) to ensure window condition\n", retries, map.size(), 100.0 * retries / map.size());
                 // ensure the window condition
                 foreach_index (t, map) assert ((size_t) t <= map[t] + randomizationrange/2 && map[t] < (size_t) t + randomizationrange/2);
     #if 1       // and a live check since I don't trust myself here yet
                 foreach_index (t, map) if (!((size_t) t <= map[t] + randomizationrange/2 && map[t] < (size_t) t + randomizationrange/2))
                 {
-                    fprintf (stderr, "randomordering: windowing condition violated %d -> %d\n", t, map[t]);
-                    throw std::logic_error ("randomordering: windowing condition violated");
+                    fprintf (stderr, "RandomOrdering: windowing condition violated %d -> %d\n", t, map[t]);
+                    throw std::logic_error ("RandomOrdering: windowing condition violated");
                 }
     #endif
     #endif
@@ -265,7 +265,7 @@ public:
                 ::sort (map2.begin(), map2.end());
                 foreach_index (t, map2) assert (map2[t] == (size_t) t);
     #endif
-                fprintf (stderr, "randomordering: recached sequence for seed %d: %d, %d, ...\n", (int) seed, (int) map[0], (int) map[1]);
+                fprintf (stderr, "RandomOrdering: recached sequence for seed %d: %d, %d, ...\n", (int) seed, (int) map[0], (int) map[1]);
             }
             currentseed = seed;
         }

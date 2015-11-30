@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_backwardDecoderModelPath = m_modelPath + L".backward.decoder";
             m_encoderModelPath = m_modelPath + L".encoder";
 
-            ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
+            ConfigArray arrEncoderNodeNames = readerConfig(L"encoderNodes", "");
             vector<wstring> encoderNodeNames;
             m_lst_pair_encoder_decode_node_names.clear();
 
@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            ConfigArray arrDecoderNodeNames = readerConfig("decoderNodes", "");
+            ConfigArray arrDecoderNodeNames = readerConfig(L"decoderNodes", "");
             vector<wstring> decoderNodeNames;
             if (arrDecoderNodeNames.size() > 0)
             {

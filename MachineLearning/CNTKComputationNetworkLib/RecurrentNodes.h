@@ -1039,11 +1039,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int GetSegInfo(size_t t, size_t streamid)
         {
             if (streamid >= GetNumParallelSequences())
-                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, GetNumParallelSequences());
+                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int)streamid, (int)GetNumParallelSequences());
 
             size_t nT = Inputs(0)->GetNumCols();
             if (t >= nT)
-                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
+                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
 
             int utt_t = (int)t / GetNumParallelSequences();
             auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
@@ -1567,16 +1567,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(1, false);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
-        //{
-        //    m_children.resize(5);
-        //    m_children[0] = obs;
-        //    m_children[1] = inputGate;
-        //    m_children[2] = forgetGate;
-        //    m_children[3] = outputGate;
-        //    m_children[4] = memoryCellWgt;
-        //}
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {

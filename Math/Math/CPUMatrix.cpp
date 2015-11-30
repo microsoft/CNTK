@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 #include "Basics.h"
-#include "fileutil.h"
+#include "File.h"
 
 #include <assert.h>
 #include <stdexcept>
@@ -510,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
     {
         if (m_numRows != m_numCols)
-            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m_numRows, m_numCols);
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", (int)m_numRows, (int)m_numCols);
 
         CPUMatrix<ElemType> diag(1, m_numCols);
 

@@ -26,7 +26,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -96,7 +96,7 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init=fixedvalue, value=0.1)
+        B=Parameter(rowCount, init="fixedValue", value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
         S = Sigmoid(BFF_final);
@@ -106,30 +106,30 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init=fixedvalue, value=0.1)
+        B=Parameter(rowCount, init="fixedValue", value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
     }
 
     LSTMComponent(inputDim, outputDim, in)
     {
-        Wxo = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
-        Wxi = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
-        Wxf = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
-        Wxc = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
+        Wxo = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
+        Wxi = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
+        Wxf = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
+        Wxc = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
 
-        bo = Parameter(outputDim, init=fixedvalue, value=-1.0);
-        bc = Parameter(outputDim, init=fixedvalue, value=0.0);
-        bi = Parameter(outputDim, init=fixedvalue, value=-1.0);
-        bf = Parameter(outputDim, init=fixedvalue, value=-1.0);
+        bo = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
+        bc = Parameter(outputDim, 1, init="fixedValue", value=0.0);
+        bi = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
+        bf = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
 
-        Whi = Parameter(outputDim, outputDim, init=Uniform, initValueScale=6);
-        Wci = Parameter(outputDim, init=Uniform, initValueScale=6);
-        Whf = Parameter(outputDim, outputDim, init=Uniform, initValueScale=6);
-        Wcf = Parameter(outputDim, init=Uniform, initValueScale=6);
-        Who = Parameter(outputDim, outputDim, init=Uniform, initValueScale=6);
-        Wco = Parameter(outputDim, init=Uniform, initValueScale=6);
-        Whc = Parameter(outputDim, outputDim, init=Uniform, initValueScale=6);
+        Whi = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
+        Wci = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
+        Whf = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
+        Wcf = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
+        Who = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
+        Wco = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
+        Whc = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
 
         delayHI = Delay(outputDim, outputTest, delayTime=1);
         delayHF = Delay(outputDim, outputTest, delayTime=1);
@@ -185,24 +185,25 @@ ndlCreateNetwork=[
 	labelDim=127
 	hiddenDim=300
 
-	features=Input(featDim, tag=feature)
-	labels=Input(labelDim, tag=label)
+	features=Input(featDim, tag="feature")
+	labels=Input(labelDim, tag="label")
 
 	# define network
-    Wlookup = Parameter(lookupDim, inputDim, init=Uniform, initValueScale=6);
-    featLookuped = LookupTable(Wlookup, features, init=Uniform, initValueScale=6);
+    Wlookup = Parameter(lookupDim, inputDim, init="uniform", initValueScale=6);
+    featLookuped = LookupTable(Wlookup, features, init="uniform", initValueScale=6);
     
-    LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, init=Uniform, initValueScale=6);
-    W1 = Parameter(labelDim, hiddenDim, init=Uniform, initValueScale=6);
+    LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, init="uniform", initValueScale=6);
+    W1 = Parameter(labelDim, hiddenDim, init="uniform", initValueScale=6);
 
-    LSTMoutputW1 = Times(W1, LSTMoutput, tag=outputs);
+    // TODO: This tag does not exist, does it?
+    LSTMoutputW1 = Times(W1, LSTMoutput, tag="outputs");
 
-    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Criteria);
-    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag=Eval);
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
+    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="eval");
     
 #    logPrior = LogPrior(labels)	 
 
-#    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag=Output)
-    outputs=SoftMax(LSTMoutputW1,tag=Output)
+#    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag="output")
+    outputs=SoftMax(LSTMoutputW1,tag="output")
 
 ]

@@ -101,12 +101,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UCIFastReader.h" />

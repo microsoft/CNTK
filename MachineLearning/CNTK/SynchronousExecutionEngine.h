@@ -282,13 +282,13 @@ public:
             {
                 SetOutputNode(m_net->LabelNodes(), compNode);
             }
-            else if (!_stricmp(value.c_str(), "criteria"))
+            else if (!_stricmp(value.c_str(), "criterion") || !_stricmp(value.c_str(), "criteria"))
             {
                 SetOutputNode(m_net->FinalCriterionNodes(), compNode);
             }
-            else if (!_stricmp(value.c_str(), "multiseq"))
+            else if (!_stricmp(value.c_str(), "multiSeq"))
             {
-                fprintf(stderr, "'multiseq' tag is defunct.\n");
+                fprintf(stderr, "'multiSeq' tag is defunct.\n");
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {

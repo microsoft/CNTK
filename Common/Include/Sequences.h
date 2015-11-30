@@ -12,6 +12,36 @@
 #include <vector>
 #include <memory>   // for shared_ptr
 
+enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
+{
+    None = 0,
+    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+    NoLabel = 1 << 3,               // binary 1000  frame has no label
+
+    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
+    SequenceStartOrNoFeature = SequenceStart | NoFeature,
+    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
+    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
+};
+
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
+{
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
+{
+    a = a | b;
+    return a;
+}
+
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Forward declarations

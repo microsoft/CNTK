@@ -8,11 +8,15 @@
 
 // #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
 #include "CommonMatrix.h"
-#include "commandArgUtil.h"
-#include "ScriptableObjects.h"
+
+// define IConfigRecord and ConfigParameters as incomplete types, in order to avoid having to include "ScriptableObjects.h" and "commandArgUtil.h", as that confuses some .CU code
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+    struct IConfigRecord;
+}}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef CPUONLY
+    class ConfigParameters;
     DEVICEID_TYPE DeviceFromConfig(const ConfigParameters & config);
     DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config);
 #else

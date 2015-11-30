@@ -10,8 +10,10 @@
 #include "latticestorage.h"
 #include <unordered_map>
 #include <list>
+#include <stdexcept>
 
-#undef PRINT_TIME_MEASUREMENT       // [v-hansu]
+using namespace std;
+
 #define VIRGINLOGZERO (10 * LOGZERO)            // used for printing statistics on unseen states
 #undef CPU_VERIFICATION
 
@@ -792,7 +794,6 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
 #endif
 
     // Phase 1: abcs allocate
-    auto_timer timerabcsallocate;
     if (!parallelstate.enabled() || !parallelsil || cpuverification)    // allocate abcs when 1.parallelstate not enabled (cpu mode); 2. enabled but not PARALLEL_SIL (silence need to be allocate); 3. cpuverfication
     {
         abcs.resize (edges.size(), NULL);                               // [edge index] -> alpha/beta/gamma matrices for each edge
@@ -839,10 +840,8 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
         if (minlogpp > LOGZERO)
             fprintf(stderr, "forwardbackwardalign: %d of %d edges pruned\n", (int)countskip, (int)edges.size());
     }
-    const double abcsallocatedur = timerabcsallocate;
 
     // Phase 2: alignment on CPU
-    auto_timer timersilalignment;
     if (parallelstate.enabled() && !parallelsil)       // silence edge shall be process separately if not cuda and not PARALLEL_SIL
     {
         if (softalignstates)
@@ -870,13 +869,10 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
             edgeacscores[j] = alignedge (aligntokens, hset, edgeLLs, *abcs[j], j, true, thisedgealignments[j]);
         }
     }
-    const double silalignmentdur = timersilalignment;
 
     // Phase 3: alignment on GPU
-    auto_timer timercudafwbwalign;
     if (parallelstate.enabled())
         parallelforwardbackwardalign (parallelstate, hset, logLLs, edgeacscores, thisedgealignments, thisbackpointers);
-    const double cudafwbwaligndur = timercudafwbwalign;
 
     //zhaorui align to reference mlf
     if (bounds.size() > 0)
@@ -931,7 +927,6 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
     }
 
     // Phase 4: alignment or forwardbackward on CPU for non parallel mode or verification
-    auto_timer timercpualign;
 
     if (!parallelstate.enabled() || cpuverification)        //non parallel mode or verification
     {
@@ -988,19 +983,6 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
             }
         }
     }
-    const double cpualigndur = timercpualign;
-#ifdef PRINT_TIME_MEASUREMENT
-    if (!parallelstate.enabled() || !parallelsil || cpuverification)
-        fprintf (stderr, "abcsallocate: %f ms\n", abcsallocatedur * 10);
-    if (parallelstate.enabled() && !parallelsil)
-        fprintf (stderr, "silalignment: %f ms\n", silalignmentdur * 10);
-    if (parallelstate.enabled())
-        fprintf (stderr, "cudafwbwalign: %f ms\n", cudafwbwaligndur * 10);
-    if (!parallelstate.enabled() || cpuverification)
-        fprintf (stderr, "cpualign: %f ms\n", cpualigndur * 10);
-#else
-    abcsallocatedur; silalignmentdur; cudafwbwaligndur; cpualigndur;
-#endif
 }
 
 // compute the error signal for sMBR mode
@@ -1016,13 +998,7 @@ void lattice::sMBRerrorsignal (parallelstate & parallelstate,
             errorsignalcompute: 19.871935 ms (cuda) v.s. 448.711444 ms (emu) */
         if (minlogpp > LOGZERO)
             fprintf(stderr, "sMBRerrorsignal: pruning not supported (we won't need it!) :)\n");
-#ifdef PRINT_TIME_MEASUREMENT
-        auto_timer errorsignalcompute;
-#endif
         parallelsMBRerrorsignal (parallelstate, thisedgealignments, logpps, amf, logEframescorrect, logEframescorrecttotal, errorsignal, errorsignalneg);
-#ifdef PRINT_TIME_MEASUREMENT
-        errorsignalcompute.show("errorsignalcompute");
-#endif
         return;
     }
 
@@ -1064,14 +1040,8 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
         if (minlogpp > LOGZERO)
             fprintf(stderr, "mmierrorsignal: pruning not supported (we won't need it!) :)\n");
         if (softalignstates)
-            throw::logic_error ("mmierrorsignal: parallel version for softalignstates mode is not supported yet");
-#ifdef PRINT_TIME_MEASUREMENT
-        auto_timer errorsignalcompute;
-#endif
+            LogicError("mmierrorsignal: parallel version for softalignstates mode is not supported yet");
         parallelmmierrorsignal (parallelstate, thisedgealignments, logpps, errorsignal);
-#ifdef PRINT_TIME_MEASUREMENT
-        errorsignalcompute.show("errorsignalcompute");
-#endif
         return;
     }
     
@@ -1202,7 +1172,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
                 int transPindex = hset.senonetransP (senoneid);
                 int sindex = hset.senonestate (senoneid);
                 if (transPindex == -1 || sindex == -1)
-                    RuntimeError("scoregroundtruth: failed to resolve ambiguous senone " + (string) hset.getsenonename (senoneid));
+                    RuntimeError("scoregroundtruth: failed to resolve ambiguous senone %s", hset.getsenonename (senoneid));
                 transP = &hset.transPs[transPindex];
                 s = sindex;
             }
@@ -1359,12 +1329,11 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     bool softalignstates = false;       // true if soft alignment within edges, currently we only support soft within edge in cpu mode
     bool softalignlattice = softalign;  // w.r.t. whole lattice
 
-    auto_timer timerfwbwprepare;
     edgealignments thisedgealignments (*this);          // alignments memory allocate for this lattice
     backpointers thisbackpointers (*this, hset);        // memory for forwardbackward
 
     if (info.numframes != logLLs.cols())
-        LogicError(msra::strfun::strprintf ("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols()));
+        LogicError("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols());
     // TODO: the following checks should throw, but I don't dare in case this will crash a critical job... if we never see this warning, then 
     if (info.numframes != uids.size())
         fprintf (stderr, "forwardbackward: #frames mismatch between lattice (%d) and uids (%d)\n", (int) info.numframes, (int) uids.size());
@@ -1372,7 +1341,6 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
         fprintf (stderr, "forwardbackward: #frames mismatch between lattice (%d) and result (%d)\n", (int) info.numframes, (int) result.cols());
 
     littlematrixheap matrixheap (info.numedges);        // for abcs
-    const double fwbwpreparedur = timerfwbwprepare;
 
     // PHASE 0: fake word level forward backwards --only used when pruning enabled
     const double minlogpp = LOGZERO;                // pruning threshold  --LOGZERO means disabled
@@ -1383,12 +1351,6 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     // score the ground truth  --only if a transcript is provided, which happens if the user provides a language model
     // TODO: no longer used, remove this. 'transcript' parameter is no longer used in this function.
     transcript; transcriptunigrams;
-
-#ifdef PRINT_TIME_MEASUREMENT
-    fprintf (stderr, "fwbwprepare: %f ms\n", fwbwpreparedur * 1000);
-#else
-    fwbwpreparedur;
-#endif
 
     // allocate alpha/beta/gamma matrices (all are sharing the same memory in-place)
     std::vector<msra::math::ssematrixbase *> abcs;

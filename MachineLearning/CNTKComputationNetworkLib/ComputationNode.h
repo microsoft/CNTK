@@ -38,22 +38,24 @@
 
 #pragma warning (disable: 4267)
 
-//version number to control how to read and write 
+// version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
-// #define TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
+// helper mode for debugging
+// If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
+// #define TRACK_GAP_NANS
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    enum CopyNodeFlags
+    enum CopyNodeFlags  // flags to be passed to the CopyTo() function
     {
-        copyNodeNull = 0,               // invalid value
-        copyNodeValue=1,                // copy everything but the children links
-        copyNodeChildren=2,             // only copy over children links
-        copyNodeAll=3,                  // copy everything
-        copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
+        copyNodeNull                 = 0,   // invalid value
+        copyNodeValue                = 1,   // copy everything but the children links
+        copyNodeChildren             = 2,   // only copy over children links
+        copyNodeAll                  = 3,   // copy everything
+        copyNodeChildrenCrossNetwork = 4,   // allow a cross network child copy
     };
 
 #pragma region base computation class
@@ -72,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
-#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
+#define OperationNameOf(T) (T<float>::TypeName())               // convenience macro
 
         virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
@@ -103,7 +105,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs() = 0;
         virtual void SaveToFile(File& fstream) const = 0;
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
-        // TODO: is this always just called with deviceId == m_deviceId?   TODO: Where is this actually EVERY called?? I don't see it!
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
         // --- optional overrides that describe a feature or property of the node
@@ -197,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
-    // TimeStamp -- helper class to manage a time stamp
+    // TimeStamp -- helper class to manage a "time stamp" (unique value) of a computation result to avoid recomputation
     // =======================================================================
 
     class TimeStamp
@@ -259,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("Cannot copy from one node type to another node type");
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
-                node->m_children = m_children;
+                node->m_inputs = m_inputs;
             }
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -325,15 +326,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Validate(bool isFinalValidationPass)           // main base validation function
         {
             // check for NULL pointers
-            for (size_t i = 0; i < m_children.size(); i++)
+            for (size_t i = 0; i < m_inputs.size(); i++)
             {
-                if (!m_children[i])
+                if (!m_inputs[i])
                     RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int)i, OperationName().c_str(), NodeName().c_str());
             }
             // check for empty inputs
             if (isFinalValidationPass)
             {
-                for (const auto & child : m_children)
+                for (const auto & child : m_inputs)
                 {
                     if (child->GetNumRows() == 0 || (!child->HasMBLayout() && child->GetNumCols() == 0))
                         RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.",
@@ -373,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr &thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { firstInput, secondInput, thirdInput, fourthInput, fifthInput } ); }
         void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr &thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput, const ComputationNodeBasePtr& sixthInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { firstInput, secondInput, thirdInput, fourthInput, fifthInput, sixthInput } ); }
 
-        virtual void DetachInputs() { m_children.clear(); }
+        virtual void DetachInputs() { m_inputs.clear(); }
 
         // helper for the factory function for ComputationNodes
         static vector<ComputationNodeBasePtr> GetInputsFromConfig(const ScriptableObjects::IConfigRecordPtr configp)
@@ -395,8 +396,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return inputs;
         }
 
-        const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
-        ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
+        const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_inputs; }
+        ComputationNodeBasePtr Inputs(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
@@ -469,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "(");
                 for (size_t i = 0; i<ChildrenSize(); i++)
                 {
-                    const auto & child = m_children[i];
+                    const auto & child = m_inputs[i];
                     if (i > 0)
                         fprintf(stderr, ", ");
 
@@ -519,14 +520,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsChildAnImage(const size_t index) const
         {
-            return m_children[index]->m_imageLayout.GetWidth() != 1 || m_children[index]->m_imageLayout.GetNumChannels() != 1;
+            return m_inputs[index]->m_imageLayout.GetWidth() != 1 || m_inputs[index]->m_imageLayout.GetNumChannels() != 1;
         }
 
         const ImageLayout & GetImageLayout() const { return m_imageLayout; }
 
         pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_imageLayout); }   // helper for Validate()
 
-        const size_t ChildrenSize() const { return m_children.size(); }     // TODO: rename to NumChildren() or NumInputs(); and inside here where we use m_children, use m_children.size() as well
+        const size_t ChildrenSize() const { return m_inputs.size(); }     // TODO: rename to NumChildren() or NumInputs(); and inside here where we use m_inputs, use m_inputs.size() as well
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
@@ -572,7 +573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (index >= ChildrenSize())
                 InvalidArgument("InferImageDimsFromInput: output index");
 
-            const auto & child = m_children[index];
+            const auto & child = m_inputs[index];
             if (child != nullptr)
                 m_inputImageLayout = child->m_imageLayout;
             if (outputSameAsInput)
@@ -590,7 +591,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
         {
-            if (OperationName() != other->OperationName() || m_children.size() != other->m_children.size())
+            if (OperationName() != other->OperationName() || m_inputs.size() != other->m_inputs.size())
                 return false;
 
             if (NodeName() == other->NodeName())  //assume names are unique in the system
@@ -599,8 +600,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (IsLeaf() && other->IsLeaf())  //since names are not equal otherwise will return above
                 return false;
 
-            for (size_t i=0; i<m_children.size(); i++)
-                if (!(m_children[i] == other->m_children[i]))
+            for (size_t i=0; i<m_inputs.size(); i++)
+                if (!(m_inputs[i] == other->m_inputs[i]))
                     return false;
 
             return true;
@@ -636,10 +637,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // children first for function evaluation
                 if (OperationName() != L"PairNetwork" || !skipPairNetwork)    // (don't step through network-pair boundary if called from FormRecurrentLoops())
                 {
-                    for (int i = 0; i < m_children.size(); i++)
+                    for (int i = 0; i < m_inputs.size(); i++)
                     {
-                        if (m_children[i])
-                            m_children[i]->EnumerateNodesRec(visited, result, skipPairNetwork);
+                        if (m_inputs[i])
+                            m_inputs[i]->EnumerateNodesRec(visited, result, skipPairNetwork);
                     }
                 }
 
@@ -658,7 +659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: use range-based for
             for (size_t i = 0; i < ChildrenSize(); i++)
             {
-                if (IsOlderThan(*m_children[i]))
+                if (IsOlderThan(*m_inputs[i]))
                     return true;
             }
 
@@ -685,12 +686,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (visited.find(curNode) == visited.end())
                     {
-                        for (size_t i = 0; i < curNode->m_children.size(); i++)
+                        for (size_t i = 0; i < curNode->m_inputs.size(); i++)
                         {
-                            arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
+                            arcs.push_back(ComputationArc(curNode, curNode->m_inputs[i]));
 
-                            if (visited.find(curNode->m_children[i]) == visited.end()) // this children has not been visited before 
-                                tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
+                            if (visited.find(curNode->m_inputs[i]) == visited.end()) // this children has not been visited before 
+                                tovisit.push_front(curNode->m_inputs[i]);		// going to visit each of the children
                         }
                         visited.insert(curNode);
                     }
@@ -732,7 +733,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_nodeName;
 
         // inputs
-        std::vector<ComputationNodeBasePtr> m_children;
+        std::vector<ComputationNodeBasePtr> m_inputs;
 
         // dimensions and layout
         // Data is stored as a matrix, but often it is interpreted as a more complex structure.
@@ -846,12 +847,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const auto * pNumInputs = dynamic_cast<INumInputs*>(this);    // if this class also derives from NumInputs<N> then N is the expected number of inputs
             if (pNumInputs && pNumInputs->GetExpectedNumInputs() != inputs.size())
                 RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int)pNumInputs->GetExpectedNumInputs(), (int)inputs.size());
-            m_children.resize(inputs.size());
-            for (size_t i = 0; i < m_children.size(); i++)
+            m_inputs.resize(inputs.size());
+            for (size_t i = 0; i < m_inputs.size(); i++)
                 if (inputs[i])
-                    m_children[i] = UpCast(inputs[i]);          // (UpCast() checks the type; the assignment then downcasts it again)
+                    m_inputs[i] = UpCast(inputs[i]);          // (UpCast() checks the type; the assignment then downcasts it again)
                 else
-                    m_children[i] = nullptr;                    // during network creation, nullpts are possible
+                    m_inputs[i] = nullptr;                    // during network creation, nullpts are possible
         }
 
     protected:
@@ -895,10 +896,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
         {
-            for (int i = 0; i < m_children.size(); i++)
+            for (int i = 0; i < m_inputs.size(); i++)
             {
-                if (m_children[i]->NeedGradient())
-                    m_children[i]->RequestMatricesBeforeGradientComp(matrixPool);
+                if (m_inputs[i]->NeedGradient())
+                    m_inputs[i]->RequestMatricesBeforeGradientComp(matrixPool);
             }
         }
 
@@ -916,7 +917,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_gradientValues != nullptr && m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
                     ReleaseMatrixToPool(m_gradientValues, matrixPool);
 
-                ReleaseMatrixToPool(m_functionValues, matrixPool);
+                if (m_functionValues->GetMatrixType() != SPARSE)
+                    ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
@@ -927,12 +929,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // we format it like "name : type rows x cols ( args )"
             wstring result = /*TidyName*/(NodeName()) + L" : " + OperationName();
             result.append(msra::strfun::wstrprintf(L" %d x %d", (int)m_functionValues->GetNumRows(), (int)m_functionValues->GetNumCols()));
-            if (m_children.empty()) result.append(L" ()");
+            if (m_inputs.empty()) result.append(L" ()");
             else
             {
                 wstring args;
                 bool first = true;
-                for (auto & child : m_children)
+                for (auto & child : m_inputs)
                 {
                     if (first)
                         first = false;
@@ -967,6 +969,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto f_numCols = m_functionValues->GetNumCols();
             if (f_numRows != m_numRows || f_numCols != m_numCols)
                 LogicError("UpdateFunctionMBSize: m_functionValues out of sync with m_numRows/m_numCols");
+
+#ifdef SHOW_MATRIX_TYPE
+            fprintf(stderr, "MatrixType %ls: %ls(%ls  %ls)\n",
+                NodeName().c_str(),
+                OperationName().c_str(),
+                FunctionValues().GetMatrixType() == MatrixType::DENSE ? L"Dense" : L"Sparse",
+                FunctionValues().GetCurrentMatrixLocation() == GPU ? L"GPU" :
+                FunctionValues().GetCurrentMatrixLocation() == CPU ? L"CPU" : L"BOTH");
+#endif        
         }
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
@@ -1013,7 +1024,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (i > 0)
                         fprintf(stderr, ", ");           
-                    fprintf(stderr, "%ls[%lu, %lu]", m_children[i] ? m_children[i]->NodeName().c_str():L"NULL", m_children[i]->GetNumRows(), m_children[i]->GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", m_inputs[i] ? m_inputs[i]->NodeName().c_str():L"NULL", m_inputs[i]->GetNumRows(), m_inputs[i]->GetNumCols());
                 }
                 fprintf(stderr, ")");           
             }
@@ -1040,10 +1051,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         inline ComputationNodePtr Inputs(const size_t childIndex) const       // TODO: rename to Input
         {
 #ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
-            if (childIndex >= m_children.size())
+            if (childIndex >= m_inputs.size())
                 LogicError("Inputs: childIndex is out of range.");
 #endif
-            return UpCast(m_children[childIndex]);
+            return UpCast(m_inputs[childIndex]);
         }
 
         void /*ComputationNodeBase::*/SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
@@ -1051,22 +1062,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ComputationNodePtr node = UpCast(inode);
 
             //require first nodes specified before the second to avoid null nodes condition.
-            if (childIndex > m_children.size())
+            if (childIndex > m_inputs.size())
                 InvalidArgument("SetInput: You must specify the input for children with index less than this one first.");
 
             // expand the inputs to exist up to the desired index
-            while (childIndex >= m_children.size())
-                m_children.push_back(nullptr);
+            while (childIndex >= m_inputs.size())
+                m_inputs.push_back(nullptr);
 
             // set the input value
-            m_children[childIndex] = node;
+            m_inputs[childIndex] = node;
         }
 
         const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
         Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
+        shared_ptr<Matrix<ElemType>>& FunctionValuesPtr() { return m_functionValues; }
 
         const Matrix<ElemType>& GradientValues() const { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
+        shared_ptr<Matrix<ElemType>>& GradientValuesPtr() { return m_gradientValues; }
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
@@ -1159,10 +1172,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     MaskMissingGradientColumnsToZero(FrameRange(m_pMBLayout));
             }
             bool anyChildNeedsGradient = false;
-            for (size_t i = 0; i < m_children.size(); i++)
+            for (size_t i = 0; i < m_inputs.size(); i++)
                 anyChildNeedsGradient |= Inputs(i)->m_needsGradient;
             if (anyChildNeedsGradient)
-                for (size_t i = 0; i < m_children.size(); i++)
+                for (size_t i = 0; i < m_inputs.size(); i++)
                     Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(Inputs(i)->GetMBLayout()));
 #endif
         }
@@ -1172,7 +1185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::OnComputeGradientEndIteration();
 #ifdef TRACK_GAP_NANS
-            for (size_t i = 0; i < m_children.size(); i++)
+            for (size_t i = 0; i < m_inputs.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
@@ -1193,7 +1206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
                 LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
 
-            for (size_t i = 0; i < m_children.size(); i++)
+            for (size_t i = 0; i < m_inputs.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient &&
@@ -1239,7 +1252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void /*ComputationNodeBase::*/ClearGradientForChildren() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
         {
-            for (size_t i = 0; i < m_children.size(); i++)
+            for (size_t i = 0; i < m_inputs.size(); i++)
                 Inputs(i)->m_gradientInitialized = false;
         }
 
@@ -1308,6 +1321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
             }
         }
+
         //to be called by derived classed if that class needs to print node values
         void PrintNodeValuesToFile(const bool printValues, File& fstream) const
         {
@@ -1498,9 +1512,9 @@ protected: \
     using Base::SetDims; /*using Base::NotifyFunctionValuesMBSizeModified;*/ using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadFunctionValues; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientValues; using Base::GradientValuesPtr; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
-    using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
+    using Base::m_inputs; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_imageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
@@ -1522,7 +1536,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::NodeName; \
-    using Base::FunctionValues
+    using Base::FunctionValues; using Base::FunctionValuesPtr
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
