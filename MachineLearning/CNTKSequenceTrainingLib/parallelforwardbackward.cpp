@@ -376,7 +376,6 @@ namespace msra { namespace lattices {
             if (lr3transPgpu->size() > 0)
                 LogicError("cachehset: cannot bind to multiple model sets");
 
-            auto_timer copyhmms;
             // transPs
             lr3transPcpuforgpu.resize (hset.transPs.size());
             const std::vector<msra::asr::simplesenonehmm::transP> & transPs = hset.transPs;
@@ -439,7 +438,6 @@ namespace msra { namespace lattices {
                     LogicError("parallelforwardbackwardalign : hmms.transPindex is out of range of unsigned short");
             }
             hmmsgpu->assign (hmmscpuforgpu, true/*sync*/);  // need to sync if we free the memory right after (and we won't buy much from async)
-            copyhmms.show("copyhmms");      // 246.776281 ms  --note: forgot hmmsgpu
 
             // if we are not emulating then we will delete our CPU-side copy to save memory
             if (!emulation)

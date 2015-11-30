@@ -169,7 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: seems to be specific to SynchronousExecutionEngine, should be in a derived class for that execution engine
         void SetOutputNodes(NDLScript<ElemType>* script)
         {
-            // NOTE: all optional parameter nodes (i.e. tag=feature) have already been processed in ProcessOptionalParameters()
+            // NOTE: all optional parameter nodes (i.e. tag="feature") have already been processed in ProcessOptionalParameters()
 
             // handle the alternate way of specifying nodes, the array of nodes method
             CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());

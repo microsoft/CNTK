@@ -7,6 +7,8 @@
 //
 
 #include "stdafx.h"
+#include "Basics.h"
+#include "File.h"
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
@@ -15,16 +17,11 @@
 #include "CPUSparseMatrix.h"
 #include <random>
 #include <chrono>
-#ifdef    _WIN32
-#include <Windows.h>
-#endif
+#include <iostream>
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
 
-#include "Basics.h"
-#include "fileutil.h"
-#include <iostream>
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifndef USE_MKL
@@ -113,9 +110,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             m_blockSize = 0;      
+            m_blockIdShift = 0;
             m_pArray = NULL;
             m_blockIds = NULL;
         }
+        m_nzValues = NULL;
     }
 
     //should only be used by constructors.
@@ -166,33 +165,108 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //move constructor, shallow copy
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>::CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom)
+    {
+        m_format = moveFrom.m_format;
+        m_numRows = moveFrom.m_numRows;
+        m_numCols = moveFrom.m_numCols;
+        m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
+        m_compIndexSize = moveFrom.m_compIndexSize;
+        m_externalBuffer = moveFrom.m_externalBuffer;
+        m_computeDevice = moveFrom.m_computeDevice;
+        m_nz = moveFrom.m_nz;
+        m_matrixName = moveFrom.m_matrixName;
+
+        m_colIdx = moveFrom.m_colIdx;
+        m_pArray = moveFrom.m_pArray;
+        m_nzValues = moveFrom.m_nzValues;
+        m_unCompIndex = moveFrom.m_unCompIndex;
+        m_compIndex = moveFrom.m_compIndex;
+
+        m_blockSize = moveFrom.m_blockSize;
+        m_blockIdShift = moveFrom.m_blockIdShift;
+        m_blockIds = moveFrom.m_blockIds;
+
+        //release the pointer from the source object so that the destructor won't release it twice
+        moveFrom.ZeroInit();
+    }
+
+    //move assignment operator, shallow copy
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<ElemType>&& moveFrom)
+    {
+        if (this != &moveFrom)
+        {
+            if (OwnBuffer())
+                ReleaseMemory();  //always delete the data pointer since we will use the pointer from moveFrom
+
+            m_format = moveFrom.m_format;
+            m_numRows = moveFrom.m_numRows;
+            m_numCols = moveFrom.m_numCols;
+            m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
+            m_compIndexSize = moveFrom.m_compIndexSize;
+            m_externalBuffer = moveFrom.m_externalBuffer;
+            m_computeDevice = moveFrom.m_computeDevice;
+            m_nz = moveFrom.m_nz;
+            m_matrixName = moveFrom.m_matrixName;
+
+            m_colIdx = moveFrom.m_colIdx;
+            m_pArray = moveFrom.m_pArray;
+            m_nzValues = moveFrom.m_nzValues;
+            m_unCompIndex = moveFrom.m_unCompIndex;
+            m_compIndex = moveFrom.m_compIndex;
+
+            m_blockSize = moveFrom.m_blockSize;
+            m_blockIdShift = moveFrom.m_blockIdShift;
+            m_blockIds = moveFrom.m_blockIds;
+
+            //release the pointer from the source object so that the destructor won't release it twice
+            moveFrom.ZeroInit();
+        }
+        return *this;
+    }
+
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
+    {
+        ReleaseMemory();
+    }
+
+    template<class ElemType>
+    void CPUSparseMatrix<ElemType>::ReleaseMemory()
     {
         // If m_externalBuffer is true then this matrix
         // is simply a view over another matrix. In that
         // case we shouldn't free anything.
         if (!m_externalBuffer)
         {
-            if (m_matrixName!=NULL) 
+            delete[] m_matrixName;
+
+            if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
             {
-                delete[] m_matrixName;
+                delete[] m_pArray; 
+                m_pArray = nullptr;
+                m_nzValues = nullptr;
+
+                delete[] m_unCompIndex; 
+                m_unCompIndex = nullptr;
+
+                delete[] m_compIndex; 
+                m_compIndex = nullptr;
             }
-            if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+            else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
             {
-                    delete[] m_pArray;
-                    delete[] m_unCompIndex;
-                    delete[] m_compIndex;
-            }
-            else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
-            {
-                delete[] m_pArray;
-                delete[] m_blockIds;
+                delete[] m_pArray; 
+                m_pArray = nullptr;
+                m_nzValues = nullptr;
+
+                delete[] m_blockIds; 
+                m_blockIds = nullptr;
             }
         }
     }
-
-
 
 #pragma endregion Constructors and Destructor
 
@@ -307,15 +381,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (startColumn + numCols > m_numCols)
             InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
 
-        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+        if (m_format != MatrixFormat::matrixFormatSparseCSC && m_format != MatrixFormat::matrixFormatSparseBlockCol)
             NOT_IMPLEMENTED;
 
-        CPUSparseMatrix<ElemType> slice(m_format, m_numRows, numCols, m_elemSizeAllocated);
-        slice.m_pArray = m_pArray;
-        slice.m_unCompIndex = m_unCompIndex;
-        slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-        slice.m_externalBuffer = true;
-        slice.m_nz = m_nz;
+        CPUSparseMatrix<ElemType> slice(m_format);
+        slice.m_numRows = m_numRows;
+        slice.m_numCols = numCols;
+
+        if (m_format == MatrixFormat::matrixFormatSparseCSC)
+        {
+            slice.m_pArray = m_pArray;
+            slice.m_nzValues = m_pArray + m_compIndex[startColumn];  //note: m_compIndex is always against  m_pArray
+            slice.m_unCompIndex = m_unCompIndex;
+            slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+            slice.m_externalBuffer = true;
+            slice.m_nz = m_compIndex[startColumn + numCols] - m_compIndex[startColumn];
+            slice.m_elemSizeAllocated = slice.m_nz;
+            slice.m_compIndexSize = numCols + 1;
+        }
+        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol)
+        {
+            long long startColBlock = 0, endColBlock = 0;
+            bool foundStart = false, foundEnd = false;
+            for (size_t j = 0; j < m_blockSize; j++)
+            {
+                if (j > 0)
+                {
+                    assert(m_blockIds[j] > m_blockIds[j - 1]);  //assume ids are increasing.Is this valid?
+                }
+
+                if (!foundStart && (long long) m_blockIds[j] - (long long)m_blockIdShift >= (long long)startColumn) // start column with values
+                {
+                    startColBlock = j;
+                    foundStart = true;
+                }
+                else if ((long long)m_blockIds[j] - (long long)m_blockIdShift >= (long long)(startColumn + numCols)) //end column with values
+                {
+                    endColBlock = j;
+                    foundEnd = true;
+                    break;
+                }
+            }
+            if (!foundStart)
+            {
+                startColBlock = (long long)m_blockSize;
+            }
+            if (!foundEnd)
+            {
+                endColBlock = (long long)m_blockSize;
+            }
+
+            slice.m_pArray = m_pArray + startColBlock * m_numRows;
+            slice.m_nzValues = slice.m_pArray;
+            slice.m_blockIds = m_blockIds + startColBlock; //the value stored in the block id is based on the original column numbers
+            slice.m_blockSize = (size_t)max((long long)0, endColBlock - startColBlock);
+            slice.m_blockIdShift = m_blockIdShift + startColumn;
+            slice.m_externalBuffer = true;
+            slice.m_nz = slice.m_blockSize * m_numRows;
+        }
 
         return slice;
     }
@@ -439,22 +562,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_nz > 0)
                 {
                     assert(m_compIndexSize > 0 && m_nz < numNZElemToReserve);
-                    memcpy(pArray, m_pArray, NzSize());
+                    memcpy(pArray, m_nzValues, NzSize());
                     memcpy(unCompIndex, m_unCompIndex, MajorIndexSize());
                     memcpy(compIndex, m_compIndex, SecondaryIndexSize());
                 }
 
-                if (m_pArray != NULL)
-                    delete [] m_pArray;
-                if (m_unCompIndex != NULL)
-                    delete [] m_unCompIndex;
-                if (m_compIndex != NULL)
-                    delete [] m_compIndex;
-                m_pArray = NULL;
-                m_unCompIndex = NULL;
-                m_compIndex = NULL;
+                delete [] m_pArray;
+                delete [] m_unCompIndex;
+                delete [] m_compIndex;
 
                 m_pArray = pArray;
+                m_nzValues = m_pArray;
                 m_unCompIndex = unCompIndex;
                 m_compIndex = compIndex;
             }
@@ -469,18 +587,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
                     assert(m_compIndexSize > 0 && m_elemSizeAllocated < numNZElemToReserve);
-                    memcpy(blockVal, m_pArray, NzSize());
+                    memcpy(blockVal, m_nzValues, NzSize());
                     memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
                 }
 
-                if (m_pArray != NULL)
-                    delete[] m_pArray;
-                if(m_blockIds != NULL) 
-                    delete[] m_blockIds;
-                m_pArray = NULL;
-                m_blockIds = NULL;
+                delete[] m_pArray;
+                delete[] m_blockIds;
 
                 m_pArray = blockVal;
+                m_nzValues = m_pArray;
                 m_blockIds = blockIds;
             }
 
@@ -496,6 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nz = 0;
         m_colIdx = -1;
         m_blockSize = 0;
+        m_blockIdShift = 0;
     }
 
     //c = alpha*op(lhs) * op(rhs) + beta*c
@@ -712,7 +828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for(size_t j = 0; j < lhs.m_blockSize; j++) 
             {
-                size_t i = lhs.m_blockIds[j];
+                size_t i = lhs.m_blockIds[j] - lhs.m_blockIdShift;
                 size_t len = (lhs.m_format == MatrixFormat::matrixFormatSparseBlockCol) ? lhs.GetNumRows() : lhs.GetNumCols();
                 size_t start = j * len;
                 for(size_t p = start; p < start+len; p++) 
@@ -771,7 +887,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for(size_t j = 0; j < m_blockSize; j++) 
             {
-                size_t i = m_blockIds[j];
+                size_t i = m_blockIds[j] - m_blockIdShift;
                 size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
                 size_t start = j* len;
                 for(size_t p = start; p < start+len; p++) 
@@ -834,7 +950,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t p = 0;
             for (long j = 0; j < m_blockSize; j++)
             {
-                size_t colOrRow = m_blockIds[j];
+                size_t colOrRow = m_blockIds[j] - m_blockIdShift;
                 for (long i = 0; i < len; i++, p++) 
                 {
                     ElemType val = m_pArray[p];
@@ -1063,18 +1179,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifndef USE_MKL
-            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_nzValues), 1);
 #else  
-            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_nzValues), 1);
 #endif
         }
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
-            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_nzValues), 1);
 #else
-            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_nzValues), 1);
 #endif
         }
     }
@@ -1217,6 +1333,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUSparseMatrix<char>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
     template CPUSparseMatrix<char>::CPUSparseMatrix(MatrixFormat);
     template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const &);
+    template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> &&);
+    template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(CPUSparseMatrix<char>&& moveFrom);
     template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
     template char* CPUSparseMatrix<char>::BufferPointer() const;
     template void CPUSparseMatrix<char>::Reset(void);

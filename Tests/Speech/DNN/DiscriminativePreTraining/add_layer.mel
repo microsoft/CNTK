@@ -1,7 +1,7 @@
-m1=LoadModel($CurrModel$, format=cntk)
+m1 = LoadModel("$currModel$", format="cntk")
 SetDefaultModel(m1)
-HDim=512
-HL$NewLayer$=DNNLayer(HDim, HDim, HL$CurrLayer$.y)
-SetInput(OL.t, 1, HL$NewLayer$.y)
-SetInput(HL$NewLayer$.t, 1, HL$CurrLayer$.y)
-SaveModel(m1, $NewModel$, format=cntk)
+HDim = 512
+HL$newLayer$ = DNNLayer(HDim, HDim, HL$currLayer$.y)
+SetInput(OL.t, 1, HL$newLayer$.y)
+SetInput(HL$newLayer$.t, 1, HL$currLayer$.y)
+SaveModel(m1, "$newModel$", format="cntk")

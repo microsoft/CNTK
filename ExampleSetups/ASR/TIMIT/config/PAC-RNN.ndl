@@ -26,7 +26,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -90,7 +90,7 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init=fixedvalue, value=0.1)
+        B=Parameter(rowCount, init="fixedValue", value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
         S = Sigmoid(BFF_final);
@@ -125,10 +125,10 @@ ndlCreateNetwork=[
 	hiddenDim=2048
     bottleneckDim=80
     bottleneckDim2=500
-	features=Input(featDim, tag=feature)
-	labels=Input(labelDim, tag=label)
+	features=Input(featDim, tag="feature")
+	labels=Input(labelDim, tag="label")
 
-	statelabels=Input(labelDim2, tag=label)
+	statelabels=Input(labelDim2, tag="label")
 
 	cr1=Constant(0.8)
     cr2=Constant(0.2)
@@ -161,15 +161,15 @@ ndlCreateNetwork=[
 
     criterion1 = CrossEntropyWithSoftmax(labels, DNN_A_CE_BFF)
     criterion2 = CrossEntropyWithSoftmax(statelabels, DNN_B_CE_BFF)
-    criterion = Plus(Scale(cr2,criterion2), Scale(cr1,criterion1), tag=Criteria)
+    criterion = Plus(Scale(cr2,criterion2), Scale(cr1,criterion1), tag="criterion")
 	
-	Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag=Eval)
+	Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag="eval")
     
     logPrior = LogPrior(labels)	 
 
-    ScaledLogLikelihood=Minus(DNN_A_CE_BFF,logPrior,tag=Output)
+    ScaledLogLikelihood=Minus(DNN_A_CE_BFF,logPrior,tag="output")
 
 
 	# define output (scaled loglikelihood)
-	#ScaledLogLikelihood=Minus(CE_BFF,logPrior,tag=Output)
+	#ScaledLogLikelihood=Minus(CE_BFF,logPrior,tag="output")
 ]

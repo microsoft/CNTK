@@ -6,7 +6,7 @@ ndlMacroDefine=[
     #Sigmoid Base Feed Forward Two Inputs
     SBFF2(input1,rowCount,colCount1,input2,colCount2)
     {
-        B=Parameter(rowCount, init=fixedvalue, value=0)
+        B=Parameter(rowCount, init="fixedValue", value=0)
         W1=Parameter(rowCount, colCount1)
         W2=Parameter(rowCount, colCount2)
         T1=Times(W1,input1)
@@ -34,9 +34,9 @@ HiddenDim = 512
 LabelDim1 = 183
 
 # input definitions
-features1=Input(FeatDim1,tag=feature)
-features2=Input(FeatDim2,tag=feature)
-labels=Input(LabelDim1,tag=label)
+features1=Input(FeatDim1,tag="feature")
+features2=Input(FeatDim2,tag="feature")
+labels=Input(LabelDim1,tag="label")
 
 featMean1=Mean(features1)
 featInvStd1=InvStdDev(features1)
@@ -50,8 +50,8 @@ featInput2=PerDimMeanVarNormalization(features2,featMean2,featInvStd2)
 L1 = SBFF2(featInput1, HiddenDim, FeatDim1, featInput2, FeatDim2)
 L2 = SBFF(L1, HiddenDim, HiddenDim)
 L3 = SBFF(L2, HiddenDim, HiddenDim)
-CE = SMBFF(L3, LabelDim1, HiddenDim, labels,tag=criteria) # do I need a tag? 
-FER = ErrorPrediction(labels,CE.BFF.FF.P,tag=eval)
+CE = SMBFF(L3, LabelDim1, HiddenDim, labels,tag="criterion") # do I need a tag? 
+FER = ErrorPrediction(labels,CE.BFF.FF.P,tag="eval")
 
 # outputNodes
 Prior=Mean(labels)

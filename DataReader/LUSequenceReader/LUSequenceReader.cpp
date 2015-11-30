@@ -8,6 +8,7 @@
 
 
 #include "stdafx.h"
+#include "Basics.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "LUSequenceReader.h"
@@ -25,7 +26,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template<class ElemType>
-/* return value used to be unsigned */
 long LUSequenceReader<ElemType>::GetIdFromLabel(const LabelType& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.word4idx.find(labelValue);
@@ -36,10 +36,6 @@ long LUSequenceReader<ElemType>::GetIdFromLabel(const LabelType& labelValue, Lab
 template<class ElemType>
 BatchLUSequenceReader<ElemType>::~BatchLUSequenceReader()
 {
-    if (m_labelTemp.size() > 0)
-        m_labelTemp.clear();
-    if (m_featureTemp.size() > 0)
-        m_featureTemp.clear();
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
     {
         delete[] m_labelInfo[index].m_id2classLocal;
@@ -56,24 +52,22 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     map<long, long>& idx4class,
     int & mNbrCls)
 {
-    char strFileName[MAX_STRING];
-    wstring strtmp;
-    size_t sz;
-    long b;
-
-    wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
-
     wifstream vin; 
-    vin.open(strFileName, wifstream::in);
+#ifdef _MSC_VER
+    vin.open(vocfile, wifstream::in);
+#else
+    vin.open(wtocharpath(vocfile), wifstream::in);
+#endif
     if (!vin.good())
-        LogicError("LUSequenceReader cannot open %ls \n", strFileName);
+        LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
     wstring wstr = L" ";
-    b = 0;
+    long b = 0;
     this->nwords = 0;
     int prevcls = -1;
 
     mNbrCls = 0;
+    wstring strtmp;
     while (vin.good())
     {
         getline(vin, strtmp); 
@@ -83,11 +77,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         if (readClass)
         {
             vector<wstring> wordandcls = wsep_string(strtmp, wstr);
-#ifdef __unix__
-            long cls = (long)wcstol(wordandcls[1].c_str(),nullptr,10);
-#else
-            long cls = (long)_wtoi(wordandcls[1].c_str());
-#endif
+            long cls = _wtoi(wordandcls[1].c_str());
             word4cls[wordandcls[0]] = cls;
 
             idx4class[b] = cls;
@@ -104,13 +94,13 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
             if (mNbrCls < cls)
                 mNbrCls = cls;
         }
-        else {
+        else
+        {
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
         this->nwords++;
     }
-    vin.close();
 
     if (readClass)
         mNbrCls++;
@@ -129,8 +119,10 @@ void BatchLUSequenceReader<ElemType>::GetClassInfo(LabelInfo& lblInfo)
 
     lblInfo.m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     lblInfo.m_classInfoLocal->Resize(2, lblInfo.mNbrClasses);
+    lblInfo.m_classInfoLocal->SetValue(0);  // TODO: needed? (left-over of refactoring)
 
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // TODO: Can it ever be not on the CPU? We allocate it ourselves abovew
     int curDevId = lblInfo.m_classInfoLocal->GetDeviceId();
     lblInfo.m_classInfoLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
 
@@ -167,24 +159,20 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<LabelIdType>& label
     {
         val.push_back(labelValue[i]);
     }
-    return true;
+    return true;    // TODO: what's this return value for?
 }
 
 template<class ElemType>
 int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
-
-    // now get the labels
     LabelInfo& featIn = m_labelInfo[labelInfoOut];
 
     auto found = featIn.word4idx.find(featIn.endSequence);
 
-    // not yet found, add to the map
     if (found != featIn.word4idx.end())
-    {
         return (int)found->second;
-    }
-    else return -1;
+    else
+        return -1;  // not found
 }
 
 // GetData - Gets metadata from the specified section (into CPU memory) 
@@ -212,7 +200,7 @@ bool LUSequenceReader<ElemType>::CheckIdFromLabel(const LabelType& labelValue, c
     {
         return false; 
     }
-    labelId = found->second;
+    labelId = found->second;    // TODO: This function is called Check...() but it does Get something. Bad name?
     return true; 
 }
 
@@ -250,21 +238,21 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring &filePath, std
     // initialize with file name
     std::wstring path = filePath;
     
-    wchar_t stmp[MAX_STRING];
-    wstring str; 
     retLabels.resize(0);
     wifstream vin;
-#ifdef __unix__
-    vin.open(ws2s(path).c_str(), ifstream::in);
-#else
+#ifdef _MSC_VER
     vin.open(path.c_str(), ifstream::in);
+#else
+    vin.open(wtocharpath(path), ifstream::in);
 #endif
 
+    wstring str;
     while (vin.good())
     {
+        wchar_t stmp[MAX_STRING];
         vin.getline(stmp, MAX_STRING);
-        wstring temp = stmp;
-        str = wtrim(temp);
+        str = stmp;
+        str = wtrim(str);
         if (str.length() == 0)
             break; 
 
@@ -276,7 +264,6 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring &filePath, std
             retLabels.push_back((LabelType)str);
         }
     }
-    vin.close();  
 }
 
 template<class ElemType>
@@ -307,9 +294,9 @@ void LUSequenceReader<ElemType>::ChangeMaping(const map<LabelType, LabelType>& m
     }
 }
 
-
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -326,8 +313,8 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
 
     {
-        wstring tInputLabel = readerConfig("inputLabel", L"");
-        wstring tOutputLabel = readerConfig("outputLabel", L"");
+        wstring tInputLabel = readerConfig(L"inputLabel", L"");
+        wstring tOutputLabel = readerConfig(L"outputLabel", L"");
 
         if (labels.size() == 2)
         {
@@ -362,23 +349,24 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         else
             RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-        ConfigParameters featureConfig = readerConfig(m_featuresName, "");
-        ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
+        //const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
-            m_labelInfo[index].idMax = 0;
-            m_labelInfo[index].beginSequence = (wstring) labelConfig[index]("beginSequence", "");
-            m_labelInfo[index].endSequence = (wstring) labelConfig[index]("endSequence", "");
-            m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
+            const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
 
-            m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
+            m_labelInfo[index].idMax = 0;
+            m_labelInfo[index].beginSequence = (wstring)labelConfig(L"beginSequence", L"");
+            m_labelInfo[index].endSequence   = (wstring)labelConfig(L"endSequence",   L"");
+            m_labelInfo[index].busewordmap = labelConfig(L"useWordMap", false);
+
+            m_labelInfo[index].isproposal = labelConfig(L"isProposal", false);
 
             m_labelInfo[index].m_clsinfoRead = false;
 
             // determine label type desired
-            std::string labelType(labelConfig[index]("labelType", "Category"));
-            if (labelType == "Category")
+            wstring labelType(labelConfig(L"labelType", L"category"));
+            if (!_wcsicmp(labelType.c_str(), L"category"))
             {
                 m_labelInfo[index].type = labelCategory;
             }
@@ -388,18 +376,19 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             // if we have labels, we need a label Mapping file, it will be a file with one label per line
             if (m_labelInfo[index].type != labelNone)
             {
-                string mode = labelConfig[index]("mode", "plain");//plain, class
+                wstring mode = labelConfig(L"mode", L"plain");//plain, class
 
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
 
-                if (mode == "class")
+                if (mode == L"class")
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
                 }
 
-                std::wstring wClassFile = labelConfig[index]("token", "");
-                if (wClassFile != L""){
+                std::wstring wClassFile = labelConfig(L"token", L"");
+                if (wClassFile != L"")
+                {
                     ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, 
                         m_labelInfo[index].readerMode == ReaderMode::Class, 
                         m_labelInfo[index].word4cls,
@@ -421,15 +410,13 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
 
-    ConfigArray wContext = readerConfig("wordContext", "0");
-    intargvector wordContext = wContext;
-    m_wordContext = wordContext;
+    m_wordContext = readerConfig(L"wordContext", ConfigRecordType::Array(intargvector(vector<int>{ 0 })));
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig(L"file");
     if (m_traceLevel > 0)
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
 
@@ -437,27 +424,27 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence, mUnkStr);
 
-    mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
 
     mRandomize = false;
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
+        string randomizeString = readerConfig(L"randomize");
+        if (!_stricmp(randomizeString.c_str(), "none"))
         {
             ;
         }
-        else if (randomizeString == "Auto" || randomizeString == "True")
+        else if (!_stricmp(randomizeString.c_str(), "auto") || !_stricmp(randomizeString.c_str(), "true"))
         {
             mRandomize = true;
         }
+        // else invalid
     }
 
-    mEqualLengthOutput = readerConfig("equalLength", "true");
-    mAllowMultPassData = readerConfig("dataMultiPass", "false");
+    mEqualLengthOutput = readerConfig(L"equalLength",   true);
+    mAllowMultPassData = readerConfig(L"dataMultiPass", false);
 
-    mIgnoreSentenceBeginTag = readerConfig("ignoresentencebegintag", "false");
-
+    mIgnoreSentenceBeginTag = readerConfig(L"ignoresentencebegintag", false);
 }
 
 template<class ElemType>
@@ -465,15 +452,13 @@ void BatchLUSequenceReader<ElemType>::Reset()
 {
     mProcessed.clear();
     mToProcess.clear();
-    mLastProcssedSentenceId = 0;
+    mLastProcessedSentenceId = 0;
     mPosInSentence = 0;
     mLastPosInSentence = 0;
     mNumRead = 0;
 
-    if (m_labelTemp.size() > 0)
-        m_labelTemp.clear();
-    if (m_featureTemp.size() > 0)
-        m_featureTemp.clear();
+    m_labelTemp.clear();
+    m_featureTemp.clear();
     m_parser.mSentenceIndex2SentenceInfo.clear();
 }
 
@@ -483,8 +468,8 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     if (m_featuresBuffer==NULL)
     {
         const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
-        m_featuresBuffer = new ElemType[mbSize*labelInfo.dim];
-        memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*labelInfo.dim);
+        m_featuresBuffer = new ElemType[mbSize*labelInfo.dim]();
+        //memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*labelInfo.dim);
     }
 
     if (m_labelsBuffer==NULL)
@@ -492,15 +477,15 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
         const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
         if (labelInfo.type == labelCategory)
         {
-            m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new long[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(long)*mbSize);
+            m_labelsBuffer = new ElemType[labelInfo.dim*mbSize]();
+            //memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
+            m_labelsIdBuffer = new long[mbSize]();
+            //memset(m_labelsIdBuffer,0,sizeof(long)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
-            m_labelsBuffer = new ElemType[mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
+            m_labelsBuffer = new ElemType[mbSize]();
+            //memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
             m_labelsIdBuffer = NULL;
         }
     }
@@ -513,7 +498,6 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     m_mbStartSample = epoch*m_epochSize;
 
     // allocate room for the data
-    m_featureData.reserve(m_featureCount*m_mbSize);
     if (m_labelInfo[labelInfoOut].type == labelCategory)
         m_labelIdData.reserve(m_mbSize);
     else if (m_labelInfo[labelInfoOut].type != labelNone)
@@ -528,22 +512,20 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
 
     Reset();
 
-    m_parser.ParseReset(); /// restart from the corpus begining
-
+    m_parser.ParseReset(); /// restart from the corpus beginning
 }
 
 template<class ElemType>
 size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 {
-    vector<size_t> sln ;
-
+    // I think this may test whether all sentences in a series of minibatches have hit their end. Then we'd pick the next sentences.
     if (mToProcess.size() > 0 && mProcessed.size() > 0)
     {
         bool allDone = true; 
         for (int s = 0; s < mToProcess.size(); s++)
         {
-            size_t mp = mToProcess[s];
-            if (mProcessed[mp] == false)
+            size_t seq = mToProcess[s];
+            if (mProcessed[seq] == false)
             {
                 allDone = false;
                 break;
@@ -551,9 +533,9 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
         }
         if (allDone)
         {
-            mLastPosInSentence = 0;
-            mToProcess.clear();
-            /// reset sentence Begin and setnenceEnd
+            mLastPosInSentence = 0;     // reset BPTT offset
+            mToProcess.clear();         // means we need to get a new set of sentences and start over with them
+            // reset sentence begin and end
             mSentenceEnd = false;
             mSentenceBegin = false;
         }
@@ -561,39 +543,41 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 
     if (mToProcess.size() > 0 && mProcessed.size() > 0)
     {
+        // I think if we get here then we are continuing to return the next sub-stretch of the same sentences in mToProcess[]
         size_t nbrToProcess = mToProcess.size();
-        mSentenceBeginAt.resize(nbrToProcess, -1);
+        mSentenceBeginAt.resize(nbrToProcess, -1);      // if the start or end fall within the current sub-stretch, then it will be put in here
         mSentenceEndAt.resize(nbrToProcess, -1);
-        mSentenceLength.clear();
+        mSentenceLengths.clear();
         mMaxSentenceLength = 0;
 
         for (size_t i = 0; i < nbrToProcess; i++)
         {
             size_t seq = mToProcess[i];
-            size_t ln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
-            mSentenceLength.push_back(ln);
-            mMaxSentenceLength = max(mMaxSentenceLength, ln); 
+            size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+            mSentenceLengths.push_back(len);
+            mMaxSentenceLength = max(mMaxSentenceLength, len); 
         }
         return mToProcess.size();
     }
 
     mMaxSentenceLength = 0;
 
-    if (m_parser.mSentenceIndex2SentenceInfo.size() == 0)
-        return mMaxSentenceLength;
+    // I think we get here if we need to start with the next batch of sentences
+    if (m_parser.mSentenceIndex2SentenceInfo.size() == 0)       // corpus empty??
+        return 0;
 
+    // form mToProcess[] array for this minibatch
+    vector<size_t> sln;     // (value of mSentenceLengths is first formed here and later moved over)
     size_t iNumber = min(numRead, mProcessed.size());
     int previousLn = -1;
-    for (size_t seq = mLastProcssedSentenceId, inbrReader = 0; inbrReader < iNumber; seq++)
+    for (size_t seq = mLastProcessedSentenceId, inbrReader = 0; seq < mProcessed.size() && inbrReader < iNumber; seq++)
     {
-        if (seq >= mProcessed.size())
-            break;
-
-        if (mProcessed[seq]) continue;
+        if (mProcessed[seq])
+            continue;
 
         if (mEqualLengthOutput)
         {
-            if (mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            if (mProcessed[seq] == false && mToProcess.size() < mRequestedNumParallelSequences)
             {
                 int ln = (int)m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
                 if (ln == previousLn || previousLn == -1)
@@ -602,25 +586,27 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
                     mToProcess.push_back(seq);
                     mMaxSentenceLength = max((int)mMaxSentenceLength, ln);
                     if (previousLn == -1)
-                        mLastProcssedSentenceId = seq + 1;  /// update index for the next retrieval
+                        mLastProcessedSentenceId = seq + 1;  /// update index for the next retrieval
                     previousLn = ln;
                 }
             }
 
-            if (mToProcess.size() == mBlgSize) break;
+            if (mToProcess.size() == mRequestedNumParallelSequences)
+                break;
             inbrReader++;
         }
         else
         {
-            if (mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            if (mProcessed[seq] == false && mToProcess.size() < mRequestedNumParallelSequences)
             {
-                size_t ln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
-                sln.push_back(ln);
+                size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+                sln.push_back(len);
                 mToProcess.push_back(seq);
-                mMaxSentenceLength = max(mMaxSentenceLength, ln);
+                mMaxSentenceLength = max(mMaxSentenceLength, len);
             }
 
-            if (mToProcess.size() == mBlgSize) break;
+            if (mToProcess.size() == mRequestedNumParallelSequences)
+                break;
             inbrReader++;
         }
     }
@@ -629,38 +615,41 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
     mSentenceBeginAt.resize(nbrToProcess, -1);
     mSentenceEndAt.resize(nbrToProcess, -1);
 
-    mSentenceLength = sln;
+    mSentenceLengths = sln;
 
     return mToProcess.size();
 }
 
+// fetch the next minibatch
+// Returns result in m_labelIdData and m_featureWordContext.
 template<class ElemType>
 bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/)
 {
-    bool bDataIsThere = true; 
-
-    m_featureData.clear();
+    // these two variables are being filled in this function
     m_labelIdData.clear();
     m_featureWordContext.clear();
 
     // now get the labels
-    LabelInfo& featIn = m_labelInfo[labelInfoIn];
+    LabelInfo& featIn  = m_labelInfo[labelInfoIn];
     LabelInfo& labelIn = m_labelInfo[labelInfoOut];
 
     // see how many we already read
     std::vector<SequencePosition> seqPos;
 
     if (mTotalSentenceSofar > m_epochSize)
+    {
+        m_pMBLayout->Init(1, 0);
         return false;
+    }
     else
     {
-        size_t nbrSentenceRead = FindNextSentences(mBlgSize);
+        size_t nbrSentenceRead = FindNextSentences(mRequestedNumParallelSequences);
         if (mAllowMultPassData && nbrSentenceRead == 0 && mTotalSentenceSofar > 0 && m_totalSamples < m_epochSize)
         {
-            /// restart for the next pass of the data
+            // restart for the next pass of the data
             mProcessed.assign(mProcessed.size(), false);
-            mLastProcssedSentenceId = 0;
-            nbrSentenceRead = FindNextSentences(mBlgSize);
+            mLastProcessedSentenceId = 0;
+            nbrSentenceRead = FindNextSentences(mRequestedNumParallelSequences);
         }
 
         if (nbrSentenceRead == 0)
@@ -670,7 +659,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
             if (mNumRead == 0)
             {
-                fprintf(stderr, "EnsureDataAvailable: no more data\n");
+                fprintf(stderr, "EnsureDataAvailable: No more data.\n");
+                m_pMBLayout->Init(1, 0);
                 return false;
             }
             mProcessed.assign(mNumRead, false);
@@ -685,19 +675,18 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 #endif
 
             m_readNextSampleLine += mNumRead;
-            nbrSentenceRead = FindNextSentences(mBlgSize);
+            nbrSentenceRead = FindNextSentences(mRequestedNumParallelSequences);
             if (nbrSentenceRead == 0)
-                return false; /// no more data to process
+            {
+                m_pMBLayout->Init(1, 0);
+                return false;
+            }
         }
 
         mTotalSentenceSofar += (ULONG) nbrSentenceRead;
 
-        /// add one minibatch 
-        int i = (int)mLastPosInSentence; 
-        int j = 0;
-
         if (mLastPosInSentence != 0)
-            RuntimeError("LUSequenceReader : only support begining sentence at zero");
+            RuntimeError("LUSequenceReader : only support beginning sentence at zero");
         if (mSentenceBeginAt.size() != mToProcess.size())
             RuntimeError("LUSequenceReader : need to preallocate mSentenceBegin");
         if (mSentenceEndAt.size() != mToProcess.size())
@@ -705,45 +694,51 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             RuntimeError("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
-        /// reset sentence-end index to ((int) MinibatchPackingFlags::NoInput), which is negative
-        mSentenceEndAt.assign(mSentenceEndAt.size(), ((int) MinibatchPackingFlags::NoInput));
+        // reset all sentence-end indices to NO_INPUT, which is negative
+        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_INPUT);
 
-        /**
-        m_pMBLayout->m_sentenceBoundaryFlags : a matrix with [Ns x T]
-        the first row is 0/1 bit for wether corresponding frame has sentence beginining/no_label for any of streams
-        0 : no such case
-        1 : case exists
-        */
-        m_pMBLayout->Init(mToProcess.size(), mMaxSentenceLength, true/*sequential*/);
-        for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
+        // add one minibatch 
+        std::vector<LabelIdType> index;
+        std::vector<std::vector<LabelIdType>> tmpCxt;
+        int i;
+        int j = 0;
+        m_pMBLayout->Init(mToProcess.size(), mMaxSentenceLength);
+        if (mLastPosInSentence != 0)
+            LogicError("LUBatchSequenceReader: Currently, mLastPosInSentence != 0 is not supported.");
+        for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)    // loop over time steps
         {
-            for (int k = 0; k < mToProcess.size(); k++)
+            assert(i == j); // for now
+            for (int k = 0; k < mToProcess.size(); k++)     // loop over parallel sequences
             {
-                size_t seq = mToProcess[k];
+                size_t seq = mToProcess[k];         // utterance index
+                size_t seqLen = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
 
-                if (i == mLastPosInSentence)         /// the first time instance has sentence begining
+                if (i == mLastPosInSentence)        // first token in the sequence
                 {
                     mSentenceBeginAt[k] = i;
-                    if (!mIgnoreSentenceBeginTag)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                    if (!mIgnoreSentenceBeginTag)   // ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
                         m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceStart);
                 }
 
-                if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
+                if (i == seqLen - 1)    // last token in the sequence
                 {
                     mSentenceEndAt[k] = i;
+                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceEnd);
                 }
-                if (i < m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
+
+                if (i < seqLen)         // valid token
                 {
                     size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
-                    std::vector<std::vector<LabelIdType>> tmpCxt;
+                    tmpCxt.clear();
 
+                    // m_wordContext[] is the index offset of the context, e.g. trigram would be 0:1:2
                     for (int i_cxt = 0; i_cxt < m_wordContext.size(); i_cxt++)
                     {
                         if (featIn.type == labelCategory)
                         {
-                            vector<LabelIdType> index;
-                            int ilabel = (int) label + m_wordContext[i_cxt];
-                            if (ilabel < m_parser.mSentenceIndex2SentenceInfo[seq].sBegin)
+                            index.clear();
+                            int ilabel = (int) label + m_wordContext[i_cxt];                    // index into collated word tokens, offset by m_wordContext[]
+                            if (ilabel < m_parser.mSentenceIndex2SentenceInfo[seq].sBegin)      // access outside sentence: clamp
                             {
                                 GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sBegin], index);
                             }
@@ -751,19 +746,15 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                             {
                                 GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sEnd - 1], index);
                             }
-                            else
+                            else            // regular access
                             {
                                 GetIdFromLabel(m_featureTemp[ilabel], index);
-                            }
-                            if (i_cxt == 0)
-                            {
-                                m_featureData.push_back(index);
                             }
                             tmpCxt.push_back(index);
                         }
                         else
                         {
-                            RuntimeError("Input label expected to be a category label");
+                            RuntimeError("Input label expected to be a category label.");
                         }
                     }
 
@@ -775,55 +766,52 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_totalSamples++;
                 }
-                else
+                else            // i >= seqLen: no token for this sequence (NoInput)
                 {
-                    /// push null 
-                    std::vector<std::vector<LabelIdType>> tmpCxt;
-                    std::vector<LabelIdType> index;
-                    for (int i_cxt = 0; i_cxt < m_wordContext.size(); i_cxt++)
-                        index.push_back((LabelIdType)NULLLABEL);
-                    tmpCxt.push_back(index);
+                    // push null
+                    index.assign(1, (LabelIdType)NULLLABEL);    // bag of words consisting of one word, the NULLLABEL
+                    tmpCxt.assign(m_wordContext.size(), index); // all contexts contain this bag of one word
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
+
                     m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
                 }
-
             }
         }
 
         mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
     }
 
-    return bDataIsThere;
+    return true;
 }
 
 template<class ElemType>
 size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
-    size_t sz = (mSentenceBeginAt.size() == 0)?mBlgSize : mSentenceBeginAt.size();
+#if 1
+    return m_pMBLayout->GetNumParallelSequences();  // (this function is only used for validation anyway)
+#else
+    size_t sz = (mSentenceBeginAt.size() == 0) ? mRequestedNumParallelSequences/*not initialized yet?*/ : mSentenceBeginAt.size();
     if (mSentenceBeginAt.size() == 0)
-    {
         mSentenceBeginAt.assign(sz, -1);
-    }
     if (mSentenceEndAt.size() == 0)
-    {
         mSentenceEndAt.assign(sz, -1);
-    }
     return sz;
+#endif
 }
 
 template<class ElemType>
 void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 {
-    mBlgSize = mz;
+    mRequestedNumParallelSequences = mz;
 }
 
 template<class ElemType>
 bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-
     // get out if they didn't call StartMinibatchLoop() first
+    // TODO: Why is this allowed? Why not terminate?
     if (m_mbSize == 0)
     {
         fprintf(stderr, "GetMiniBatch : m_mbSize = 0\n");
@@ -836,71 +824,72 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
     // actual size is the size of the next seqence
     size_t actualmbsize = 0;
-    size_t lablsize = 0;
 
     // figure out the size of the next sequence
-    actualmbsize = m_labelIdData.size();
-    if (actualmbsize > m_mbSize * mToProcess.size()){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
-    }
+    actualmbsize = m_labelIdData.size();                // number of actual columns in the output
+    if (actualmbsize > m_mbSize * mToProcess.size())    // TODO: is this a LogicError?
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
 
     // now get the labels
     const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
     if (actualmbsize > 0)
     {
-
-        //loop through all the samples
+        if (matrices.find(m_featuresName) == matrices.end())
+            RuntimeError("BatchLUSequenceReader cannot find %ls.", m_featuresName.c_str());
         Matrix<ElemType>& features = *matrices[m_featuresName];
-        Matrix<ElemType>  locObs(CPUDEVICE);
+
+        // loop through all the samples and create a one-hot representation, or multi-hot in some conditions (TODO: which condition)
+        Matrix<ElemType> locObs(CPUDEVICE);
         if (features.GetMatrixType() == DENSE)
             locObs.SwitchToMatrixType(DENSE, features.GetFormat(), false);
         else
             locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
-        if (matrices.find(m_featuresName) == matrices.end())
-        {
-            RuntimeError("LUsequence reader cannot find %s", m_featuresName.c_str());
-        }
-
         locObs.Resize(featInfo.dim * m_wordContext.size(), actualmbsize);
+        locObs.SetValue(0);
 
-        size_t utt_id = 0;
-        for (size_t j = 0; j < actualmbsize; ++j)
+        assert(m_featureWordContext.size() == actualmbsize);
+        for (size_t j = 0; j < actualmbsize; ++j)                   // loop over matrix columns
         {
-            utt_id = (size_t) fmod(j, mSentenceEndAt.size());  /// get the utterance id
-
-            size_t utt_t = (size_t) floor(j/mSentenceEndAt.size()); /// the utt-specific timing
+            size_t s = j % mSentenceEndAt.size();                   // get the parallel sequence index
+            size_t t = j / mSentenceEndAt.size();                   // and the time step
 
             // vector of feature data goes into matrix column
-            for (size_t jj = 0; jj < m_featureWordContext[j].size(); jj++) ///  number of sentence per time
+            // Each column is a (featInfo.dim x m_wordContext.size()) tensor, i.e. one sub-column per word in the context.
+            assert(m_wordContext.size() == m_featureWordContext[j].size());
+            for (size_t jj = 0; jj < m_featureWordContext[j].size(); jj++)  // number of n-tuples (samples) to return
             {
-                /// this support context dependent inputs since words or vector of words are placed
-                /// in different slots
-                for (size_t ii = 0; ii < m_featureWordContext[j][jj].size(); ii++)  /// context
+                // this support context dependent inputs since words or vector of words are placed in different slots
+                for (size_t ii = 0; ii < m_featureWordContext[j][jj].size(); ii++)
                 {
-                    /// this can support bag of words, since words are placed in the same slot
-                    size_t idx = m_featureWordContext[j][jj][ii];
+                    // Each n-tuple may contain several words, which get encoded as multi-hot.
+                    // This can support bag of words, since words are placed in the same slot.
+                    size_t idx = m_featureWordContext[j][jj][ii];   // get the word index for this sample
 
-                    if (idx >= featInfo.dim)
+                    // some consistency checks
+                    if (t > mSentenceEndAt[s] || idx >= featInfo.dim)
                     {
-                        if (m_pMBLayout->Is(utt_id, utt_t, MinibatchPackingFlags::NoInput)) /// for those obs that are for no observations
-                            LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here. ");
+                        assert(idx == (LabelIdType)NULLLABEL);      // TODO: what other conditions?
+                        if (!m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
+                            LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
                         continue;
                     }
 
-                    assert(idx < featInfo.dim);
-                    if (utt_t > mSentenceEndAt[utt_id]) 
-                        locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)0);
-                    else
-                        locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
+                    if (m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
+                        LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
+
+                    locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
                 }
             }
         }
 
+        locObs.SetPreferredDeviceId(features.GetDeviceId());    // needed, otherwise SetValue() below will inherit CPUDEVICE a as target
+        // Note: This is not efficient, as it first moves locObs to GPU, and then copies it. What is the correct way of doing this?
         features.SetValue(locObs);
-        
-        lablsize = GetLabelOutput(matrices, m_labelInfo[labelInfoOut], actualmbsize);
+
+        // fill in the label matrix
+        GetLabelOutput(matrices, m_labelInfo[labelInfoOut], actualmbsize);
 
         // go to the next sequence
         m_seqIndex++;
@@ -908,14 +897,11 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     else
     {
         fprintf(stderr, "actual minibatch size is zero\n");
-        return 0;
+        return false;
     }
 
-    // we read some records, so process them
-    if (actualmbsize == 0)
-        return false;
-    else
-        return true;
+    // return true if we read some records
+    return actualmbsize > 0;
 }
 
 template<class ElemType>
@@ -925,21 +911,26 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return 0;
 
-    DEVICEID_TYPE device = labels->GetDeviceId();
-
     labels->Resize(labelInfo.dim, actualmbsize);
     labels->SetValue(0);
-    labels->TransferFromDeviceToDevice(device, CPUDEVICE, true);
+
+    // build it on the CPU side
+    DEVICEID_TYPE deviceId = labels->GetDeviceId();
+    labels->TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
 
     size_t nbrLabl = 0;
-    for (size_t j = 0; j < actualmbsize; ++j)
+    for (size_t j = 0; j < actualmbsize; ++j)   // loop over columns of the minibatch matrix
     {
+        size_t utt_id = j % mSentenceBeginAt.size();
+        size_t utt_t  = j / mSentenceBeginAt.size();
+
+        if (utt_t > mSentenceEndAt[utt_id])
+            continue;
+
         long wrd = m_labelIdData[j];
 
-        size_t utt_id = (size_t) fmod(j, mSentenceBeginAt.size());
-        size_t utt_t = (size_t) floor(j / mSentenceBeginAt.size());
-
-        if (utt_t > mSentenceEndAt[utt_id]) continue;
+        // if Plain then labels are 1-dim
+        // if Class then labels are 3-dim, including the index range of all words belonging to the same class (words within a class have consecutive ids)
         if (labelInfo.readerMode == ReaderMode::Plain)
             labels->SetValue(wrd, j, 1); 
         else if (labelInfo.readerMode == ReaderMode::Class && labelInfo.mNbrClasses > 0)
@@ -950,18 +941,21 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             clsidx = labelInfo.idx4class[wrd];
 
             labels->SetValue(1, j, (ElemType)clsidx);
-            /// save the [begining ending_indx) of the class 
+            // save the [beginning ending_indx) of the class 
             ElemType lft = (*labelInfo.m_classInfoLocal)(0, clsidx);
             ElemType rgt = (*labelInfo.m_classInfoLocal)(1, clsidx);
             if (rgt <= lft)
                 LogicError("LUSequenceReader : right is equal or smaller than the left, which is wrong.");
-            labels->SetValue(2, j, lft); /// begining index of the class
+            labels->SetValue(2, j, lft); /// beginning index of the class
             labels->SetValue(3, j, rgt); /// end index of the class
         }
         else
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
         nbrLabl++;
     }
+
+    // move it back to GPU if that's where it was before
+    labels->TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
 
     return nbrLabl;
 }
@@ -1020,12 +1014,12 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEndAt.size() != mToProcess.size())
-            LogicError("DataEnd: sentence ending vector size %d and the toprocess vector size %d should be the same", mSentenceEndAt.size(), mToProcess.size());
+            LogicError("DataEnd: Sentence ending vector size %d and the toprocess vector size %d should be the same.", (int)mSentenceEndAt.size(), (int)mToProcess.size());
         ret = true;
         for (size_t i = 0; i < mToProcess.size(); i++)
         {
-            if (mSentenceEndAt[i] == ((int) MinibatchPackingFlags::NoInput))
-                LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
+            if (mSentenceEndAt[i] == NO_INPUT)
+                LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
             size_t k = mToProcess[i];
             mProcessed[k] = true;
         }
@@ -1036,13 +1030,12 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 }
 
 template<class ElemType>
-bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName)
+bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName)  // TODO: const wstring &
 {
     if (this->m_featuresName == nodeName) return true;
-    if (m_labelsName[labelInfoIn] == nodeName) return true;
-    if (m_labelsName[labelInfoOut] == nodeName) return true;
-
-    return false;
+    else if (m_labelsName[labelInfoIn] == nodeName) return true;
+    else if (m_labelsName[labelInfoOut] == nodeName) return true;
+    else return false;
 }
 
 /// get a column slice corresponding to a frame of observations
@@ -1067,11 +1060,12 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            RuntimeError("LUSequenceReader cannot find l%s", m_featuresName.c_str());
+            RuntimeError("LUSequenceReader cannot find %ls", m_featuresName.c_str());
         }
-        locObs.Resize(featInfo.dim * m_wordContext.size(), mBlgSize);
+        locObs.Resize(featInfo.dim * m_wordContext.size(), mRequestedNumParallelSequences);
+        locObs.SetValue(0);
 
-        assert(mBlgSize == 1); /// currently only support one utterance a time
+        assert(mRequestedNumParallelSequences == 1);    // currently only support one utterance a time
 
         size_t hlength = history.size();
         int nextProposal = -1;
@@ -1085,7 +1079,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
             history.push_back(nextProposal);
         }
 
-        for (size_t j = 0; j < mBlgSize; ++j)
+        for (size_t j = 0; j < mRequestedNumParallelSequences; ++j)
         {
             for (size_t jj = 0; jj < m_wordContext.size(); jj++)
             {
@@ -1115,7 +1109,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         {
             assert(mMatrices[p->first].GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
-                matrices[p->first]->SetValue(mMatrices[p->first].ColumnSlice(tidx, mBlgSize));
+                matrices[p->first]->SetValue(mMatrices[p->first].ColumnSlice(tidx, mRequestedNumParallelSequences));
         }
     }
 
@@ -1141,16 +1135,21 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigRecordType& readerConfig)
 {
-    mWordMappingFn = readerConfig("wordmap", "");
+    mWordMappingFn = (wstring)readerConfig(L"wordmap", L"");
     wstring si, so;
     wstring ss;
     vector<wstring> vs;
-    if (mWordMappingFn != "")
+    if (mWordMappingFn != L"")
     {
         wifstream fp;
+#ifdef _WIN32
         fp.open(mWordMappingFn.c_str(), wifstream::in);
+#else
+        fp.open(wtocharpath(mWordMappingFn.c_str()).c_str(), wifstream::in);
+#endif
 
         while (fp.good())
         {
@@ -1164,9 +1163,8 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& re
         }
         fp.close();
     }
-    mUnkStr = (wstring)readerConfig("unk", "<unk>");
+    mUnkStr = (wstring)readerConfig(L"unk", L"<unk>");
 }
-
 
 template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
@@ -1192,7 +1190,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
                 }
             }
             if (bFound == false)
-                RuntimeError("GetMinibatch: cannot find a node that can feed in features for L%s", iter->first.c_str());
+                RuntimeError("GetMinibatch: cannot find a node that can feed in features for %ls", iter->first.c_str());
         }
         mCheckDictionaryKeys = false;
     }
@@ -1226,15 +1224,16 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetRandomSeed(int us)
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
-    ConfigArray ioNames = readerConfig("ioNodeNames", "");
+    vector<wstring> ioNames = readerConfig(L"ioNodeNames", ConfigRecordType::Array(stringargvector()));
     if (ioNames.size() > 0)
     {
         /// newer code that explicitly place multiple streams for inputs
         foreach_index(i, ioNames) // inputNames should map to node names
         {
-            ConfigParameters thisIO = readerConfig(ioNames[i]);
+            const ConfigRecordType & thisIO = readerConfig(ioNames[i]);
 
             BatchLUSequenceReader<ElemType> *thisReader = new BatchLUSequenceReader<ElemType>();
             thisReader->Init(thisIO);
@@ -1278,7 +1277,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayou
         if (rows == 0)
             rows = pMBLayout->GetNumParallelSequences();
         else if (rows != pMBLayout->GetNumParallelSequences())
-            LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
+            LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence beginning");
         size_t this_col = pMBLayout->GetNumTimeSteps();
         col.push_back(this_col);
         cols += this_col;

@@ -110,14 +110,14 @@ static size_t tryfind (const MAPTYPE & map, const KEYTYPE & key, VALTYPE deflt)
     foreach_index (i, infiles)
     {
         const std::wstring & inlatpath = infiles[i];
-        fprintf (stderr, "build: processing lattice '%S'\n", inlatpath.c_str());
+        fprintf (stderr, "build: processing lattice '%ls'\n", inlatpath.c_str());
 
         // get key
         std::wstring key = regex_replace (inlatpath, wregex (L"=.*"), wstring());  // delete mapping
         key = regex_replace (key, wregex (L".*[\\\\/]"), wstring());                // delete path
         key = regex_replace (key, wregex (L"\\.[^\\.\\\\/:]*$"), wstring());        // delete extension (or not if none)
         if (!seenkeys.insert (key).second)
-            RuntimeError(msra::strfun::strprintf ("build: duplicate key for lattice '%S'", inlatpath.c_str()));
+            RuntimeError("build: duplicate key for lattice '%ls'", inlatpath.c_str());
 
         // we fail all the time due to totally broken HDecode/copy process, OK if not too many files are missing
         bool latticeread = false;
@@ -136,17 +136,17 @@ static size_t tryfind (const MAPTYPE & map, const KEYTYPE & key, VALTYPE deflt)
             L.fwrite (f);
             fflushOrDie (f);
 
-            // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %S format (default code page)
+            // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %ls format (default code page)
             fprintfOrDie (ftoc, "%s=%s[%llu]\n", msra::strfun::utf8 (key).c_str(), ((i - brokeninputfiles) == 0) ? msra::strfun::utf8 (outpath).c_str() : "", offset);
             fflushOrDie (ftoc);
 
-            fprintf (stderr, "written lattice to offset %llu as '%S'\n", offset, key.c_str());
+            fprintf (stderr, "written lattice to offset %llu as '%ls'\n", offset, key.c_str());
         }
         catch (const exception & e)
         {
             if (latticeread) throw;        // write failure
             // we ignore read failures
-            fprintf (stderr, "ERROR: skipping unreadable lattice '%S': %s\n", inlatpath.c_str(), e.what());
+            fprintf (stderr, "ERROR: skipping unreadable lattice '%ls': %s\n", inlatpath.c_str(), e.what());
             brokeninputfiles++;
         }
     }
@@ -447,10 +447,10 @@ void lattice::dedup()
         const char * line = toclines[i];
         const char * p = strchr (line, '=');
         if (p == NULL)
-            RuntimeError("open: invalid TOC line (no = sign): " + std::string (line));
+            RuntimeError("open: invalid TOC line (no = sign): %s", line);
         const std::wstring key = msra::strfun::utf16 (std::string (line, p - line));
 
-        fprintf (stderr, "convert: processing lattice '%S'\n", key.c_str());
+        fprintf (stderr, "convert: processing lattice '%ls'\n", key.c_str());
 
         // fetch lattice  --this performs any necessary format conversions already
         lattice L;
@@ -461,7 +461,7 @@ void lattice::dedup()
         {
             if (!archive2.haslattice (key))
             {
-                fprintf (stderr, "convert: cannot merge because lattice '%S' missing in secondary archive; skipping\n", key.c_str());
+                fprintf (stderr, "convert: cannot merge because lattice '%ls' missing in secondary archive; skipping\n", key.c_str());
                 skippedmerges++;
                 continue;
             }
@@ -492,11 +492,11 @@ void lattice::dedup()
             L.fwrite (f);
             fflushOrDie (f);
             
-            // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %S format (default code page)
+            // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %ls format (default code page)
             fprintfOrDie (ftoc, "%s=%s[%llu]\n", msra::strfun::utf8 (key).c_str(), (i == 0) ? msra::strfun::utf8 (outpath).c_str() : "", offset);
             fflushOrDie (ftoc);
 
-            fprintf (stderr, "written converted lattice to offset %llu as '%S'\n", offset, key.c_str());
+            fprintf (stderr, "written converted lattice to offset %llu as '%ls'\n", offset, key.c_str());
         }
         else if (outpath == L"-")
         {
@@ -539,7 +539,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     {
         if (strncmp (*iter, "lmscale=", 8) == 0)    // note: HTK sometimes generates extra garbage space at the end of this line
             if (sscanf_s (*iter, "lmscale=%f wdpenalty=%f%c", &info.lmf, &info.wp, &dummychar, sizeof (dummychar)) != 2 && dummychar != ' ')
-                RuntimeError("lattice: mal-formed lmscale/wdpenalty line in lattice: " + string (*iter));
+                RuntimeError("lattice: mal-formed lmscale/wdpenalty line in lattice: %s", *iter);
     }
     
     // parse N and L
@@ -547,7 +547,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     {
         unsigned long N, L;
         if (sscanf_s (*iter, "N=%lu L=%lu %c", &N, &L, &dummychar, sizeof (dummychar)) != 2)
-            RuntimeError("lattice: mal-formed N=/L= line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed N=/L= line in lattice: %s", *iter);
         info.numnodes = N;
         info.numedges = L;
         iter++;
@@ -555,7 +555,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     else
         RuntimeError("lattice: mal-formed before parse N=/L= line in lattice.");
     
-    ASSERT(info.numnodes > 0);
+    assert(info.numnodes > 0);
     nodes.reserve (info.numnodes);
     // parse the nodes
     for (size_t i = 0; i < info.numnodes; i++, iter++)
@@ -565,14 +565,14 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         unsigned long itest;
         float t;
         if (sscanf_s (*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, sizeof (dummychar)) < 2)
-            RuntimeError("lattice: mal-formed node line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed node line in lattice: %s", *iter);
         if (i != (size_t) itest)
-            RuntimeError("lattice: out-of-sequence node line in lattice: " + string (*iter));
+            RuntimeError("lattice: out-of-sequence node line in lattice: %s", *iter);
         nodes.push_back (nodeinfo ((unsigned int) (t / info.frameduration + 0.5)));
         info.numframes = max (info.numframes, (size_t) nodes.back().t);
     }
     // parse the edges
-    ASSERT(info.numedges > 0);
+    assert(info.numedges > 0);
     edges.reserve (info.numedges);
     align.reserve (info.numedges * 10);  // 10 phones per word on av. should be enough
     std::string label;
@@ -590,37 +590,37 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         if (nvals == 5 && j == info.numedges - 1)    // special case: last edge is a !NULL and thus may have the d= record missing
             strcpy (d, ":");
         else if (nvals != 6)
-            RuntimeError("lattice: mal-formed edge line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed edge line in lattice: %s", *iter);
         if (j != (size_t) jtest)
-            RuntimeError("lattice: out-of-sequence edge line in lattice: " + string (*iter));
+            RuntimeError("lattice: out-of-sequence edge line in lattice: %s", *iter);
         edges.push_back (edgeinfowithscores (S, E, a, l, align.size()));
         // build align array
         size_t edgeframes = 0;      // (for checking whether the alignment sums up right)
         const char * p = d;
         if (p[0] != ':' || (p[1] == 0 && j < info.numedges-1))    // last edge may be empty
-            RuntimeError("lattice: alignment info must start with a colon and must have at least one entry: " + string (*iter));
+            RuntimeError("lattice: alignment info must start with a colon and must have at least one entry: %s", *iter);
         p++;
         while (*p)
         {
             // p points to an entry of the form TRIPHONE,DURATION
             const char * q = strchr (p, ',');
             if (q == NULL)
-                RuntimeError("lattice: alignment entry lacking a comma: " + string (*iter));
+                RuntimeError("lattice: alignment entry lacking a comma: %s", *iter);
             if (q == p)
-                RuntimeError("lattice: alignment entry label empty: " + string (*iter));
+                RuntimeError("lattice: alignment entry label empty: %s", *iter);
             label.assign (p, q-p);  // the triphone label
             q++;
             char * ep;
             double duration = strtod (q, &ep); // (weird--returns a non-const ptr in ep to a const object)
             p = ep;
             if (*p != ':')
-                RuntimeError("lattice: alignment entry not ending with a colon: " + string (*iter));
+                RuntimeError("lattice: alignment entry not ending with a colon: %s", *iter);
             p++;
             // create the alignment entry
             const size_t frames = (unsigned int) (duration / info.frameduration + 0.5);
             auto it = unitmap.find (label);
             if (it == unitmap.end())
-                RuntimeError("lattice: unit in alignment that is not in model: " + label);
+                RuntimeError("lattice: unit in alignment that is not in model: %s", label.c_str());
             const size_t unitid = it->second;
             //const size_t unitid = unitmap.insert (make_pair (label, unitmap.size())).first->second;  // may create a new entry with index = #entries
             align.push_back (aligninfo (unitid, frames));
@@ -630,11 +630,11 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         {
             char msg[128];
             sprintf (msg, "\n-- where edgeframes=%d != (nodes[E].t - nodes[S].t=%d), the gap is %d.", edgeframes, nodes[E].t - (size_t) nodes[S].t, edgeframes + nodes[S].t - nodes[E].t);
-            RuntimeError("lattice: alignment info duration mismatches edge duration: " + string (*iter) + msg);
+            RuntimeError("lattice: alignment info duration mismatches edge duration: %s%s", *iter, msg);
         }
     }
     if (iter != lines.end())
-        RuntimeError("lattice: unexpected garbage at end of lattice: " + string (*iter));
+        RuntimeError("lattice: unexpected garbage at end of lattice: %s", *iter);
     checklattice();
 
     // create more efficient storage for alignments
@@ -655,10 +655,10 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
     // get the labels (state and word)
     auto iter = transcripts.find (key);
     if (iter == transcripts.end())
-        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key " + strfun::utf8 (key));
+        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key %ls", key.c_str());
     const auto & transcript = iter->second;
     if (transcript.words.size() == 0)
-        RuntimeError("frommlf: empty reference word sequence for lattice with key " + strfun::utf8 (key));
+        RuntimeError("frommlf: empty reference word sequence for lattice with key %ls", key.c_str());
 
     // determine unigram scores for all words
     vector<float> lmscores (transcript.words.size());
@@ -681,7 +681,7 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
         e.S = j;
         e.E = j+1;
         if (e.E != j+1)
-            RuntimeError(msra::strfun::strprintf ("frommlf: too many tokens to be represented as edgeinfo::E in label set: %S", key.c_str()));
+            RuntimeError("frommlf: too many tokens to be represented as edgeinfo::E in label set: %ls", key.c_str());
         e.a = 0.0f; // no ac score
 
         // LM score
@@ -711,7 +711,7 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
     }
     nodes[transcript.words.size()].t = (unsigned short) numframes;
     if (nodes[transcript.words.size()].t != numframes)
-        RuntimeError(msra::strfun::strprintf ("frommlf: too many frames to be represented as nodeinfo::t in label set: %S", key.c_str()));
+        RuntimeError("frommlf: too many frames to be represented as nodeinfo::t in label set: %ls", key.c_str());
     info.lmf = -1.0f;       // indicates not set
     info.wp = 0.0f;         // not set indicated by lmf < 0
     info.numedges = edges.size();

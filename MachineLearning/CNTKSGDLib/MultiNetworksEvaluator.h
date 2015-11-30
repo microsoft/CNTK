@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _MSC_VER
                 outputStream.open(output);
 #else
-                outputStream.open(charpath(output));    // GCC does not implement wide-char pathnames here
+                outputStream.open(wtocharpath(output).c_str());    // GCC does not implement wide-char pathnames here
 #endif
             }
 
@@ -360,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This stuff must all be removed from SimpleEvaluator, as this is not simple at all!!
         void InitTrainEncoderDecoderWithHiddenStates(const ConfigParameters& readerConfig)
         {
-            ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
+            ConfigArray arrEncoderNodeNames = readerConfig(L"encoderNodes", "");
             vector<wstring> encoderNodeNames;
 
             m_lst_pair_encoder_decode_node_names.clear();;
@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            ConfigArray arrDecoderNodeNames = readerConfig("decoderNodes", "");
+            ConfigArray arrDecoderNodeNames = readerConfig(L"decoderNodes", "");
             vector<wstring> decoderNodeNames;
             if (arrDecoderNodeNames.size() > 0)
             {
@@ -516,6 +516,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
                     (*ptr)->DataEnd(endDataSentence);
             }
+        }
+
+        template<class F>
+        static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+        {
+            return l.second > r.second;
         }
 
         bool GetCandidatesAtOneTimeInstance(const Matrix<ElemType>& score,

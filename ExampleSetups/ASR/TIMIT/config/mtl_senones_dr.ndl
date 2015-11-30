@@ -22,9 +22,9 @@ LabelDim1 = 183
 LabelDim2 = 8
 
 # input definitions
-features=Input(FeatDim,tag=feature)
-labels=Input(LabelDim1,tag=label)
-regions=Input(LabelDim2,tag=label)
+features=Input(FeatDim,tag="feature")
+labels=Input(LabelDim1,tag="label")
+regions=Input(LabelDim2,tag="label")
 
 Prior=Mean(labels)
 LogPrior = Log(Prior)
@@ -40,18 +40,18 @@ L3 = SBFF(L2, HiddenDim, HiddenDim2)
 
 # objective function 1
 BFF1=BFF(L3,LabelDim1,HiddenDim)
-CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag=eval)
-FER1 = ErrorPrediction(labels,BFF1.FF.P,tag=eval)
+CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="eval")
+FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="eval")
 
 # objective function 2
 BFF2=BFF(L3,LabelDim2,HiddenDim)
-CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag=eval)
-FER2 = ErrorPrediction(regions,BFF2.FF.P,tag=eval)
+CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="eval")
+FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="eval")
 
 # weighted final objective function
 Alpha1=0.8
 Alpha2=0.2
-ObjFcn = WtObjFcn(CE1,Alpha1,CE2,Alpha2,tag=criteria)
+ObjFcn = WtObjFcn(CE1,Alpha1,CE2,Alpha2,tag="criterion")
 
 # for decoding
 ScaledLogLikelihood=Minus(BFF1.FF.P, LogPrior)

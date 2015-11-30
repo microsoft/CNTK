@@ -41,7 +41,7 @@ Rename(L*.S,L*.RL)
 
 #add a new sigmoid hidden layer
 HDIM=256
-L2=SBFF(L1.RL,HDIM,HDIM, init=uniform)
+L2=SBFF(L1.RL,HDIM,HDIM, init="uniform")
 SetInput(L3.*.T, 1, L2.S)
 
 Dump(m1, "c:\temp\dump3.txt")

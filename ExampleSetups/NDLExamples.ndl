@@ -13,8 +13,8 @@ ndlTestCosDist=[
     HDim=256
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # compute mean/stddev for mean/stddev normalization
     fmean = Mean(features);
@@ -28,8 +28,8 @@ ndlTestCosDist=[
     L4 = SoftMax(L3);
     CD = CosDistance(L4, labels);
     CDAll=SumElements(CD)
-    NCD=Negate(CDALL, tag=Criteria)
-    Err=ErrorPrediction(labels, L4, tag=Eval)
+    NCD=Negate(CDALL, tag="criterion")
+    Err=ErrorPrediction(labels, L4, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(L4)
@@ -42,8 +42,8 @@ ndlTestGMM=[
     HDim=10
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # Layer operations
     L1=RBFF(features, HDim, SDim)
@@ -59,7 +59,7 @@ ndlTestGMM=[
     
     LL=GMMLL(UnnormedPrior, Means, LogStddev, L3)
     LLAll=SumElements(LL)
-    NLL=Negate(LLALL, tag=Criteria)
+    NLL=Negate(LLALL, tag="criterion")
 
     # rootNodes defined here
     OutputNodes=(NLL)
@@ -73,8 +73,8 @@ ndlTestMDN=[
     HDim=256
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # Layer operations
     L1=RBFF(features, HDim, SDim)
@@ -99,7 +99,7 @@ ndlTestMDN=[
     
     LL=GMMLL(UnnormedPrior, Means, LogStddev, labels)
     LLAll=SumElements(LL)
-    NLL=Negate(LLALL, tag=Criteria)
+    NLL=Negate(LLALL, tag="criterion")
 
     # rootNodes defined here
     OutputNodes=(NLL)
@@ -150,7 +150,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init=fixedvalue, value=0)
+        B=Parameter(rows, init="fixedValue", value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -220,8 +220,8 @@ ndlMacroUse2=[
     HDim=256
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # compute mean/stddev for mean/stddev normalization
     fmean = Mean(features);
@@ -232,8 +232,8 @@ ndlMacroUse2=[
     L1 = RBFF(finput, HDim, SDim)
     L2 = RBFF(L1, HDim, HDim)
     L3 = RBFF(L2, HDim, HDim)
-    CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -244,8 +244,8 @@ ndlMacroUseCNNSubSample2ZeroPadding=[
     SDim=784
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
     
     #convolution
     inputWidth=28
@@ -289,8 +289,8 @@ ndlMacroUseCNNSubSample2ZeroPadding=[
     
     HDim=128
     L1 = SBFF(mp, HDim, mpoutputSizePerSample)
-    CE = SMBFF(L1, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -302,8 +302,8 @@ ndlMacroUseCNNSubSample2=[
     SDim=784
     LDim=10
 
-    features=ImageInput(28,28, 1, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=ImageInput(28,28, 1, tag="feature")
+    labels=Input(LDim, tag="label")
     
     #convolution
     inputWidth=28
@@ -348,8 +348,8 @@ ndlMacroUseCNNSubSample2=[
     
     HDim=128
     L1 = SBFF(mp, HDim, mpoutputSizePerSample)
-    CE = SMBFF(L1, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -365,8 +365,8 @@ ndlMacroUseCNN=[
     SDim=784
     LDim=10
 
-    features=ImageInput(inputWidth, inputHeight, inputChannels, 1, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=ImageInput(inputWidth, inputHeight, inputChannels, 1, tag="feature")
+    labels=Input(LDim, tag="label")
     
     #convolution
     kernelWidth=5
@@ -398,8 +398,8 @@ ndlMacroUseCNN=[
     
     HDim=128
     L1 = SBFF(mp, HDim, 0)
-    CE = SMBFF(L1, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMBFF(L1, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF)
@@ -413,24 +413,24 @@ ndlMacroUseNoBase=[
     LDim=10
 
     # Weight, Bias, features and label inputs
-    B0=Parameter(HDim, init=fixedvalue, value=0)
-    W0=Parameter(HDim, SDim, init=uniform)
-    B1=Parameter(HDim, init=fixedvalue, value=0)
-    W1=Parameter(HDim, HDim, init=uniform)
-    B2=Parameter(HDim, init=fixedvalue, value=0)
-    W2=Parameter(HDim, HDim, init=uniform)
-    BTop=Parameter(LDim, init=fixedvalue, value=0)
-    WTop=Parameter(LDim, HDim, init=uniform)
+    B0=Parameter(HDim, init="fixedValue", value=0)
+    W0=Parameter(HDim, SDim, init="uniform")
+    B1=Parameter(HDim, init="fixedValue", value=0)
+    W1=Parameter(HDim, HDim, init="uniform")
+    B2=Parameter(HDim, init="fixedValue", value=0)
+    W2=Parameter(HDim, HDim, init="uniform")
+    BTop=Parameter(LDim, init="fixedValue", value=0)
+    WTop=Parameter(LDim, HDim, init="uniform")
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # Layer operations
     L1 = RFFD(features, HDim, SDim)
     L2 = RFFD(L1, HDim, HDim)
     L3 = RFFD(L2, HDim, HDim)
-    CE = SMFF(L3, LDim, SDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMFF(L3, LDim, SDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
     # rootNodes defined here
     OutputNodes=(CE.BFF)
 ]
@@ -442,8 +442,8 @@ ndlMacroUseMask=[
     HDim=256
     LDim=10
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # compute mean/stddev for mean/stddev normalization
     fmean = Mean(features);
@@ -462,8 +462,8 @@ ndlMacroUseMask=[
     # mask
     L4=ElementTimes(L3, ML2)
     
-    CE = SMBFF(L4, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF, tag=Eval)
+    CE = SMBFF(L4, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF, tag="eval")
     
     # output nodes
     Prior=Mean(labels)

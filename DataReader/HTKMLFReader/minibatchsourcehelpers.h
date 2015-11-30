@@ -43,7 +43,7 @@ static size_t augmentationextent (size_t featdim/*augment from*/, size_t modeldi
     if (modeldim % featdim != 0)
         RuntimeError("augmentationextent: model vector size not multiple of input features");
     if (windowframes % 2 == 0)
-        RuntimeError(msra::strfun::strprintf ("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
+        RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowframes);
 
     return extent;
 }
@@ -204,7 +204,7 @@ public:
     {
         size_t tbegin = max (ts, randomizationrange/2) - randomizationrange/2;
         size_t tend = min (te + randomizationrange/2, map.size());
-        return std::make_pair<size_t,size_t> (move(tbegin), move(tend));
+        return std::make_pair<size_t, size_t>(std::move(tbegin), std::move(tend));
     }
 
     // this returns the map directly (read-only) and will lazily initialize it for a given seed
@@ -242,7 +242,7 @@ public:
                         if (trand <= map[t] + randomizationrange/2 && map[t] < trand + randomizationrange/2
                             && (size_t) t <= map[trand] + randomizationrange/2 && map[trand] < (size_t) t + randomizationrange/2)
                         {
-                            ::swap (map[t], map[trand]);
+                            std::swap (map[t], map[trand]);
                             break;
                         }
                         // but don't multi-swap stuff out of its range (for swapping positions that have been swapped before)
@@ -263,7 +263,7 @@ public:
     #endif
     #if 1       // test whether it is indeed a unique complete sequence
                 auto map2 = map;
-                ::sort (map2.begin(), map2.end());
+                std::sort (map2.begin(), map2.end());
                 foreach_index (t, map2) assert (map2[t] == (size_t) t);
     #endif
                 fprintf (stderr, "randomordering: recached sequence for seed %d: %d, %d, ...\n", (int) seed, (int) map[0], (int) map[1]);
@@ -280,5 +280,29 @@ public:
 // will not work. This needs to be changed to dynamically choose what size to use based on the number of class ids.
 typedef unsigned short CLASSIDTYPE;
 typedef unsigned short HMMIDTYPE;
+
+#ifndef _MSC_VER
+// these needed below with gcc because some regex function is not implemented properly there
+struct MatchPathSeparator
+{
+    bool operator()(char ch) const { return ch == '\\' || ch == '/'; }
+};
+static inline std::string basename(std::string const& pathname)
+{
+    return std::string(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+static inline std::string removeExtension(std::string const& filename)
+{
+    return filename.substr(0, filename.find_last_of("."));
+}
+static inline std::wstring basename(std::wstring const& pathname)
+{
+    return std::wstring(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+static inline std::wstring removeExtension(std::wstring const& filename)
+{
+    return filename.substr(0, filename.find_last_of(L"."));
+}
+#endif
 
 };};

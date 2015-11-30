@@ -5,14 +5,14 @@
 //
 #pragma once
 
-#include <stdarg.h>
-
+#include "Basics.h"
 #include "commandArgUtil.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
 #include "NDLUtil.h"
+#include <stdarg.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -576,6 +576,7 @@ public:
             Trim(name);
             value = token.substr(foundEqual+1);
             Trim(value);
+            TrimQuotes(value);
         }
         return optional;
     }

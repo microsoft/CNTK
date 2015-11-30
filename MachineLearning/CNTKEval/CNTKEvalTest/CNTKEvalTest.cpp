@@ -25,9 +25,9 @@ void DoCommand(const ConfigParameters& configRoot)
         epochSize = requestDataSize;
     }
 
-    ConfigParameters configFeatures = readerConfig("features");
+    ConfigParameters configFeatures = readerConfig(L"features");
     size_t dimFeatures = configFeatures("dim");
-    ConfigParameters configLabels = readerConfig("labels");
+    ConfigParameters configLabels = readerConfig(L"labels");
     size_t dimLabels = configLabels("labelDim");
     ConfigParameters configSgd = config("SGD");
     std::wstring modelPath = configSgd("modelPath");
@@ -91,7 +91,7 @@ int wmain(int argc, wchar_t* argv[])
         else if (type == "double")
             DoCommand<double>(config);
         else
-            RuntimeError("invalid precision specified: " + type);
+            RuntimeError("invalid precision specified: %s", type.c_str());
     }
     catch(std::exception &err)
     {

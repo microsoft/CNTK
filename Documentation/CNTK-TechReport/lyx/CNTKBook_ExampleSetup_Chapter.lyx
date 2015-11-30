@@ -959,12 +959,12 @@ ndlCreateNetwork=[
 
 \begin_layout Plain Layout
 
-  featIn=Input(featInDim,tag=feature)
+  featIn=Input(featInDim,tag="feature")
 \end_layout
 
 \begin_layout Plain Layout
 
-  featOut=Input(featOutDim,tag=feature) 			       			        	
+  featOut=Input(featOutDim,tag="feature") 			       			        	
 \end_layout
 
 \begin_layout Plain Layout
@@ -998,7 +998,7 @@ ndlCreateNetwork=[
 
 \begin_layout Plain Layout
 
-  MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag=criteria)
+  MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag="criterion")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1455,7 +1455,7 @@ status open
 
 \begin_layout Plain Layout
 
-m1=LoadModel($CurrModel$, format=cntk)
+m1=LoadModel("$currModel$", format="cntk")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1470,22 +1470,22 @@ HDim=512
 
 \begin_layout Plain Layout
 
-L$NewLayer$=SBFF(L$CurrLayer$.S,HDim,HDim)
+L$newLayer$=SBFF(L$currLayer$.S, HDim, HDim)
 \end_layout
 
 \begin_layout Plain Layout
 
-SetInput(CE.*.T, 1, L$NewLayer$.S)
+SetInput(CE.*.T, 1, L$newLayer$.S)
 \end_layout
 
 \begin_layout Plain Layout
 
-SetInput(L$NewLayer$.*.T, 1, L$CurrLayer$.S)
+SetInput(L$newLayer$.*.T, 1, L$currLayer$.S)
 \end_layout
 
 \begin_layout Plain Layout
 
-SaveModel(m1,$NewModel$, format=cntk)
+SaveModel(m1, "$newModel$", format="cntk")
 \end_layout
 
 \end_inset
@@ -1605,12 +1605,12 @@ BFF1=BFF(L3,LabelDim1,HiddenDim)
 
 \begin_layout Plain Layout
 
-CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag=eval)
+CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="eval")
 \end_layout
 
 \begin_layout Plain Layout
 
-FER1 = ErrorPrediction(labels,BFF1.FF.P,tag=eval)
+FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="eval")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1629,12 +1629,12 @@ BFF2=BFF(L3,LabelDim2,HiddenDim)
 
 \begin_layout Plain Layout
 
-CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag=eval)
+CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="eval")
 \end_layout
 
 \begin_layout Plain Layout
 
-FER2 = ErrorPrediction(regions,BFF2.FF.P,tag=eval)
+FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="eval")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1658,7 +1658,7 @@ Alpha2=0.2
 
 \begin_layout Plain Layout
 
-ObjFcn = WtObjFcn(CE1,Alpha1,CE2,Alpha2,tag=criteria)
+ObjFcn = WtObjFcn(CE1,Alpha1,CE2,Alpha2,tag="criterion")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1877,7 +1877,7 @@ SBFF2(input1,rowCount,colCount1,input2,colCount2)
 
 \begin_layout Plain Layout
 
-  B=Parameter(rowCount,init=fixedvalue,value=0)
+  B=Parameter(rowCount,init="fixedValue",value=0)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1944,17 +1944,17 @@ FeatDim2 = 39
 
 \begin_layout Plain Layout
 
-features1=Input(FeatDim1,tag=feature)
+features1=Input(FeatDim1,tag="feature")
 \end_layout
 
 \begin_layout Plain Layout
 
-features2=Input(FeatDim2,tag=feature) 
+features2=Input(FeatDim2,tag="feature") 
 \end_layout
 
 \begin_layout Plain Layout
 
-labels=Input(LabelDim1,tag=label)
+labels=Input(LabelDim1,tag="label")
 \end_layout
 
 \begin_layout Plain Layout

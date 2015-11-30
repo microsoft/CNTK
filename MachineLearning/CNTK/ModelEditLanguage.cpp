@@ -203,7 +203,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         NetNdl<ElemType>* netNdl = &m_mapNameToNetNdl[modelName];
         if (netNdl->cn == NULL)
-            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %ls.", modelName.c_str());
+            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %s.", modelName.c_str());
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
@@ -396,35 +396,35 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         
         std::string propName = params[1];
         MELProperty prop=melPropNull;
-        if (EqualInsensitive(propName, "ComputeGradient", "NeedsGradient"))
+        if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
         {
             prop = melPropComputeGradient;
         }
-        else if (EqualInsensitive(propName, "Feature"))
+        else if (EqualInsensitive(propName, "feature"))
         {
             prop = melPropFeature;
         }
-        else if (EqualInsensitive(propName, "Label"))
+        else if (EqualInsensitive(propName, "label"))
         {
             prop = melPropLabel;
         }
-        else if (EqualInsensitive(propName, "FinalCriterion", "Criteria"))
+        else if (EqualInsensitive(propName, "finalCriterion", "criterion") || EqualInsensitive(propName, "finalCriterion", "Criteria"))
         {
             prop = melPropFinalCriterion;
         }
-        else if (EqualInsensitive(propName, "MultiSeq", "ReqMultiSeqHandling"))
+        else if (EqualInsensitive(propName, "multiSeq", "reqMultiSeqHandling"))
         {
             fprintf(stderr, "WARNING: '%s' property is defunct and will be ignored.\n", propName.c_str());
         }
-        else if (EqualInsensitive(propName, "Evaluation", "Eval"))
+        else if (EqualInsensitive(propName, "evaluation", "eval"))
         {
             prop = melPropEvaluation;
         }
-        else if (EqualInsensitive(propName, "Output"))
+        else if (EqualInsensitive(propName, "output"))
         {
             prop = melPropOutput;
         }
-        else if (EqualInsensitive(propName, "Recurrent"))
+        else if (EqualInsensitive(propName, "recurrent"))
         {
             prop = melPropRecurrent;
         }
@@ -605,7 +605,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 continue;
             }
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
-            pParamNode->ReviseFromFile(msra::strfun::mbstowcs(paramPath));
+            pParamNode->ReviseFromFile(msra::strfun::utf16(paramPath));
             fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
         }
     }

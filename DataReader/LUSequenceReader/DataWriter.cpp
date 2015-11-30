@@ -31,18 +31,11 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 }
 
 
-template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+template<class ElemType> template<class ConfigRecordType>
+void DataWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig)
 {
     m_dataWriter = new LUSequenceWriter<ElemType>();
     m_dataWriter->Init(writerConfig);
-}
-
-
-template<class ElemType>
-void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& /*config*/)
-{
-    NOT_IMPLEMENTED;
 }
 
 
@@ -59,7 +52,7 @@ void DataWriter<ElemType>::Destroy()
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
 template<class ElemType>
-DataWriter<ElemType>::DataWriter(const ConfigParameters& config)
+template<class ConfigRecordType> DataWriter<ElemType>::DataWriter(const ConfigRecordType & config)
 {
     Init(config);
 }

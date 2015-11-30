@@ -23,8 +23,6 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Create a Data Writer
-    //DATAWRITER_API IDataWriter* DataWriterFactory(void)
-
 
     // comparison, not case sensitive.
     template<class ElemType>
@@ -33,29 +31,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ( first < second );
     }
 
-    template<class ElemType>
-    void LUSequenceWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+    template<class ElemType> template<class ConfigRecordType>
+    void LUSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig)
     {
         udims.clear();
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        vector<wstring> outputNames = writerConfig(L"outputNodeNames", ConfigRecordType::Array(stringargvector()));
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
 
-
         foreach_index(i, outputNames) // inputNames should map to node names
         {
-            ConfigParameters thisOutput = writerConfig(outputNames[i]);
-            outputFiles[outputNames[i]] = thisOutput("file");
-            int iN = thisOutput("nbest", "1");
+            const ConfigRecordType & thisOutput = writerConfig(outputNames[i]);
+            outputFiles[outputNames[i]] = (const wstring &)thisOutput(L"file");
+            int iN = thisOutput(L"nbest", 1);
             nBests[outputNames[i]] = iN; 
-            wstring fname = thisOutput("token");
+            wstring fname = thisOutput(L"token");
             ReadLabelInfo(fname, word4idx[outputNames[i]], idx4word[outputNames[i]]);
             size_t dim = idx4word[outputNames[i]].size(); 
             udims.push_back(dim);
-
         }
-
     }
 
     template<class ElemType>

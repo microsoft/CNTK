@@ -1,11 +1,10 @@
-m1=LoadModel($CurrModel$, format=cntk)
+m1 = LoadModel("$currModel$", format="cntk")
 SetDefaultModel(m1)
-SetProperty(cr, Criteria, false)
+SetProperty(cr, "criterion", false)
 Remove(cr)
 
-SEwithSoftmax=SequenceWithSoftmax(labels, OL.z, ScaledLogLikelihood) 
-SetProperty(SEwithSoftmax, Criteria, true)
+seWithSoftmax = SequenceWithSoftmax(labels, OL.z, scaledLogLikelihood) 
+SetProperty(seWithSoftmax, criterion, true)
 
-SaveModel(m1, $NewModel$, format=cntk)
-Dump(m1,$NewModel$.dump.txt)
-
+SaveModel(m1, "$newModel$", format="cntk")
+Dump(m1, "$newModel$.dump.txt")

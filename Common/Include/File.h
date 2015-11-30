@@ -287,7 +287,7 @@ public:
                 if (r == 0)
                     numColsInFirstRow = numElementsInRow;
                 else if (numElementsInRow != numColsInFirstRow)
-                    RuntimeError("The rows in the provided file do not all have the same number of columns: " + filePath);
+                    RuntimeError("The rows in the provided file do not all have the same number of columns: %s", filePath.c_str());
 
                 r++;
             }

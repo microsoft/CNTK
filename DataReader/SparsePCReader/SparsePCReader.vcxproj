@@ -117,8 +117,8 @@
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="SparsePCReader.h" />
-    <ClInclude Include="minibatchsourcehelpers.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

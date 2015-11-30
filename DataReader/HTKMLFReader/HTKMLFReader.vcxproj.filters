@@ -7,14 +7,14 @@
     <ClCompile Include="HTKMLFWriter.cpp" />
     <ClCompile Include="latticearchive.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="fileutil.cpp">
-      <Filter>Duplicates to remove</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <Filter>Duplicates to remove</Filter>
     </ClCompile>
     <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -34,9 +34,6 @@
     <ClInclude Include="basetypes.h">
       <Filter>Duplicates to remove</Filter>
     </ClInclude>
-    <ClInclude Include="fileutil.h">
-      <Filter>Duplicates to remove</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Duplicates to remove</Filter>
     </ClInclude>
@@ -44,6 +41,13 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\basetypes.h" />
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ssematrix.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

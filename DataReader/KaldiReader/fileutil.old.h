@@ -162,10 +162,10 @@ template<class CHAR> CHAR * fgetline (FILE * f, CHAR * buf, int size);
 template<class CHAR, size_t n> CHAR * fgetline (FILE * f, CHAR (& buf)[n]) { return fgetline (f, buf, n); }
 STRING fgetline (FILE * f);
 WSTRING fgetlinew (FILE * f);
-void fgetline (FILE * f, std::string & s, ARRAY<char> & buf);
-void fgetline (FILE * f, std::wstring & s, ARRAY<char> & buf);
-void fgetline (FILE * f, ARRAY<char> & buf);
-void fgetline (FILE * f, ARRAY<wchar_t> & buf);
+void fgetline (FILE * f, std::string & s, std::vector<char> & buf);
+void fgetline (FILE * f, std::wstring & s, std::vector<char> & buf);
+void fgetline (FILE * f, std::vector<char> & buf);
+void fgetline (FILE * f, std::vector<wchar_t> & buf);
 
 const char * fgetstring (FILE * f, char * buf, int size);
 template<size_t n> const char * fgetstring (FILE * f, char (& buf)[n]) { return fgetstring (f, buf, n); }
@@ -274,8 +274,8 @@ double fgetdouble (FILE * f);
 // fgetwav(): read an entire .wav file
 // ----------------------------------------------------------------------------
 
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate);
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate);
+void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate);
+void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate);
 
 // ----------------------------------------------------------------------------
 // fputwav(): save data into a .wav file
@@ -325,7 +325,7 @@ void fputdouble (FILE * f, double val);
 // fputfile(): write a binary block or a string as a file
 // ----------------------------------------------------------------------------
 
-void fputfile (const WSTRING & pathname, const ARRAY<char> & buffer);
+void fputfile (const WSTRING & pathname, const std::vector<char> & buffer);
 void fputfile (const WSTRING & pathname, const std::wstring & string);
 void fputfile (const WSTRING & pathname, const std::string & string);
 
@@ -333,8 +333,8 @@ void fputfile (const WSTRING & pathname, const std::string & string);
 // fgetfile(): load a file as a binary block
 // ----------------------------------------------------------------------------
 
-void fgetfile (const WSTRING & pathname, ARRAY<char> & buffer);
-void fgetfile (FILE * f, ARRAY<char> & buffer);
+void fgetfile (const WSTRING & pathname, std::vector<char> & buffer);
+void fgetfile (FILE * f, std::vector<char> & buffer);
 namespace msra { namespace files {
     void fgetfilelines (const std::wstring & pathname, vector<char> & readbuffer, std::vector<std::string> & lines);
     static inline std::vector<std::string> fgetfilelines (const std::wstring & pathname) { vector<char> buffer; std::vector<std::string> lines; fgetfilelines (pathname, buffer, lines); return lines; }
@@ -408,7 +408,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples);
 //            For example, data[i][j]: i is channel index, 0 means the first 
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
-void fgetraw (FILE *f,ARRAY< ARRAY<short> > & data,const WAVEHEADER & wavhd);
+void fgetraw (FILE *f,std::vector< std::vector<short> > & data,const WAVEHEADER & wavhd);
 
 // ----------------------------------------------------------------------------
 // temp functions -- clean these up
