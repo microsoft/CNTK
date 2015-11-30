@@ -132,7 +132,7 @@ typedef struct{
 } stSentenceInfo;
 
 template <typename NumType, typename LabelType = wstring>
-class LUBatchLUSequenceParser : public LUSequenceParser<NumType, LabelType>
+class BatchLUSequenceParser : public LUSequenceParser<NumType, LabelType>
 {
 public:
     wstring mUnkStr; 
@@ -158,9 +158,11 @@ public:
     using LUSequenceParser<NumType, LabelType>::m_labels;
     using LUSequenceParser<NumType, LabelType>::m_beginSequence;
     using LUSequenceParser<NumType, LabelType>::m_endSequence;
-    LUBatchLUSequenceParser() {
+    BatchLUSequenceParser()
+    {
     };
-    ~LUBatchLUSequenceParser() {
+    ~BatchLUSequenceParser()
+    {
         mFile.close(); 
     }
 

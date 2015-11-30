@@ -581,7 +581,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: not nice--why not always call this in ValidateSubNetwork() only?
         FormRecurrentLoops(rootNode);
 
-        // for the m_inputs and m_learnableParameters sets for this rootNode
+        // for the m_inputValues and m_learnableParameters sets for this rootNode
         CollectInputAndLearnableParameters(rootNode);
 
         // validate the rootNode and all nodes it depends on, in evaluation order

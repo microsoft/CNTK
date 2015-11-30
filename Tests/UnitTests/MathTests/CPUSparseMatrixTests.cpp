@@ -22,14 +22,14 @@ namespace Microsoft
 
 				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
-				BOOST_AUTO_TEST_CASE(CPUSparseMatrixColumnSlice)
+				BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixColumnSlice, RandomSeedFixture)
 				{
 					const size_t m = 100;
 					const size_t n = 50;
 					DenseMatrix dm0(m, n);
 					SparseMatrix sm0(MatrixFormat::matrixFormatSparseCSC, m, n, 0);
 
-					dm0.SetUniformRandomValue(-1, 1);
+					dm0.SetUniformRandomValue(-1, 1, IncrementCounter());
 
 					foreach_coord(row, col, dm0)
 					{
@@ -41,17 +41,17 @@ namespace Microsoft
 					DenseMatrix dm1 = dm0.ColumnSlice(start, numCols);
 					DenseMatrix dm2 = sm0.ColumnSlice(start, numCols).CopyColumnSliceToDense(0, numCols);
 
-					BOOST_CHECK(dm1.IsEqualTo(dm2, 0.0001));
+                    BOOST_CHECK(dm1.IsEqualTo(dm2, c_epsilonFloatE4));
 				}
 
-				BOOST_AUTO_TEST_CASE(CPUSparseMatrixCopyColumnSliceToDense)
+				BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixCopyColumnSliceToDense, RandomSeedFixture)
 				{
 					const size_t m = 100;
 					const size_t n = 50;
 					DenseMatrix dm0(m, n);
 					SparseMatrix sm0(MatrixFormat::matrixFormatSparseCSC, m, n, 0);
 
-					dm0.SetUniformRandomValue(-1, 1);
+					dm0.SetUniformRandomValue(-1, 1, IncrementCounter());
 
 					foreach_coord(row, col, dm0)
 					{
@@ -63,7 +63,7 @@ namespace Microsoft
 					DenseMatrix dm1 = dm0.ColumnSlice(start, numCols);
                     DenseMatrix dm2 = sm0.CopyColumnSliceToDense(start, numCols);
 
-					BOOST_CHECK(dm1.IsEqualTo(dm2, 0.0001));
+                    BOOST_CHECK(dm1.IsEqualTo(dm2, c_epsilonFloatE4));
 				}
 
 				BOOST_AUTO_TEST_SUITE_END()

@@ -16,8 +16,8 @@ DNN = [
     labelDim = 132
     hiddenDim = 512
 
-    features = Input(featDim, tag=feature)
-    labels   = Input(labelDim, tag=label)
+    features = Input(featDim, tag="feature")
+    labels   = Input(labelDim, tag="label")
 
     globalMean   = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalMeanPath$",   computeGradient=false)
     globalInvStd = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalInvStdPath$", computeGradient=false)
@@ -32,7 +32,7 @@ DNN = [
     # last layer 512 X 132 
     OL = DNNLastLayer(hiddenDim, labelDim, HL1);
 
-    cr  =  CrossEntropyWithSoftmax(labels, OL, tag=criterion);
-    err  =  ErrorPrediction(labels, OL, tag=eval);
-    scaledLogLikelihood = Minus(OL, logPrior, tag=output)
+    cr  = CrossEntropyWithSoftmax(labels, OL, tag="criterion");
+    err = ErrorPrediction(labels, OL, tag="eval");
+    scaledLogLikelihood = Minus(OL, logPrior, tag="output")
 ]

@@ -1553,7 +1553,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & read
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    mBlgSize = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
+    mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
 }
 
 template<class ElemType>
@@ -1711,10 +1711,14 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
             sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
         }
         if (sln == m_parser.mSentenceIndex2SentenceInfo[seq].sLen &&
-            mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            mProcessed[seq] == false &&
+            mToProcess.size() < mRequestedNumParallelSequences)
+        {
             mToProcess.push_back(seq);
+        }
 
-        if (mToProcess.size() == mBlgSize) break;
+        if (mToProcess.size() == mRequestedNumParallelSequences)
+            break;
     }
 
     return sln;

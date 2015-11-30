@@ -1528,7 +1528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
 
             // Multiply the vector by the Inputs(2)->FunctionValues()
-            if (m_children.size() == 3) // without weight
+            if (m_inputs.size() == 3) // without weight
                 m_temp->AssignElementProductOf(*m_temp, Inputs(2)->ValueSlice(frameRange));     // TODO: is Inputs(2) minibatch data? Confirm
 
             // divide class by p (class 1) or (1-p) (class 0)
@@ -1579,7 +1579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp->AssignLogOf(*m_result);
 
             // The error is the negative of the sum of the result
-            if (m_children.size() == 2)
+            if (m_inputs.size() == 2)
                 FunctionValues().AssignSumOfElements(*m_temp);
             else
                 FunctionValues().AssignInnerProductOf(Inputs(2)->ValueSlice(frameRange), *m_temp, false);
@@ -1588,27 +1588,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-			if (m_children.size() != 2 && m_children.size() != 3)
-				InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
+            if (m_inputs.size() != 2 && m_inputs.size() != 3)
+                InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
 
-			ValidateBinaryReduce(isFinalValidationPass);
+            ValidateBinaryReduce(isFinalValidationPass);
 
-			/* Note that this is the same as ValidateInferBinaryChildrenDims, but done for the 3rd child if it exists */
-			if (m_children.size() == 3)
-			{
-				auto in = Inputs(2);
-				auto other = Inputs(1);
-				// borrow any unset dimension on one input from the other input
-				size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
-				size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
+            /* Note that this is the same as ValidateInferBinaryChildrenDims, but done for the 3rd child if it exists */
+            if (m_inputs.size() == 3)
+            {
+                auto in = Inputs(2);
+                auto other = Inputs(1);
+                // borrow any unset dimension on one input from the other input
+                size_t rows =                        in->GetNumRows() == 0 ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
+                size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
 
-				ValidateInferChildDims(2, rows, cols);
+                ValidateInferChildDims(2, rows, cols);
 
-                if (isFinalValidationPass && 
+                if (isFinalValidationPass &&
                     !(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
-                      (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
+                    (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
+                {
                     LogicError("The Matrix dimensions of the second argument in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-			}
+                }
+            }
         }
 
         //request matrices needed to do node function value evaluation

@@ -20,7 +20,7 @@ namespace Microsoft
                 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
                 // Requires GPU
-                BOOST_AUTO_TEST_CASE(MatrixDataSynchronization_DefaultBehaviorTestForConstructors)
+                BOOST_FIXTURE_TEST_CASE(MatrixDataSynchronization_DefaultBehaviorTestForConstructors, RandomSeedFixture)
                 {
                     const SingleMatrix matrixA;
                     BOOST_CHECK_EQUAL(CurrentDataLocation::GPU, matrixA.GetCurrentMatrixLocation());
@@ -45,7 +45,7 @@ namespace Microsoft
                 }
 
                 // Requires GPU
-                BOOST_AUTO_TEST_CASE(MatrixDataSynchronization_AccessPatternAndTransferTest)
+                BOOST_FIXTURE_TEST_CASE(MatrixDataSynchronization_AccessPatternAndTransferTest, RandomSeedFixture)
                 {
                     float arr[5 * 45];
                     const SingleMatrix matrixA(5, 45, arr, matrixFlagNormal);
@@ -94,9 +94,9 @@ namespace Microsoft
                 }
 
                 // Requires GPU
-                BOOST_AUTO_TEST_CASE(MatrixDataSynchronization_GravitatingTowardsPreferredDevice)
+                BOOST_FIXTURE_TEST_CASE(MatrixDataSynchronization_GravitatingTowardsPreferredDevice, RandomSeedFixture)
                 {
-                    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2);
+                    SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
                     SingleMatrix matrixB = SingleMatrix::Eye(23);
 
                     BOOST_CHECK_EQUAL(CurrentDataLocation::GPU, matrixA.GetCurrentMatrixLocation());

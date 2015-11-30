@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         using LabelType = typename IDataReader<ElemType>::LabelType;
         using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-        using IDataReader<ElemType>::mBlgSize;
+        using IDataReader<ElemType>::mRequestedNumParallelSequences;
         //typedef std::string LabelType;
         //typedef unsigned LabelIdType;
     private:

@@ -74,7 +74,7 @@ public:
 
 protected:
 
-    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
+    BatchLUSequenceParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;    // size of minibatch requested
     size_t m_mbStartSample; // starting sample # of the next minibatch
     size_t m_epochSize; // size of an epoch
@@ -113,9 +113,10 @@ protected:
     int m_traceLevel;
    
     // feature and label data are parallel arrays
-    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext;
-    std::vector<vector<LabelIdType>> m_featureData;
+    // The following two hold the actual MB data internally, created by EnsureDataAvailable().
+    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext; // [parSeq + t * numParSeq] word n-tuple in order of storage in m_functionValues matrix
     std::vector<LabelIdType> m_labelIdData;
+
     std::vector<ElemType> m_labelData;
     std::vector<size_t> m_sequence;
 
@@ -233,7 +234,6 @@ public:
     using LUSequenceReader<ElemType>::m_labelsIdBuffer;
     using LUSequenceReader<ElemType>::m_mbSize;
     using LUSequenceReader<ElemType>::m_epochSize;
-    using LUSequenceReader<ElemType>::m_featureData;
     using LUSequenceReader<ElemType>::m_sequence;
     using LUSequenceReader<ElemType>::m_labelData;
     using LUSequenceReader<ElemType>::m_labelIdData;
@@ -251,25 +251,26 @@ public:
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
     using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
 private:
-    size_t mLastProcssedSentenceId ; 
-    size_t mBlgSize; 
+    size_t mLastProcessedSentenceId;
+    size_t mRequestedNumParallelSequences; 
     size_t mPosInSentence;
-    vector<size_t> mToProcess;
-    size_t mLastPosInSentence; 
-    size_t mNumRead ;
+    vector<size_t> mToProcess;      // [seqIndex] utterance id of utterance in this minibatch's position [seqIndex]
+    size_t mLastPosInSentence;      // BPTT cursor
+    size_t mNumRead;
 
     std::vector<vector<LabelIdType>>  m_featureTemp;
     std::vector<LabelIdType> m_labelTemp;
 
-    bool   mSentenceEnd; 
-    bool   mSentenceBegin;
+    bool mSentenceEnd; 
+    bool mSentenceBegin;
 
 public:
     vector<bool> mProcessed; 
-    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
-    BatchLUSequenceReader() : m_pMBLayout(make_shared<MBLayout>()){
-        mLastProcssedSentenceId  = 0;
-        mBlgSize = 1;
+    BatchLUSequenceParser<ElemType, LabelType> m_parser;
+    BatchLUSequenceReader() : m_pMBLayout(make_shared<MBLayout>())
+    {
+        mLastProcessedSentenceId = 0;
+        mRequestedNumParallelSequences = 1;
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false; 
@@ -345,19 +346,19 @@ public:
     bool mEqualLengthOutput;
     bool mAllowMultPassData;
 
-    /// return length of sentences size
-    vector<size_t> mSentenceLength;
-    size_t mMaxSentenceLength;
-    vector<int> mSentenceBeginAt;
+    // return length of sentences size
+    vector<size_t> mSentenceLengths;    // [seqIndex] lengths of all sentences in a minibatch
+    size_t mMaxSentenceLength;          // max over mSentenceLength[]  --TODO: why not compute on the fly?
+    vector<int> mSentenceBeginAt;       // [seqIndex] index of first token
     const int NO_INPUT = -2;
-    vector<int> mSentenceEndAt;
+    vector<int> mSentenceEndAt;         // [seqIndex] index of last token
 
     MBLayoutPtr m_pMBLayout;
 
-    /// by default it is false
-    /// if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
-    /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
-    /// default will have truncated BPTT, which only does BPTT inside a minibatch
+    // if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
+    // set to true so that a current minibatch can uses state activities from the previous minibatch. 
+    // default will have truncated BPTT, which only does BPTT inside a minibatch
+    // by default it is false
     bool mIgnoreSentenceBeginTag;
 };
 

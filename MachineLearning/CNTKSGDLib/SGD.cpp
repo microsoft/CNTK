@@ -896,9 +896,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_loadBestModel)
                     {
-                        fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
-                        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(i - m_learnRateAdjustInterval),
-                                                              m_validateAfterModelReloading);
+                        auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
+                        fprintf(stderr, "Loaded previous model with best training criterion value: %ls.\n", bestModelPath.c_str());
+                        net->LoadPersistableParametersFromFile(bestModelPath, m_validateAfterModelReloading);
                         net->ResetEvalTimeStamp();
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
