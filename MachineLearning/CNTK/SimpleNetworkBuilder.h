@@ -5,10 +5,6 @@
 //
 #pragma once
 
-#include <stdexcept>
-#include <regex>
-#include <string>
-
 #include "Basics.h"
 #include "Matrix.h"
 #include "BestGpu.h"
@@ -19,9 +15,13 @@
 // TODO: giving up moving stuff for now, running out of time. The following #includes should not be necessary once the hard-working code in here gets moved to .cpp
 #include "InputAndParamNodes.h"
 
+#include <stdexcept>
+#include <regex>
+#include <string>
+
 #pragma warning (disable: 4661)
 
-using namespace std;
+using namespace std;    // TODO: ugh!
 
 /// this is for sparse input, useful when input dimension is very large and sparse such as language modeling
 /// to-do: need to use it guided by argument
@@ -98,8 +98,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool uniformInit = true, const ElemType initValueScale = 1.0f,
             const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
+            if (deviceId == AUTOPLACEMATRIX)
+                deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
+            deviceId = EnforceOneGPUOnly(deviceId);      // see EnforceOneGPUOnly() for comment on what this is
+
             m_deviceId = deviceId;
             m_net = make_shared<ComputationNetwork>(m_deviceId);
+
+            if (m_deviceId < 0)
+                fprintf(stderr, "SimpleNetworkBuilder Using CPU\n");
+            else
+                fprintf(stderr, "SimpleNetworkBuilder Using GPU %d\n", m_deviceId);
 
             m_outputLayerSize = outputLayerSize;
             m_layerSizes = layerSizes;
@@ -113,17 +122,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initValueScale = initValueScale;
             if (m_layerSizes.size() < 2)
                 InvalidArgument("A network should have at least two layers (one input and one output)");
-
-            if (m_deviceId == AUTOPLACEMATRIX)
-                m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-            m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
-
-            m_net->SetDeviceId(m_deviceId);
-            if (m_deviceId < 0)
-                fprintf(stderr, "SimpleNetworkBuilder Using CPU\n");
-            else
-                fprintf(stderr, "SimpleNetworkBuilder Using GPU %d\n", m_deviceId);
-
         }
 
         void InitAttentionNetworkConfig(const ConfigParameters& config)
