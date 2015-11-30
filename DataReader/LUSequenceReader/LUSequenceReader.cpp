@@ -890,6 +890,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
             }
         }
 
+        locObs.SetPreferredDeviceId(features.GetDeviceId());    // needed, otherwise SetValue() below will inherit CPUDEVICE a as target
         features.SetValue(locObs);
         
         lablsize = GetLabelOutput(matrices, m_labelInfo[labelInfoOut], actualmbsize);
@@ -917,11 +918,12 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return 0;
 
-    DEVICEID_TYPE device = labels->GetDeviceId();
-
     labels->Resize(labelInfo.dim, actualmbsize);
     labels->SetValue(0);
-    labels->TransferFromDeviceToDevice(device, CPUDEVICE, true);
+
+    // build it on the CPU side
+    DEVICEID_TYPE deviceId = labels->GetDeviceId();
+    labels->TransferFromDeviceToDevice(deviceId, CPUDEVICE, true);
 
     size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j)
@@ -954,6 +956,9 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
         nbrLabl++;
     }
+
+    // move it back to GPU if that's where it was before
+    labels->TransferFromDeviceToDevice(CPUDEVICE, deviceId, true);
 
     return nbrLabl;
 }
