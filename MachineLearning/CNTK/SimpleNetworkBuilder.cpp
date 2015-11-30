@@ -6,18 +6,16 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#include "SimpleNetworkBuilder.h"
+#include "ComputationNetworkBuilder.h"
+
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-
-#include "SimpleEvaluator.h"
-#include "IComputationNetBuilder.h"
-#include "ComputationNetworkBuilder.h"
-#include "SGD.h"
-#include "SimpleNetworkBuilder.h"
+#include "CompositeComputationNodes.h"
 
 #pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
 
