@@ -51,6 +51,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return DistGradHeaderSize(numEvalNode);
         }
 
+        void Clear()
+        {
+            numSamples = 0;
+            numSamplesWithLabel = 0;
+            criterion = 0;
+            for (int i = 0; i < numEvalNode; i++)
+            {
+                evalErrors[i] = 0;
+            }
+        }
+
+        friend void swap(DistGradHeader& first, DistGradHeader& second)
+        {
+            if (first.numEvalNode != second.numEvalNode)
+                LogicError("Cannot swap DistGradHeader objects with different number of evalNodes!");
+
+            std::swap(first.numSamples, second.numSamples);
+            std::swap(first.numSamplesWithLabel, second.numSamplesWithLabel);
+            std::swap(first.criterion, second.criterion);
+            for (int i = 0; i < first.numEvalNode; i++)
+            {
+                std::swap(first.evalErrors[i], second.evalErrors[i]);
+            }
+        }
+
     private:
         static size_t DistGradHeaderSize(size_t nEvalNode)
         {

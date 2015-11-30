@@ -212,10 +212,13 @@ protected:
 
     // Parallel training
     ParallelizationMethod m_parallelizationMethod;
-    int m_numGradientBits;
-    bool m_zeroThresholdFor1Bit;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
+
+    // Data parallel SGD training parameters
+    int m_numGradientBits;
+    bool m_bufferedAsyncGradientAggregation;
+    bool m_zeroThresholdFor1Bit;
 
     // Parallel training related with MA 
     // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
@@ -229,7 +232,7 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
-    //sequence trainning
+    //sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
