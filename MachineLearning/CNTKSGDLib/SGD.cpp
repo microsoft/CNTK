@@ -1698,15 +1698,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // --- MAIN MINIBATCH LOOP
 
         size_t totalSamplesProcessed = 0; // for progress printing   --TODO: is it different from nSamplesSinceLastModelSync?
-        bool pendingAsycGradients = false;
+        bool noMoreSamplesToProcess = false;
         for (;;)
         {
             // get minibatch
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
-            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
-                                                                              useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
-            if (!notAtEndOfEpoch && (!useGradientAggregation || !pendingAsycGradients))
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
+                                                                          useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
                 break;  // end of epoch
 
             nSamplesSinceLastModelSync += actualMBSize;
@@ -1831,7 +1831,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
-                pendingAsycGradients = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber, !notAtEndOfEpoch);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber);
+                noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -1868,33 +1869,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // aggregation by model averaging
             // TODO: this does not happen each MB, does it?
-            if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
+            if (useModelAveraging)
             {
-                size_t processedSamples = 0; 
-                float secondsSinceLastSyncFinished = 0; 
-                float secondsSpentOnSync = 0;
-                if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
-                                             secondsSinceLastSyncFinished, secondsSpentOnSync))
+                // Determine if any samples were processed across any of the ranks
+                if (useDistributedMBReading)
                 {
-                    // if a sync happens, do some extra work
-                    nSamplesSinceLastModelSync = 0; 
-                    nSynced++;
+                    std::array<int, 1> numNodesWithDataToProcess;
+                    numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
+                    g_mpi->AllReduce(numNodesWithDataToProcess);
 
-                    nSecondsOnMASync += secondsSpentOnSync; 
-                    nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
-                    
-                    if (m_iMASyncStatsTrace > 0)
+                    if (numNodesWithDataToProcess[0] == 0)
+                        noMoreSamplesToProcess = true;
+                }
+
+                if (g_mpi->NumNodesInUse() > 1)
+                {
+                    size_t processedSamples = 0;
+                    float secondsSinceLastSyncFinished = 0;
+                    float secondsSpentOnSync = 0;
+                    if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
+                        secondsSinceLastSyncFinished, secondsSpentOnSync))
                     {
-                        if (nSynced % m_iMASyncStatsTrace == 0)
+                        // if a sync happens, do some extra work
+                        nSamplesSinceLastModelSync = 0;
+                        nSynced++;
+
+                        nSecondsOnMASync += secondsSpentOnSync;
+                        nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished;
+
+                        if (m_iMASyncStatsTrace > 0)
                         {
-                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
+                            if (nSynced % m_iMASyncStatsTrace == 0)
+                            {
+                                fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
                                     (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
-                            nSecondsOnMASync = 0; 
-                            nSecondsSinceLastMAPerfReport = 0; 
+                                nSecondsOnMASync = 0;
+                                nSecondsSinceLastMAPerfReport = 0;
+                            }
                         }
                     }
+                    aggregateNumSamplesWithLabel = processedSamples;
                 }
-                aggregateNumSamplesWithLabel = processedSamples;
             }
 
             timer.Stop();

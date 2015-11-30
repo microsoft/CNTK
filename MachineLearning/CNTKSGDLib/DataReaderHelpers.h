@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
-        // Returns false if end of epoch has been reached.
+        // Returns false if no data is read
         // If not, then actualMBSize is set. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
         // -------------------------------------------------------------------
 
@@ -149,30 +149,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
             }
 
-            // did we reach end of epoch?
-            if (useDistributedMBReading)
-            {
-                // In case of distributed reading, the current node needs to continue even with a minibatch size of 0 if any
-                // other node in the group has a non-zero size minibatch to process. This is needed to ensure that
-                // the gradient aggregation barriers do not get stuck and also to ensure that all nodes update their weights
-                // properly using the aggregate gradients from other nodes before moving on to the next epoch even though the current
-                // node itself may not have any gradient contribution.
-                // TODO: wasDataRead == false means end of epoch, right? Is this state idempotent?
-                std::array<int, 1> numNodesWithDataToProcess;
-                numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
-                g_mpi->AllReduce(numNodesWithDataToProcess);
-
-                if (numNodesWithDataToProcess[0] == 0)
-                    return false;   // end of epoch
-            }
-            else if (!wasDataRead)
-                return false;       // end of epoch
-
-            // We are not at the end of epoch.
-            // Note, however, that in case of parallelization, this MPI rank may have received a share of 0 samples. Calling code, beware.
+            if (!wasDataRead)
+                return false;
 
             // decimate if needed. Decimation happens in-place.
-            if (wasDataRead && !useDistributedMBReading && useParallelTrain)
+            if (!useDistributedMBReading && useParallelTrain)
             {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
                 net->NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
@@ -183,8 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
             // TODO: This will go away, as we will do resizing inside EvaluateThisNode(FrameRange()).
             actualMBSize = 0;
-            if (wasDataRead)    // TODO: what if we call it always?
-                actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
+            actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
 
             return true;
         }
