@@ -253,6 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_parallelizationMethod = ParallelizationMethod::None;
         m_numGradientBits = 32;
         m_zeroThresholdFor1Bit = true;
+        m_bufferedAsyncGradientAggregation = false;
         m_enableDistributedMBReading = false;
         m_parallelizationStartEpochNum = 0;
         m_nFramesBetweenMASync = 40000; // default 40k frames 
@@ -270,6 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t defaultGradientBits = 8 * sizeofElemType;
                 m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
                 m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
+                m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
                 if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeofElemType)))
                 {
                     InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
@@ -1691,6 +1693,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // --- MAIN MINIBATCH LOOP
 
         size_t totalSamplesProcessed = 0; // for progress printing   --TODO: is it different from nSamplesSinceLastModelSync?
+        bool pendingAsycGradients = false;
         for (;;)
         {
             // get minibatch
@@ -1698,7 +1701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = 0;
             bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
                                                                               useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
-            if (!notAtEndOfEpoch)
+            if (!notAtEndOfEpoch && (!useGradientAggregation || !pendingAsycGradients))
                 break;  // end of epoch
 
             nSamplesSinceLastModelSync += actualMBSize;
@@ -1823,7 +1826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
-                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber);
+                pendingAsycGradients = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber, !notAtEndOfEpoch);
 
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -1912,7 +1915,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     totalTimeInMBs += timer.ElapsedSeconds();
                 }
 
-                double trainLossPerSample = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
+                double trainLossPerSample = (numSamplesLastMBs != 0) ? ((epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs) : 0.0;
+
                 bool wasProgressPrinted = false;
 
                 if (epochNumber > 0 || (int) epochSize > 0)
@@ -2053,7 +2057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_distGradAgg == nullptr)
             {
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel);
             }
 
             if (m_gradHeader == nullptr)
