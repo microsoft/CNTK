@@ -7,19 +7,14 @@
 #pragma once
 
 #include "Basics.h"
-//#include "Helpers.h"    // for foreach_column() macro
-//#include "fileutil.h"
 #include "DataReader.h"
-//#include "DataWriter.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
-//#include "CompositeComputationNodes.h"
 #include <vector>
 #include <string>
-//#include <fstream>
-//#include <queue>
+#include <set>
 
 using namespace std;
 
@@ -41,26 +36,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
         vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
         {
-            //specify evaluation nodes
+            // determine nodes to evaluate
             std::vector<ComputationNodeBasePtr> evalNodes;
 
+            set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log critera
             if (evalNodeNames.size() == 0)
             {
                 fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
                 if (m_net->EvaluationNodes().size() == 0 && m_net->FinalCriterionNodes().size() == 0)
                     LogicError("There is no default evalnodes or training criterion node specified in the network.");
 
-                for (int i = 0; i < m_net->EvaluationNodes().size(); i++)
-                    evalNodes.push_back(m_net->EvaluationNodes()[i]);
+                for (const auto & node : m_net->EvaluationNodes())
+                    if (criteriaLogged.insert(node).second)
+                        evalNodes.push_back(node);
 
-                for (int i = 0; i < m_net->FinalCriterionNodes().size(); i++)
-                    evalNodes.push_back(m_net->FinalCriterionNodes()[i]);
+                for (const auto & node : m_net->FinalCriterionNodes())
+                    if (criteriaLogged.insert(node).second)
+                        evalNodes.push_back(node);
             }
             else
             {
                 for (int i = 0; i < evalNodeNames.size(); i++)
                 {
                     const auto & node = m_net->GetNodeFromName(evalNodeNames[i]);
+                    if (!criteriaLogged.insert(node).second)
+                        continue;
                     m_net->BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
                         LogicError("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
