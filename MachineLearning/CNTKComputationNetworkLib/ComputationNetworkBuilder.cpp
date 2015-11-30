@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // check more types
         else if (nodeType == OperationNameOf(AveragePoolingNode))	return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ConvolutionNode))	        return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SparseInputValue))	    return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SparseInputValue))	        return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(InputValue))	        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
