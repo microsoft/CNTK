@@ -44,14 +44,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decide new parallel utterances
             size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
             size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
-            static bool warned = false;
-            if (nOrigParallelUtts % numprocs != 0 && !warned)
-            {
-                /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "DecimateMinibatch: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
-                        (int)nOrigParallelUtts, (int)numprocs);
-                warned = true;
-            }
             size_t newNumParallelSequences = sent_end - sent_start;
 
             // decimate data
