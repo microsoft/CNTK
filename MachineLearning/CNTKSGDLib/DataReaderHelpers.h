@@ -28,15 +28,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
 
             // For RNN, a input Matrix is organized in the following way: 
-            //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
-            //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
-            // N is the nSlice (input)
+            //   | x_t^1  x_t^2 ... x_t^N | ... | x_{t+T-1}^1 ... x_{t+T-1}^N |
+            //   |<--- micro-batch 1  --->| ... |<------ micro-batch T ------>|
+            // N is the number of parallel sequences.
             // The decimation here is to split each block to individual GPUs 
-            // So After decimation 
-            //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
-            // Each block now has nSlice/nProcs 
-            // 
-            // Correspondingly, the MBLayout will be revised 
+            // Decimation will select a sub-range st..en of parallel sequences from each micro-batch:
+            //   | x_t^{st} ... x_t^{en}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en} | 
+            // This function will update the MB data and also the MBLayout.
 
             size_t nOrigParallelUtts = pMBLayout->GetNumParallelSequences();
             size_t T = pMBLayout->GetNumTimeSteps();
@@ -64,23 +62,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (T * nOrigParallelUtts != nCols) // (should really not happen)
                     LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", (int)nCols, (int)nOrigParallelUtts);
 
-                if (sent_end == sent_start)
-                {
-                    // should never happen, print debug info
-                    // BUGBUG: Yes, this can happen if we got less parallel sequences than GPUs. But users wouldn't want that, so we should fail.
-                    // BUGBUG: This can also happen for a very small minibatch at the end of the epoch.
-                    fprintf(stderr, "DecimateMinibatch: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
-                            (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
-                }
-
                 // copy the respective columns
-                // TODO: not efficient. Instead, use Reshape() and AssignRowSlice...()
+                // TODO: not efficient. We should use a special row-slice assignment function that allows overlapping input/output.
                 MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
                 for (size_t t = 0; t < T; t++)
                     tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
                 mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
-                // TODO: ^^ If had Matrix::RowSlice(), this would be simpler.
-                //       TODO: But we do have a row-slice assignment function. This could be used.
             }
             // decimate layout
             auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
@@ -92,10 +79,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
         // Returns false if end of epoch has been reached.
-        // If not, then actualMBSize is set. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
+        // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
         // -------------------------------------------------------------------
 
-        // Note: Later, a function like this will become part of the reader interface.
+        // Note: This will go away with the redesigned reader interface.
         // TODO: callers of this often do ComputationNetwork::UpdateEvalTimeStamps(featureNodes) and also for labels; we should eliminate the need for this.
         template<class ElemType>
         static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
@@ -116,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
             // TODO: The reader does not always resize the input matrices to zero when 
-            // no data is read. When it does, 'wasDataRead' can be removed
+            //       no data is read. When it does, 'wasDataRead' can be removed. Will go away with reader redesig.
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
             net->NotifyInputNodesFunctionValuesMBSizeModified();
@@ -128,7 +115,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
             net->VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
-            //assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
 
             if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
             {
@@ -171,9 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
-            // Note: Decimation may have reduced this to 0 frames.
-            // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
-            // TODO: This will go away, as we will do resizing inside EvaluateThisNode(FrameRange()).
+            // Note: Decimation may have reduced this to 0 frames, in which case we must return 'true'.
             actualMBSize = 0;
             if (wasDataRead)    // TODO: what if we call it always?
                 actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
