@@ -32,7 +32,7 @@ testCases:
       - ^Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=.1%}}
       - EvalErrPerSample = {{float,tolerance=.25%}}
-      - AveLearnRatePerSample = {{float,tolerance=0.001%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
