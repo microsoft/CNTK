@@ -72,8 +72,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Special Note: for the matrix may be a read-only column slice view of another
         // matrix (only supported for CSC format today) and hence the NzValues needs
         // to be offset accordingly.
-        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
-        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
         inline size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
