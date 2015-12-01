@@ -778,6 +778,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    template<class ElemType> 
+    Matrix<ElemType> Matrix<ElemType>::RowSlice(size_t startRow, size_t numRow) const
+    {
+        int devId = GetDeviceId();
+        Matrix<ElemType> slice(devId); 
+        slice.m_preferredDeviceId = m_preferredDeviceId; 
+        if (GetMatrixType() == MatrixType::DENSE)
+        {
+            if (devId == CPUDEVICE)
+            {
+                if (slice.m_CPUMatrix != nullptr)
+                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&> (m_CPUMatrix->RowSlice(startRow, numRow)));
+                else
+                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&> (m_CPUMatrix->RowSlice(startRow, numRow))); 
+                slice.SetDataLocation(CPU, DENSE); 
+            }
+            else
+            {
+                if (slice.m_GPUMatrix != nullptr)
+                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->RowSlice(startRow, numRow)));
+                else
+                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->RowSlice(startRow, numRow)));
+                slice.SetDataLocation(GPU, DENSE);
+            }
+            
+        }
+        else if (GetMatrixType() == MatrixType::SPARSE)
+        {
+            NOT_IMPLEMENTED; 
+        }
+        else
+        {
+            RuntimeError("Unknown matrix type");
+        }
+        return slice; 
+    }
+   
+
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {            
