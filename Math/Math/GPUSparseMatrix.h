@@ -66,9 +66,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Reset();
 
     public:
-        const ElemType* NzValues() const;
-        ElemType* NzValues();
-        size_t NzSize() const;
+        // return col pointer, which is immediately following the non-zero element
+        // in memory format is always in the following order:
+        // Non-zero data elements, Full index locations, compressed index locations
+        // In CSR row data is compressed, in CSC col data is compressed
+        // Special Note: for the matrix may be a read-only column slice view of another
+        // matrix (only supported for CSC format today) and hence the NzValues needs
+        // to be offset accordingly.
+        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
         { 
@@ -163,13 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return (m_format&matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
         }
-        GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const
-        {
-            GPUSPARSE_INDEX_TYPE value;
-            CUDA_CALL(cudaMemcpy(&value, SecondaryIndexLocation() + idx, sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyDeviceToHost));
-
-            return value;
-        }
+        GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const;
         GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
         {
             //not a valid function for other formats
