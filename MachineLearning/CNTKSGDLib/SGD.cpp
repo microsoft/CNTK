@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //       truncated = truncation length
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         m_truncated = configSGD(L"truncated", false);
-        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector < int > {0})));
+        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector<int>{ 0 })));
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
@@ -309,6 +309,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template SGD<double>::SGD(const ConfigParameters &);
     template SGD<float >::SGD(const ScriptableObjects::IConfigRecord &);
     template SGD<double>::SGD(const ScriptableObjects::IConfigRecord &);
+
+    template<class ElemType>
+    void SGD<ElemType>::ForwardBackward(ComputationNetwork& net, 
+               const std::vector<ComputationNodeBasePtr>& evalNodes,
+               shared_ptr<ComputationNodeBase> criterionNode, 
+               bool dobackpropogate)
+    {
+        net.Evaluate(evalNodes);
+        // only compute gradient when learning rate is large enough
+        if (dobackpropogate)
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
+            // ==============================
+            net.ComputeGradient<ElemType>(criterionNode);
+            // TODO: we should split Evaluate() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
+        }
+        else
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop
+            // ==============================
+            net.Evaluate(criterionNode);
+        }
+    }
 
     template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
@@ -1674,7 +1701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t nParallelSequences = trainSetDataReader->GetNumParallelSequences(); 
             size_t estimatedMBSize = tunedMBSize * nParallelSequences; 
-            numSubminibatchRequested = (size_t)std::ceil(estimatedMBSize / samplesInRAM);             
+            numSubminibatchRequested = (size_t)std::ceil( (float)estimatedMBSize / samplesInRAM);             
         }
         if (numSubminibatchRequested > 1) // only use subminibatch dispatcher if more than 1 subminibatch is required 
         {
@@ -1701,7 +1728,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchRequested > 0)
         {
-            fprintf(stderr, ", with %d Max Samples in RAM", (int)samplesInRAM);
+            fprintf(stderr, ", with maximum %d samples in RAM", (int)samplesInRAM);
         }
         fprintf(stderr, ".\n");
 
@@ -1775,19 +1802,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (size_t ismb = 0; ismb < actualNumSubminibatch; ismb++)
                     {
                         smbDisplatcher.GetSubMinibatchToNet(ismb);
-#ifdef SMB_DEBUG
-                        //smbhelper.WriteInputMatriceAndMBLayout(numMBsRun, ismb);
-#endif 
                         ComputationNetwork::UpdateEvalTimeStamps(featureNodes); 
                         ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
                         ForwardBackward(*net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate); 
                         smbDisplatcher.DoneWithCurrentSubMinibatch(ismb); 
                     }
-#ifdef SMB_DEBUG
-                    //smbhelper.WriteGradient(numMBsRun);
-#endif 
                     smbDisplatcher.DoneWithCurrentMinibatch(); 
-
                 }
                 else 
                 {
