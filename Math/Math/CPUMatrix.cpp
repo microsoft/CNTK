@@ -259,6 +259,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    template<class ElemType> 
+    CPUMatrix<ElemType> CPUMatrix<ElemType>::RowSlice(size_t startRow, size_t numRows) const
+    {
+        if (startRow + numRows > m_numRows )
+             InvalidArgument("The row slice (%d+%d) is out of range of the source matrix (%d).", (int)startRow, (int)numRows, (int)m_numRows);
+
+        CPUMatrix<ElemType> slice; 
+        slice.AssignRowSliceValuesOf(*this, startRow, numRows); 
+
+        return slice; 
+
+    }
+
     // set this(:, 0:numCols-1) = fromMatrix(:, startColumn : startColumn+numCols-1)
     // TODO: why not say *this = ColumnSlice()?
     template<class ElemType>
