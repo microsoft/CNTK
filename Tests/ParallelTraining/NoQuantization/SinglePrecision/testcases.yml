@@ -20,7 +20,7 @@ testCases:
       - Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=0.01%}}
       - EvalErrPerSample = {{float,tolerance=0.01%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.01%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
