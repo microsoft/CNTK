@@ -827,7 +827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             timer.Stop();
             double epochTime = timer.ElapsedSeconds();
 
-            if (m_useEvalCriterionControlLR)
+            if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
             {
                 lrControlCriterion = epochEvalErrors[0];
             }
@@ -840,12 +840,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, (int) m_maxEpochs, epochCriterion);
 
-            if (epochEvalErrors.size() == 1)
+            if (epochEvalErrors.size() == 0)    // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
-                        "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g; EpochTime=%.8g\n",
+                        "Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
+                        learnRatePerSample, epochTime);
+                m_lastFinishedEpochEvalErr = epochCriterion;
+            }
+            else if (epochEvalErrors.size() == 1)
+            {
+                fprintf(stderr,
+                        "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
                         epochEvalErrors[0], learnRatePerSample, epochTime);
-                m_lastFinishedEpochEvalErr = epochEvalErrors[0];
+                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
             }
             else
             {
@@ -853,13 +860,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
                     fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j]);
-                    m_lastFinishedEpochEvalErr = epochEvalErrors[j];
-
                 }
+                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
 
-                fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
+                fprintf(stderr, "Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
                         learnRatePerSample, epochTime);
 
+                // TODO: why these extra log messages here and not for 1 eval criterion?
                 fprintf(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
                                 i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
@@ -876,22 +883,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(net);
                     vector<wstring> cvSetTrainAndEvalNodes;
-                    cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
-                    cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
+                    if (criterionNodes.size() > 0)
+                        cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
+                    if (evaluationNodes.size() > 0)
+                        cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                            i + 1, (int) m_maxEpochs, vScore[0], vScore[1]);
+                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
+                    if (vScore.size() > 1)
+                        fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
+                    fprintf(stderr, "\n");
 
                     if (m_useCVSetControlLRIfCVExists)
                     {
-                        if (m_useEvalCriterionControlLR)
+                        if (m_useEvalCriterionControlLR && vScore.size() > 1)
                             lrControlCriterion = vScore[1];
                         else
-                            lrControlCriterion = vScore[0]; //the first one is the training criterion.
-                        }
+                            lrControlCriterion = vScore[0]; // the first one is the training criterion
                     }
                 }
+            }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
@@ -906,8 +917,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                    avgCriterion + lrControlCriterion) /
-                    (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+                                avgCriterion + lrControlCriterion) /
+                                (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&

@@ -24,10 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SimpleEvaluator
     {
-    protected:
-
     public:
-
         SimpleEvaluator(ComputationNetworkPtr net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
             : m_net(net), m_numMBsToShowResult(numMBsToShowResult), m_traceLevel(traceLevel)
         {
@@ -68,12 +65,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            //initialize eval results
+            // initialize eval results
             std::vector<double> evalResults;
             for (int i = 0; i < evalNodes.size(); i++)
                 evalResults.push_back((double)0);
 
-            //prepare features and labels
+            // prepare features and labels
             auto & featureNodes = m_net->FeatureNodes();
             auto & labelNodes = m_net->LabelNodes();
 
@@ -83,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < labelNodes.size(); i++)
                 inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
 
-            //evaluate through minibatches
+            // evaluate through minibatches
             size_t totalEpochSamples = 0;
             size_t numMBsRun = 0;
             size_t actualMBSize = 0;
@@ -102,14 +99,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                //for now since we share the same label masking flag we call this on one node only
-                //Later, when we apply different labels on different nodes
-                //we need to add code to call this function multiple times, one for each criteria node
+                // for now since we share the same label masking flag we call this on one node only
+                // Later, when we apply different labels on different nodes
+                // we need to add code to call this function multiple times, one for each criteria node
                 size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
                 for (int i = 0; i < evalNodes.size(); i++)
                 {
                     m_net->Evaluate(evalNodes[i]);
-                    evalResults[i] += (double)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
+                    evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
                 }
 
                 totalEpochSamples += numSamplesWithLabel;
@@ -132,8 +129,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                /// call DataEnd to check if end of sentence is reached
-                /// datareader will do its necessary/specific process for sentence ending 
+                // call DataEnd to check if end of sentence is reached
+                // datareader will do its necessary/specific process for sentence ending 
                 dataReader->DataEnd(endDataSentence);
             }
 
