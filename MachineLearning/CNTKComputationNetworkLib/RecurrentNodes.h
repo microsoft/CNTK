@@ -30,13 +30,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DelayedValueNodeState: public INodeState
     {
-               
         public:
             DelayedValueNodeState(int deviceID) :
-                m_cachedActivity((size_t)0, (size_t)0, deviceID), m_delayedActivationMBLayout(nullptr), m_isEmpty(true)
-            {
-
-            }
+                m_cachedActivity((size_t)0, (size_t)0, deviceID),
+                m_delayedActivationMBLayout(nullptr), m_isEmpty(true)
+            { }
             void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
             {
                 m_delayedActivationMBLayout = make_shared<MBLayout>();
@@ -51,7 +49,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 pMBLayout->CopyFrom(m_delayedActivationMBLayout); 
             }
-
             bool IsEmpty()
             {
                 return m_isEmpty; 
@@ -60,8 +57,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 return m_cachedActivity; 
             }
-
-
             ~DelayedValueNodeState(){}
             
         protected:
@@ -416,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //========================================
         // implement the IStateFulNode interface
         //========================================
-        virtual NodeStatePtr ExportState()
+        virtual NodeStatePtr ExportState() override 
         {
             NodeStatePtr pExportedState;
             size_t nT = m_pMBLayout->GetNumTimeSteps();
@@ -456,7 +451,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId);
-                    //pState->CacheState(FunctionValues().Reshaped(nD*nU, nT).RowSlice(nD*(nT - 1), nD));
                     pState->CacheState(m_delayedActivation.ColumnSlice((nT - 1)*nU, nU)); 
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
                     pExportedState = pState; 
@@ -502,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return pExportedState;
         }
-        virtual void ImportState(const NodeStatePtr& pImportedState)
+        virtual void ImportState(const NodeStatePtr& pImportedState) override
         {
             DelayedNodeStatePtr pState = dynamic_pointer_cast<DelayedValueNodeState<ElemType>> (pImportedState); 
 

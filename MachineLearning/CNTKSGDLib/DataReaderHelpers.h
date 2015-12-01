@@ -10,12 +10,8 @@
 #include <map>
 #include "TrainingCriterionNodes.h"
 
-//#define SMB_DEBUG
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-
-
 
     /*static*/ struct DataReaderHelpers
     {
@@ -24,23 +20,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // non-inplace decimation , to be used in subminibatch implementation 
         template<class ElemType> 
-        static void DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,                               // input matrices 
-                                      std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,                            // output decimated matrices. 
-                                                                                                                        // Caller need to release the memory themselves!!!   TODO: use shared_ptr 
-                                      MBLayoutPtr pMBLayout,                                                            // input MBLayout 
-                                      MBLayoutPtr& pDecimateMBLayout,                                                    // output decimated MBLayout 
+        static void DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,                                   // input matrices 
+                                      std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,                               // output decimated matrices. 
+                                                                                                                            // Caller need to release the memory themselves!!!   TODO: use shared_ptr 
+                                      MBLayoutPtr pMBLayout,                                                                // input MBLayout 
+                                      MBLayoutPtr& pDecimateMBLayout,                                                       // output decimated MBLayout 
                                       int numWorker, int rank)
         {
-            size_t nSequence = pMBLayout->GetNumParallelSequences(); 
+            size_t numParallelSequences = pMBLayout->GetNumParallelSequences(); 
             size_t nT = pMBLayout->GetNumTimeSteps(); 
 
             // decide start column and end column 
-            size_t st = nSequence * (size_t)rank / numWorker; 
-            size_t en = nSequence * (size_t)(rank + 1) / numWorker; 
-            en = en > nSequence ? nSequence : en; 
-            en = (rank == numWorker - 1) ? nSequence : en;             
-            size_t nNewParallelSequence = en - st;
+            size_t st = numParallelSequences * (size_t)rank / numWorker; 
+            size_t en = numParallelSequences * (size_t)(rank + 1) / numWorker; 
+            en = en > numParallelSequences ? numParallelSequences : en; 
+            en = (rank == numWorker - 1) ? numParallelSequences : en;             
+            size_t numNewParallelSequence = en - st;
 
+#if 0   // per discussion with Frank and Amit, we remove this warning since the same decimation function is also called for frame-mode
             // warning if needed 
             static bool bWarned = false; 
             if (!bWarned && nSequence % numWorker != 0)
@@ -50,42 +47,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (int)nSequence, (int)numWorker);
                 bWarned = true;
             }
-
+#endif 
             // begin decimate matrices 
             size_t rv = 0; 
             for (const auto& it : MB)
             {
                 wstring name = it.first;
                 MSR::CNTK::Matrix<ElemType> & mat = *it.second; 
-                size_t nRows = mat.GetNumRows(); 
-                size_t nCols = mat.GetNumCols();
+                size_t numRows = mat.GetNumRows(); 
+                size_t numCols = mat.GetNumCols();
                 int devID = mat.GetDeviceId(); 
 
                 if (rv == 0)
-                    rv = nCols; 
-                else if ( rv != nCols )
-                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
+                    rv = numCols; 
+                else if ( rv != numCols )
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)numCols);
 
-                if (nT != nCols / nSequence )
+                if (nT != numCols / numParallelSequences )
                     LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
                 
-                decimatedMB[name] = new Matrix<ElemType>(
-                    mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT), 
-                    devID
-                ); 
-                // NOTE: 
-                // Reshaped return a matrix referencing the caller, so the moving constructor will not work here 
-                // we need to use devID here to signify compiler that we are going to do a deep copy instead of moving constructor 
+                decimatedMB[name] = new Matrix<ElemType>(devID);
+                decimatedMB[name]->AssignRowSliceValuesOf(mat.Reshaped(numRows*numParallelSequences, nT), st*numRows, (en - st)*numRows);
+                decimatedMB[name]->Reshape(numRows, numNewParallelSequence*nT);
+                // If we have RowSlice function, we would like to write in this way 
+                // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
             }
             // decimate MBLayout as well 
-            pDecimateMBLayout= make_shared<MBLayout>(nNewParallelSequence, nT, true);
-            for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < nNewParallelSequence; id++)
+            pDecimateMBLayout= make_shared<MBLayout>(numNewParallelSequence, nT, true);
+            for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
                 pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
             
         }
 
         // Inpace decimation 
-        // We sub-sample the parallel utterances.
         template<class ElemType> 
         static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
                                       int numprocs, int rank,                           // rank info
@@ -93,75 +87,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (numprocs == 1)
                 return;
+            // no need to do inplace decimation if numproc == 1 
 
-            // For RNN, a input Matrix is organized in the following way: 
-            //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
-            //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
-            // N is the nSlice (input)
-            // The decimation here is to split each block to individual GPUs 
-            // So After decimation 
-            //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
-            // Each block now has nSlice/nProcs 
-            // 
-            // Correspondingly, the MBLayout will be revised 
-
-            size_t nOrigParallelUtts = pMBLayout->GetNumParallelSequences();
-            size_t T = pMBLayout->GetNumTimeSteps();
-
-            // decide new parallel utterances
-            size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
-            size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
-            static bool warned = false;
-            if (nOrigParallelUtts % numprocs != 0 && !warned)
+            // allocate space for non-inplace decimation 
+            MBLayoutPtr pDecimatedMB = make_shared<MBLayout>(); 
+            std::map<wstring, Matrix<ElemType>*>    decimatedMB; 
+            // call in-place decimation 
+            DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+            // move the data 
+            for (auto k : mb)
             {
-                /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "DecimateMinibatch: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
-                        (int)nOrigParallelUtts, (int)numprocs);
-                warned = true;
+                auto name = k.first; 
+                k.second->SetValue(*decimatedMB[name]); 
+                delete decimatedMB[name]; 
+                decimatedMB[name] = nullptr; 
             }
-            size_t newNumParallelSequences = sent_end - sent_start;
-
-            // decimate data
-            size_t rv = 0;
-            for (auto & it : mb)
-            {
-                MSR::CNTK::Matrix<ElemType> &mat = *it.second;
-                size_t nCols = mat.GetNumCols();
-
-                // assert the cols are even among nodes 
-                if (rv == 0)
-                    rv = nCols;
-                else if (rv != nCols)
-                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
-
-                if (T != nCols / nOrigParallelUtts)
-                    LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
-                if (T * nOrigParallelUtts != nCols) // (should really not happen)
-                    LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", (int)nCols, (int)nOrigParallelUtts);
-
-                if (sent_end == sent_start)
-                {
-                    // should never happen, print debug info
-                    // BUGBUG: Yes, this can happen if we got less parallel sequences than GPUs. But users wouldn't want that, so we should fail.
-                    // BUGBUG: This can also happen for a very small minibatch at the end of the epoch.
-                    fprintf(stderr, "DecimateMinibatch: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
-                            (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
-                }
-
-                // copy the respective columns
-                // TODO: not efficient. Instead, use Reshape() and AssignRowSlice...()
-                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
-                for (size_t t = 0; t < T; t++)
-                    tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
-                mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
-                // TODO: ^^ If had Matrix::RowSlice(), this would be simpler.
-                //       TODO: But we do have a row-slice assignment function. This could be used.
-            }
-            // decimate layout
-            auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
-            for (size_t t = 0; t < T; t++) for (size_t id = 0; id < newNumParallelSequences; id++)
-                pNewMBLayout->Set(id, t, pMBLayout->Get(id + sent_start, t));
-            pMBLayout->MoveFrom(pNewMBLayout);  // update layout in-place
+            pMBLayout->MoveFrom(pDecimatedMB); 
         }
 
         // -------------------------------------------------------------------
@@ -257,11 +198,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    // SubminibatchHelpers
+    // SubminibatchDispatcher
     // Helper for sub-minibatch implementation
     // A sub-minibathc is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation 
     // The usage would be : 
-    //        SubminibatchHelpers sbhelper;    
+    //        SubminibatchDispatcher sbhelper; 
+    //        sbhelper.init(net, learnableNodes, criterionNodes, evaluationNodes);
     //        for (;;)
     //        {
     //            size_t nsb=sb.GetMinibatchIntoCache(...); 
@@ -271,6 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //                net.Evaluate(criterionNodes[0]);
     //                sbhelper.DoneWithCurrentSubMinibatch(); 
     //            }
+    //            sbhelper.DoneWithCurrentMinibatch();
     //            UpdateWeights(...);
     //        }
 
@@ -353,9 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         SubminibatchDispatcher()
             : m_MBLayoutCache(nullptr), m_LatticeCache(nullptr), m_uidCache(nullptr), m_extrauttmapCache(nullptr)
-        {
-            
-        }
+        { }
 
         void Init(ComputationNetworkPtr & net,
             const std::list<ComputationNodeBasePtr>& learnableNodes,
@@ -582,83 +523,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             m_NetEvaluationAccumulator->SetValue((ElemType)0);
         }
-
-#ifdef SMB_DEBUG
-
-        template<class Matrix, class ElemType>
-        void WriteMatrix(const Matrix& mat, string filename)
-        {
-            ElemType* pArray = mat.CopyToArray();
-            size_t nRows = mat.GetNumRows();
-            size_t nCols = mat.GetNumCols();
-            FILE* fp = fopenOrDie(filename, "w");
-            for (size_t r = 0; r < nRows; r++)
-            {
-                for (size_t c = 0; c < nCols; c++)
-                {
-                    fprintf(fp, "%.9f ", pArray[nRows*c + r]);
-                }
-                fprintf(fp, "\n");
-            }
-            fcloseOrDie(fp);
-            delete[]pArray;
-        }
-        void WriteMBLayout(MBLayoutPtr pMBLayout, wstring filename)
-        {
-            size_t nT = pMBLayout->GetNumTimeSteps();
-            size_t nU = pMBLayout->GetNumParallelSequences();
-
-            FILE* fp = fopenOrDie(filename, L"w");
-            for (size_t u = 0; u < nU; u++)
-            {
-                for (size_t t = 0; t < nT; t++)
-                {
-                    MinibatchPackingFlags flag = pMBLayout->Get(u, t);
-                    fprintf(fp, "%d\t", (int)flag);
-                }
-                fprintf(fp, "\n");
-            }
-            fcloseOrDie(fp);
-        }
-        void WriteInputMatriceAndMBLayout(size_t mbID, size_t smbID)
-        {
-            wstring node = L"features";
-            wstring filename = msra::strfun::wstrprintf(L"tmp/%s.%d.%d", node.c_str(), mbID, smbID);
-            if (m_NetInputMatrixPtr.find(node) != m_NetInputMatrixPtr.end())
-            {
-                WriteMatrix<Matrix<ElemType>, ElemType>(*m_NetInputMatrixPtr[node], msra::strfun::wcstombs(filename));
-            }
-            wstring fn = msra::strfun::wstrprintf(L"tmp/Layout.%d.%d", mbID, smbID);
-            WriteMBLayout(m_NetMBLayoutPtr, fn);
-        }
-        void WriteInputMatriceAndMBLayout(Matrices m, MBLayoutPtr pMBLayout, size_t mbID)
-        {
-            wstring filename = msra::strfun::wstrprintf(L"tmp/features.%d", mbID);
-            wstring fn       = msra::strfun::wstrprintf(L"tmp/layout.%d", mbID);
-            if (m.find(L"features") != m.end())
-            {
-                WriteMatrix<Matrix<ElemType>, ElemType>(*m[L"features"], msra::strfun::wcstombs(filename));
-            }
-            WriteMBLayout(pMBLayout, fn);
-        }
-
-        void WriteGradient(size_t mbID)
-        {
-            wstring node = L"LSTMoutput1.bias";
-            wstring filename = msra::strfun::wstrprintf(L"%s.%d", L"tmp/gradient", mbID);
-            if (m_CachedGraident.find(node) != m_CachedGraident.end())
-            {
-                WriteMatrix<Matrix<ElemType>, ElemType>(*m_CachedGraident[node], msra::strfun::wcstombs(filename));
-            }
-        }
-
-        void WriteGradient(const Matrix<ElemType>& mat, wstring fn)
-        {
-            WriteMatrix<Matrix<ElemType>, ElemType>(mat, msra::strfun::wcstombs(fn));
-        }
-#endif // SMB_DEBUG
-
-
     };
 
 }}}
