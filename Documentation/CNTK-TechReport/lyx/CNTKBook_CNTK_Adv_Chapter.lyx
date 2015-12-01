@@ -159,12 +159,12 @@ LDim=10
 
 \begin_layout Plain Layout
 
-features=Input(SDim)
+features=Input(SDim, 1)
 \end_layout
 
 \begin_layout Plain Layout
 
-labels=Input(LDim)
+labels=Input(LDim, 1)
 \end_layout
 
 \begin_layout Plain Layout
@@ -183,7 +183,7 @@ W0=Parameter(HDim, SDim)
 
 \begin_layout Plain Layout
 
-B0=Parameter(HDim)
+B0=Parameter(HDim, 1)
 \end_layout
 
 \begin_layout Plain Layout
@@ -450,7 +450,7 @@ status open
 
 \begin_layout Plain Layout
 
-B0=Parameter(HDim)
+B0=Parameter(HDim, 1)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1189,7 +1189,7 @@ status open
 
 \begin_layout Plain Layout
 
-B0=Parameter(HDim, init=zero)
+B0=Parameter(HDim, 1, init=zero)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1283,12 +1283,12 @@ status open
 
 \begin_layout Plain Layout
 
-features=Input(SDim, tag="feature")
+features=Input(SDim, 1, tag="feature")
 \end_layout
 
 \begin_layout Plain Layout
 
-labels=Input(LDim, tag="label")
+labels=Input(LDim, 1, tag="label")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1345,7 +1345,7 @@ label
 \begin_layout Itemize
 
 \emph on
-criteria
+criteri
 \family roman
 \series medium
 \shape up
@@ -1357,7 +1357,7 @@ criteria
 \uwave off
 \noun off
 \color none
-: training criteria 
+on: training criteria 
 \end_layout
 
 \begin_layout Itemize
@@ -1429,45 +1429,10 @@ reference "chap:CN"
 
 .
  As CNTK is expanded, additional functions become available.
- In the following discussion, 
-\emph on
-ordered optional
-\emph default
- parameters are operational parameters that are identified by the position
- of the parameter in the argument list, and named optional parameters are
- optional parameters that are specified by an augment name.
- For example, if cols is an ordered optional parameter in 
-\end_layout
-
-\begin_layout Standard
-\begin_inset listings
-inline false
-status open
-
-\begin_layout Plain Layout
-
-Function(rows, [cols=1])
-\end_layout
-
-\end_inset
-
-we can use 
-\end_layout
-
-\begin_layout Standard
-\begin_inset listings
-inline false
-status open
-
-\begin_layout Plain Layout
-
-Function(rowsValue, colsValue)
-\end_layout
-
-\end_inset
-
-to specify the cols value.
- If cols is a named optional parameter, we need to call the function as
+ In the following discussion named optional parameters are optional parameters
+ that are specified by an augment name.
+ For example, if cols is a named optional parameter, we need to call the
+ function as
 \end_layout
 
 \begin_layout Standard
@@ -1482,7 +1447,7 @@ Function(rowsValue, cols=colsValue)
 
 \end_inset
 
-instead.
+
 \end_layout
 
 \begin_layout Subsubsection
@@ -1524,12 +1489,12 @@ status open
 
 \begin_layout Plain Layout
 
-InputValue(rows, [cols=1], {tag="feature"|label})
+InputValue(rows, cols, {tag="feature"|"label"})
 \end_layout
 
 \begin_layout Plain Layout
 
-Input(rows, [cols=1], {tag="feature"|"label"})  #deprecated
+Input(rows, cols, {tag="feature"|"label"})  #deprecated
 \end_layout
 
 \end_inset
@@ -1542,7 +1507,7 @@ rows - row dimension of the data.
 \end_layout
 
 \begin_layout Itemize
-cols - [ordered optional] column dimension of the data, default to 1.
+cols - column dimension of the data, default to 1.
  Each column is considered as a sample in CNTK.
  Default value is often used since the actual value may be determined by
  the minibatch size.
@@ -1593,7 +1558,7 @@ status open
 
 \begin_layout Plain Layout
 
-ImageInput(width, height, channels, [numImages=1], 
+ImageInput(width, height, channels, numImages, 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1603,7 +1568,7 @@ ImageInput(width, height, channels, [numImages=1],
 
 \begin_layout Plain Layout
 
-Image(width, height, channels, [numImages=1], 
+Image(width, height, channels, numImages, 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1630,7 +1595,7 @@ channels - number of channels in the image data (i.e.
 \end_layout
 
 \begin_layout Itemize
-numImages - [ordered optional] number of images, defaults to 1.
+numImages - number of images, defaults to 1.
  Each image is stored as a column vector with size 
 \begin_inset Formula $width\times height\times channels$
 \end_inset
@@ -1690,7 +1655,7 @@ status open
 
 \begin_layout Plain Layout
 
-LearnableParameter(row, [cols=1], 
+LearnableParameter(row, cols, 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1710,12 +1675,12 @@ LearnableParameter(row, [cols=1],
 
 \begin_layout Plain Layout
 
-Parameter(row, [cols=1], {needGradient=true|false, 
+Parameter(row, cols, {needGradient=true|false, 
 \end_layout
 
 \begin_layout Plain Layout
 
-          init="fixedValue"|Uniform|Gaussian|fromFile, 
+          init="fixedValue"|"uniform"|"gaussian"|"fromFile", 
 \end_layout
 
 \begin_layout Plain Layout
@@ -1733,8 +1698,7 @@ rows - number of rows in the parameter.
 \end_layout
 
 \begin_layout Itemize
-cols - [ordered optional] number of columns in the parameter, defaults to
- 1.
+cols - number of columns in the parameter, defaults to 1.
  
 \end_layout
 
@@ -1761,7 +1725,7 @@ fromFile - No initialization is required, should only be used if the network
 \end_layout
 
 \begin_layout Itemize
-Uniform - Initializes the parameter matrix with uniform random numbers in
+uniform - Initializes the parameter matrix with uniform random numbers in
  the range of 
 \begin_inset Formula $\left[-0.05\times initValueScale,0.05\times initValueScale\right]$
 \end_inset
@@ -1770,7 +1734,7 @@ Uniform - Initializes the parameter matrix with uniform random numbers in
 \end_layout
 
 \begin_layout Itemize
-Gaussian - Initializes the parameter matrix with Gaussian random numbers
+gaussian - Initializes the parameter matrix with Gaussian random numbers
  with zero mean and standard deviation of 
 \begin_inset Formula $0.2\times initValueScale/\sqrt{cols}$
 \end_inset
@@ -1830,12 +1794,12 @@ status open
 
 \begin_layout Plain Layout
 
-Constant(value, [rows=1, cols=1])
+Constant(value, rows, cols)
 \end_layout
 
 \begin_layout Plain Layout
 
-Const(value, [rows=1, cols=1])  #deprecated
+Const(value, rows, cols)  #deprecated
 \end_layout
 
 \end_inset
@@ -1848,11 +1812,11 @@ value - the value of the constant.
 \end_layout
 
 \begin_layout Itemize
-rows - [ordered optional] row dimension of the data, default to 1.
+rows - row dimension of the data, default to 1.
 \end_layout
 
 \begin_layout Itemize
-cols - [ordered optional] column dimension of the data, default to 1.
+cols - column dimension of the data, default to 1.
  
 \end_layout
 
@@ -3738,17 +3702,17 @@ status open
 
 \begin_layout Plain Layout
 
-PastValue(rows, [cols], m, [timeStep=1, defaultHiddenActivity=0.1])
+PastValue(rows, cols, m, [timeStep=1, defaultHiddenActivity=0.1])
 \end_layout
 
 \begin_layout Plain Layout
 
-Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1]) #deprecated
+Delay(rows, cols, m, [delayTime=1, defaultPastValue=0.1]) #deprecated
 \end_layout
 
 \begin_layout Plain Layout
 
-FutureValue(rows, [cols], m, [timeStep=1, defaultHiddenActivity=0.1])
+FutureValue(rows, cols, m, [timeStep=1, defaultHiddenActivity=0.1])
 \end_layout
 
 \end_inset
@@ -3764,8 +3728,6 @@ rows - the number of rows in the input matrix.
 
 \begin_layout Itemize
 cols - the number of columns in the input matrix.
- This parameter is optional since it will be set based on the minibatch
- size during training and testing.
 \end_layout
 
 \begin_layout Itemize
@@ -3906,7 +3868,7 @@ originalModel.dmp", includeData = true)
 
 \begin_layout Plain Layout
 
-Copy(L3.*, L4.*, copy=all)
+Copy(L3.*, L4.*, copy="all")
 \end_layout
 
 \begin_layout Plain Layout
@@ -4135,7 +4097,7 @@ model1 = LoadModel("c:
 \backslash
 models
 \backslash
-mymodel.cn", format=cntk)
+mymodel.cn", format="cntk")
 \end_layout
 
 \begin_layout Plain Layout
@@ -4973,12 +4935,12 @@ status open
 
 \begin_layout Plain Layout
 
-m=LoadModel(modelFileName, [format=cntk])
+m=LoadModel(modelFileName, [format="cntk"])
 \end_layout
 
 \begin_layout Plain Layout
 
-LoadModelWithName(m, modelFileName, [format=cntk])
+LoadModelWithName(m, modelFileName, [format="cntk"])
 \end_layout
 
 \end_inset
@@ -5039,12 +5001,12 @@ status open
 
 \begin_layout Plain Layout
 
-SaveDefaultModel(modelFileName, [format=cntk])
+SaveDefaultModel(modelFileName, [format="cntk"])
 \end_layout
 
 \begin_layout Plain Layout
 
-SaveModel(m, modelFileName, [format=cntk])
+SaveModel(m, modelFileName, [format="cntk"])
 \end_layout
 
 \end_inset
@@ -5338,12 +5300,12 @@ status open
 
 \begin_layout Plain Layout
 
-Copy(fromNode, toNode, [copy=all|value])
+Copy(fromNode, toNode, [copy="all"|"value"])
 \end_layout
 
 \begin_layout Plain Layout
 
-CopyNode(fromNode, toNode, [copy=all|value])
+CopyNode(fromNode, toNode, [copy="all"|"value"])
 \end_layout
 
 \end_inset
@@ -5409,7 +5371,7 @@ if destination node does not exist
 \begin_inset Text
 
 \begin_layout Plain Layout
-All
+all
 \end_layout
 
 \end_inset
@@ -5444,7 +5406,7 @@ Copies over the values of the nodes and any links between them creating
 \begin_inset Text
 
 \begin_layout Plain Layout
-Value
+value
 \end_layout
 
 \end_inset
@@ -5505,7 +5467,7 @@ status open
 
 \begin_layout Plain Layout
 
-CopySubTree(fromRootNode, toRootNode, [copy=all|value])
+CopySubTree(fromRootNode, toRootNode, [copy="all"|"value"])
 \end_layout
 
 \end_inset
@@ -5706,22 +5668,22 @@ The acceptable property names and property values are as follows:
 \end_layout
 
 \begin_layout Itemize
-ComputeGradient
+computeGradient
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-ComputeGradient
+computeGradient
 \end_layout
 
 \end_inset
 
- or NeedsGradient
+ or needsGradient
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-NeedsGradient
+needsGradient
 \end_layout
 
 \end_inset
@@ -5732,12 +5694,12 @@ ns.
 \end_layout
 
 \begin_layout Itemize
-Feature
+feature
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-Feature
+feature
 \end_layout
 
 \end_inset
@@ -5747,12 +5709,12 @@ Feature
 \end_layout
 
 \begin_layout Itemize
-Label
+label
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-Label
+label
 \end_layout
 
 \end_inset
@@ -5762,12 +5724,12 @@ Label
 \end_layout
 
 \begin_layout Itemize
-FinalCriterionCriteria
+finalCriterion or criterion
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-FinalCriterionCriteria
+finalCriterion
 \end_layout
 
 \end_inset
@@ -5776,12 +5738,12 @@ FinalCriterionCriteria
 \end_layout
 
 \begin_layout Itemize
-EvaluationEval
+evaluation or eval
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-EvaluationEval
+evaluation
 \end_layout
 
 \end_inset
@@ -5790,12 +5752,12 @@ EvaluationEval
 \end_layout
 
 \begin_layout Itemize
-Output
+output
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-Output
+output
 \end_layout
 
 \end_inset
@@ -5804,12 +5766,12 @@ Output
 \end_layout
 
 \begin_layout Itemize
-MultiSeq
+multiSeq
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-MultiSeq
+multiSeq
 \end_layout
 
 \end_inset
