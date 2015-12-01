@@ -234,6 +234,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePr
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
 	EndProjectSection
@@ -243,6 +244,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
