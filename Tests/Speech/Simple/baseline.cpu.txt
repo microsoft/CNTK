@@ -787,7 +787,7 @@ randomordering: recached sequence for seed 0: 2009, 1524, ...
  Epoch[ 1 of 50]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.55423242; EvalErr[0]PerSample = 0.38000000; TotalTime = 0.00244s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102291
  Epoch[ 1 of 50]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.39989062; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.00244s; TotalTimePerSample = 0.00977ms; SamplesPerSecond = 102333
  Epoch[ 1 of 50]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.27809570; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102459
-Finished Epoch[ 1 of 50]: [Training Set] TrainLossPerSample = 0.67935586; EvalErrPerSample = 0.4576; Ave LearnRatePerSample = 0.01999999955; EpochTime=0.107706
+Finished Epoch[ 1 of 50]: [Training Set] TrainLossPerSample = 0.67935586; EvalErrPerSample = 0.4576; AvgLearningRatePerSample = 0.01999999955; EpochTime=0.107706
 Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 1 at record count 10000, and file position 0
 already there from last epoch
@@ -835,7 +835,7 @@ randomordering: recached sequence for seed 1: 2009, 1524, ...
  Epoch[ 2 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15408887; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101667
  Epoch[ 2 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13801855; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00244s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102291
  Epoch[ 2 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14082715; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102040
-Finished Epoch[ 2 of 50]: [Training Set] TrainLossPerSample = 0.1664414; EvalErrPerSample = 0.074599996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.10807
+Finished Epoch[ 2 of 50]: [Training Set] TrainLossPerSample = 0.1664414; EvalErrPerSample = 0.074599996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.10807
 Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 2 at record count 20000, and file position 0
 already there from last epoch
@@ -883,7 +883,7 @@ randomordering: recached sequence for seed 2: 1429, 4327, ...
  Epoch[ 3 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11735791; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00985ms; SamplesPerSecond = 101543
  Epoch[ 3 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13108447; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00261s; TotalTimePerSample = 0.01045ms; SamplesPerSecond = 95712
  Epoch[ 3 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12973096; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.00244s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
-Finished Epoch[ 3 of 50]: [Training Set] TrainLossPerSample = 0.15917444; EvalErrPerSample = 0.075199999; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.10843
+Finished Epoch[ 3 of 50]: [Training Set] TrainLossPerSample = 0.15917444; EvalErrPerSample = 0.075199999; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.10843
 Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 3 at record count 30000, and file position 0
 already there from last epoch
@@ -931,7 +931,7 @@ randomordering: recached sequence for seed 3: 4235, 438, ...
  Epoch[ 4 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10220850; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.00247s; TotalTimePerSample = 0.00989ms; SamplesPerSecond = 101132
  Epoch[ 4 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12396680; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101667
  Epoch[ 4 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12979883; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
-Finished Epoch[ 4 of 50]: [Training Set] TrainLossPerSample = 0.15762775; EvalErrPerSample = 0.075800002; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108326
+Finished Epoch[ 4 of 50]: [Training Set] TrainLossPerSample = 0.15762775; EvalErrPerSample = 0.075800002; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108326
 Starting Epoch 5: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 4 at record count 40000, and file position 0
 already there from last epoch
@@ -979,7 +979,7 @@ randomordering: recached sequence for seed 4: 2910, 3008, ...
  Epoch[ 5 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16553125; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[ 5 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13581445; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
  Epoch[ 5 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18009277; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101750
-Finished Epoch[ 5 of 50]: [Training Set] TrainLossPerSample = 0.15920427; EvalErrPerSample = 0.073399998; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108345
+Finished Epoch[ 5 of 50]: [Training Set] TrainLossPerSample = 0.15920427; EvalErrPerSample = 0.073399998; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108345
 Starting Epoch 6: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 5 at record count 50000, and file position 0
 already there from last epoch
@@ -1027,7 +1027,7 @@ randomordering: recached sequence for seed 5: 984, 652, ...
  Epoch[ 6 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19878662; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
  Epoch[ 6 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17007324; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[ 6 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17106641; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
-Finished Epoch[ 6 of 50]: [Training Set] TrainLossPerSample = 0.15714514; EvalErrPerSample = 0.076299995; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.10947
+Finished Epoch[ 6 of 50]: [Training Set] TrainLossPerSample = 0.15714514; EvalErrPerSample = 0.076299995; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.10947
 Starting Epoch 7: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 6 at record count 60000, and file position 0
 already there from last epoch
@@ -1075,7 +1075,7 @@ randomordering: recached sequence for seed 6: 38, 3119, ...
  Epoch[ 7 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18507861; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00244s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102291
  Epoch[ 7 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18759766; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00243s; TotalTimePerSample = 0.00974ms; SamplesPerSecond = 102711
  Epoch[ 7 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13401221; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00243s; TotalTimePerSample = 0.00972ms; SamplesPerSecond = 102923
-Finished Epoch[ 7 of 50]: [Training Set] TrainLossPerSample = 0.15758231; EvalErrPerSample = 0.073899999; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108182
+Finished Epoch[ 7 of 50]: [Training Set] TrainLossPerSample = 0.15758231; EvalErrPerSample = 0.073899999; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108182
 Starting Epoch 8: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 7 at record count 70000, and file position 0
 already there from last epoch
@@ -1123,7 +1123,7 @@ randomordering: recached sequence for seed 7: 1590, 2476, ...
  Epoch[ 8 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14976855; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[ 8 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.23044580; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[ 8 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12866846; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00262s; TotalTimePerSample = 0.01047ms; SamplesPerSecond = 95529
-Finished Epoch[ 8 of 50]: [Training Set] TrainLossPerSample = 0.15734912; EvalErrPerSample = 0.075300001; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108722
+Finished Epoch[ 8 of 50]: [Training Set] TrainLossPerSample = 0.15734912; EvalErrPerSample = 0.075300001; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108722
 Starting Epoch 9: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 8 at record count 80000, and file position 0
 already there from last epoch
@@ -1171,7 +1171,7 @@ randomordering: recached sequence for seed 8: 2848, 4644, ...
  Epoch[ 9 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15924512; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101750
  Epoch[ 9 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12429541; EvalErr[0]PerSample = 0.04000000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102417
  Epoch[ 9 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18786523; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102165
-Finished Epoch[ 9 of 50]: [Training Set] TrainLossPerSample = 0.15900241; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.119793
+Finished Epoch[ 9 of 50]: [Training Set] TrainLossPerSample = 0.15900241; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.119793
 Starting Epoch 10: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 9 at record count 90000, and file position 0
 already there from last epoch
@@ -1219,7 +1219,7 @@ randomordering: recached sequence for seed 9: 927, 3131, ...
  Epoch[10 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16469434; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00244s; TotalTimePerSample = 0.00977ms; SamplesPerSecond = 102333
  Epoch[10 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12849805; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102459
  Epoch[10 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15652881; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
-Finished Epoch[10 of 50]: [Training Set] TrainLossPerSample = 0.1570099; EvalErrPerSample = 0.075099997; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108802
+Finished Epoch[10 of 50]: [Training Set] TrainLossPerSample = 0.1570099; EvalErrPerSample = 0.075099997; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108802
 Starting Epoch 11: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 10 at record count 100000, and file position 0
 already there from last epoch
@@ -1267,7 +1267,7 @@ randomordering: recached sequence for seed 10: 681, 3298, ...
  Epoch[11 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16135010; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00262s; TotalTimePerSample = 0.01048ms; SamplesPerSecond = 95383
  Epoch[11 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14148096; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
  Epoch[11 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14052588; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
-Finished Epoch[11 of 50]: [Training Set] TrainLossPerSample = 0.15749562; EvalErrPerSample = 0.074599996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109079
+Finished Epoch[11 of 50]: [Training Set] TrainLossPerSample = 0.15749562; EvalErrPerSample = 0.074599996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109079
 Starting Epoch 12: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 11 at record count 110000, and file position 0
 already there from last epoch
@@ -1315,7 +1315,7 @@ randomordering: recached sequence for seed 11: 1719, 790, ...
  Epoch[12 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15298975; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[12 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13434766; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101626
  Epoch[12 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17133447; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101750
-Finished Epoch[12 of 50]: [Training Set] TrainLossPerSample = 0.15656054; EvalErrPerSample = 0.0757; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.108719
+Finished Epoch[12 of 50]: [Training Set] TrainLossPerSample = 0.15656054; EvalErrPerSample = 0.0757; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.108719
 Starting Epoch 13: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 12 at record count 120000, and file position 0
 already there from last epoch
@@ -1363,7 +1363,7 @@ randomordering: recached sequence for seed 12: 641, 2009, ...
  Epoch[13 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16050977; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[13 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14200342; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00248s; TotalTimePerSample = 0.00992ms; SamplesPerSecond = 100847
  Epoch[13 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17116748; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
-Finished Epoch[13 of 50]: [Training Set] TrainLossPerSample = 0.15670486; EvalErrPerSample = 0.074900001; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109143
+Finished Epoch[13 of 50]: [Training Set] TrainLossPerSample = 0.15670486; EvalErrPerSample = 0.074900001; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109143
 Starting Epoch 14: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 13 at record count 130000, and file position 0
 already there from last epoch
@@ -1411,7 +1411,7 @@ randomordering: recached sequence for seed 13: 107, 1070, ...
  Epoch[14 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10467676; EvalErr[0]PerSample = 0.03200000; TotalTime = 0.00244s; TotalTimePerSample = 0.00974ms; SamplesPerSecond = 102669
  Epoch[14 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17087939; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00243s; TotalTimePerSample = 0.00973ms; SamplesPerSecond = 102753
  Epoch[14 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12047754; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102417
-Finished Epoch[14 of 50]: [Training Set] TrainLossPerSample = 0.1562624; EvalErrPerSample = 0.073199995; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109104
+Finished Epoch[14 of 50]: [Training Set] TrainLossPerSample = 0.1562624; EvalErrPerSample = 0.073199995; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109104
 Starting Epoch 15: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 14 at record count 140000, and file position 0
 already there from last epoch
@@ -1459,7 +1459,7 @@ randomordering: recached sequence for seed 14: 1417, 1892, ...
  Epoch[15 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19497119; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.00248s; TotalTimePerSample = 0.00992ms; SamplesPerSecond = 100806
  Epoch[15 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14380957; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101708
  Epoch[15 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15487109; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101708
-Finished Epoch[15 of 50]: [Training Set] TrainLossPerSample = 0.15747459; EvalErrPerSample = 0.075599998; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109054
+Finished Epoch[15 of 50]: [Training Set] TrainLossPerSample = 0.15747459; EvalErrPerSample = 0.075599998; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109054
 Starting Epoch 16: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 15 at record count 150000, and file position 0
 already there from last epoch
@@ -1507,7 +1507,7 @@ randomordering: recached sequence for seed 15: 2520, 1858, ...
  Epoch[16 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13857666; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
  Epoch[16 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10769727; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[16 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17847412; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00260s; TotalTimePerSample = 0.01039ms; SamplesPerSecond = 96227
-Finished Epoch[16 of 50]: [Training Set] TrainLossPerSample = 0.15587136; EvalErrPerSample = 0.074999996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109554
+Finished Epoch[16 of 50]: [Training Set] TrainLossPerSample = 0.15587136; EvalErrPerSample = 0.074999996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109554
 Starting Epoch 17: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 16 at record count 160000, and file position 0
 already there from last epoch
@@ -1555,7 +1555,7 @@ randomordering: recached sequence for seed 16: 4331, 4563, ...
  Epoch[17 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14287598; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
  Epoch[17 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20951025; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00243s; TotalTimePerSample = 0.00974ms; SamplesPerSecond = 102711
  Epoch[17 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17218945; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101791
-Finished Epoch[17 of 50]: [Training Set] TrainLossPerSample = 0.15544492; EvalErrPerSample = 0.073299997; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109079
+Finished Epoch[17 of 50]: [Training Set] TrainLossPerSample = 0.15544492; EvalErrPerSample = 0.073299997; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109079
 Starting Epoch 18: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 17 at record count 170000, and file position 0
 already there from last epoch
@@ -1603,7 +1603,7 @@ randomordering: recached sequence for seed 17: 1559, 312, ...
  Epoch[18 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15134619; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101667
  Epoch[18 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13559717; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
  Epoch[18 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13085059; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
-Finished Epoch[18 of 50]: [Training Set] TrainLossPerSample = 0.15553951; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.119829
+Finished Epoch[18 of 50]: [Training Set] TrainLossPerSample = 0.15553951; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.119829
 Starting Epoch 19: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 18 at record count 180000, and file position 0
 already there from last epoch
@@ -1651,7 +1651,7 @@ randomordering: recached sequence for seed 18: 1888, 3611, ...
  Epoch[19 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20374756; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00244s; TotalTimePerSample = 0.00975ms; SamplesPerSecond = 102585
  Epoch[19 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15154639; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00244s; TotalTimePerSample = 0.00977ms; SamplesPerSecond = 102333
  Epoch[19 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16138916; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00244s; TotalTimePerSample = 0.00974ms; SamplesPerSecond = 102627
-Finished Epoch[19 of 50]: [Training Set] TrainLossPerSample = 0.15642285; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109826
+Finished Epoch[19 of 50]: [Training Set] TrainLossPerSample = 0.15642285; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109826
 Starting Epoch 20: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 19 at record count 190000, and file position 0
 already there from last epoch
@@ -1699,7 +1699,7 @@ randomordering: recached sequence for seed 19: 3695, 2398, ...
  Epoch[20 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13396631; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00243s; TotalTimePerSample = 0.00972ms; SamplesPerSecond = 102880
  Epoch[20 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20579834; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102417
  Epoch[20 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11346289; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.00244s; TotalTimePerSample = 0.00977ms; SamplesPerSecond = 102375
-Finished Epoch[20 of 50]: [Training Set] TrainLossPerSample = 0.15545134; EvalErrPerSample = 0.074000001; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109313
+Finished Epoch[20 of 50]: [Training Set] TrainLossPerSample = 0.15545134; EvalErrPerSample = 0.074000001; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109313
 Starting Epoch 21: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 20 at record count 200000, and file position 0
 already there from last epoch
@@ -1747,7 +1747,7 @@ randomordering: recached sequence for seed 20: 1154, 1438, ...
  Epoch[21 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16886816; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00244s; TotalTimePerSample = 0.00974ms; SamplesPerSecond = 102669
  Epoch[21 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17858789; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00243s; TotalTimePerSample = 0.00973ms; SamplesPerSecond = 102796
  Epoch[21 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13429395; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
-Finished Epoch[21 of 50]: [Training Set] TrainLossPerSample = 0.15621577; EvalErrPerSample = 0.074099995; Ave LearnRatePerSample = 0.00800000038; EpochTime=0.109383
+Finished Epoch[21 of 50]: [Training Set] TrainLossPerSample = 0.15621577; EvalErrPerSample = 0.074099995; AvgLearningRatePerSample = 0.00800000038; EpochTime=0.109383
 Starting Epoch 22: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 21 at record count 210000, and file position 0
 already there from last epoch
@@ -1795,7 +1795,7 @@ randomordering: recached sequence for seed 21: 3679, 2249, ...
  Epoch[22 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19264648; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
  Epoch[22 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17328613; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00248s; TotalTimePerSample = 0.00993ms; SamplesPerSecond = 100725
  Epoch[22 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13754248; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
-Finished Epoch[22 of 50]: [Training Set] TrainLossPerSample = 0.15426955; EvalErrPerSample = 0.073899999; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.109547
+Finished Epoch[22 of 50]: [Training Set] TrainLossPerSample = 0.15426955; EvalErrPerSample = 0.073899999; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.109547
 Starting Epoch 23: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 22 at record count 220000, and file position 0
 already there from last epoch
@@ -1843,7 +1843,7 @@ randomordering: recached sequence for seed 22: 349, 2306, ...
  Epoch[23 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17720508; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00244s; TotalTimePerSample = 0.00977ms; SamplesPerSecond = 102375
  Epoch[23 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.09784131; EvalErr[0]PerSample = 0.04000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102082
  Epoch[23 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17155811; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
-Finished Epoch[23 of 50]: [Training Set] TrainLossPerSample = 0.15398121; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.109598
+Finished Epoch[23 of 50]: [Training Set] TrainLossPerSample = 0.15398121; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.109598
 Starting Epoch 24: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 23 at record count 230000, and file position 0
 already there from last epoch
@@ -1891,7 +1891,7 @@ randomordering: recached sequence for seed 23: 2027, 711, ...
  Epoch[24 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16506348; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[24 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19581592; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00261s; TotalTimePerSample = 0.01044ms; SamplesPerSecond = 95748
  Epoch[24 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13809326; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101667
-Finished Epoch[24 of 50]: [Training Set] TrainLossPerSample = 0.15468226; EvalErrPerSample = 0.074000001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110921
+Finished Epoch[24 of 50]: [Training Set] TrainLossPerSample = 0.15468226; EvalErrPerSample = 0.074000001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110921
 Starting Epoch 25: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 24 at record count 240000, and file position 0
 already there from last epoch
@@ -1939,7 +1939,7 @@ randomordering: recached sequence for seed 24: 612, 820, ...
  Epoch[25 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16609619; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00764s; TotalTimePerSample = 0.03057ms; SamplesPerSecond = 32713
  Epoch[25 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15325293; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00448s; TotalTimePerSample = 0.01791ms; SamplesPerSecond = 55840
  Epoch[25 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12941211; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00852s; TotalTimePerSample = 0.03408ms; SamplesPerSecond = 29339
-Finished Epoch[25 of 50]: [Training Set] TrainLossPerSample = 0.15426713; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.159608
+Finished Epoch[25 of 50]: [Training Set] TrainLossPerSample = 0.15426713; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.159608
 Starting Epoch 26: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 25 at record count 250000, and file position 0
 already there from last epoch
@@ -1987,7 +1987,7 @@ randomordering: recached sequence for seed 25: 601, 2482, ...
  Epoch[26 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13657275; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00249s; TotalTimePerSample = 0.00997ms; SamplesPerSecond = 100321
  Epoch[26 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18722510; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[26 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14938281; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
-Finished Epoch[26 of 50]: [Training Set] TrainLossPerSample = 0.15418422; EvalErrPerSample = 0.074099995; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.170017
+Finished Epoch[26 of 50]: [Training Set] TrainLossPerSample = 0.15418422; EvalErrPerSample = 0.074099995; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.170017
 Starting Epoch 27: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 26 at record count 260000, and file position 0
 already there from last epoch
@@ -2035,7 +2035,7 @@ randomordering: recached sequence for seed 26: 2401, 570, ...
  Epoch[27 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20890430; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102165
  Epoch[27 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12860596; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00247s; TotalTimePerSample = 0.00987ms; SamplesPerSecond = 101296
  Epoch[27 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14694336; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
-Finished Epoch[27 of 50]: [Training Set] TrainLossPerSample = 0.15391847; EvalErrPerSample = 0.073799998; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110536
+Finished Epoch[27 of 50]: [Training Set] TrainLossPerSample = 0.15391847; EvalErrPerSample = 0.073799998; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110536
 Starting Epoch 28: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 27 at record count 270000, and file position 0
 already there from last epoch
@@ -2083,7 +2083,7 @@ randomordering: recached sequence for seed 27: 2613, 103, ...
  Epoch[28 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13962646; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101791
  Epoch[28 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18195508; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[28 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22056006; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00244s; TotalTimePerSample = 0.00976ms; SamplesPerSecond = 102417
-Finished Epoch[28 of 50]: [Training Set] TrainLossPerSample = 0.1542; EvalErrPerSample = 0.073199995; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.111465
+Finished Epoch[28 of 50]: [Training Set] TrainLossPerSample = 0.1542; EvalErrPerSample = 0.073199995; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.111465
 Starting Epoch 29: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 28 at record count 280000, and file position 0
 already there from last epoch
@@ -2131,7 +2131,7 @@ randomordering: recached sequence for seed 28: 2366, 259, ...
  Epoch[29 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15949170; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101708
  Epoch[29 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16166309; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[29 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18013428; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
-Finished Epoch[29 of 50]: [Training Set] TrainLossPerSample = 0.15397441; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110389
+Finished Epoch[29 of 50]: [Training Set] TrainLossPerSample = 0.15397441; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110389
 Starting Epoch 30: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 29 at record count 290000, and file position 0
 already there from last epoch
@@ -2179,7 +2179,7 @@ randomordering: recached sequence for seed 29: 2080, 4627, ...
  Epoch[30 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10716504; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
  Epoch[30 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16802539; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00249s; TotalTimePerSample = 0.00994ms; SamplesPerSecond = 100563
  Epoch[30 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12419678; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101791
-Finished Epoch[30 of 50]: [Training Set] TrainLossPerSample = 0.15411189; EvalErrPerSample = 0.074199997; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110405
+Finished Epoch[30 of 50]: [Training Set] TrainLossPerSample = 0.15411189; EvalErrPerSample = 0.074199997; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110405
 Starting Epoch 31: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 30 at record count 300000, and file position 0
 already there from last epoch
@@ -2227,7 +2227,7 @@ randomordering: recached sequence for seed 30: 4072, 1697, ...
  Epoch[31 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13600146; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
  Epoch[31 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18645312; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102040
  Epoch[31 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16094482; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
-Finished Epoch[31 of 50]: [Training Set] TrainLossPerSample = 0.15366222; EvalErrPerSample = 0.072700001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.1105
+Finished Epoch[31 of 50]: [Training Set] TrainLossPerSample = 0.15366222; EvalErrPerSample = 0.072700001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.1105
 Starting Epoch 32: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 31 at record count 310000, and file position 0
 already there from last epoch
@@ -2275,7 +2275,7 @@ randomordering: recached sequence for seed 31: 1183, 1480, ...
  Epoch[32 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13974854; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00259s; TotalTimePerSample = 0.01037ms; SamplesPerSecond = 96413
  Epoch[32 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11784229; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102040
  Epoch[32 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13784229; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00246s; TotalTimePerSample = 0.00985ms; SamplesPerSecond = 101502
-Finished Epoch[32 of 50]: [Training Set] TrainLossPerSample = 0.15374352; EvalErrPerSample = 0.073399998; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110922
+Finished Epoch[32 of 50]: [Training Set] TrainLossPerSample = 0.15374352; EvalErrPerSample = 0.073399998; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110922
 Starting Epoch 33: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 32 at record count 320000, and file position 0
 already there from last epoch
@@ -2323,7 +2323,7 @@ randomordering: recached sequence for seed 32: 3336, 146, ...
  Epoch[33 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14789844; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00247s; TotalTimePerSample = 0.00987ms; SamplesPerSecond = 101296
  Epoch[33 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22849609; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101750
  Epoch[33 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14075781; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00247s; TotalTimePerSample = 0.00987ms; SamplesPerSecond = 101296
-Finished Epoch[33 of 50]: [Training Set] TrainLossPerSample = 0.15397032; EvalErrPerSample = 0.074599996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110987
+Finished Epoch[33 of 50]: [Training Set] TrainLossPerSample = 0.15397032; EvalErrPerSample = 0.074599996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110987
 Starting Epoch 34: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 33 at record count 330000, and file position 0
 already there from last epoch
@@ -2371,7 +2371,7 @@ randomordering: recached sequence for seed 33: 818, 3781, ...
  Epoch[34 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13293555; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
  Epoch[34 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15304248; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
  Epoch[34 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22074463; EvalErr[0]PerSample = 0.12000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
-Finished Epoch[34 of 50]: [Training Set] TrainLossPerSample = 0.15377936; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.111395
+Finished Epoch[34 of 50]: [Training Set] TrainLossPerSample = 0.15377936; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.111395
 Starting Epoch 35: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 34 at record count 340000, and file position 0
 already there from last epoch
@@ -2419,7 +2419,7 @@ randomordering: recached sequence for seed 34: 2626, 871, ...
  Epoch[35 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13336377; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00246s; TotalTimePerSample = 0.00986ms; SamplesPerSecond = 101419
  Epoch[35 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17409277; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
  Epoch[35 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16669434; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
-Finished Epoch[35 of 50]: [Training Set] TrainLossPerSample = 0.15350108; EvalErrPerSample = 0.074599996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.122159
+Finished Epoch[35 of 50]: [Training Set] TrainLossPerSample = 0.15350108; EvalErrPerSample = 0.074599996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.122159
 Starting Epoch 36: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 35 at record count 350000, and file position 0
 already there from last epoch
@@ -2467,7 +2467,7 @@ randomordering: recached sequence for seed 35: 2695, 120, ...
  Epoch[36 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16081494; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102165
  Epoch[36 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15196094; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102207
  Epoch[36 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16363184; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101791
-Finished Epoch[36 of 50]: [Training Set] TrainLossPerSample = 0.15403606; EvalErrPerSample = 0.074000001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.110961
+Finished Epoch[36 of 50]: [Training Set] TrainLossPerSample = 0.15403606; EvalErrPerSample = 0.074000001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.110961
 Starting Epoch 37: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 36 at record count 360000, and file position 0
 already there from last epoch
@@ -2515,7 +2515,7 @@ randomordering: recached sequence for seed 36: 1500, 4258, ...
  Epoch[37 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16187988; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[37 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10903418; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
  Epoch[37 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13092383; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00262s; TotalTimePerSample = 0.01046ms; SamplesPerSecond = 95565
-Finished Epoch[37 of 50]: [Training Set] TrainLossPerSample = 0.15347257; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.111311
+Finished Epoch[37 of 50]: [Training Set] TrainLossPerSample = 0.15347257; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.111311
 Starting Epoch 38: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 37 at record count 370000, and file position 0
 already there from last epoch
@@ -2563,7 +2563,7 @@ randomordering: recached sequence for seed 37: 3874, 4062, ...
  Epoch[38 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15250146; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
  Epoch[38 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18435400; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102082
  Epoch[38 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18085449; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
-Finished Epoch[38 of 50]: [Training Set] TrainLossPerSample = 0.15375265; EvalErrPerSample = 0.073100001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.114123
+Finished Epoch[38 of 50]: [Training Set] TrainLossPerSample = 0.15375265; EvalErrPerSample = 0.073100001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.114123
 Starting Epoch 39: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 38 at record count 380000, and file position 0
 already there from last epoch
@@ -2611,7 +2611,7 @@ randomordering: recached sequence for seed 38: 761, 4317, ...
  Epoch[39 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13640625; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
  Epoch[39 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16928516; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
  Epoch[39 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19070264; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
-Finished Epoch[39 of 50]: [Training Set] TrainLossPerSample = 0.15363242; EvalErrPerSample = 0.074999996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.115427
+Finished Epoch[39 of 50]: [Training Set] TrainLossPerSample = 0.15363242; EvalErrPerSample = 0.074999996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.115427
 Starting Epoch 40: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 39 at record count 390000, and file position 0
 already there from last epoch
@@ -2659,7 +2659,7 @@ randomordering: recached sequence for seed 39: 4500, 2438, ...
  Epoch[40 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17115625; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101584
  Epoch[40 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13924951; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00247s; TotalTimePerSample = 0.00989ms; SamplesPerSecond = 101091
  Epoch[40 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10536133; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.00248s; TotalTimePerSample = 0.00990ms; SamplesPerSecond = 100969
-Finished Epoch[40 of 50]: [Training Set] TrainLossPerSample = 0.15376176; EvalErrPerSample = 0.074000001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.116585
+Finished Epoch[40 of 50]: [Training Set] TrainLossPerSample = 0.15376176; EvalErrPerSample = 0.074000001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.116585
 Starting Epoch 41: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 40 at record count 400000, and file position 0
 already there from last epoch
@@ -2707,7 +2707,7 @@ randomordering: recached sequence for seed 40: 1280, 496, ...
  Epoch[41 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14688232; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[41 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12623242; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00244s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
  Epoch[41 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13994141; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00245s; TotalTimePerSample = 0.00978ms; SamplesPerSecond = 102249
-Finished Epoch[41 of 50]: [Training Set] TrainLossPerSample = 0.15321229; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.116209
+Finished Epoch[41 of 50]: [Training Set] TrainLossPerSample = 0.15321229; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.116209
 Starting Epoch 42: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 41 at record count 410000, and file position 0
 already there from last epoch
@@ -2755,7 +2755,7 @@ randomordering: recached sequence for seed 41: 1322, 2120, ...
  Epoch[42 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19198926; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
  Epoch[42 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14713867; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.00245s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101874
  Epoch[42 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18415967; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
-Finished Epoch[42 of 50]: [Training Set] TrainLossPerSample = 0.15355127; EvalErrPerSample = 0.0726; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.116229
+Finished Epoch[42 of 50]: [Training Set] TrainLossPerSample = 0.15355127; EvalErrPerSample = 0.0726; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.116229
 Starting Epoch 43: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 42 at record count 420000, and file position 0
 already there from last epoch
@@ -2803,7 +2803,7 @@ randomordering: recached sequence for seed 42: 2488, 3744, ...
  Epoch[43 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17102686; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00248s; TotalTimePerSample = 0.00991ms; SamplesPerSecond = 100887
  Epoch[43 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14323145; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00247s; TotalTimePerSample = 0.00988ms; SamplesPerSecond = 101173
  Epoch[43 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14955566; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00248s; TotalTimePerSample = 0.00994ms; SamplesPerSecond = 100603
-Finished Epoch[43 of 50]: [Training Set] TrainLossPerSample = 0.1536127; EvalErrPerSample = 0.073100001; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.116088
+Finished Epoch[43 of 50]: [Training Set] TrainLossPerSample = 0.1536127; EvalErrPerSample = 0.073100001; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.116088
 Starting Epoch 44: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 43 at record count 430000, and file position 0
 already there from last epoch
@@ -2851,7 +2851,7 @@ randomordering: recached sequence for seed 43: 4915, 3469, ...
  Epoch[44 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16781348; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101750
  Epoch[44 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14748584; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00246s; TotalTimePerSample = 0.00982ms; SamplesPerSecond = 101832
  Epoch[44 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14355615; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101626
-Finished Epoch[44 of 50]: [Training Set] TrainLossPerSample = 0.15322056; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.127656
+Finished Epoch[44 of 50]: [Training Set] TrainLossPerSample = 0.15322056; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.127656
 Starting Epoch 45: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 44 at record count 440000, and file position 0
 already there from last epoch
@@ -2899,7 +2899,7 @@ randomordering: recached sequence for seed 44: 1977, 1274, ...
  Epoch[45 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16632373; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
  Epoch[45 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17599902; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.00263s; TotalTimePerSample = 0.01053ms; SamplesPerSecond = 94948
  Epoch[45 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13061035; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.00246s; TotalTimePerSample = 0.00986ms; SamplesPerSecond = 101419
-Finished Epoch[45 of 50]: [Training Set] TrainLossPerSample = 0.15330698; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.117294
+Finished Epoch[45 of 50]: [Training Set] TrainLossPerSample = 0.15330698; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.117294
 Starting Epoch 46: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 45 at record count 450000, and file position 0
 already there from last epoch
@@ -2947,7 +2947,7 @@ randomordering: recached sequence for seed 45: 369, 2365, ...
  Epoch[46 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18422705; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102082
  Epoch[46 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20406689; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 102040
  Epoch[46 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16345898; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00980ms; SamplesPerSecond = 101999
-Finished Epoch[46 of 50]: [Training Set] TrainLossPerSample = 0.1530764; EvalErrPerSample = 0.072099999; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.116943
+Finished Epoch[46 of 50]: [Training Set] TrainLossPerSample = 0.1530764; EvalErrPerSample = 0.072099999; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.116943
 Starting Epoch 47: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 46 at record count 460000, and file position 0
 already there from last epoch
@@ -2995,7 +2995,7 @@ randomordering: recached sequence for seed 46: 2502, 1396, ...
  Epoch[47 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20056543; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101916
  Epoch[47 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13321094; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.00245s; TotalTimePerSample = 0.00979ms; SamplesPerSecond = 102124
  Epoch[47 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16817480; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
-Finished Epoch[47 of 50]: [Training Set] TrainLossPerSample = 0.15308942; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.11824
+Finished Epoch[47 of 50]: [Training Set] TrainLossPerSample = 0.15308942; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.11824
 Starting Epoch 48: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 47 at record count 470000, and file position 0
 already there from last epoch
@@ -3043,7 +3043,7 @@ randomordering: recached sequence for seed 47: 4812, 1102, ...
  Epoch[48 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15994336; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00247s; TotalTimePerSample = 0.00986ms; SamplesPerSecond = 101378
  Epoch[48 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20196143; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.00247s; TotalTimePerSample = 0.00986ms; SamplesPerSecond = 101419
  Epoch[48 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15978369; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.00246s; TotalTimePerSample = 0.00984ms; SamplesPerSecond = 101667
-Finished Epoch[48 of 50]: [Training Set] TrainLossPerSample = 0.15332107; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.117755
+Finished Epoch[48 of 50]: [Training Set] TrainLossPerSample = 0.15332107; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.117755
 Starting Epoch 49: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 48 at record count 480000, and file position 0
 already there from last epoch
@@ -3091,7 +3091,7 @@ randomordering: recached sequence for seed 48: 20, 1678, ...
  Epoch[49 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17736279; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.00246s; TotalTimePerSample = 0.00983ms; SamplesPerSecond = 101708
  Epoch[49 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18315527; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.00247s; TotalTimePerSample = 0.00988ms; SamplesPerSecond = 101255
  Epoch[49 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18503271; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.00250s; TotalTimePerSample = 0.01002ms; SamplesPerSecond = 99800
-Finished Epoch[49 of 50]: [Training Set] TrainLossPerSample = 0.15370348; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.118126
+Finished Epoch[49 of 50]: [Training Set] TrainLossPerSample = 0.15370348; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.118126
 Starting Epoch 50: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 49 at record count 490000, and file position 0
 already there from last epoch
@@ -3139,7 +3139,7 @@ randomordering: recached sequence for seed 49: 2737, 4106, ...
  Epoch[50 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18385742; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00247s; TotalTimePerSample = 0.00987ms; SamplesPerSecond = 101296
  Epoch[50 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15658301; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00246s; TotalTimePerSample = 0.00985ms; SamplesPerSecond = 101502
  Epoch[50 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14656641; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00245s; TotalTimePerSample = 0.00981ms; SamplesPerSecond = 101957
-Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15285511; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.117737
+Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15285511; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.117737
 CNTKCommandTrainEnd: Simple_Demo
 reading uci file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Data/SimpleDataTest.txt
 
@@ -4345,7 +4345,7 @@ randomordering: recached sequence for seed 49: 2737, 4106, ...
  Epoch[50 of 50]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18388574; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.00247s; TotalTimePerSample = 0.00987ms; SamplesPerSecond = 101337
  Epoch[50 of 50]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15655225; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.00247s; TotalTimePerSample = 0.00989ms; SamplesPerSecond = 101091
  Epoch[50 of 50]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14657861; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.00248s; TotalTimePerSample = 0.00991ms; SamplesPerSecond = 100887
-Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15286739; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=0.147382
+Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15286739; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=0.147382
 CNTKCommandTrainEnd: Simple_Demo
 reading uci file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Data/SimpleDataTest.txt
 
