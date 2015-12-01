@@ -2004,7 +2004,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
 #if 1
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d,  0%%]: SamplesSeen = %d; TrainLossPerSample = " +
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
 #else
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
