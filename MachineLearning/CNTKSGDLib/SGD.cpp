@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //       truncated = truncation length
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         m_truncated = configSGD(L"truncated", false);
-        intargvector m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector < int > {0})));
+        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector < int > {0})));
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
