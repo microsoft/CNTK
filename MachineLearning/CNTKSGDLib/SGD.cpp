@@ -1701,7 +1701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchRequested > 0)
         {
-            fprintf(stderr, ", with %d Max Samples in RAM", samplesInRAM);
+            fprintf(stderr, ", with %d Max Samples in RAM", (int)samplesInRAM);
         }
         fprintf(stderr, ".\n");
 
