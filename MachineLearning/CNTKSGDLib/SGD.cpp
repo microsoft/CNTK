@@ -844,14 +844,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (epochEvalErrors.size() == 0)    // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
-                        "Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
+                        "AveLearnRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
                 m_lastFinishedEpochEvalErr = epochCriterion;
             }
             else if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
-                        "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
+                        "EvalErrPerSample = %.8g; AveLearnRatePerSample = %.8g; EpochTime=%.6g\n",
                         epochEvalErrors[0], learnRatePerSample, epochTime);
                 m_lastFinishedEpochEvalErr = epochEvalErrors.back();
             }
@@ -864,7 +864,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 m_lastFinishedEpochEvalErr = epochEvalErrors.back();
 
-                fprintf(stderr, "Ave LearnRatePerSample = %.6g; Epoch Time=%.6g\n",
+                fprintf(stderr, "AveLearnRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
 
                 // TODO: why these extra log messages here and not for 1 eval criterion?
@@ -1317,7 +1317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
 
         if (epochEvalErrors.size() == 1)
-            fprintf(stderr, "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g\n", epochEvalErrors[0], learnRatePerSample);
+            fprintf(stderr, "EvalErrPerSample = %.8g; AveLearnRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
         else
         {
             fprintf(stderr, "EvalErrPerSample ");
@@ -1325,7 +1325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
             }
-            fprintf(stderr, "Ave LearnRatePerSample = %.10g\n", learnRatePerSample);
+            fprintf(stderr, "AveLearnRatePerSample = %.8g\n", learnRatePerSample);
         }
 
         int baseModelEpoch = epochNumber - 1;

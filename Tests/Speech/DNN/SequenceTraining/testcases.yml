@@ -22,11 +22,11 @@ testCases:
       - ^Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=.1%}}
       - EvalErrPerSample = {{float,tolerance=.25%}}
-      - Ave LearnRatePerSample = {{float,tolerance=0%}}
+      - AveLearnRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
     patterns:
-      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
+      - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
       - TrainLossPerSample = {{float,tolerance=.2%}}
 
