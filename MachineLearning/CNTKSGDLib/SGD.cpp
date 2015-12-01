@@ -20,55 +20,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static AdaptationRegType ParseAdaptationRegType(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"" || s == L"none")
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return AdaptationRegType::None;
-        else if (s == L"kl" || s == L"klreg")
+        else if (!_wcsicmp(s.c_str(), L"kl") || !_wcsicmp(s.c_str(), L"klReg"))
             return AdaptationRegType::KL;
         else
-            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
+            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
         }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if (s == L"" || s == L"none" || s == L"normal" || s == L"simple")
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none") || !_wcsicmp(s.c_str(), L"normal") || !_wcsicmp(s.c_str(), L"simple"))
             return GradientsUpdateType::None;
-        else if (s == L"adagrad")
+        else if (!_wcsicmp(s.c_str(), L"adagrad"))
             return GradientsUpdateType::AdaGrad;
-        else if (s == L"rmsprop")
+        else if (!_wcsicmp(s.c_str(), L"rmsProp"))
             return GradientsUpdateType::RmsProp;
-        else if (s == L"fsadagrad")
+        else if (!_wcsicmp(s.c_str(), L"fsAdagrad"))
             return GradientsUpdateType::FSAdaGrad;
         else
-            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
+            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
     {
-        msra::strfun::tolower_ascii(s);
-        if ((s == L"") || (s == L"none"))
+        if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return ParallelizationMethod::None;
-        else if (s == L"dataparallelsgd")
+        else if (!_wcsicmp(s.c_str(), L"DataParallelSGD"))
             return ParallelizationMethod::DataParallelSGD;
-        else if (s == L"modelaveragingsgd")
+        else if (!_wcsicmp(s.c_str(), L"ModelAveragingSGD"))
             return ParallelizationMethod::ModelAveragingSGD;
         else
-            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
-        }
+            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
+    }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
         // TODO: why allow so many variants?
-        msra::strfun::tolower_ascii(s);
-        if (s == L"false" || s == L"none")
+        if (!_wcsicmp(s.c_str(), L"false") || !_wcsicmp(s.c_str(), L"none"))
             return LearningRateSearchAlgorithm::None;
-        else if (s == L"searchbeforeepoch" || s == L"beforeepoch" || s == L"before")
+        else if (!_wcsicmp(s.c_str(), L"searchBeforeEpoch") || !_wcsicmp(s.c_str(), L"beforeEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"before"/*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-        else if (s == L"adjustafterepoch" || s == L"afterepoch" || s == L"after")
+        else if (!_wcsicmp(s.c_str(), L"adjustAfterEpoch") || !_wcsicmp(s.c_str(), L"afterEpoch"/*legacy, deprecated*/) || !_wcsicmp(s.c_str(), L"after"/*legacy, deprecated*/))
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
         else
-            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
+            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
     }
 
     template<class ConfigRecordType>
@@ -112,8 +108,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //       mbSize = total number of samples after which a model update should happen
         //       truncated = truncation length
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
-        m_truncated = configSGD(L"Truncated", false);
-        intargvector numSubMinibatch = configSGD(L"NumSubMinibatch", ConfigRecordType::Array(intargvector(vector < int > {0})));
+        m_truncated = configSGD(L"truncated", false);
+        intargvector m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector < int > {0})));
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
@@ -252,7 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_needAdaptRegularization = false;
 
         // BUGBUG: these are not passed to Init()
-        m_doUnitTest = configSGD(L"unittest", false);
+        m_doUnitTest = configSGD(L"unitTest", false);
 
         // parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
@@ -265,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
         {
             const ConfigRecordType & configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
-            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"None"));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
             m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
 
@@ -284,8 +280,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (configParallelTrain.Exists(L"ModelAveragingSGD") )
             {
                 const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-                m_nFramesBetweenMASync = configMASGD(L"SyncFrequencyInFrames", (size_t)40000);
-                m_iMASyncStatsTrace = configMASGD(L"MAPerfStats", (int)0);
+                m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
+                m_iMASyncStatsTrace = configMASGD(L"maPerfStats", (int)0);
             }
         }
     }
@@ -901,9 +897,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_loadBestModel)
                     {
-                        fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
-                        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(i - m_learnRateAdjustInterval),
-                                                              m_validateAfterModelReloading);
+                        auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
+                        fprintf(stderr, "Loaded previous model with best training criterion value: %ls.\n", bestModelPath.c_str());
+                        net->LoadPersistableParametersFromFile(bestModelPath, m_validateAfterModelReloading);
                         net->ResetEvalTimeStamp();
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
@@ -1670,11 +1666,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             refNet->StartEvaluateMinibatchLoop(refNode);
         }
 
-        SubminibatchDispatcher<ElemType> smbhelper; 
-        size_t numSubminibatchRequested = m_numSubMinibatch[epochNumber]; 
-        if (numSubminibatchRequested > 0)
+        SubminibatchDispatcher<ElemType> smbDisplatcher; 
+        size_t samplesInRAM = m_maxSamplesInRAM[epochNumber]; 
+        // convert it to SubminibatchRequested 
+        size_t numSubminibatchRequested = 0; 
+        if (samplesInRAM > 0)   // if samplesInRAM = 0 , we will not use subminibatch dispatcher
         {
-            smbhelper.Init(net, learnableNodes, criterionNodes, evaluationNodes);
+            size_t nParallelSequences = trainSetDataReader->GetNumParallelSequences(); 
+            size_t estimatedMBSize = tunedMBSize * nParallelSequences; 
+            numSubminibatchRequested = (size_t)std::ceil(estimatedMBSize / samplesInRAM);             
+        }
+        if (numSubminibatchRequested > 1) // only use subminibatch dispatcher if more than 1 subminibatch is required 
+        {
+            smbDisplatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
         }
         size_t actualNumSubminibatch=0;
 
@@ -1697,7 +1701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchRequested > 0)
         {
-            fprintf(stderr, ", Dispatched to %d subminibatch", numSubminibatchRequested);
+            fprintf(stderr, ", with %d Max Samples in RAM", samplesInRAM);
         }
         fprintf(stderr, ".\n");
 
@@ -1718,13 +1722,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                                               useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
-            
-            // for MA use only 
             nSamplesSinceLastModelSync += actualMBSize;
 
             if (numSubminibatchRequested > 0)
             {
-                actualNumSubminibatch = smbhelper.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchRequested); 
+                actualNumSubminibatch = smbDisplatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchRequested); 
             }
             else
             {
@@ -1772,19 +1774,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (size_t ismb = 0; ismb < actualNumSubminibatch; ismb++)
                     {
-                        smbhelper.GetSubMinibatchToNet(ismb);
+                        smbDisplatcher.GetSubMinibatchToNet(ismb);
 #ifdef SMB_DEBUG
                         //smbhelper.WriteInputMatriceAndMBLayout(numMBsRun, ismb);
 #endif 
                         ComputationNetwork::UpdateEvalTimeStamps(featureNodes); 
                         ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
                         ForwardBackward(*net, evaluationNodes, criterionNodes[0], learnRatePerSample > 0.01 * m_minLearnRate); 
-                        smbhelper.DoneWithCurrentSubMinibatch(ismb); 
+                        smbDisplatcher.DoneWithCurrentSubMinibatch(ismb); 
                     }
 #ifdef SMB_DEBUG
                     //smbhelper.WriteGradient(numMBsRun);
 #endif 
-                    smbhelper.DoneWithCurrentMinibatch(); 
+                    smbDisplatcher.DoneWithCurrentMinibatch(); 
 
                 }
                 else 
@@ -2586,6 +2588,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SGD<double>;
 
     // register SGD<> with the ScriptableObject system
-    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>,SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
 
 }}}
