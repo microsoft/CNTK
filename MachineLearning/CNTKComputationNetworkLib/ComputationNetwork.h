@@ -294,7 +294,7 @@ public:
         m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
     }
 
-    DEVICEID_TYPE GetDeviceId() { return m_deviceId; }
+    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
     unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
     void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }
