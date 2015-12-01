@@ -249,18 +249,18 @@ TIMIT_TrainSimple=[
 
 \begin_layout Plain Layout
 
-  action=train
+  action="train"
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath=$ExpDir$
+  modelPath="$ExpDir$
 \backslash
 TrainSimpleNetwork
 \backslash
 model
 \backslash
-cntkSpeech.dnn
+cntkSpeech.dnn"
 \end_layout
 
 \begin_layout Plain Layout
@@ -285,17 +285,17 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    trainingCriterion=CrossEntropyWithSoftmax
+    trainingCriterion="CrossEntropyWithSoftmax"
 \end_layout
 
 \begin_layout Plain Layout
 
-    evalCriterion=ErrorPrediction
+    evalCriterion="ErrorPrediction"
 \end_layout
 
 \begin_layout Plain Layout
 
-    layerTypes=Sigmoid
+    layerTypes="Sigmoid"
 \end_layout
 
 \begin_layout Plain Layout
@@ -365,22 +365,22 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    readerType=HTKMLFReader
+    readerType="HTKMLFReader"
 \end_layout
 
 \begin_layout Plain Layout
 
-    readMethod=rollingWindow
+    readMethod="rollingWindow"
 \end_layout
 
 \begin_layout Plain Layout
 
-    miniBatchMode=Partial
+    miniBatchMode="partial"
 \end_layout
 
 \begin_layout Plain Layout
 
-    randomize=Auto
+    randomize="auto"
 \end_layout
 
 \begin_layout Plain Layout
@@ -404,9 +404,9 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-      scpFile=$ScpDir$
+      scpFile="$ScpDir$
 \backslash
-TIMIT.train.scp.fbank.fullpath
+TIMIT.train.scp.fbank.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -426,9 +426,9 @@ TIMIT.train.scp.fbank.fullpath
 
 \begin_layout Plain Layout
 
-      mlfFile=$MlfDir$
+      mlfFile="$MlfDir$
 \backslash
-TIMIT.train.align_cistate.mlf.cntk
+TIMIT.train.align_cistate.mlf.cntk"
 \end_layout
 
 \begin_layout Plain Layout
@@ -438,9 +438,9 @@ TIMIT.train.align_cistate.mlf.cntk
 
 \begin_layout Plain Layout
 
-      labelMappingFile=$MlfDir$
+      labelMappingFile="$MlfDir$
 \backslash
-TIMIT.statelist
+TIMIT.statelist"
 \end_layout
 
 \begin_layout Plain Layout
@@ -515,22 +515,22 @@ status open
 
 \begin_layout Plain Layout
 
-    readerType=HTKMLFReader
+    readerType="HTKMLFReader"
 \end_layout
 
 \begin_layout Plain Layout
 
-    readMethod=rollingWindow
+    readMethod="rollingWindow"
 \end_layout
 
 \begin_layout Plain Layout
 
-    miniBatchMode=Partial
+    miniBatchMode="partial"
 \end_layout
 
 \begin_layout Plain Layout
 
-    randomize=Auto
+    randomize="auto"
 \end_layout
 
 \begin_layout Plain Layout
@@ -554,9 +554,9 @@ status open
 
 \begin_layout Plain Layout
 
-      scpFile=$ScpDir$
+      scpFile="$ScpDir$
 \backslash
-TIMIT.dev.scp.fbank.fullpath
+TIMIT.dev.scp.fbank.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -576,9 +576,9 @@ TIMIT.dev.scp.fbank.fullpath
 
 \begin_layout Plain Layout
 
-      mlfFile=$MlfDir$
+      mlfFile="$MlfDir$
 \backslash
-TIMIT.dev.align_cistate.mlf.cntk
+TIMIT.dev.align_cistate.mlf.cntk"
 \end_layout
 
 \begin_layout Plain Layout
@@ -588,9 +588,9 @@ TIMIT.dev.align_cistate.mlf.cntk
 
 \begin_layout Plain Layout
 
-      labelMappingFile=$MlfDir$
+      labelMappingFile="$MlfDir$
 \backslash
-TIMIT.statelist
+TIMIT.statelist"
 \end_layout
 
 \begin_layout Plain Layout
@@ -658,7 +658,7 @@ status open
 
 \begin_layout Plain Layout
 
-      autoAdjustLR=AdjustAfterEpoch
+      autoAdjustLR="adjustAfterEpoch"
 \end_layout
 
 \begin_layout Plain Layout
@@ -745,16 +745,16 @@ status open
 
 \begin_layout Plain Layout
 
-    ndlMacros=$NdlDir$
+    ndlMacros="$NdlDir$
 \backslash
-default_macros.ndl
+default_macros.ndl"
 \end_layout
 
 \begin_layout Plain Layout
 
-    networkDescription=$NdlDir$
+    networkDescription="$NdlDir$
 \backslash
-classify.ndl
+classify.ndl"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1170,8 +1170,8 @@ status open
 
 \begin_layout Plain Layout
 
-command=TIMIT_DiscrimPreTrain1:TIMIT_AddLayer2:TIMIT_DiscrimPreTrain2:TIMIT_AddL
-ayer3:TIMIT_Train3
+command="TIMIT_DiscrimPreTrain1:TIMIT_AddLayer2:TIMIT_DiscrimPreTrain2:TIMIT_Add
+Layer3:TIMIT_Train3"
 \end_layout
 
 \end_inset
@@ -1216,18 +1216,18 @@ TIMIT_DiscrimPreTrain1=[
 
 \begin_layout Plain Layout
 
-  action=train
+  action="train"
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath=$ExpDir$
+  modelPath="$ExpDir$
 \backslash
 TrainWithPreTrain
 \backslash
 dptmodel1
 \backslash
-cntkSpeech.dnn
+cntkSpeech.dnn"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1237,9 +1237,9 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    NetworkDescription=$NdlDir$
+    NetworkDescription="$NdlDir$
 \backslash
-create_1layer.ndl
+create_1layer.ndl"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1263,7 +1263,7 @@ TIMIT_AddLayer2=[
 
 \begin_layout Plain Layout
 
-  action=edit
+  action="edit"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1278,31 +1278,31 @@ TIMIT_AddLayer2=[
 
 \begin_layout Plain Layout
 
-  CurrModel=$ExpDir$
+  CurrModel="$ExpDir$
 \backslash
 TrainWithPreTrain
 \backslash
 dptmodel1
 \backslash
-cntkSpeech.dnn
+cntkSpeech.dnn"
 \end_layout
 
 \begin_layout Plain Layout
 
-  NewModel=$ExpDir$
+  NewModel="$ExpDir$
 \backslash
 TrainWithPreTrain
 \backslash
 dptmodel2
 \backslash
-cntkSpeech.dnn.0
+cntkSpeech.dnn.0"
 \end_layout
 
 \begin_layout Plain Layout
 
-  editPath=$MelDir$
+  editPath="$MelDir$
 \backslash
-add_layer.mel
+add_layer.mel"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1321,18 +1321,18 @@ TIMIT_DiscrimPreTrain2=[
 
 \begin_layout Plain Layout
 
-  action=train
+  action="train"
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath=$ExpDir$
+  modelPath="$ExpDir$
 \backslash
 TrainWithPreTrain
 \backslash
 dptmodel2
 \backslash
-cntkSpeech.dnn
+cntkSpeech.dnn"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1342,9 +1342,9 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    NetworkDescription=$NdlDir$
+    NetworkDescription="$NdlDir$
 \backslash
-create_1layer.ndl
+create_1layer.ndl"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1787,9 +1787,9 @@ features1=[
 
 \begin_layout Plain Layout
 
-  scpFile=$ScpDir$
+  scpFile="$ScpDir$
 \backslash
-TIMIT.train.scp.fbank.fullpath
+TIMIT.train.scp.fbank.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1809,9 +1809,9 @@ features2=[
 
 \begin_layout Plain Layout
 
-  scpFile=$ScpDir$
+  scpFile="$ScpDir$
 \backslash
-TIMIT.train.scp.mfcc.fullpath
+TIMIT.train.scp.mfcc.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1826,16 +1826,16 @@ labels=[
 
 \begin_layout Plain Layout
 
-  mlfFile=$MlfDir$
+  mlfFile="$MlfDir$
 \backslash
-TIMIT.train.align_cistate.mlf.cntk
+TIMIT.train.align_cistate.mlf.cntk"
 \end_layout
 
 \begin_layout Plain Layout
 
-  labelMappingFile=$MlfDir$
+  labelMappingFile="$MlfDir$
 \backslash
-TIMIT.statelist
+TIMIT.statelist"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2044,7 +2044,7 @@ status open
 
 \begin_layout Plain Layout
 
-action=eval
+action="eval"
 \end_layout
 
 \end_inset
@@ -2077,7 +2077,7 @@ status open
 
 \begin_layout Plain Layout
 
-action=cv
+action="cv"
 \end_layout
 
 \end_inset
@@ -2216,23 +2216,23 @@ TIMIT_WriteBottleneck=[
 
 \begin_layout Plain Layout
 
-  action=write
+  action="write"
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath=$ExpDir$
+  modelPath="$ExpDir$
 \backslash
 TrainAutoEncoder
 \backslash
 model
 \backslash
-cntkSpeech.dnn 
+cntkSpeech.dnn" 
 \end_layout
 
 \begin_layout Plain Layout
 
-  outputNodeNames=L2.BFF.FF.P 
+  outputNodeNames="L2.BFF.FF.P" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -2242,7 +2242,7 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    readerType=HTKMLFReader
+    readerType="HTKMLFReader"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2257,9 +2257,9 @@ cntkSpeech.dnn
 
 \begin_layout Plain Layout
 
-    scpFile=$ScpDir$
+    scpFile="$ScpDir$
 \backslash
-TIMIT.core.scp.fbank.fullpath
+TIMIT.core.scp.fbank.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2278,7 +2278,7 @@ TIMIT.core.scp.fbank.fullpath
 
 \begin_layout Plain Layout
 
-    writerType=HTKMLFWriter
+    writerType="HTKMLFWriter"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2293,9 +2293,9 @@ TIMIT.core.scp.fbank.fullpath
 
 \begin_layout Plain Layout
 
-      scpFile=$ScpDir$
+      scpFile="$ScpDir$
 \backslash
-TIMIT.core.scp.bottleneck.fullpath
+TIMIT.core.scp.bottleneck.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2357,13 +2357,13 @@ TIMIT_DumpNodes=[
 
 \begin_layout Plain Layout
 
-  modelPath=$ExpDir$
+  modelPath="$ExpDir$
 \backslash
 TrainAutoEncoder
 \backslash
 model
 \backslash
-cntkSpeech.dnn 
+cntkSpeech.dnn" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -2461,7 +2461,15 @@ action
 
 \end_inset
 
-=train.
+=
+\begin_inset Quotes erd
+\end_inset
+
+train
+\begin_inset Quotes erd
+\end_inset
+
+.
  It indicates the section is for training.
 \end_layout
 
@@ -2542,7 +2550,15 @@ rnnType
 
 \end_inset
 
-=CLASSLM.
+=
+\begin_inset Quotes erd
+\end_inset
+
+CLASSLM
+\begin_inset Quotes erd
+\end_inset
+
+.
  The RNN network structure.
  It consists of an input layer, a recurrent hidden layer and an output layer
  (including classes and vocabularies).
@@ -2560,7 +2576,15 @@ trainingCriterion
 
 \end_inset
 
-=classCrossEntropyWithSoftmax.
+=
+\begin_inset Quotes erd
+\end_inset
+
+ClassCrossEntropyWithSoftmax
+\begin_inset Quotes erd
+\end_inset
+
+.
  Training criterion used in model training.
 \end_layout
 
@@ -2575,7 +2599,15 @@ nodeType
 
 \end_inset
 
-=Sigmoid.
+=
+\begin_inset Quotes erd
+\end_inset
+
+Sigmoid
+\begin_inset Quotes erd
+\end_inset
+
+.
  Non-linearity function used in hidden layer.
 \end_layout
 
@@ -2762,7 +2794,15 @@ gradUpdateType
 
 \end_inset
 
-=None.
+=
+\begin_inset Quotes erd
+\end_inset
+
+none
+\begin_inset Quotes erd
+\end_inset
+
+.
  How the gradients are computed.
  None stands for standard gradient update (no special treatment).
  One can also choose adagrad or rmsprop.
@@ -2779,7 +2819,11 @@ modelPath
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -2787,7 +2831,11 @@ RNN
 \backslash
 log
 \backslash
-modelRnnCNTK.
+modelRnnCNTK
+\begin_inset Quotes erd
+\end_inset
+
+.
  The resulting RNN model file location.
 \end_layout
 
@@ -2880,7 +2928,11 @@ wordclass
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -2890,7 +2942,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-vocab.txt.
+vocab.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  Word class file which contains words, their ids and their class ids, in
  the following format 
 \end_layout
@@ -2940,7 +2996,11 @@ file
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -2950,7 +3010,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-ptb.train.cntk.txt.
+ptb.train.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  The location of training data file which has the following format
 \end_layout
 
@@ -2988,7 +3052,11 @@ wordclass
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -2998,7 +3066,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-vocab.txt.
+vocab.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  Word class file which contains words, their ids and their class ids.
 \end_layout
 
@@ -3013,7 +3085,11 @@ file
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -3023,7 +3099,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-ptb.valid.cntk.txt.
+ptb.valid.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  Validation data file location.
  It has the same format as training data.
 \end_layout
@@ -3059,7 +3139,15 @@ action
 
 \end_inset
 
-=eval.
+=
+\begin_inset Quotes erd
+\end_inset
+
+eval
+\begin_inset Quotes erd
+\end_inset
+
+.
  It indicates the section is for test.
 \end_layout
 
@@ -3120,7 +3208,11 @@ wordclass
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -3130,7 +3222,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-vocab.txt.
+vocab.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  Word class file which contains words, their ids and their class ids.
 \end_layout
 
@@ -3145,7 +3241,11 @@ ile
 
 \end_inset
 
-=C:
+=
+\begin_inset Quotes erd
+\end_inset
+
+C:
 \backslash
 CNTKExp
 \backslash
@@ -3155,7 +3255,11 @@ data
 \backslash
 PennTreeBank
 \backslash
-ptb.test.cntk.txt.
+ptb.test.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+.
  Test data file location.
  It has the same format as training data.
 \end_layout
@@ -3212,7 +3316,15 @@ action
 
 \end_inset
 
-=train : this informs CNTK to train a model.
+=
+\begin_inset Quotes erd
+\end_inset
+
+train
+\begin_inset Quotes erd
+\end_inset
+
+ : this informs CNTK to train a model.
  
 \end_layout
 
@@ -3270,8 +3382,15 @@ rnnType
 
 \end_inset
 
-=CLASSLM : this informs CNTK to call class-based LSTM function in simplenetworkb
-uilder.
+=
+\begin_inset Quotes erd
+\end_inset
+
+CLASSLM
+\begin_inset Quotes erd
+\end_inset
+
+ : this informs CNTK to call class-based LSTM function in simplenetworkbuilder.
 \end_layout
 
 \begin_layout Itemize
@@ -3285,8 +3404,15 @@ trainingCriterion
 
 \end_inset
 
-=classcrossentropywithsoftmax specifies that training set to use class-based
- cross entropy
+=
+\begin_inset Quotes erd
+\end_inset
+
+ClassCrossEntropyWithSoftmax
+\begin_inset Quotes erd
+\end_inset
+
+ specifies that training set to use class-based cross entropy
 \end_layout
 
 \begin_layout Itemize
@@ -3300,8 +3426,15 @@ evalCriterion
 
 \end_inset
 
-=classcrossentropywithsoftmax specifies validation set also uses class-based
- cross entropy for evaluation.
+=
+\begin_inset Quotes erd
+\end_inset
+
+ClassCrossEntropyWithSoftmax
+\begin_inset Quotes erd
+\end_inset
+
+ specifies validation set also uses class-based cross entropy for evaluation.
 \end_layout
 
 \begin_layout Itemize
@@ -3369,13 +3502,21 @@ modelPath
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 temp
 \backslash
 penntreebank
 \backslash
-cntkdebug.dnn : this is the trained model file name.
+cntkdebug.dnn
+\begin_inset Quotes erd
+\end_inset
+
+ : this is the trained model file name.
 \end_layout
 
 \end_deeper
@@ -3405,7 +3546,15 @@ readerType
 
 \end_inset
 
-=LMSequenceReader : specifies using language model sequence reader.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LMSequenceReader
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies using language model sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3419,7 +3568,11 @@ wordclass
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3427,7 +3580,11 @@ penntreebank
 \backslash
 data
 \backslash
-wordclass.txt : specifies word class info.
+wordclass.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
@@ -3441,7 +3598,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3449,7 +3610,11 @@ penntreebank
 \backslash
 data
 \backslash
-ptb.train.cntk.txt : specifies training file
+ptb.train.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies training file
 \end_layout
 
 \end_deeper
@@ -3479,7 +3644,15 @@ readerType
 
 \end_inset
 
-=LMSequenceReader : specifies using language model sequence reader.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LMSequenceReader
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies using language model sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3493,7 +3666,11 @@ wordclass
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3501,7 +3678,11 @@ penntreebank
 \backslash
 data
 \backslash
-wordclass.txt : specifies word class info.
+wordclass.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
@@ -3515,7 +3696,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3523,7 +3708,11 @@ penntreebank
 \backslash
 data
 \backslash
-ptb.valid.cntk.txt : specifies validation file
+ptb.valid.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies validation file
 \end_layout
 
 \end_deeper
@@ -3556,7 +3745,15 @@ action
 
 \end_inset
 
-=eval : this informs CNTK to call simplenetwork evaluation.
+=
+\begin_inset Quotes erd
+\end_inset
+
+eval
+\begin_inset Quotes erd
+\end_inset
+
+ : this informs CNTK to call simplenetwork evaluation.
  
 \end_layout
 
@@ -3585,13 +3782,21 @@ modelPath
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 temp
 \backslash
 penntreebank
 \backslash
-cntkdebug.dnn : this is the trained model file name.
+cntkdebug.dnn
+\begin_inset Quotes erd
+\end_inset
+
+ : this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
@@ -3620,7 +3825,15 @@ readerType
 
 \end_inset
 
-=LMSequenceReader : specifies using sequence reader.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LMSequenceReader
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3634,7 +3847,11 @@ wordclass
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3642,7 +3859,11 @@ penntreebank
 \backslash
 data
 \backslash
-wordclass.txt : specifies word class info.
+wordclass.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
@@ -3656,7 +3877,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -3664,7 +3889,11 @@ penntreebank
 \backslash
 data
 \backslash
-ptb.test.cntk.txt : specifies testing file
+ptb.test.cntk.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies testing file
 \end_layout
 
 \end_deeper
@@ -3731,7 +3960,15 @@ action
 
 \end_inset
 
-=train : this informs CNTK to train a model.
+=
+\begin_inset Quotes erd
+\end_inset
+
+train
+\begin_inset Quotes erd
+\end_inset
+
+ : this informs CNTK to train a model.
  
 \end_layout
 
@@ -3832,7 +4069,15 @@ trainingCriterion
 
 \end_inset
 
-=crossentropywithsoftmax specifies that training set to use cross entropy
+=
+\begin_inset Quotes erd
+\end_inset
+
+ClassCrossEntropyWithSoftmax
+\begin_inset Quotes erd
+\end_inset
+
+ specifies that training set to use cross entropy
 \end_layout
 
 \begin_layout Itemize
@@ -3846,8 +4091,15 @@ evalCriterion
 
 \end_inset
 
-=crossentropywithsoftmax specifies validation set also uses cross entropy
- for evaluation.
+=
+\begin_inset Quotes erd
+\end_inset
+
+ClassCrossEntropyWithSoftmax
+\begin_inset Quotes erd
+\end_inset
+
+ specifies validation set also uses cross entropy for evaluation.
 \end_layout
 
 \begin_layout Itemize
@@ -3911,7 +4163,11 @@ modelPath
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 temp
 \backslash
@@ -3921,7 +4177,11 @@ ATIS
 \backslash
 temp
 \backslash
-cntkdebug.dnn : this is the trained model file name.
+cntkdebug.dnn
+\begin_inset Quotes erd
+\end_inset
+
+ : this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
@@ -4120,7 +4380,11 @@ token
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4128,7 +4392,11 @@ atis
 \backslash
 data
 \backslash
-input.txt : this specifies a list of word as input.
+input.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies a list of word as input.
  
 \end_layout
 
@@ -4159,7 +4427,11 @@ token
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4167,7 +4439,11 @@ atis
 \backslash
 data
 \backslash
-output.txt : this specifies output semantic labels.
+output.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies output semantic labels.
 \end_layout
 
 \end_deeper
@@ -4199,7 +4475,15 @@ readerType
 
 \end_inset
 
-=LUSequenceReader : specifies using sequence reader.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LUSequenceReader
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -4228,7 +4512,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4236,7 +4524,11 @@ ATIS
 \backslash
 data
 \backslash
-atis.dev.apos.pred.pos.head.IOB.simple: specifies validation file
+atis.dev.apos.pred.pos.head.IOB.simple
+\begin_inset Quotes erd
+\end_inset
+
+: specifies validation file
 \end_layout
 
 \end_deeper
@@ -4263,7 +4555,15 @@ action
 
 \end_inset
 
-=write: this informs CNTK to call simplenetwork evaluation and write outputs,
+=
+\begin_inset Quotes erd
+\end_inset
+
+write
+\begin_inset Quotes erd
+\end_inset
+
+: this informs CNTK to call simplenetwork evaluation and write outputs,
  which will be specified below.
  
 \end_layout
@@ -4293,7 +4593,11 @@ modelPath
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 temp
 \backslash
@@ -4303,7 +4607,11 @@ ATIS
 \backslash
 temp
 \backslash
-cntkdebug.dnn: this is the trained model file name.
+cntkdebug.dnn
+\begin_inset Quotes erd
+\end_inset
+
+: this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
@@ -4317,7 +4625,15 @@ outputNodeNames
 
 \end_inset
 
-=outputs:labels : this specifies which nodes to output results.
+=
+\begin_inset Quotes erd
+\end_inset
+
+outputs:labels
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies which nodes to output results.
  These node names are pre-spefied in CNTK's simple network builder.
  The node 
 \begin_inset Quotes eld
@@ -4365,7 +4681,15 @@ readerType
 
 \end_inset
 
-=LUSequenceReader : specifies using LUsequence reader.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LUSequenceReader
+\begin_inset Quotes erd
+\end_inset
+
+ : specifies using LUsequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -4379,7 +4703,11 @@ wordmap
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4387,8 +4715,12 @@ atis
 \backslash
 data
 \backslash
-inputmap.txt: specifies word map file, which should be the same as those
- used in training/validation readers.
+inputmap.txt
+\begin_inset Quotes erd
+\end_inset
+
+: specifies word map file, which should be the same as those used in training/va
+lidation readers.
  
 \end_layout
 
@@ -4403,7 +4735,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4411,7 +4747,11 @@ atis
 \backslash
 data
 \backslash
-atis.test.apos.pred.pos.head.IOB.simple: specifies testing file
+atis.test.apos.pred.pos.head.IOB.simple
+\begin_inset Quotes erd
+\end_inset
+
+: specifies testing file
 \end_layout
 
 \end_deeper
@@ -4441,7 +4781,15 @@ writerType
 
 \end_inset
 
-=LUSequenceWriter : this specifies using LUSequenceWriter.
+=
+\begin_inset Quotes erd
+\end_inset
+
+LUSequenceWriter
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies using LUSequenceWriter.
 \end_layout
 
 \begin_layout Itemize
@@ -4470,7 +4818,11 @@ file
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 temp
 \backslash
@@ -4480,7 +4832,11 @@ atis
 \backslash
 output
 \backslash
-output.rec.txt : the file name for writting decode results from LUSequenceWriter.
+output.rec.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : the file name for writting decode results from LUSequenceWriter.
  
 \end_layout
 
@@ -4495,7 +4851,11 @@ token
 
 \end_inset
 
-=c:
+=
+\begin_inset Quotes erd
+\end_inset
+
+c:
 \backslash
 exp
 \backslash
@@ -4503,7 +4863,11 @@ atis
 \backslash
 data
 \backslash
-output.txt : this specifies the semantic labels.
+output.txt
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies the semantic labels.
  
 \end_layout
 
