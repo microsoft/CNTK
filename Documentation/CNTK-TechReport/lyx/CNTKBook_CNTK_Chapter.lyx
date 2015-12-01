@@ -161,7 +161,7 @@ mnistTrain=[
 
 \begin_layout Plain Layout
 
-  action=train 
+  action="train"
 \end_layout
 
 \begin_layout Plain Layout
@@ -175,18 +175,18 @@ mnistTrain=[
 
 \begin_layout Plain Layout
 
-    networkDescription=c:
+    networkDescription="c:
 \backslash
 cntk
 \backslash
 config
 \backslash
-sample.ndl 
+sample.ndl" 
 \end_layout
 
 \begin_layout Plain Layout
 
-    run=ndlMacroUse 
+    run=ndlMacroUse
 \end_layout
 
 \begin_layout Plain Layout
@@ -205,13 +205,13 @@ sample.ndl
 
 \begin_layout Plain Layout
 
-    modelPath=c:
+    modelPath="c:
 \backslash
 cntk
 \backslash
 model
 \backslash
-mnist.cn 
+mnist.cn"
 \end_layout
 
 \begin_layout Plain Layout
@@ -250,12 +250,12 @@ mnist.cn
 
 \begin_layout Plain Layout
 
-    readerType=UCIFastReader 
+    readerType="UCIFastReader"
 \end_layout
 
 \begin_layout Plain Layout
 
-    file=c:
+    file="c:
 \backslash
 cntk
 \backslash
@@ -263,7 +263,7 @@ data
 \backslash
 mnist
 \backslash
-mnist_train.txt 
+mnist_train.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -316,7 +316,7 @@ mnist_train.txt
 
 \begin_layout Plain Layout
 
-	  labelMappingFile=c:
+	  labelMappingFile="c:
 \backslash
 cntk
 \backslash
@@ -324,7 +324,7 @@ data
 \backslash
 mnist
 \backslash
-mnistlabels.txt
+mnistlabels.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2194,7 +2194,7 @@ Gradient Check
 \begin_layout Itemize
 
 \emph on
-gradientcheck
+gradientCheck
 \emph default
 
 \begin_inset Index idx
@@ -2280,7 +2280,7 @@ status open
 
 \begin_layout Plain Layout
 
-    readerType=UCIFastReader 
+    readerType="UCIFastReader"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2289,7 +2289,7 @@ status open
 
 \begin_layout Plain Layout
 
-    file=c:
+    file="c:
 \backslash
 cntk
 \backslash
@@ -2297,7 +2297,7 @@ data
 \backslash
 mnist
 \backslash
-mnist_train.txt 
+mnist_train.txt" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -2350,7 +2350,7 @@ mnist_train.txt
 
 \begin_layout Plain Layout
 
-	  labelMappingFile=c:
+	  labelMappingFile="c:
 \backslash
 cntk
 \backslash
@@ -2358,7 +2358,7 @@ data
 \backslash
 mnist
 \backslash
-mnistlabels.txt
+mnistlabels.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2553,22 +2553,22 @@ reader=[
 
 \begin_layout Plain Layout
 
-  readerType=HTKMLFReader
+  readerType="HTKMLFReader"
 \end_layout
 
 \begin_layout Plain Layout
 
-  readMethod=rollingWindow
+  readMethod="rollingWindow"
 \end_layout
 
 \begin_layout Plain Layout
 
-  miniBatchMode=Partial
+  miniBatchMode="partial"
 \end_layout
 
 \begin_layout Plain Layout
 
-  randomize=Auto
+  randomize="auto"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2588,9 +2588,9 @@ reader=[
 
 \begin_layout Plain Layout
 
-    scpFile=$ScpDir$
+    scpFile="$ScpDir$
 \backslash
-TIMIT.train.scp.fbank.fullpath
+TIMIT.train.scp.fbank.fullpath"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2610,9 +2610,9 @@ TIMIT.train.scp.fbank.fullpath
 
 \begin_layout Plain Layout
 
-    mlfFile=$MlfDir$
+    mlfFile="$MlfDir$
 \backslash
-TIMIT.train.align_cistate.mlf.cntk
+TIMIT.train.align_cistate.mlf.cntk"
 \end_layout
 
 \begin_layout Plain Layout
@@ -2622,9 +2622,9 @@ TIMIT.train.align_cistate.mlf.cntk
 
 \begin_layout Plain Layout
 
-    labelMappingFile=$MlfDir$
+    labelMappingFile="$MlfDir$
 \backslash
-TIMIT.statelist
+TIMIT.statelist"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3255,7 +3255,7 @@ status open
 
 \begin_layout Plain Layout
 
-    readerType=LMSequenceReader
+    readerType="LMSequenceReader"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3275,16 +3275,16 @@ status open
 
 \begin_layout Plain Layout
 
-    wordclass=$DataDir$
+    wordclass="$DataDir$
 \backslash
-wordclass.txt
+wordclass.txt"
 \end_layout
 
 \begin_layout Plain Layout
 
-    file=$DataDir$
+    file="$DataDir$
 \backslash
-penntreebank.train.txt
+penntreebank.train.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3598,12 +3598,12 @@ status open
 
 \begin_layout Plain Layout
 
-    readerType=LUSequenceReader 
+    readerType="LUSequenceReader" 
 \end_layout
 
 \begin_layout Plain Layout
 
-    randomize=None
+    randomize="none"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3617,7 +3617,7 @@ status open
 
 \begin_layout Plain Layout
 
-    nbruttineachrecurrentiter=10
+    nbrUttsInEachRecurrentIter=10
 \end_layout
 
 \begin_layout Plain Layout
@@ -3631,16 +3631,16 @@ status open
 
 \begin_layout Plain Layout
 
-    wordmap=$DataDir$
+    wordMap="$DataDir$
 \backslash
-inputmap.txt
+inputmap.txt"
 \end_layout
 
 \begin_layout Plain Layout
 
-    file=$DataDir$
+    file="$DataDir$
 \backslash
-atis.train.IOB
+atis.train.IOB"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3654,7 +3654,7 @@ atis.train.IOB
 
 \begin_layout Plain Layout
 
-      usewordmap=true
+      useWordMap=true
 \end_layout
 
 \begin_layout Plain Layout
@@ -3673,9 +3673,9 @@ atis.train.IOB
 
 \begin_layout Plain Layout
 
-      token=$DataDir$
+      token="$DataDir$
 \backslash
-input.txt
+input.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3704,9 +3704,9 @@ input.txt
 
 \begin_layout Plain Layout
 
-      token=$DataDir$
+      token="$DataDir$
 \backslash
-output.txt
+output.txt"
 \end_layout
 
 \begin_layout Plain Layout
@@ -3777,12 +3777,14 @@ randomize
 \begin_layout Itemize
 
 \emph on
-nbruttsineachrecurrentiter
+nbrUttsInEachRecurrentIter
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-nbruttsineachrecurrentiter
+
+\emph on
+nbrUttsInEachRecurrentIter
 \end_layout
 
 \end_inset
@@ -3822,14 +3824,16 @@ unk
 \begin_layout Itemize
 
 \emph on
-wordmap
+wordMap
 \emph default
 
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-wordmap
+
+\emph on
+wordMap
 \end_layout
 
 \end_inset
@@ -3970,7 +3974,7 @@ labelIn
 
 \begin_deeper
 \begin_layout Itemize
-usewordmap – [Ture, False] specifies if using word map to map input words
+useWordMap – [Ture, False] specifies if using word map to map input words
  to other input words.
  
 \end_layout
@@ -4564,26 +4568,26 @@ svd=[
 
 \begin_layout Plain Layout
 
-  action=SVD 
+  action="SVD" 
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath=train
+  modelPath="train
 \backslash
-lstm.model.67
+lstm.model.67"
 \end_layout
 
 \begin_layout Plain Layout
 
-  outputmodelPath=train
+  outputModelPath="train
 \backslash
-lstm.model.svd
+lstm.model.svd"
 \end_layout
 
 \begin_layout Plain Layout
 
-  SVDConfig=NodeConfigs 
+  SVDConfig="nodeConfigs"
 \end_layout
 
 \begin_layout Plain Layout
@@ -4614,12 +4618,12 @@ modelPath – specifies where to load the initial model
 status open
 
 \begin_layout Plain Layout
-outputmodelPath
+outputModelPath
 \end_layout
 
 \end_inset
 
-outputmodelPath – specifies where to save the revised model 
+outputModelPath – specifies where to save the revised model 
 \end_layout
 
 \begin_layout Itemize
@@ -5156,21 +5160,21 @@ topoplot=[
 
 \begin_layout Plain Layout
 
-  action=plot
+  action="plot"
 \end_layout
 
 \begin_layout Plain Layout
 
-  modelPath= train
+  modelPath="train
 \backslash
-lstm.model.0 
+lstm.model.0"
 \end_layout
 
 \begin_layout Plain Layout
 
-  outputdotFile=train
+  outputdotFile="train
 \backslash
-lstm.model.dot # this specifies the dot file to output         
+lstm.model.dot" # this specifies the dot file to output         
 \end_layout
 
 \begin_layout Plain Layout
@@ -5180,14 +5184,14 @@ lstm.model.dot # this specifies the dot file to output
 
 \begin_layout Plain Layout
 
-  outputfile=train
+  outputFile="train
 \backslash
-lstm.model.jpg  # this specifies the rendered image
+lstm.model.jpg"  # this specifies the rendered image
 \end_layout
 
 \begin_layout Plain Layout
 
-  RenderCmd="d:
+  renderCmd="d:
 \backslash
 Tools
 \backslash
@@ -5313,13 +5317,13 @@ status open
 
 \begin_layout Plain Layout
 
-stderr=c:
+stderr="c:
 \backslash
 cntk
 \backslash
 log
 \backslash
-cntk
+cntk"
 \end_layout
 
 \end_inset
@@ -5402,7 +5406,7 @@ status open
 
 \begin_layout Plain Layout
 
-precision=float
+precision="float"
 \end_layout
 
 \end_inset
@@ -5662,7 +5666,7 @@ mnistTrain=[
 
 \begin_layout Plain Layout
 
-  action=train 
+  action="train" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -5686,7 +5690,7 @@ mnistTest=[
 
 \begin_layout Plain Layout
 
-  action=eval 
+  action="eval" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -5734,11 +5738,11 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config stderr=c:
+cntk configFile=yourExp.config stderr="c:
 \backslash
 temp
 \backslash
-newpath
+newpath"
 \end_layout
 
 \end_inset
@@ -5777,7 +5781,8 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp.config mnistTrain=[reader=[file=mynewfile.txt]] 
+cntk configFile=yourExp.config mnistTrain=[reader=[file="mynewfile.txt"]]
+ 
 \end_layout
 
 \end_inset
@@ -5847,7 +5852,8 @@ status open
 
 \begin_layout Plain Layout
 
-cntk configFile=yourExp1.config mnistTrain=[reader=[file=mynewfile.txt]] 
+cntk configFile=yourExp1.config mnistTrain=[reader=[file="mynewfile.txt"]]
+ 
 \end_layout
 
 \end_inset
@@ -5999,9 +6005,9 @@ command=SpeechTrain
 
 \begin_layout Plain Layout
 
-stderr=$Root$
+stderr="$Root$
 \backslash
-$RunName$.log 
+$RunName$.log" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -6015,9 +6021,9 @@ speechTrain=[
 
 \begin_layout Plain Layout
 
-  modelPath=$Root$
+  modelPath="$Root$
 \backslash
-$RunName$.cn 
+$RunName$.cn" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -6041,17 +6047,17 @@ $RunName$.cn
 
 \begin_layout Plain Layout
 
-  	  type=Real 
+  	  type="real"
 \end_layout
 
 \begin_layout Plain Layout
 
-  	  dim=$DataSet1_Dim$ 
+  	  dim="$DataSet1_Dim$" 
 \end_layout
 
 \begin_layout Plain Layout
 
-  	  file=$DataSet1_Features$ 
+  	  file="$DataSet1_Features$" 
 \end_layout
 
 \begin_layout Plain Layout
@@ -6195,13 +6201,13 @@ status open
 
 \begin_layout Plain Layout
 
-stderr=c:
+stderr="c:
 \backslash
 cntk
 \backslash
 log
 \backslash
-cntk # "_mnistTrain_mnistTest.log" 
+cntk" # "_mnistTrain_mnistTest.log" 
 \end_layout
 
 \end_inset
