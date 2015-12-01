@@ -490,7 +490,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {
         GPUMatrix<ElemType> slice(0);
+        return slice;
+    }
 
+    template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::RowSlice(size_t startRow, size_t numRows) const
+    {
+        GPUMatrix<ElemType> slice(0); 
         return slice;
     }
 

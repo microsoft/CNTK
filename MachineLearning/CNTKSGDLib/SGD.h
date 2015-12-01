@@ -150,6 +150,14 @@ protected:
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
+    intargvector m_maxSamplesInRAM; 
+    // This is related with subminibatch implementation 
+    // maxSamplesInRAM denotes how many samples we used in forward-backward on net. 
+    // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM. 
+    // To mitigate this issue, we adopt the sub-minibatch implementation, where 
+    // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM[epoch]
+    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
+
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -485,6 +493,28 @@ protected:
 
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
+    void ForwardBackward(ComputationNetwork& net, const std::vector<ComputationNodeBasePtr>& evalNodes,  shared_ptr<ComputationNodeBase> criterionNode, bool dobackpropogate=true)
+    {
+        net.Evaluate(evalNodes);
+        // only compute gradient when learning rate is large enough
+        if (dobackpropogate)
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
+            // ==============================
+            net.ComputeGradient<ElemType>(criterionNode);
+            // TODO: we should split Evaluate() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
+        }
+        else
+        {
+            // use only the first criterion. Is there any possibility to use more?
+            // ==============================
+            // forward prop
+            // ==============================
+            net.Evaluate(criterionNode);
+        }
+    }
 };
 
 }}}
