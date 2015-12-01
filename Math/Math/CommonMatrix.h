@@ -7,6 +7,7 @@
 
 #include <string>
 #include <stdint.h>
+#include "Basics.h"
 
 #define DEVICEID_TYPE int
 // and the following magic values
