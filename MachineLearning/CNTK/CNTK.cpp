@@ -1657,7 +1657,7 @@ void PrintBuiltInfo()
     fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
 #endif 
 #ifdef _CUB_PATH_
-    fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUB_PATH_);
+    fprintf(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
 #endif 
 #ifdef _GIT_EXIST
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
