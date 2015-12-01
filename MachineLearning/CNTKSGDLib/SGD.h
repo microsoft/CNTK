@@ -105,62 +105,6 @@ struct SGDParams : public ScriptableObjects::Object
 
     //SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
-    //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    SGDParams(const floatargvector& learningRatesPerMB,
-              const floatargvector& learningRatesPerSample,
-              const intargvector& mbSize,
-              const intargvector& subMBSize, 
-              bool truncated,
-              const size_t fullEpochsOffset,
-              const size_t fullTotalMaxEpochs,
-              const size_t epochSize,
-              const size_t maxEpochs,
-              const wstring& modelPath,
-              const floatargvector& momentumPerMB,
-              const floatargvector& momentumPerSample,
-              const bool gradientClippingWithTruncation,
-              const double clippingThresholdPerSample,
-              const LearningRateSearchAlgorithm autoLearnRateSearchType,
-              const double increaseLearnRateIfImproveMoreThan,
-              const double learnRateIncreaseFactor,
-              const double reduceLearnRateIfImproveLessThan,
-              const bool continueReduce,
-              const double learnRateDecreaseFactor,
-              floatargvector dropoutRates,
-              const bool loadBestModel,
-              const intargvector& numMiniBatch4LRSearch,
-              const size_t numPrevLearnRates,
-              const size_t numBestSearchEpoch,
-              const int traceLevel,
-              const bool progressTracing,
-              const size_t numMBsToShowResult,
-              const size_t numMBsToCUDAProfile,
-              const size_t maxTempMemSizeInSamplesForCNN,
-              const GradientUpdateInfo gradUpdateType,
-              const bool keepCheckPointFiles,
-              const AdaptationRegType adaptationRegType,
-              const double adaptationRegWeight,
-              const wstring trainCriterionNodeName,
-              const wstring evalCriterionNodeName,
-              const bool doGradientCheck,
-              const double gradientCheckSigDigit,
-              const bool validateAfterModelReloading,
-              RMSPropInfo rpi,
-              size_t learnRateAdjustInterval,
-              const bool UsingAllDataForPreComputed,
-              const bool needAveMultiplier,
-              const double L2RegWeight,
-              const double L1RegWeight,
-              const bool autoAdjustMinibatch,
-              const size_t minibatchSizeTuningFrequency,
-              const size_t minibatchSizeTuningMax,
-              const bool useCVSetControlLRIfCVExists,
-              const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin,
-              const double hsmoothingWeight,
-              const double frameDropThresh,
-              const bool doreferencealign);
-
 protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
@@ -201,12 +145,19 @@ protected:
     //bool m_needToNormalizeMomentumByParallUtterance;
 
     intargvector m_mbSize;
-    intargvector m_numSubMinibatch; 
     bool m_truncated;           // do BPTT
     // BUGBUG: The 'Truncated' option is duplicated in the reader and must be set to the same there (e.g. by defining in the config on an outer enclosing level, like current samples).
     //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
     // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
     // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
+    intargvector m_maxSamplesInRAM; 
+    // This is related with subminibatch implementation 
+    // maxSamplesInRAM denotes how many samples we used in forward-backward on net. 
+    // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM. 
+    // To mitigate this issue, we adopt the sub-minibatch implementation, where 
+    // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM[epoch]
+    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
+
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -266,7 +217,6 @@ protected:
     bool m_doUnitTest;
 
     bool m_useAllDataForPreComputedNode;
-
 
     // Parallel training
     ParallelizationMethod m_parallelizationMethod;
