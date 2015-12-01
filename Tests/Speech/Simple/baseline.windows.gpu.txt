@@ -4447,47 +4447,47 @@ already there from last epoch
 Starting minibatch loop.
 randomordering: 1995 retries for 10000 elements (19.9%) to ensure window condition
 randomordering: recached sequence for seed 49: 954, 533, ...
- Epoch[50 of 50]-Minibatch[   1-  10 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16219635; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.35556s; TotalTimePerSample = 1.42223ms; SamplesPerSecond = 703
- Epoch[50 of 50]-Minibatch[  11-  20 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15900116; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04740s; TotalTimePerSample = 0.18962ms; SamplesPerSecond = 5273
- Epoch[50 of 50]-Minibatch[  21-  30 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13724194; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04737s; TotalTimePerSample = 0.18949ms; SamplesPerSecond = 5277
- Epoch[50 of 50]-Minibatch[  31-  40 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14847681; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04733s; TotalTimePerSample = 0.18931ms; SamplesPerSecond = 5282
- Epoch[50 of 50]-Minibatch[  41-  50 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.21968488; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.04727s; TotalTimePerSample = 0.18908ms; SamplesPerSecond = 5288
- Epoch[50 of 50]-Minibatch[  51-  60 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14950464; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04719s; TotalTimePerSample = 0.18875ms; SamplesPerSecond = 5298
- Epoch[50 of 50]-Minibatch[  61-  70 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13677826; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04733s; TotalTimePerSample = 0.18931ms; SamplesPerSecond = 5282
- Epoch[50 of 50]-Minibatch[  71-  80 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18400269; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.04721s; TotalTimePerSample = 0.18884ms; SamplesPerSecond = 5295
- Epoch[50 of 50]-Minibatch[  81-  90 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13719153; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04712s; TotalTimePerSample = 0.18848ms; SamplesPerSecond = 5305
- Epoch[50 of 50]-Minibatch[  91- 100 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15287048; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04767s; TotalTimePerSample = 0.19069ms; SamplesPerSecond = 5244
+ Epoch[50 of 50]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.16219635; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.35556s; TotalTimePerSample = 1.42223ms; SamplesPerSecond = 703
+ Epoch[50 of 50]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.15900116; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04740s; TotalTimePerSample = 0.18962ms; SamplesPerSecond = 5273
+ Epoch[50 of 50]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.13724194; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04737s; TotalTimePerSample = 0.18949ms; SamplesPerSecond = 5277
+ Epoch[50 of 50]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.14847681; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04733s; TotalTimePerSample = 0.18931ms; SamplesPerSecond = 5282
+ Epoch[50 of 50]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.21968488; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.04727s; TotalTimePerSample = 0.18908ms; SamplesPerSecond = 5288
+ Epoch[50 of 50]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.14950464; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04719s; TotalTimePerSample = 0.18875ms; SamplesPerSecond = 5298
+ Epoch[50 of 50]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.13677826; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04733s; TotalTimePerSample = 0.18931ms; SamplesPerSecond = 5282
+ Epoch[50 of 50]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.18400269; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.04721s; TotalTimePerSample = 0.18884ms; SamplesPerSecond = 5295
+ Epoch[50 of 50]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.13719153; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04712s; TotalTimePerSample = 0.18848ms; SamplesPerSecond = 5305
+ Epoch[50 of 50]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.15287048; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04767s; TotalTimePerSample = 0.19069ms; SamplesPerSecond = 5244
 WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[50 of 50]-Minibatch[ 101- 110 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13952893; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.04729s; TotalTimePerSample = 0.18916ms; SamplesPerSecond = 5286
- Epoch[50 of 50]-Minibatch[ 111- 120 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12584436; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.04724s; TotalTimePerSample = 0.18896ms; SamplesPerSecond = 5292
- Epoch[50 of 50]-Minibatch[ 121- 130 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15119482; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.04701s; TotalTimePerSample = 0.18803ms; SamplesPerSecond = 5318
- Epoch[50 of 50]-Minibatch[ 131- 140 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13055371; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04721s; TotalTimePerSample = 0.18884ms; SamplesPerSecond = 5295
- Epoch[50 of 50]-Minibatch[ 141- 150 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12967017; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04719s; TotalTimePerSample = 0.18876ms; SamplesPerSecond = 5297
- Epoch[50 of 50]-Minibatch[ 151- 160 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15023340; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.04749s; TotalTimePerSample = 0.18996ms; SamplesPerSecond = 5264
- Epoch[50 of 50]-Minibatch[ 161- 170 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14382349; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04699s; TotalTimePerSample = 0.18797ms; SamplesPerSecond = 5320
- Epoch[50 of 50]-Minibatch[ 171- 180 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.08575903; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.04714s; TotalTimePerSample = 0.18858ms; SamplesPerSecond = 5302
- Epoch[50 of 50]-Minibatch[ 181- 190 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17751733; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04711s; TotalTimePerSample = 0.18845ms; SamplesPerSecond = 5306
- Epoch[50 of 50]-Minibatch[ 191- 200 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20404810; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04745s; TotalTimePerSample = 0.18980ms; SamplesPerSecond = 5268
- Epoch[50 of 50]-Minibatch[ 201- 210 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17242993; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04755s; TotalTimePerSample = 0.19020ms; SamplesPerSecond = 5257
- Epoch[50 of 50]-Minibatch[ 211- 220 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12448657; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04743s; TotalTimePerSample = 0.18970ms; SamplesPerSecond = 5271
- Epoch[50 of 50]-Minibatch[ 221- 230 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14477075; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.04730s; TotalTimePerSample = 0.18921ms; SamplesPerSecond = 5285
- Epoch[50 of 50]-Minibatch[ 231- 240 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16081714; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04736s; TotalTimePerSample = 0.18945ms; SamplesPerSecond = 5278
- Epoch[50 of 50]-Minibatch[ 241- 250 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15686157; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04742s; TotalTimePerSample = 0.18970ms; SamplesPerSecond = 5271
- Epoch[50 of 50]-Minibatch[ 251- 260 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.11661328; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04693s; TotalTimePerSample = 0.18772ms; SamplesPerSecond = 5327
- Epoch[50 of 50]-Minibatch[ 261- 270 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17682983; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04731s; TotalTimePerSample = 0.18925ms; SamplesPerSecond = 5283
- Epoch[50 of 50]-Minibatch[ 271- 280 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12256445; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.04750s; TotalTimePerSample = 0.18999ms; SamplesPerSecond = 5263
- Epoch[50 of 50]-Minibatch[ 281- 290 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20207422; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.04712s; TotalTimePerSample = 0.18847ms; SamplesPerSecond = 5305
- Epoch[50 of 50]-Minibatch[ 291- 300 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14701465; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04783s; TotalTimePerSample = 0.19133ms; SamplesPerSecond = 5226
- Epoch[50 of 50]-Minibatch[ 301- 310 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14405762; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04732s; TotalTimePerSample = 0.18928ms; SamplesPerSecond = 5283
- Epoch[50 of 50]-Minibatch[ 311- 320 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13430029; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04707s; TotalTimePerSample = 0.18826ms; SamplesPerSecond = 5311
- Epoch[50 of 50]-Minibatch[ 321- 330 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18196143; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04719s; TotalTimePerSample = 0.18876ms; SamplesPerSecond = 5297
- Epoch[50 of 50]-Minibatch[ 331- 340 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16981787; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04731s; TotalTimePerSample = 0.18924ms; SamplesPerSecond = 5284
- Epoch[50 of 50]-Minibatch[ 341- 350 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18865869; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04708s; TotalTimePerSample = 0.18832ms; SamplesPerSecond = 5310
- Epoch[50 of 50]-Minibatch[ 351- 360 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14027637; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04707s; TotalTimePerSample = 0.18828ms; SamplesPerSecond = 5311
- Epoch[50 of 50]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17351953; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04706s; TotalTimePerSample = 0.18825ms; SamplesPerSecond = 5312
- Epoch[50 of 50]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13019482; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04705s; TotalTimePerSample = 0.18820ms; SamplesPerSecond = 5313
- Epoch[50 of 50]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.19873682; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.04735s; TotalTimePerSample = 0.18940ms; SamplesPerSecond = 5279
- Epoch[50 of 50]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12178662; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.04755s; TotalTimePerSample = 0.19019ms; SamplesPerSecond = 5257
+ Epoch[50 of 50]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.13952893; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.04729s; TotalTimePerSample = 0.18916ms; SamplesPerSecond = 5286
+ Epoch[50 of 50]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.12584436; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.04724s; TotalTimePerSample = 0.18896ms; SamplesPerSecond = 5292
+ Epoch[50 of 50]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.15119482; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.04701s; TotalTimePerSample = 0.18803ms; SamplesPerSecond = 5318
+ Epoch[50 of 50]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.13055371; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04721s; TotalTimePerSample = 0.18884ms; SamplesPerSecond = 5295
+ Epoch[50 of 50]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.12967017; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04719s; TotalTimePerSample = 0.18876ms; SamplesPerSecond = 5297
+ Epoch[50 of 50]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.15023340; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.04749s; TotalTimePerSample = 0.18996ms; SamplesPerSecond = 5264
+ Epoch[50 of 50]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.14382349; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04699s; TotalTimePerSample = 0.18797ms; SamplesPerSecond = 5320
+ Epoch[50 of 50]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.08575903; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.04714s; TotalTimePerSample = 0.18858ms; SamplesPerSecond = 5302
+ Epoch[50 of 50]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.17751733; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04711s; TotalTimePerSample = 0.18845ms; SamplesPerSecond = 5306
+ Epoch[50 of 50]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.20404810; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04745s; TotalTimePerSample = 0.18980ms; SamplesPerSecond = 5268
+ Epoch[50 of 50]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.17242993; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04755s; TotalTimePerSample = 0.19020ms; SamplesPerSecond = 5257
+ Epoch[50 of 50]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.12448657; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04743s; TotalTimePerSample = 0.18970ms; SamplesPerSecond = 5271
+ Epoch[50 of 50]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.14477075; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.04730s; TotalTimePerSample = 0.18921ms; SamplesPerSecond = 5285
+ Epoch[50 of 50]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.16081714; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04736s; TotalTimePerSample = 0.18945ms; SamplesPerSecond = 5278
+ Epoch[50 of 50]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.15686157; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.04742s; TotalTimePerSample = 0.18970ms; SamplesPerSecond = 5271
+ Epoch[50 of 50]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.11661328; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.04693s; TotalTimePerSample = 0.18772ms; SamplesPerSecond = 5327
+ Epoch[50 of 50]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.17682983; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04731s; TotalTimePerSample = 0.18925ms; SamplesPerSecond = 5283
+ Epoch[50 of 50]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.12256445; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.04750s; TotalTimePerSample = 0.18999ms; SamplesPerSecond = 5263
+ Epoch[50 of 50]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.20207422; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.04712s; TotalTimePerSample = 0.18847ms; SamplesPerSecond = 5305
+ Epoch[50 of 50]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.14701465; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.04783s; TotalTimePerSample = 0.19133ms; SamplesPerSecond = 5226
+ Epoch[50 of 50]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.14405762; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04732s; TotalTimePerSample = 0.18928ms; SamplesPerSecond = 5283
+ Epoch[50 of 50]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.13430029; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.04707s; TotalTimePerSample = 0.18826ms; SamplesPerSecond = 5311
+ Epoch[50 of 50]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.18196143; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.04719s; TotalTimePerSample = 0.18876ms; SamplesPerSecond = 5297
+ Epoch[50 of 50]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.16981787; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04731s; TotalTimePerSample = 0.18924ms; SamplesPerSecond = 5284
+ Epoch[50 of 50]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.18865869; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.04708s; TotalTimePerSample = 0.18832ms; SamplesPerSecond = 5310
+ Epoch[50 of 50]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.14027637; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04707s; TotalTimePerSample = 0.18828ms; SamplesPerSecond = 5311
+ Epoch[50 of 50]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.17351953; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.04706s; TotalTimePerSample = 0.18825ms; SamplesPerSecond = 5312
+ Epoch[50 of 50]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.13019482; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.04705s; TotalTimePerSample = 0.18820ms; SamplesPerSecond = 5313
+ Epoch[50 of 50]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.19873682; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.04735s; TotalTimePerSample = 0.18940ms; SamplesPerSecond = 5279
+ Epoch[50 of 50]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.12178662; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.04755s; TotalTimePerSample = 0.19019ms; SamplesPerSecond = 5257
 Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15332235; EvalErrPerSample = 0.073799998; AvgLearningRatePerSample = 0.00400000019; EpochTime=2.209268
 CNTKCommandTrainEnd: Simple_Demo
 reading uci file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\Speech\Data/SimpleDataTest.txt
