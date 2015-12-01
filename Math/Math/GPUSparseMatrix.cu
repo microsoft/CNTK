@@ -50,6 +50,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = true;
 #endif
 
+    // return col pointer, which is immediately following the non-zero element
+    // in memory format is always in the following order:
+    // Non-zero data elements, Full index locations, compressed index locations
+    // In CSR row data is compressed, in CSC col data is compressed
+    // Special Note: for the matrix may be a read-only column slice view of another
+    // matrix (only supported for CSC format today) and hence the NzValues needs
+    // to be offset accordingly.
+    template<class ElemType>
+    const ElemType* GPUSparseMatrix<ElemType>::NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+    template<class ElemType>
+    ElemType* GPUSparseMatrix<ElemType>::NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+    template<class ElemType>
+    size_t GPUSparseMatrix<ElemType>::NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
+
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice)
     {
