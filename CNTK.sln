@@ -467,6 +467,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{669B6203-967
 		Tests\Speech\SVD\testcases.yml = Tests\Speech\SVD\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\Simple\baseline.cpu.txt = Tests\Speech\Simple\baseline.cpu.txt
+		Tests\Speech\Simple\baseline.gpu.txt = Tests\Speech\Simple\baseline.gpu.txt
+		Tests\Speech\Simple\baseline.windows.cpu.txt = Tests\Speech\Simple\baseline.windows.cpu.txt
+		Tests\Speech\Simple\baseline.windows.gpu.txt = Tests\Speech\Simple\baseline.windows.gpu.txt
+		Tests\Speech\Simple\cntk.config = Tests\Speech\Simple\cntk.config
+		Tests\Speech\Simple\run-test = Tests\Speech\Simple\run-test
+		Tests\Speech\Simple\testcases.yml = Tests\Speech\Simple\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -758,5 +769,6 @@ Global
 		{76F9323D-34A1-43A5-A594-C4798931FF21} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{669B6203-9675-4950-B526-7CD72D55E5E1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 	EndGlobalSection
 EndGlobal
