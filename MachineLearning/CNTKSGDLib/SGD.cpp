@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //       truncated = truncation length
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         m_truncated = configSGD(L"truncated", false);
-        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", ConfigRecordType::Array(intargvector(vector<int>{ 0 })));
+        m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t)SIZE_MAX);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
@@ -1694,10 +1694,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         SubminibatchDispatcher<ElemType> smbDisplatcher; 
-        size_t samplesInRAM = m_maxSamplesInRAM[epochNumber]; 
+        size_t samplesInRAM = m_maxSamplesInRAM; 
         // convert it to SubminibatchRequested 
         size_t numSubminibatchRequested = 0; 
-        if (samplesInRAM > 0)   // if samplesInRAM = 0 , we will not use subminibatch dispatcher
+        if (samplesInRAM < SIZE_MAX)   // if samplesInRAM = 0 , we will not use subminibatch dispatcher
         {
             size_t nParallelSequences = trainSetDataReader->GetNumParallelSequences(); 
             size_t estimatedMBSize = tunedMBSize * nParallelSequences; 
@@ -1726,7 +1726,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             fprintf(stderr, ", Distributed reading is ENABLED");
         }
-        if (numSubminibatchRequested > 0)
+        if (numSubminibatchRequested > 1)
         {
             fprintf(stderr, ", with maximum %d samples in RAM", (int)samplesInRAM);
         }
@@ -1751,13 +1751,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 break;  // end of epoch
             nSamplesSinceLastModelSync += actualMBSize;
 
-            if (numSubminibatchRequested > 0)
+            if (numSubminibatchRequested > 1)
             {
                 actualNumSubminibatch = smbDisplatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchRequested); 
             }
             else
             {
-                actualNumSubminibatch = 0;
+                actualNumSubminibatch = 1;
             }
             
             // node data was changed
@@ -1797,7 +1797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //compute eval node first since when gradient is computed the forward function values
                 //may be changed and need to be recomputed when gradient and function value share the same matrix
-                if (actualNumSubminibatch > 0)
+                if (actualNumSubminibatch > 1)
                 {
                     for (size_t ismb = 0; ismb < actualNumSubminibatch; ismb++)
                     {

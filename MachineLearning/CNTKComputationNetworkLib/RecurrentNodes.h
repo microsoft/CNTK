@@ -473,7 +473,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                 }
-
                 if (allAtBoundary)
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
@@ -487,8 +486,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout);
                     pExportedState = pState;
                 }
-                
-               
             }
             if (dir != -1 && dir != 1)
             {
