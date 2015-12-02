@@ -58,6 +58,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
     long recordCount = 0;
     long orgRecordCount = (long)labels->size();
     long lineCount = 0;
+    long tokenCount = 0;
     bool bAtEOS = false; /// whether the reader is at the end of sentence position
     SequencePosition sequencePositionLast(0, 0, 0);
 
@@ -86,6 +87,9 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
             bAtEOS = true;
             continue;
         }
+
+        // got a token
+        tokenCount++;
 
         vstr = wsep_string(ch, L" ");
         if (vstr.size() < 2)
@@ -142,7 +146,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         prvat = (int)ptr->labelPos;
     }
 
-    fprintf(stderr, "BatchLUSequenceParser: Parsed %ld lines.\n", (long)lineCount);
+    fprintf(stderr, "BatchLUSequenceParser: Parsed %ld lines with a total of %ld+%ld tokens.\n", (long)lineCount, (long)(tokenCount-lineCount)/*exclude EOS*/, (long)lineCount);
     return lineCount;
 }
 

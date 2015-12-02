@@ -32,9 +32,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         public:
             DelayedValueNodeState(int deviceID) :
-                m_cachedActivity((size_t)0, (size_t)0, deviceID),
-                m_delayedActivationMBLayout(nullptr), m_isEmpty(true)
-            { }
+                m_cachedActivity((size_t)0, (size_t)0, deviceID), 
+                m_delayedActivationMBLayout(nullptr), 
+                m_isEmpty(true)
+            {
+
+            }
             void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
             {
                 m_delayedActivationMBLayout = make_shared<MBLayout>();
@@ -90,7 +93,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_timeStep = 1;
             CreateMatrixIfNull(m_functionValues);
             SetDims(row_size, col_size);
-            //m_delayedActivation.Resize(row_size, col_size);     // TODO: relevance of col_size? Why not timeStep?
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
     protected:
@@ -109,10 +111,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_timeStep = (int)timeStep;
 
             m_functionValues->SetValue(m_initialActivationValue);
-            //m_delayedActivation.SetValue(m_initialActivationValue);
-
-            //m_gradientValues->Resize(row_size, col_size);
-            //m_gradientValues->SetValue(0.0f);
         }
         DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"rows"), configp->Get(L"cols"), configp->Get(L"timeStep"))
@@ -351,9 +349,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 out.SetValue(inp);
             }
-
-            //MaskMissingValuesColumnsToZero(t);  // fix gaps if any  --TODO: make this take a FrameRange
-            // TODO: why is masking needed here? We should never carry over data from those into valid regions, right?
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -362,7 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // this function is only used for PairNetworkNode (on PastValueNode)
-        // BUGBUG: Need to transfer the layout as well. PairNetworkNod will go away.
+        // BUGBUG: Need to transfer the layout as well. PairNetworkNode will go away.
         bool GetHistory(Matrix<ElemType>& hist, bool)
         {
             DEVICEID_TYPE device = hist.GetDeviceId();
@@ -411,7 +406,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //========================================
         // implement the IStateFulNode interface
         //========================================
-        virtual NodeStatePtr ExportState() override 
+
+        virtual NodeStatePtr ExportState()
         {
             NodeStatePtr pExportedState;
             size_t nT = m_pMBLayout->GetNumTimeSteps();
@@ -541,7 +537,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_pShiftedMBLayout; using Base::m_isHistoryCarryOverManagedExternally;
 
-    // =======================================================================
     // -----------------------------------------------------------------------
     // PastValueNode (input) -- delay node
     // TODO: Can this just be a typedef?

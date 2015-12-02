@@ -121,12 +121,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // =======================================================================
     //  This provide a interface for stateful node (e.g., DelayNodeBase) and definition of state
-    //  This interface allows to Export and Import state from elsewhere. 
-    //  It is needed when doing sub-minibatch implementation.
+    //  This interface allows to Export and Import state from elsewhere 
+    //  It is needed when doing sub-minibatch implementation 
     // =======================================================================
 
     class INodeState: public std::enable_shared_from_this<INodeState>
-    {  
+    {
     public:
         virtual ~INodeState() {} 
     };
