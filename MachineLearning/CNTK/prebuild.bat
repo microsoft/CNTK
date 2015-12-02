@@ -11,7 +11,7 @@ FOR /F "usebackq" %%i IN (`hostname`) DO SET HOST=%%i
 :: assuming hostname always exists 
 
 :: not sure whether git in path ? 
-git --version 2 > nul 
+call git --version 2 > nul 
 if not %ERRORLEVEL% == 9009 (
     echo #define _GIT_EXIST >> buildinfo.h$$
     FOR /F "usebackq" %%i IN (`git rev-parse --abbrev-ref HEAD`) DO SET BRANCH=%%i
