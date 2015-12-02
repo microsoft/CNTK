@@ -2108,9 +2108,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
     {
-        if (!OwnBuffer())
-            LogicError("Cannot modify since the buffer is managed externally.");
-
         int m = (int)GetNumRows();
         int n = (int)GetNumCols();
         int nnz = (int)GetNumNZElements();
@@ -2145,12 +2142,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (sizeof(ElemType) == sizeof(float))
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
                     reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
                     reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
         }

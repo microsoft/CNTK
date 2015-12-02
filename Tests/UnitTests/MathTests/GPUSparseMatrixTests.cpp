@@ -543,15 +543,12 @@ namespace Microsoft
 
 
                     // Optimized code path for 1-D convolution on GPU + Sparse
-                    Matrix<float> inputSubBatchSparse(inputSubBatch.GetNumRows(), inputSubBatch.GetNumCols(), c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-                    Matrix<float> inputSubBatchSparseTransposed(inputSubBatch.GetNumRows(), inputSubBatch.GetNumCols(), c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
                     Matrix<float> inputSubBatchSparseReordered(batchSize * inWidth, inChannels, c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
 
                     inputSubBatch.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, true);
-                    inputSubBatchSparse.SetValue(inputSubBatch);
-                    inputSubBatchSparseTransposed.AssignTransposeOf(inputSubBatchSparse);
-                    inputSubBatchSparseTransposed.Reshape(batchSize * inWidth, inChannels);
-                    Matrix<float>::TensorShuffleScaleAndAdd(0.0f, inputSubBatchSparseTransposed, 1, batchSize, 1, inWidth, inChannels, 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
+                    inputSubBatch.InplaceTranspose();
+                    inputSubBatch.Reshape(batchSize * inWidth, inChannels);
+                    Matrix<float>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch, 1, batchSize, 1, inWidth, inChannels, 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
                     inputGradientValues2.Reshape(inputGradientValues2.GetNumRows() * inputGradientValues2.GetNumCols() / inChannels, inChannels);
                     Matrix<float>::ConvolveAndWeightedAdd(1, outputGradientSubBatch, false, inputSubBatchSparseReordered, false, 1, inputGradientValues2,
                         batchSize, horizontalSubsample, zeroPadding, false);
