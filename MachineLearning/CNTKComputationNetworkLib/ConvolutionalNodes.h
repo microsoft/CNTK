@@ -168,12 +168,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_1DConvolutionOnGPUSparse)
                     {
                         Matrix<ElemType> inputSubBatch;
-                        Matrix<ElemType> inputSubBatchTransposed;
-                        Matrix<ElemType> inputSubBatchReordered;
+                        Matrix<ElemType> inputSubBatchReordered(smallBatchSize * m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
                         inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize));
-                        inputSubBatchTransposed.AssignTransposeOf(inputSubBatch);
-                        inputSubBatchTransposed.Reshape(smallBatchSize * m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels());
-                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatchTransposed, 1, smallBatchSize, 1,
+                        inputSubBatch.InplaceTranspose();
+                        inputSubBatch.Reshape(smallBatchSize * m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels());
+                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch, 1, smallBatchSize, 1,
                             m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels(), 1.0f, inputSubBatchReordered, inputSubBatchReordered);
                         inputGradientValues.Reshape(inputGradientValues.GetNumRows() * inputGradientValues.GetNumCols() / m_inputImageLayout.GetNumChannels(), m_inputImageLayout.GetNumChannels());
 
