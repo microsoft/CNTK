@@ -493,7 +493,7 @@ protected:
 
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
-    void SGD<ElemType>::ForwardBackward(ComputationNetwork& net,const std::vector<ComputationNodeBasePtr>& evalNodes,shared_ptr<ComputationNodeBase> criterionNode,bool dobackpropogate);
+    void ForwardBackward(ComputationNetwork& net,const std::vector<ComputationNodeBasePtr>& evalNodes,shared_ptr<ComputationNodeBase> criterionNode,bool dobackpropogate);
 };
 
 }}}
