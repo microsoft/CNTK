@@ -488,26 +488,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Clear()
     {
-        if (m_CPUMatrix!=NULL)
-        {
-            delete m_CPUMatrix;
-            m_CPUMatrix = NULL;
-        }
-        if (m_GPUMatrix!=NULL)
-        {
-            delete m_GPUMatrix;
-            m_GPUMatrix = NULL;
-        }
-        if (m_GPUSparseMatrix!=NULL)
-        {
-            delete m_GPUSparseMatrix;
-            m_GPUSparseMatrix = NULL;
-        }
-        if (m_CPUSparseMatrix!=NULL)
-        {
-            delete m_CPUSparseMatrix;
-            m_CPUSparseMatrix = NULL;
-        }        
+        delete m_CPUMatrix;
+        m_CPUMatrix = nullptr;
+        delete m_GPUMatrix;
+        m_GPUMatrix = nullptr;
+        delete m_GPUSparseMatrix;
+        m_GPUSparseMatrix = nullptr;
+        delete m_CPUSparseMatrix;
+        m_CPUSparseMatrix = nullptr;
 
         m_matrixType=MatrixType::UNDETERMINED;
         m_currentDataLocation = CurrentDataLocation::NONE;
@@ -778,7 +766,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
-    template<class ElemType> 
+    // BUGBUG: Unlike ColumnSlice(), this does not return a view. Must be renamed.
+    template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::RowSlice(size_t startRow, size_t numRow) const
     {
         int devId = GetDeviceId();

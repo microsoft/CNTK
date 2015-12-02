@@ -9,6 +9,7 @@
 #include "ProgressTracing.h"
 
 #include <map>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -18,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // class SGDParams
     // -----------------------------------------------------------------------
 
-    static AdaptationRegType ParseAdaptationRegType(wstring s)
+    static AdaptationRegType ParseAdaptationRegType(const wstring & s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return AdaptationRegType::None;
@@ -28,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
         }
 
-    static GradientsUpdateType ParseGradUpdateType(wstring s)
+    static GradientsUpdateType ParseGradUpdateType(const wstring & s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none") || !_wcsicmp(s.c_str(), L"normal") || !_wcsicmp(s.c_str(), L"simple"))
             return GradientsUpdateType::None;
@@ -42,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
     }
 
-    static ParallelizationMethod ParseParallelizationMethod(wstring s)
+    static ParallelizationMethod ParseParallelizationMethod(const wstring & s)
     {
         if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
             return ParallelizationMethod::None;
@@ -54,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
     }
 
-    static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
+    static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring & s)
     {
         // TODO: why allow so many variants?
         if (!_wcsicmp(s.c_str(), L"false") || !_wcsicmp(s.c_str(), L"none"))
@@ -121,9 +122,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the total number of epochs to run.
         m_maxEpochs = configSGD(L"maxEpochs");
 
-        floatargvector momentumPerMB = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
-
-        floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
+        floatargvector momentumPerMB          = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
+        floatargvector momentumPerSample      = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
+        floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
 
         m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
 
@@ -180,12 +181,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // consistency checks
         for (size_t i = 0; i < m_mbSize.size(); i++)
-        {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
-            {
                 InvalidArgument("epoch size must be larger than mbsize.");
-            }
-        }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None &&
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
@@ -194,10 +191,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
-        {
             InvalidArgument("You specified both learningRatesPerSample and learningRatesPerMB. Please comment out one of them.");
-        }
-        else if (learningRatesPerSample.size() > 0)
+
+        if (learningRatesPerSample.size() > 0)
         {
             m_learningRatesParam = learningRatesPerSample;
             m_learningRatesSpecifiedForMBSize = intargvector(L"1");
@@ -208,13 +204,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
 
-        if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
-        {
-            InvalidArgument("You specified both momentumPerSample and momentumPerMB. Please comment out one of them.");
-        }
-        else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
+        if ((int)(momentumPerSample.size() > 0) + (int)(momentumPerMB.size() > 0) + (int)(momentumAsTimeConstant.size() > 0) > 1)
+            InvalidArgument("You specified more than one of momentumPerSample, momentumPerMB, and momentumAsTimeConstant. Please only specify one.");
+
+        if (momentumPerSample.size() > 0)         // note: noone would ever use this; use momentumAsTimeConstant instead
         {
             m_momentumParam = momentumPerSample;
+            m_momentumSpecifiedForMBSize = intargvector(L"1");
+        }
+        else if (momentumAsTimeConstant.size() > 0)
+        {
+            vector<float> momentumPerSampleVec;
+            for (int i = 0; i < momentumAsTimeConstant.size(); i++)
+            {
+                double momTC = momentumAsTimeConstant[i];
+                double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
+                momentumPerSampleVec.push_back((float)momPS);
+            }
+            m_momentumParam = momentumPerSampleVec;
             m_momentumSpecifiedForMBSize = intargvector(L"1");
         }
         else if (momentumPerMB.size() > 0)
@@ -539,10 +546,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto & featureNodes = net->FeatureNodes();
         auto & labelNodes = net->LabelNodes();
         auto & criterionNodes = GetTrainCriterionNodes(net);
-        auto & evaluationNodes = GetEvalCriterionNodes(net);
 
-        //allocate memory for backward computation
-        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
+        // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
+        std::vector<ComputationNodeBasePtr> evaluationNodes;
+        {
+            auto originalEvaluationNodes = GetEvalCriterionNodes(net);
+            set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log critera
+            for (const auto & crit : criterionNodes)
+                criteriaLogged.insert(crit);
+            for (const auto & eval : originalEvaluationNodes)
+                if (criteriaLogged.insert(eval).second)
+                    evaluationNodes.push_back(eval);
+        }
+
+        // allocate memory for backward computation
         fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
         for (int i = 0; i < criterionNodes.size(); i++)
             net->AllocateGradientMatrices(criterionNodes[i]);
@@ -784,9 +801,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 #endif
 
-            // TODO: show momentum also as a time constant
-            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f \n",
-                    i + 1, learnRatePerSample, MomentumPerMB(GetMomentumPerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()), actualMinibatchSize));
+            double momentumPerSample = GetMomentumPerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+            // time constant = number of samples after which a contribution has been reduced to e^-1
+            double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
+                                          : momentumPerSample >= 1.0 ? 0.0
+                                          : -1.0 / log(momentumPerSample);
+            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
+                    i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
 
             TrainOneEpoch(net,
                           refNet, 
@@ -807,7 +828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             timer.Stop();
             double epochTime = timer.ElapsedSeconds();
 
-            if (m_useEvalCriterionControlLR)
+            if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
             {
                 lrControlCriterion = epochEvalErrors[0];
             }
@@ -820,12 +841,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, (int) m_maxEpochs, epochCriterion);
 
-            if (epochEvalErrors.size() == 1)
+            if (epochEvalErrors.size() == 0)    // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
-                        "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g; EpochTime=%.8g\n",
+                        "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
+                        learnRatePerSample, epochTime);
+                m_lastFinishedEpochEvalErr = epochCriterion;
+            }
+            else if (epochEvalErrors.size() == 1)
+            {
+                fprintf(stderr,
+                        "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         epochEvalErrors[0], learnRatePerSample, epochTime);
-                m_lastFinishedEpochEvalErr = epochEvalErrors[0];
+                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
             }
             else
             {
@@ -833,13 +861,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
                     fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j]);
-                    m_lastFinishedEpochEvalErr = epochEvalErrors[j];
-
                 }
+                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
 
-                fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
+                fprintf(stderr, "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
 
+                // TODO: why these extra log messages here and not for 1 eval criterion?
                 fprintf(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
                                 i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
@@ -856,22 +884,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(net);
                     vector<wstring> cvSetTrainAndEvalNodes;
-                    cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
-                    cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
+                    if (criterionNodes.size() > 0)
+                        cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
+                    if (evaluationNodes.size() > 0)
+                        cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                            i + 1, (int) m_maxEpochs, vScore[0], vScore[1]);
+                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g", i + 1, (int) m_maxEpochs, vScore[0]);
+                    if (vScore.size() > 1)
+                        fprintf(stderr, "; EvalErrPerSample = %.8g", vScore[1]);
+                    fprintf(stderr, "\n");
 
                     if (m_useCVSetControlLRIfCVExists)
                     {
-                        if (m_useEvalCriterionControlLR)
+                        if (m_useEvalCriterionControlLR && vScore.size() > 1)
                             lrControlCriterion = vScore[1];
                         else
-                            lrControlCriterion = vScore[0]; //the first one is the training criterion.
-                        }
+                            lrControlCriterion = vScore[0]; // the first one is the training criterion
                     }
                 }
+            }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
@@ -886,8 +918,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                    avgCriterion + lrControlCriterion) /
-                    (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+                                avgCriterion + lrControlCriterion) /
+                                (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -1285,7 +1317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;", epochCriterion);
 
         if (epochEvalErrors.size() == 1)
-            fprintf(stderr, "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g\n", epochEvalErrors[0], learnRatePerSample);
+            fprintf(stderr, "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g\n", epochEvalErrors[0], learnRatePerSample);
         else
         {
             fprintf(stderr, "EvalErrPerSample ");
@@ -1293,7 +1325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
             }
-            fprintf(stderr, "Ave LearnRatePerSample = %.10g\n", learnRatePerSample);
+            fprintf(stderr, "AvgLearningRatePerSample = %.8g\n", learnRatePerSample);
         }
 
         int baseModelEpoch = epochNumber - 1;
@@ -1697,7 +1729,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (useDistributedMBReading)
         {
-            fprintf(stderr, ", Distributed reading is ENABLED");
+            fprintf(stderr, ", distributed reading is ENABLED");
         }
         if (numSubminibatchRequested > 0)
         {
@@ -1707,8 +1739,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Timer timer;
         timer.Start();
-
-
 
         // --- MAIN MINIBATCH LOOP
 
@@ -1722,6 +1752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                                               useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
+
             nSamplesSinceLastModelSync += actualMBSize;
 
             if (numSubminibatchRequested > 0)
@@ -1952,20 +1983,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (epochNumber > 0 || (int) epochSize > 0)
                 {
                     // progress tracing for compute cluster management
-                    double mbProg = (double)totalSamplesProcessed / (double)m_maxComputedEpochSize;
+                    double mbProg = m_maxComputedEpochSize ? (double)totalSamplesProcessed / (double)m_maxComputedEpochSize : 0.0;
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg);
 
                     // progress tracing for regular log
+#if 1
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2.1f%%]: SamplesSeen = %d; TrainLossPerSample = " +
+                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+                    SGDTrace(stderr, formatString.c_str(),
+                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                             numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
+#else
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                         GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
+#endif
                 }
                 else
                 {
+#if 1
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
+                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+#else
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+#endif
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, numSamplesLastMBs, trainLossPerSample);
@@ -1980,12 +2024,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
+#if 1
+                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
+                SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
+#else
                 double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
                                       GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
                 SGDTrace(stderr, formatString.c_str(),
                          totalTimeInMBs, totalTimePerSample,
-                         static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
+                         (int)(numSamplesLastMBs / totalTimeInMBs));
+#endif
 
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
