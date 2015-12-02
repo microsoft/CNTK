@@ -52,8 +52,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
-        // BUGBUG: Unlike ColumnSlice(), this does not return a view. Must be renamed.
-        CPUMatrix<ElemType> RowSlice(size_t startRow, size_t numRows) const;
 
         void CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
 
