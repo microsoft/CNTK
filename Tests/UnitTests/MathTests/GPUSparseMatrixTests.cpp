@@ -395,7 +395,7 @@ namespace Microsoft
 					BOOST_CHECK(!sliceColumn2.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 				}
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit, RandomSeedFixture)
                 {
                     const bool zeroPadding = false;
                     const int horizontalSubsample = 1;
@@ -440,7 +440,7 @@ namespace Microsoft
                     BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE5));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit, RandomSeedFixture)
                 {
                     for (auto transposeA : { false, true })
                     {
@@ -467,8 +467,8 @@ namespace Microsoft
                                         const int n = batchSize;
                                         const float alpha = 0.53f;
                                         const float beta = transposeB ? 1.0f : 0.0f;
-                                        GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(m, k, c_deviceIdZero, -1, 1);
-                                        GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(l, n, c_deviceIdZero, -5, 5);
+                                        GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(m, k, c_deviceIdZero, -1, 1, IncrementCounter());
+                                        GPUMatrix<float> denseMatrixB = GPUMatrix<float>::RandomUniform(l, n, c_deviceIdZero, -5, 5, IncrementCounter());
                                         GPUMatrix<float> denseMatrixAT(k, m, c_deviceIdZero);
                                         GPUMatrix<float> denseMatrixBT(l, n, c_deviceIdZero);
                                         GPUSparseMatrix<float> sparseMatrixB(matrixFormatSparseCSC, c_deviceIdZero);
@@ -509,7 +509,7 @@ namespace Microsoft
                     }
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture)
                 {
                     const int inChannels = 50653;
                     const int inWidth = 10;
@@ -527,12 +527,11 @@ namespace Microsoft
                     const int packedInputColsPerSample = outWidth * outHeight;
                     const float randomInitLowerBound = -1.0f;
                     const float randomInitUpperBound = 1.0f;
-                    Matrix<float> outputGradientSubBatch = Matrix<float>::RandomUniform(outChannels, batchSize*outWidth, randomInitLowerBound, randomInitUpperBound, c_deviceIdZero);
-                    Matrix<float> inputSubBatch = Matrix<float>::RandomUniform(inChannels*inWidth, batchSize, randomInitLowerBound, randomInitUpperBound, c_deviceIdZero);
+                    Matrix<float> outputGradientSubBatch = Matrix<float>::RandomUniform(outChannels, batchSize*outWidth, randomInitLowerBound, randomInitUpperBound, IncrementCounter(), c_deviceIdZero);
+                    Matrix<float> inputSubBatch = Matrix<float>::RandomUniform(inChannels*inWidth, batchSize, randomInitLowerBound, randomInitUpperBound, IncrementCounter(), c_deviceIdZero);
                     Matrix<float> tempMatrix(1, 1, c_deviceIdZero);
                     Matrix<float> inputGradientValues1 = Matrix<float>::Zeros(outChannels, inChannels*kernelWidth, c_deviceIdZero);
                     Matrix<float> inputGradientValues2 = Matrix<float>::Zeros(outChannels, inChannels*kernelWidth, c_deviceIdZero);
-
 
                     // Baseline
                     tempMatrix.Resize(packedInputRows, packedInputColsPerSample * batchSize);
@@ -541,10 +540,8 @@ namespace Microsoft
                         kernelWidth, kernelHeight, horizontalSubsample, verticalSubsample, zeroPadding);
                     Matrix<float>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues1);
 
-
                     // Optimized code path for 1-D convolution on GPU + Sparse
                     Matrix<float> inputSubBatchSparseReordered(batchSize * inWidth, inChannels, c_deviceIdZero, MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-
                     inputSubBatch.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, true);
                     inputSubBatch.InplaceTranspose();
                     inputSubBatch.Reshape(batchSize * inWidth, inChannels);
@@ -557,13 +554,13 @@ namespace Microsoft
                     BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE2));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseMatrixReshape)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
                 {
                     const int oldRowCount = 10;
                     const int oldColCount = 3;
                     const int newRowCount = 5;
                     const int newColCount = 6;
-                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(oldRowCount, oldColCount, c_deviceIdZero, -1, 1);
+                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(oldRowCount, oldColCount, c_deviceIdZero, -1, 1, IncrementCounter());
                     GPUMatrix<float> denseMatrixB(denseMatrixA);
                     GPUMatrix<float> denseMatrixC(newRowCount, newColCount, c_deviceIdZero);
                     GPUSparseMatrix<float> sparseMatrix(matrixFormatSparseCSC, c_deviceIdZero);
@@ -578,10 +575,10 @@ namespace Microsoft
                     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
                 }
 
-                BOOST_AUTO_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd)
+                BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
                 {
                     size_t D = 10, S = 10, M = 10, K = 10, T = 10;
-                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D*S*M*K, T, c_deviceIdZero, -1, 1);
+                    GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D * S * M * K, T, c_deviceIdZero, -1, 1, IncrementCounter());
                     GPUMatrix<float> denseMatrixB(D*S*M*K, T, c_deviceIdZero);
                     GPUMatrix<float> denseMatrixC(D*S*M*K, T, c_deviceIdZero);
                     GPUSparseMatrix<float> sparseMatrixA(matrixFormatSparseCSC, c_deviceIdZero);

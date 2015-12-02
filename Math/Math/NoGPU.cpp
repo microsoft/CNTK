@@ -60,7 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUSparseMatrix<ElemType>::~GPUSparseMatrix() { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Clear() { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ReleaseMemory() { }
 
     //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
     // a - sparse matrix whose structure we want to clone
@@ -359,9 +359,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE *h_CSRRow, const CPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const {}
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const {}
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat) {}
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
@@ -981,7 +981,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise) { }
-    template<class ElemType> void void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c) { }
     template<class ElemType> void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols) { }
 
     /// <summary>c += alpha * (a-b)</summary>
