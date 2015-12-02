@@ -1101,12 +1101,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    // set all elements of a matrix to a scalar value
+    // For sparse matrices, the only allowed value is 0.
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const ElemType v)
     {
         if (IsEmpty())  // if empty then we are done
             return;
-            //LogicError("SetValue: Matrix is empty.");
+
+        if (v == 0 && GetMatrixType() == MatrixType::SPARSE)    // if sparse, setting it to 0 is special
+        {
+            Reset();
+            return;
+        }
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1520,9 +1527,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return m_baseMatrix->GetSizeAllocated();
     }
-    
 
-    //Reset for sparse matrix
+    // reset for sparse matrix. Semantically the same as setting all values to 0.
     template<class ElemType>
     void Matrix<ElemType>::Reset()
     {

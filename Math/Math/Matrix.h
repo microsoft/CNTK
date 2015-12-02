@@ -200,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // similarl to the repmat operation in matlab or octave
         static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
         size_t GetAllocatedSize() const;
-        void Reset(); //reset for sparse matrix
+        void Reset(); // reset for sparse matrix
 
         const ElemType operator() (const size_t row, const size_t col) const;
         ElemType& operator() (const size_t row, const size_t col);
