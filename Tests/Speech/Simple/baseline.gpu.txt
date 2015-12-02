@@ -771,48 +771,48 @@ already there from last epoch
 Starting minibatch loop.
 randomordering: 2036 retries for 10000 elements (20.4%) to ensure window condition
 randomordering: recached sequence for seed 0: 2009, 1524, ...
- Epoch[ 1 of 50]-Minibatch[   1-  10 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70944751; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.03238s; TotalTimePerSample = 0.12953ms; SamplesPerSecond = 7720
- Epoch[ 1 of 50]-Minibatch[  11-  20 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73413403; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02858s; TotalTimePerSample = 0.11432ms; SamplesPerSecond = 8747
- Epoch[ 1 of 50]-Minibatch[  21-  30 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70723218; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02789s; TotalTimePerSample = 0.11158ms; SamplesPerSecond = 8962
- Epoch[ 1 of 50]-Minibatch[  31-  40 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71122363; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.02815s; TotalTimePerSample = 0.11260ms; SamplesPerSecond = 8880
- Epoch[ 1 of 50]-Minibatch[  41-  50 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73061719; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.02807s; TotalTimePerSample = 0.11228ms; SamplesPerSecond = 8905
- Epoch[ 1 of 50]-Minibatch[  51-  60 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70333911; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02828s; TotalTimePerSample = 0.11312ms; SamplesPerSecond = 8840
- Epoch[ 1 of 50]-Minibatch[  61-  70 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71935938; EvalErr[0]PerSample = 0.53600000; TotalTime = 0.02811s; TotalTimePerSample = 0.11242ms; SamplesPerSecond = 8894
- Epoch[ 1 of 50]-Minibatch[  71-  80 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73027979; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02833s; TotalTimePerSample = 0.11331ms; SamplesPerSecond = 8825
- Epoch[ 1 of 50]-Minibatch[  81-  90 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70430273; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.02805s; TotalTimePerSample = 0.11220ms; SamplesPerSecond = 8912
- Epoch[ 1 of 50]-Minibatch[  91- 100 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73275586; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02799s; TotalTimePerSample = 0.11194ms; SamplesPerSecond = 8933
+ Epoch[ 1 of 50]-Minibatch[   1-  10 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70944751; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.03238s; TotalTimePerSample = 0.12953ms; SamplesPerSecond = 7720
+ Epoch[ 1 of 50]-Minibatch[  11-  20 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.73413403; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02858s; TotalTimePerSample = 0.11432ms; SamplesPerSecond = 8747
+ Epoch[ 1 of 50]-Minibatch[  21-  30 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70723218; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02789s; TotalTimePerSample = 0.11158ms; SamplesPerSecond = 8962
+ Epoch[ 1 of 50]-Minibatch[  31-  40 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71122363; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.02815s; TotalTimePerSample = 0.11260ms; SamplesPerSecond = 8880
+ Epoch[ 1 of 50]-Minibatch[  41-  50 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.73061719; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.02807s; TotalTimePerSample = 0.11228ms; SamplesPerSecond = 8905
+ Epoch[ 1 of 50]-Minibatch[  51-  60 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70333911; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02828s; TotalTimePerSample = 0.11312ms; SamplesPerSecond = 8840
+ Epoch[ 1 of 50]-Minibatch[  61-  70 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71935938; EvalErr[0]PerSample = 0.53600000; TotalTime = 0.02811s; TotalTimePerSample = 0.11242ms; SamplesPerSecond = 8894
+ Epoch[ 1 of 50]-Minibatch[  71-  80 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.73027979; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02833s; TotalTimePerSample = 0.11331ms; SamplesPerSecond = 8825
+ Epoch[ 1 of 50]-Minibatch[  81-  90 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70430273; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.02805s; TotalTimePerSample = 0.11220ms; SamplesPerSecond = 8912
+ Epoch[ 1 of 50]-Minibatch[  91- 100 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.73275586; EvalErr[0]PerSample = 0.49600000; TotalTime = 0.02799s; TotalTimePerSample = 0.11194ms; SamplesPerSecond = 8933
 WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[ 1 of 50]-Minibatch[ 101- 110 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70576514; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.02839s; TotalTimePerSample = 0.11357ms; SamplesPerSecond = 8805
- Epoch[ 1 of 50]-Minibatch[ 111- 120 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71312939; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.02804s; TotalTimePerSample = 0.11215ms; SamplesPerSecond = 8916
- Epoch[ 1 of 50]-Minibatch[ 121- 130 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71854004; EvalErr[0]PerSample = 0.58800000; TotalTime = 0.02821s; TotalTimePerSample = 0.11282ms; SamplesPerSecond = 8863
- Epoch[ 1 of 50]-Minibatch[ 131- 140 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70974902; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.02804s; TotalTimePerSample = 0.11217ms; SamplesPerSecond = 8914
- Epoch[ 1 of 50]-Minibatch[ 141- 150 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73620996; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.02799s; TotalTimePerSample = 0.11196ms; SamplesPerSecond = 8931
- Epoch[ 1 of 50]-Minibatch[ 151- 160 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72493848; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.02806s; TotalTimePerSample = 0.11226ms; SamplesPerSecond = 8908
- Epoch[ 1 of 50]-Minibatch[ 161- 170 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70003320; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02793s; TotalTimePerSample = 0.11172ms; SamplesPerSecond = 8951
- Epoch[ 1 of 50]-Minibatch[ 171- 180 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69439648; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.02838s; TotalTimePerSample = 0.11350ms; SamplesPerSecond = 8810
- Epoch[ 1 of 50]-Minibatch[ 181- 190 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69366309; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.02819s; TotalTimePerSample = 0.11277ms; SamplesPerSecond = 8867
- Epoch[ 1 of 50]-Minibatch[ 191- 200 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.74907910; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02813s; TotalTimePerSample = 0.11254ms; SamplesPerSecond = 8886
- Epoch[ 1 of 50]-Minibatch[ 201- 210 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69956055; EvalErr[0]PerSample = 0.45600000; TotalTime = 0.02814s; TotalTimePerSample = 0.11255ms; SamplesPerSecond = 8884
- Epoch[ 1 of 50]-Minibatch[ 211- 220 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70481445; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.02815s; TotalTimePerSample = 0.11262ms; SamplesPerSecond = 8879
- Epoch[ 1 of 50]-Minibatch[ 221- 230 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71109180; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.02798s; TotalTimePerSample = 0.11192ms; SamplesPerSecond = 8934
- Epoch[ 1 of 50]-Minibatch[ 231- 240 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72525195; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.02800s; TotalTimePerSample = 0.11199ms; SamplesPerSecond = 8929
- Epoch[ 1 of 50]-Minibatch[ 241- 250 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71028906; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.02859s; TotalTimePerSample = 0.11436ms; SamplesPerSecond = 8744
- Epoch[ 1 of 50]-Minibatch[ 251- 260 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69264063; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.02806s; TotalTimePerSample = 0.11223ms; SamplesPerSecond = 8910
- Epoch[ 1 of 50]-Minibatch[ 261- 270 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69951562; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02818s; TotalTimePerSample = 0.11273ms; SamplesPerSecond = 8870
- Epoch[ 1 of 50]-Minibatch[ 271- 280 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69372266; EvalErr[0]PerSample = 0.43200000; TotalTime = 0.02787s; TotalTimePerSample = 0.11148ms; SamplesPerSecond = 8970
- Epoch[ 1 of 50]-Minibatch[ 281- 290 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69146484; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.02805s; TotalTimePerSample = 0.11222ms; SamplesPerSecond = 8911
- Epoch[ 1 of 50]-Minibatch[ 291- 300 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69786914; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02795s; TotalTimePerSample = 0.11181ms; SamplesPerSecond = 8943
- Epoch[ 1 of 50]-Minibatch[ 301- 310 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69831445; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.02827s; TotalTimePerSample = 0.11308ms; SamplesPerSecond = 8843
- Epoch[ 1 of 50]-Minibatch[ 311- 320 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70113086; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.02817s; TotalTimePerSample = 0.11267ms; SamplesPerSecond = 8875
- Epoch[ 1 of 50]-Minibatch[ 321- 330 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70297852; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02814s; TotalTimePerSample = 0.11255ms; SamplesPerSecond = 8885
- Epoch[ 1 of 50]-Minibatch[ 331- 340 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68515234; EvalErr[0]PerSample = 0.41600000; TotalTime = 0.02819s; TotalTimePerSample = 0.11275ms; SamplesPerSecond = 8869
- Epoch[ 1 of 50]-Minibatch[ 341- 350 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.66891406; EvalErr[0]PerSample = 0.40800000; TotalTime = 0.02796s; TotalTimePerSample = 0.11185ms; SamplesPerSecond = 8940
- Epoch[ 1 of 50]-Minibatch[ 351- 360 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.66491602; EvalErr[0]PerSample = 0.42400000; TotalTime = 0.02826s; TotalTimePerSample = 0.11305ms; SamplesPerSecond = 8845
- Epoch[ 1 of 50]-Minibatch[ 361- 370 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.67437695; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.02814s; TotalTimePerSample = 0.11256ms; SamplesPerSecond = 8883
- Epoch[ 1 of 50]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.65667578; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.02838s; TotalTimePerSample = 0.11354ms; SamplesPerSecond = 8807
- Epoch[ 1 of 50]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.55869531; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.02812s; TotalTimePerSample = 0.11247ms; SamplesPerSecond = 8891
- Epoch[ 1 of 50]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.46751172; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02796s; TotalTimePerSample = 0.11183ms; SamplesPerSecond = 8942
-Finished Epoch[ 1 of 50]: [Training Set] TrainLossPerSample = 0.69582701; EvalErrPerSample = 0.4709; Ave LearnRatePerSample = 0.01999999955; EpochTime=1.131796
+ Epoch[ 1 of 50]-Minibatch[ 101- 110 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70576514; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.02839s; TotalTimePerSample = 0.11357ms; SamplesPerSecond = 8805
+ Epoch[ 1 of 50]-Minibatch[ 111- 120 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71312939; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.02804s; TotalTimePerSample = 0.11215ms; SamplesPerSecond = 8916
+ Epoch[ 1 of 50]-Minibatch[ 121- 130 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71854004; EvalErr[0]PerSample = 0.58800000; TotalTime = 0.02821s; TotalTimePerSample = 0.11282ms; SamplesPerSecond = 8863
+ Epoch[ 1 of 50]-Minibatch[ 131- 140 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70974902; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.02804s; TotalTimePerSample = 0.11217ms; SamplesPerSecond = 8914
+ Epoch[ 1 of 50]-Minibatch[ 141- 150 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.73620996; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.02799s; TotalTimePerSample = 0.11196ms; SamplesPerSecond = 8931
+ Epoch[ 1 of 50]-Minibatch[ 151- 160 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.72493848; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.02806s; TotalTimePerSample = 0.11226ms; SamplesPerSecond = 8908
+ Epoch[ 1 of 50]-Minibatch[ 161- 170 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70003320; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02793s; TotalTimePerSample = 0.11172ms; SamplesPerSecond = 8951
+ Epoch[ 1 of 50]-Minibatch[ 171- 180 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69439648; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.02838s; TotalTimePerSample = 0.11350ms; SamplesPerSecond = 8810
+ Epoch[ 1 of 50]-Minibatch[ 181- 190 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69366309; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.02819s; TotalTimePerSample = 0.11277ms; SamplesPerSecond = 8867
+ Epoch[ 1 of 50]-Minibatch[ 191- 200 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.74907910; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02813s; TotalTimePerSample = 0.11254ms; SamplesPerSecond = 8886
+ Epoch[ 1 of 50]-Minibatch[ 201- 210 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69956055; EvalErr[0]PerSample = 0.45600000; TotalTime = 0.02814s; TotalTimePerSample = 0.11255ms; SamplesPerSecond = 8884
+ Epoch[ 1 of 50]-Minibatch[ 211- 220 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70481445; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.02815s; TotalTimePerSample = 0.11262ms; SamplesPerSecond = 8879
+ Epoch[ 1 of 50]-Minibatch[ 221- 230 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71109180; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.02798s; TotalTimePerSample = 0.11192ms; SamplesPerSecond = 8934
+ Epoch[ 1 of 50]-Minibatch[ 231- 240 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.72525195; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.02800s; TotalTimePerSample = 0.11199ms; SamplesPerSecond = 8929
+ Epoch[ 1 of 50]-Minibatch[ 241- 250 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.71028906; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.02859s; TotalTimePerSample = 0.11436ms; SamplesPerSecond = 8744
+ Epoch[ 1 of 50]-Minibatch[ 251- 260 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69264063; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.02806s; TotalTimePerSample = 0.11223ms; SamplesPerSecond = 8910
+ Epoch[ 1 of 50]-Minibatch[ 261- 270 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69951562; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02818s; TotalTimePerSample = 0.11273ms; SamplesPerSecond = 8870
+ Epoch[ 1 of 50]-Minibatch[ 271- 280 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69372266; EvalErr[0]PerSample = 0.43200000; TotalTime = 0.02787s; TotalTimePerSample = 0.11148ms; SamplesPerSecond = 8970
+ Epoch[ 1 of 50]-Minibatch[ 281- 290 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69146484; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.02805s; TotalTimePerSample = 0.11222ms; SamplesPerSecond = 8911
+ Epoch[ 1 of 50]-Minibatch[ 291- 300 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69786914; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.02795s; TotalTimePerSample = 0.11181ms; SamplesPerSecond = 8943
+ Epoch[ 1 of 50]-Minibatch[ 301- 310 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.69831445; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.02827s; TotalTimePerSample = 0.11308ms; SamplesPerSecond = 8843
+ Epoch[ 1 of 50]-Minibatch[ 311- 320 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70113086; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.02817s; TotalTimePerSample = 0.11267ms; SamplesPerSecond = 8875
+ Epoch[ 1 of 50]-Minibatch[ 321- 330 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.70297852; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.02814s; TotalTimePerSample = 0.11255ms; SamplesPerSecond = 8885
+ Epoch[ 1 of 50]-Minibatch[ 331- 340 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.68515234; EvalErr[0]PerSample = 0.41600000; TotalTime = 0.02819s; TotalTimePerSample = 0.11275ms; SamplesPerSecond = 8869
+ Epoch[ 1 of 50]-Minibatch[ 341- 350 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.66891406; EvalErr[0]PerSample = 0.40800000; TotalTime = 0.02796s; TotalTimePerSample = 0.11185ms; SamplesPerSecond = 8940
+ Epoch[ 1 of 50]-Minibatch[ 351- 360 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.66491602; EvalErr[0]PerSample = 0.42400000; TotalTime = 0.02826s; TotalTimePerSample = 0.11305ms; SamplesPerSecond = 8845
+ Epoch[ 1 of 50]-Minibatch[ 361- 370 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.67437695; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.02814s; TotalTimePerSample = 0.11256ms; SamplesPerSecond = 8883
+ Epoch[ 1 of 50]-Minibatch[ 371- 380 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.65667578; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.02838s; TotalTimePerSample = 0.11354ms; SamplesPerSecond = 8807
+ Epoch[ 1 of 50]-Minibatch[ 381- 390 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.55869531; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.02812s; TotalTimePerSample = 0.11247ms; SamplesPerSecond = 8891
+ Epoch[ 1 of 50]-Minibatch[ 391- 400 of  0%]: SamplesSeen = 250; TrainLossPerSample =  0.46751172; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02796s; TotalTimePerSample = 0.11183ms; SamplesPerSecond = 8942
+Finished Epoch[ 1 of 50]: [Training Set] TrainLossPerSample = 0.69582701; EvalErrPerSample = 0.4709; AvgLearningRatePerSample = 0.01999999955; EpochTime=1.131796
 Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 1 at record count 10000, and file position 0
 already there from last epoch
@@ -861,7 +861,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 2 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15436914; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02773s; TotalTimePerSample = 0.11094ms; SamplesPerSecond = 9013
  Epoch[ 2 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13873828; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02803s; TotalTimePerSample = 0.11210ms; SamplesPerSecond = 8920
  Epoch[ 2 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14090381; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02739s; TotalTimePerSample = 0.10957ms; SamplesPerSecond = 9126
-Finished Epoch[ 2 of 50]: [Training Set] TrainLossPerSample = 0.18394603; EvalErrPerSample = 0.075899996; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.108025
+Finished Epoch[ 2 of 50]: [Training Set] TrainLossPerSample = 0.18394603; EvalErrPerSample = 0.075899996; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.108025
 Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 2 at record count 20000, and file position 0
 already there from last epoch
@@ -910,7 +910,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 3 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11729590; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02905s; TotalTimePerSample = 0.11618ms; SamplesPerSecond = 8607
  Epoch[ 3 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13097998; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02886s; TotalTimePerSample = 0.11544ms; SamplesPerSecond = 8662
  Epoch[ 3 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12952539; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02803s; TotalTimePerSample = 0.11210ms; SamplesPerSecond = 8920
-Finished Epoch[ 3 of 50]: [Training Set] TrainLossPerSample = 0.15923488; EvalErrPerSample = 0.074999996; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.113633
+Finished Epoch[ 3 of 50]: [Training Set] TrainLossPerSample = 0.15923488; EvalErrPerSample = 0.074999996; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.113633
 Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 3 at record count 30000, and file position 0
 already there from last epoch
@@ -959,7 +959,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 4 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10161426; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.02732s; TotalTimePerSample = 0.10928ms; SamplesPerSecond = 9150
  Epoch[ 4 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12410596; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.02762s; TotalTimePerSample = 0.11047ms; SamplesPerSecond = 9052
  Epoch[ 4 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13033252; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02771s; TotalTimePerSample = 0.11085ms; SamplesPerSecond = 9021
-Finished Epoch[ 4 of 50]: [Training Set] TrainLossPerSample = 0.15781313; EvalErrPerSample = 0.075499997; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.112024
+Finished Epoch[ 4 of 50]: [Training Set] TrainLossPerSample = 0.15781313; EvalErrPerSample = 0.075499997; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.112024
 Starting Epoch 5: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 4 at record count 40000, and file position 0
 already there from last epoch
@@ -1008,7 +1008,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 5 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16619727; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02781s; TotalTimePerSample = 0.11123ms; SamplesPerSecond = 8990
  Epoch[ 5 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13551709; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02761s; TotalTimePerSample = 0.11045ms; SamplesPerSecond = 9053
  Epoch[ 5 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18037402; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02771s; TotalTimePerSample = 0.11084ms; SamplesPerSecond = 9022
-Finished Epoch[ 5 of 50]: [Training Set] TrainLossPerSample = 0.15953778; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.108933
+Finished Epoch[ 5 of 50]: [Training Set] TrainLossPerSample = 0.15953778; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.108933
 Starting Epoch 6: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 5 at record count 50000, and file position 0
 already there from last epoch
@@ -1057,7 +1057,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 6 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19902002; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02748s; TotalTimePerSample = 0.10994ms; SamplesPerSecond = 9096
  Epoch[ 6 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17025830; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02751s; TotalTimePerSample = 0.11006ms; SamplesPerSecond = 9086
  Epoch[ 6 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17163428; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02749s; TotalTimePerSample = 0.10995ms; SamplesPerSecond = 9095
-Finished Epoch[ 6 of 50]: [Training Set] TrainLossPerSample = 0.15749474; EvalErrPerSample = 0.075999998; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.106962
+Finished Epoch[ 6 of 50]: [Training Set] TrainLossPerSample = 0.15749474; EvalErrPerSample = 0.075999998; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.106962
 Starting Epoch 7: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 6 at record count 60000, and file position 0
 already there from last epoch
@@ -1106,7 +1106,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 7 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18583740; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02751s; TotalTimePerSample = 0.11006ms; SamplesPerSecond = 9086
  Epoch[ 7 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18872363; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02733s; TotalTimePerSample = 0.10931ms; SamplesPerSecond = 9148
  Epoch[ 7 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13374756; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02743s; TotalTimePerSample = 0.10972ms; SamplesPerSecond = 9113
-Finished Epoch[ 7 of 50]: [Training Set] TrainLossPerSample = 0.15796115; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.107071
+Finished Epoch[ 7 of 50]: [Training Set] TrainLossPerSample = 0.15796115; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.107071
 Starting Epoch 8: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 7 at record count 70000, and file position 0
 already there from last epoch
@@ -1155,7 +1155,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 8 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15030225; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02780s; TotalTimePerSample = 0.11118ms; SamplesPerSecond = 8994
  Epoch[ 8 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.23170752; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.02788s; TotalTimePerSample = 0.11153ms; SamplesPerSecond = 8966
  Epoch[ 8 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12861768; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02744s; TotalTimePerSample = 0.10974ms; SamplesPerSecond = 9112
-Finished Epoch[ 8 of 50]: [Training Set] TrainLossPerSample = 0.1577722; EvalErrPerSample = 0.074999996; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.113878
+Finished Epoch[ 8 of 50]: [Training Set] TrainLossPerSample = 0.1577722; EvalErrPerSample = 0.074999996; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.113878
 Starting Epoch 9: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 8 at record count 80000, and file position 0
 already there from last epoch
@@ -1204,7 +1204,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[ 9 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15944678; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02736s; TotalTimePerSample = 0.10942ms; SamplesPerSecond = 9138
  Epoch[ 9 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12402881; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.02745s; TotalTimePerSample = 0.10980ms; SamplesPerSecond = 9107
  Epoch[ 9 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18846338; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02752s; TotalTimePerSample = 0.11009ms; SamplesPerSecond = 9083
-Finished Epoch[ 9 of 50]: [Training Set] TrainLossPerSample = 0.15952739; EvalErrPerSample = 0.074199997; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.112317
+Finished Epoch[ 9 of 50]: [Training Set] TrainLossPerSample = 0.15952739; EvalErrPerSample = 0.074199997; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.112317
 Starting Epoch 10: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 9 at record count 90000, and file position 0
 already there from last epoch
@@ -1253,7 +1253,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[10 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16527734; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02723s; TotalTimePerSample = 0.10891ms; SamplesPerSecond = 9182
  Epoch[10 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12864990; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9190
  Epoch[10 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15688379; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02721s; TotalTimePerSample = 0.10884ms; SamplesPerSecond = 9188
-Finished Epoch[10 of 50]: [Training Set] TrainLossPerSample = 0.15735762; EvalErrPerSample = 0.074999996; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.098507
+Finished Epoch[10 of 50]: [Training Set] TrainLossPerSample = 0.15735762; EvalErrPerSample = 0.074999996; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.098507
 Starting Epoch 11: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 10 at record count 100000, and file position 0
 already there from last epoch
@@ -1302,7 +1302,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[11 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16231152; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02719s; TotalTimePerSample = 0.10874ms; SamplesPerSecond = 9195
  Epoch[11 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14154346; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9191
  Epoch[11 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14055371; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02718s; TotalTimePerSample = 0.10872ms; SamplesPerSecond = 9197
-Finished Epoch[11 of 50]: [Training Set] TrainLossPerSample = 0.15786354; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.09166
+Finished Epoch[11 of 50]: [Training Set] TrainLossPerSample = 0.15786354; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.09166
 Starting Epoch 12: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 11 at record count 110000, and file position 0
 already there from last epoch
@@ -1351,7 +1351,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[12 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15307568; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02740s; TotalTimePerSample = 0.10958ms; SamplesPerSecond = 9125
  Epoch[12 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13463135; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02731s; TotalTimePerSample = 0.10923ms; SamplesPerSecond = 9155
  Epoch[12 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17190479; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02736s; TotalTimePerSample = 0.10943ms; SamplesPerSecond = 9138
-Finished Epoch[12 of 50]: [Training Set] TrainLossPerSample = 0.15688172; EvalErrPerSample = 0.075300001; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092563
+Finished Epoch[12 of 50]: [Training Set] TrainLossPerSample = 0.15688172; EvalErrPerSample = 0.075300001; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092563
 Starting Epoch 13: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 12 at record count 120000, and file position 0
 already there from last epoch
@@ -1400,7 +1400,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[13 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16120947; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[13 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14225000; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02719s; TotalTimePerSample = 0.10876ms; SamplesPerSecond = 9194
  Epoch[13 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17186865; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
-Finished Epoch[13 of 50]: [Training Set] TrainLossPerSample = 0.15703486; EvalErrPerSample = 0.074900001; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092528
+Finished Epoch[13 of 50]: [Training Set] TrainLossPerSample = 0.15703486; EvalErrPerSample = 0.074900001; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092528
 Starting Epoch 14: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 13 at record count 130000, and file position 0
 already there from last epoch
@@ -1449,7 +1449,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[14 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10506836; EvalErr[0]PerSample = 0.03200000; TotalTime = 0.02718s; TotalTimePerSample = 0.10872ms; SamplesPerSecond = 9198
  Epoch[14 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17161377; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02718s; TotalTimePerSample = 0.10872ms; SamplesPerSecond = 9197
  Epoch[14 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12090918; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02717s; TotalTimePerSample = 0.10868ms; SamplesPerSecond = 9201
-Finished Epoch[14 of 50]: [Training Set] TrainLossPerSample = 0.15650167; EvalErrPerSample = 0.073199995; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092187
+Finished Epoch[14 of 50]: [Training Set] TrainLossPerSample = 0.15650167; EvalErrPerSample = 0.073199995; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092187
 Starting Epoch 15: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 14 at record count 140000, and file position 0
 already there from last epoch
@@ -1498,7 +1498,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[15 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19539990; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.02719s; TotalTimePerSample = 0.10874ms; SamplesPerSecond = 9195
  Epoch[15 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14391406; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02721s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[15 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15546729; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02718s; TotalTimePerSample = 0.10873ms; SamplesPerSecond = 9197
-Finished Epoch[15 of 50]: [Training Set] TrainLossPerSample = 0.15782984; EvalErrPerSample = 0.076399997; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.091656
+Finished Epoch[15 of 50]: [Training Set] TrainLossPerSample = 0.15782984; EvalErrPerSample = 0.076399997; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.091656
 Starting Epoch 16: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 15 at record count 150000, and file position 0
 already there from last epoch
@@ -1547,7 +1547,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[16 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13863965; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02719s; TotalTimePerSample = 0.10875ms; SamplesPerSecond = 9195
  Epoch[16 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10816260; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.02721s; TotalTimePerSample = 0.10885ms; SamplesPerSecond = 9187
  Epoch[16 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17816211; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02718s; TotalTimePerSample = 0.10872ms; SamplesPerSecond = 9197
-Finished Epoch[16 of 50]: [Training Set] TrainLossPerSample = 0.15612659; EvalErrPerSample = 0.0748; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092038
+Finished Epoch[16 of 50]: [Training Set] TrainLossPerSample = 0.15612659; EvalErrPerSample = 0.0748; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092038
 Starting Epoch 17: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 16 at record count 160000, and file position 0
 already there from last epoch
@@ -1596,7 +1596,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[17 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14310254; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10887ms; SamplesPerSecond = 9185
  Epoch[17 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20940723; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[17 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17308984; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02722s; TotalTimePerSample = 0.10887ms; SamplesPerSecond = 9185
-Finished Epoch[17 of 50]: [Training Set] TrainLossPerSample = 0.15575041; EvalErrPerSample = 0.073399998; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.09333
+Finished Epoch[17 of 50]: [Training Set] TrainLossPerSample = 0.15575041; EvalErrPerSample = 0.073399998; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.09333
 Starting Epoch 18: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 17 at record count 170000, and file position 0
 already there from last epoch
@@ -1645,7 +1645,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[18 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15200293; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02721s; TotalTimePerSample = 0.10884ms; SamplesPerSecond = 9187
  Epoch[18 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13589160; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02719s; TotalTimePerSample = 0.10877ms; SamplesPerSecond = 9193
  Epoch[18 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13092285; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02735s; TotalTimePerSample = 0.10940ms; SamplesPerSecond = 9140
-Finished Epoch[18 of 50]: [Training Set] TrainLossPerSample = 0.15587282; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092583
+Finished Epoch[18 of 50]: [Training Set] TrainLossPerSample = 0.15587282; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092583
 Starting Epoch 19: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 18 at record count 180000, and file position 0
 already there from last epoch
@@ -1694,7 +1694,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[19 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20386328; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02719s; TotalTimePerSample = 0.10878ms; SamplesPerSecond = 9192
  Epoch[19 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15185059; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02721s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[19 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16164893; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02724s; TotalTimePerSample = 0.10895ms; SamplesPerSecond = 9178
-Finished Epoch[19 of 50]: [Training Set] TrainLossPerSample = 0.15675788; EvalErrPerSample = 0.073799998; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092074
+Finished Epoch[19 of 50]: [Training Set] TrainLossPerSample = 0.15675788; EvalErrPerSample = 0.073799998; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092074
 Starting Epoch 20: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 19 at record count 190000, and file position 0
 already there from last epoch
@@ -1743,7 +1743,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[20 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13391699; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9191
  Epoch[20 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20655566; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10878ms; SamplesPerSecond = 9192
  Epoch[20 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11369189; EvalErr[0]PerSample = 0.03600000; TotalTime = 0.02719s; TotalTimePerSample = 0.10875ms; SamplesPerSecond = 9195
-Finished Epoch[20 of 50]: [Training Set] TrainLossPerSample = 0.15576193; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.091947
+Finished Epoch[20 of 50]: [Training Set] TrainLossPerSample = 0.15576193; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.091947
 Starting Epoch 21: learning rate per sample = 0.008000  effective momentum = 0.900000 
 starting epoch 20 at record count 200000, and file position 0
 already there from last epoch
@@ -1792,7 +1792,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[21 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16870068; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02721s; TotalTimePerSample = 0.10885ms; SamplesPerSecond = 9186
  Epoch[21 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17976416; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02720s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[21 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13477588; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9191
-Finished Epoch[21 of 50]: [Training Set] TrainLossPerSample = 0.15654007; EvalErrPerSample = 0.0744; Ave LearnRatePerSample = 0.00800000038; EpochTime=1.092057
+Finished Epoch[21 of 50]: [Training Set] TrainLossPerSample = 0.15654007; EvalErrPerSample = 0.0744; AvgLearningRatePerSample = 0.00800000038; EpochTime=1.092057
 Starting Epoch 22: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 21 at record count 210000, and file position 0
 already there from last epoch
@@ -1841,7 +1841,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[22 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19286230; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02719s; TotalTimePerSample = 0.10875ms; SamplesPerSecond = 9195
  Epoch[22 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17331201; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10878ms; SamplesPerSecond = 9192
  Epoch[22 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13773047; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02718s; TotalTimePerSample = 0.10872ms; SamplesPerSecond = 9197
-Finished Epoch[22 of 50]: [Training Set] TrainLossPerSample = 0.15452731; EvalErrPerSample = 0.074099995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.09325
+Finished Epoch[22 of 50]: [Training Set] TrainLossPerSample = 0.15452731; EvalErrPerSample = 0.074099995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.09325
 Starting Epoch 23: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 22 at record count 220000, and file position 0
 already there from last epoch
@@ -1890,7 +1890,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[23 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17768506; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02716s; TotalTimePerSample = 0.10866ms; SamplesPerSecond = 9203
  Epoch[23 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.09790527; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.02720s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[23 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17229346; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02721s; TotalTimePerSample = 0.10883ms; SamplesPerSecond = 9188
-Finished Epoch[23 of 50]: [Training Set] TrainLossPerSample = 0.1542567; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.09209
+Finished Epoch[23 of 50]: [Training Set] TrainLossPerSample = 0.1542567; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.09209
 Starting Epoch 24: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 23 at record count 230000, and file position 0
 already there from last epoch
@@ -1939,7 +1939,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[24 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16534424; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02722s; TotalTimePerSample = 0.10887ms; SamplesPerSecond = 9185
  Epoch[24 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19569043; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[24 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13875439; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02716s; TotalTimePerSample = 0.10866ms; SamplesPerSecond = 9203
-Finished Epoch[24 of 50]: [Training Set] TrainLossPerSample = 0.15496558; EvalErrPerSample = 0.073899999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.092693
+Finished Epoch[24 of 50]: [Training Set] TrainLossPerSample = 0.15496558; EvalErrPerSample = 0.073899999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.092693
 Starting Epoch 25: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 24 at record count 240000, and file position 0
 already there from last epoch
@@ -1988,7 +1988,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[25 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16605566; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02719s; TotalTimePerSample = 0.10876ms; SamplesPerSecond = 9194
  Epoch[25 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15307568; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02719s; TotalTimePerSample = 0.10877ms; SamplesPerSecond = 9193
  Epoch[25 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12986426; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
-Finished Epoch[25 of 50]: [Training Set] TrainLossPerSample = 0.15454097; EvalErrPerSample = 0.074499995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.092387
+Finished Epoch[25 of 50]: [Training Set] TrainLossPerSample = 0.15454097; EvalErrPerSample = 0.074499995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.092387
 Starting Epoch 26: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 25 at record count 250000, and file position 0
 already there from last epoch
@@ -2037,7 +2037,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[26 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13703613; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02724s; TotalTimePerSample = 0.10898ms; SamplesPerSecond = 9175
  Epoch[26 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18752783; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02723s; TotalTimePerSample = 0.10891ms; SamplesPerSecond = 9182
  Epoch[26 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14986914; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02725s; TotalTimePerSample = 0.10902ms; SamplesPerSecond = 9172
-Finished Epoch[26 of 50]: [Training Set] TrainLossPerSample = 0.1544621; EvalErrPerSample = 0.074499995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093565
+Finished Epoch[26 of 50]: [Training Set] TrainLossPerSample = 0.1544621; EvalErrPerSample = 0.074499995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093565
 Starting Epoch 27: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 26 at record count 260000, and file position 0
 already there from last epoch
@@ -2086,7 +2086,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[27 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20963965; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02714s; TotalTimePerSample = 0.10856ms; SamplesPerSecond = 9211
  Epoch[27 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12907471; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02716s; TotalTimePerSample = 0.10862ms; SamplesPerSecond = 9206
  Epoch[27 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14724365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02731s; TotalTimePerSample = 0.10922ms; SamplesPerSecond = 9155
-Finished Epoch[27 of 50]: [Training Set] TrainLossPerSample = 0.15420328; EvalErrPerSample = 0.073199995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.092849
+Finished Epoch[27 of 50]: [Training Set] TrainLossPerSample = 0.15420328; EvalErrPerSample = 0.073199995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.092849
 Starting Epoch 28: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 27 at record count 270000, and file position 0
 already there from last epoch
@@ -2135,7 +2135,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[28 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14019092; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02723s; TotalTimePerSample = 0.10890ms; SamplesPerSecond = 9182
  Epoch[28 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18208252; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[28 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22117920; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.02720s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
-Finished Epoch[28 of 50]: [Training Set] TrainLossPerSample = 0.15448074; EvalErrPerSample = 0.0735; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094142
+Finished Epoch[28 of 50]: [Training Set] TrainLossPerSample = 0.15448074; EvalErrPerSample = 0.0735; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094142
 Starting Epoch 29: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 28 at record count 280000, and file position 0
 already there from last epoch
@@ -2184,7 +2184,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[29 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16029443; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02729s; TotalTimePerSample = 0.10917ms; SamplesPerSecond = 9159
  Epoch[29 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16165674; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02735s; TotalTimePerSample = 0.10940ms; SamplesPerSecond = 9140
  Epoch[29 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18032227; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02721s; TotalTimePerSample = 0.10883ms; SamplesPerSecond = 9188
-Finished Epoch[29 of 50]: [Training Set] TrainLossPerSample = 0.15425788; EvalErrPerSample = 0.0735; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093177
+Finished Epoch[29 of 50]: [Training Set] TrainLossPerSample = 0.15425788; EvalErrPerSample = 0.0735; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093177
 Starting Epoch 30: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 29 at record count 290000, and file position 0
 already there from last epoch
@@ -2233,7 +2233,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[30 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10748340; EvalErr[0]PerSample = 0.04000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[30 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16840088; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02725s; TotalTimePerSample = 0.10899ms; SamplesPerSecond = 9174
  Epoch[30 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12399756; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02721s; TotalTimePerSample = 0.10884ms; SamplesPerSecond = 9187
-Finished Epoch[30 of 50]: [Training Set] TrainLossPerSample = 0.15441342; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.092974
+Finished Epoch[30 of 50]: [Training Set] TrainLossPerSample = 0.15441342; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.092974
 Starting Epoch 31: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 30 at record count 300000, and file position 0
 already there from last epoch
@@ -2282,7 +2282,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[31 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13656494; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02720s; TotalTimePerSample = 0.10881ms; SamplesPerSecond = 9190
  Epoch[31 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18717383; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[31 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16078516; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02723s; TotalTimePerSample = 0.10892ms; SamplesPerSecond = 9181
-Finished Epoch[31 of 50]: [Training Set] TrainLossPerSample = 0.15395863; EvalErrPerSample = 0.073100001; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094248
+Finished Epoch[31 of 50]: [Training Set] TrainLossPerSample = 0.15395863; EvalErrPerSample = 0.073100001; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094248
 Starting Epoch 32: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 31 at record count 310000, and file position 0
 already there from last epoch
@@ -2331,7 +2331,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[32 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14021631; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02720s; TotalTimePerSample = 0.10879ms; SamplesPerSecond = 9192
  Epoch[32 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.11768311; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02719s; TotalTimePerSample = 0.10877ms; SamplesPerSecond = 9193
  Epoch[32 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13811475; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10889ms; SamplesPerSecond = 9183
-Finished Epoch[32 of 50]: [Training Set] TrainLossPerSample = 0.15404309; EvalErrPerSample = 0.0735; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093286
+Finished Epoch[32 of 50]: [Training Set] TrainLossPerSample = 0.15404309; EvalErrPerSample = 0.0735; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093286
 Starting Epoch 33: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 32 at record count 320000, and file position 0
 already there from last epoch
@@ -2380,7 +2380,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[33 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14811572; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02721s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
  Epoch[33 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22962549; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.02725s; TotalTimePerSample = 0.10900ms; SamplesPerSecond = 9174
  Epoch[33 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14117627; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02721s; TotalTimePerSample = 0.10882ms; SamplesPerSecond = 9189
-Finished Epoch[33 of 50]: [Training Set] TrainLossPerSample = 0.15427619; EvalErrPerSample = 0.074699998; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.09316
+Finished Epoch[33 of 50]: [Training Set] TrainLossPerSample = 0.15427619; EvalErrPerSample = 0.074699998; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.09316
 Starting Epoch 34: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 33 at record count 330000, and file position 0
 already there from last epoch
@@ -2429,7 +2429,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[34 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13322217; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02768s; TotalTimePerSample = 0.11073ms; SamplesPerSecond = 9030
  Epoch[34 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15333154; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02739s; TotalTimePerSample = 0.10956ms; SamplesPerSecond = 9127
  Epoch[34 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.22119580; EvalErr[0]PerSample = 0.12000000; TotalTime = 0.02754s; TotalTimePerSample = 0.11015ms; SamplesPerSecond = 9078
-Finished Epoch[34 of 50]: [Training Set] TrainLossPerSample = 0.15408638; EvalErrPerSample = 0.074599996; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.107293
+Finished Epoch[34 of 50]: [Training Set] TrainLossPerSample = 0.15408638; EvalErrPerSample = 0.074599996; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.107293
 Starting Epoch 35: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 34 at record count 340000, and file position 0
 already there from last epoch
@@ -2478,7 +2478,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[35 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13364844; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02720s; TotalTimePerSample = 0.10879ms; SamplesPerSecond = 9192
  Epoch[35 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17490576; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02724s; TotalTimePerSample = 0.10895ms; SamplesPerSecond = 9178
  Epoch[35 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16676807; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02721s; TotalTimePerSample = 0.10885ms; SamplesPerSecond = 9187
-Finished Epoch[35 of 50]: [Training Set] TrainLossPerSample = 0.15381069; EvalErrPerSample = 0.074099995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.100509
+Finished Epoch[35 of 50]: [Training Set] TrainLossPerSample = 0.15381069; EvalErrPerSample = 0.074099995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.100509
 Starting Epoch 36: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 35 at record count 350000, and file position 0
 already there from last epoch
@@ -2527,7 +2527,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[36 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16109668; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[36 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15225586; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9190
  Epoch[36 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16420850; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02723s; TotalTimePerSample = 0.10892ms; SamplesPerSecond = 9181
-Finished Epoch[36 of 50]: [Training Set] TrainLossPerSample = 0.1543726; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093224
+Finished Epoch[36 of 50]: [Training Set] TrainLossPerSample = 0.1543726; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093224
 Starting Epoch 37: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 36 at record count 360000, and file position 0
 already there from last epoch
@@ -2576,7 +2576,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[37 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16198828; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02724s; TotalTimePerSample = 0.10897ms; SamplesPerSecond = 9176
  Epoch[37 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10900000; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02723s; TotalTimePerSample = 0.10893ms; SamplesPerSecond = 9180
  Epoch[37 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13133252; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02720s; TotalTimePerSample = 0.10879ms; SamplesPerSecond = 9191
-Finished Epoch[37 of 50]: [Training Set] TrainLossPerSample = 0.15377285; EvalErrPerSample = 0.073899999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093315
+Finished Epoch[37 of 50]: [Training Set] TrainLossPerSample = 0.15377285; EvalErrPerSample = 0.073899999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093315
 Starting Epoch 38: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 37 at record count 370000, and file position 0
 already there from last epoch
@@ -2625,7 +2625,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[38 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15273438; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10887ms; SamplesPerSecond = 9185
  Epoch[38 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18501367; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02724s; TotalTimePerSample = 0.10896ms; SamplesPerSecond = 9177
  Epoch[38 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18130713; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02723s; TotalTimePerSample = 0.10893ms; SamplesPerSecond = 9180
-Finished Epoch[38 of 50]: [Training Set] TrainLossPerSample = 0.1540807; EvalErrPerSample = 0.073399998; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093519
+Finished Epoch[38 of 50]: [Training Set] TrainLossPerSample = 0.1540807; EvalErrPerSample = 0.073399998; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093519
 Starting Epoch 39: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 38 at record count 380000, and file position 0
 already there from last epoch
@@ -2674,7 +2674,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[39 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13642383; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02723s; TotalTimePerSample = 0.10891ms; SamplesPerSecond = 9182
  Epoch[39 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16978418; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02729s; TotalTimePerSample = 0.10916ms; SamplesPerSecond = 9161
  Epoch[39 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19114453; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02741s; TotalTimePerSample = 0.10963ms; SamplesPerSecond = 9121
-Finished Epoch[39 of 50]: [Training Set] TrainLossPerSample = 0.15397325; EvalErrPerSample = 0.075099997; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.09361
+Finished Epoch[39 of 50]: [Training Set] TrainLossPerSample = 0.15397325; EvalErrPerSample = 0.075099997; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.09361
 Starting Epoch 40: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 39 at record count 390000, and file position 0
 already there from last epoch
@@ -2723,7 +2723,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[40 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17169043; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02713s; TotalTimePerSample = 0.10853ms; SamplesPerSecond = 9213
  Epoch[40 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13948096; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02720s; TotalTimePerSample = 0.10878ms; SamplesPerSecond = 9192
  Epoch[40 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.10538037; EvalErr[0]PerSample = 0.05600000; TotalTime = 0.02724s; TotalTimePerSample = 0.10894ms; SamplesPerSecond = 9179
-Finished Epoch[40 of 50]: [Training Set] TrainLossPerSample = 0.15411584; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094549
+Finished Epoch[40 of 50]: [Training Set] TrainLossPerSample = 0.15411584; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094549
 Starting Epoch 41: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 40 at record count 400000, and file position 0
 already there from last epoch
@@ -2772,7 +2772,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[41 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14700732; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02727s; TotalTimePerSample = 0.10909ms; SamplesPerSecond = 9166
  Epoch[41 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.12679102; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10881ms; SamplesPerSecond = 9190
  Epoch[41 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14017578; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02722s; TotalTimePerSample = 0.10886ms; SamplesPerSecond = 9185
-Finished Epoch[41 of 50]: [Training Set] TrainLossPerSample = 0.15354191; EvalErrPerSample = 0.074499995; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093961
+Finished Epoch[41 of 50]: [Training Set] TrainLossPerSample = 0.15354191; EvalErrPerSample = 0.074499995; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093961
 Starting Epoch 42: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 41 at record count 410000, and file position 0
 already there from last epoch
@@ -2821,7 +2821,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[42 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.19247852; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02719s; TotalTimePerSample = 0.10874ms; SamplesPerSecond = 9195
  Epoch[42 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14758496; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10890ms; SamplesPerSecond = 9183
  Epoch[42 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18480127; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02724s; TotalTimePerSample = 0.10896ms; SamplesPerSecond = 9177
-Finished Epoch[42 of 50]: [Training Set] TrainLossPerSample = 0.15389869; EvalErrPerSample = 0.072899997; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093724
+Finished Epoch[42 of 50]: [Training Set] TrainLossPerSample = 0.15389869; EvalErrPerSample = 0.072899997; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093724
 Starting Epoch 43: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 42 at record count 420000, and file position 0
 already there from last epoch
@@ -2870,7 +2870,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[43 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17157080; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02723s; TotalTimePerSample = 0.10892ms; SamplesPerSecond = 9180
  Epoch[43 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14392041; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02728s; TotalTimePerSample = 0.10910ms; SamplesPerSecond = 9165
  Epoch[43 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14997168; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02729s; TotalTimePerSample = 0.10917ms; SamplesPerSecond = 9159
-Finished Epoch[43 of 50]: [Training Set] TrainLossPerSample = 0.15397222; EvalErrPerSample = 0.072999999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094086
+Finished Epoch[43 of 50]: [Training Set] TrainLossPerSample = 0.15397222; EvalErrPerSample = 0.072999999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094086
 Starting Epoch 44: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 43 at record count 430000, and file position 0
 already there from last epoch
@@ -2919,7 +2919,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[44 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16810498; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02748s; TotalTimePerSample = 0.10994ms; SamplesPerSecond = 9096
  Epoch[44 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14758252; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02741s; TotalTimePerSample = 0.10962ms; SamplesPerSecond = 9122
  Epoch[44 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14416113; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02726s; TotalTimePerSample = 0.10904ms; SamplesPerSecond = 9171
-Finished Epoch[44 of 50]: [Training Set] TrainLossPerSample = 0.15357386; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.095125
+Finished Epoch[44 of 50]: [Training Set] TrainLossPerSample = 0.15357386; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.095125
 Starting Epoch 45: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 44 at record count 440000, and file position 0
 already there from last epoch
@@ -2968,7 +2968,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[45 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16688672; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02720s; TotalTimePerSample = 0.10880ms; SamplesPerSecond = 9191
  Epoch[45 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17625439; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02722s; TotalTimePerSample = 0.10888ms; SamplesPerSecond = 9184
  Epoch[45 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13072217; EvalErr[0]PerSample = 0.04400000; TotalTime = 0.02722s; TotalTimePerSample = 0.10887ms; SamplesPerSecond = 9185
-Finished Epoch[45 of 50]: [Training Set] TrainLossPerSample = 0.15369014; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094082
+Finished Epoch[45 of 50]: [Training Set] TrainLossPerSample = 0.15369014; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094082
 Starting Epoch 46: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 45 at record count 450000, and file position 0
 already there from last epoch
@@ -3017,7 +3017,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[46 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18481152; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02727s; TotalTimePerSample = 0.10910ms; SamplesPerSecond = 9166
  Epoch[46 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20463916; EvalErr[0]PerSample = 0.10000000; TotalTime = 0.02725s; TotalTimePerSample = 0.10899ms; SamplesPerSecond = 9174
  Epoch[46 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16385156; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02723s; TotalTimePerSample = 0.10893ms; SamplesPerSecond = 9180
-Finished Epoch[46 of 50]: [Training Set] TrainLossPerSample = 0.15344664; EvalErrPerSample = 0.0726; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.092825
+Finished Epoch[46 of 50]: [Training Set] TrainLossPerSample = 0.15344664; EvalErrPerSample = 0.0726; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.092825
 Starting Epoch 47: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 46 at record count 460000, and file position 0
 already there from last epoch
@@ -3066,7 +3066,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[47 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20146924; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.02722s; TotalTimePerSample = 0.10886ms; SamplesPerSecond = 9185
  Epoch[47 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.13325732; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02719s; TotalTimePerSample = 0.10876ms; SamplesPerSecond = 9194
  Epoch[47 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16861133; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02719s; TotalTimePerSample = 0.10875ms; SamplesPerSecond = 9195
-Finished Epoch[47 of 50]: [Training Set] TrainLossPerSample = 0.15346082; EvalErrPerSample = 0.073699996; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.093206
+Finished Epoch[47 of 50]: [Training Set] TrainLossPerSample = 0.15346082; EvalErrPerSample = 0.073699996; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.093206
 Starting Epoch 48: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 47 at record count 470000, and file position 0
 already there from last epoch
@@ -3115,7 +3115,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[48 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16028613; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02726s; TotalTimePerSample = 0.10905ms; SamplesPerSecond = 9169
  Epoch[48 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20313232; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.02726s; TotalTimePerSample = 0.10904ms; SamplesPerSecond = 9170
  Epoch[48 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16055713; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02725s; TotalTimePerSample = 0.10899ms; SamplesPerSecond = 9174
-Finished Epoch[48 of 50]: [Training Set] TrainLossPerSample = 0.15372251; EvalErrPerSample = 0.074199997; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.094656
+Finished Epoch[48 of 50]: [Training Set] TrainLossPerSample = 0.15372251; EvalErrPerSample = 0.074199997; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.094656
 Starting Epoch 49: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 48 at record count 480000, and file position 0
 already there from last epoch
@@ -3164,7 +3164,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[49 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.17763770; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.02726s; TotalTimePerSample = 0.10903ms; SamplesPerSecond = 9171
  Epoch[49 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18380615; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02725s; TotalTimePerSample = 0.10900ms; SamplesPerSecond = 9173
  Epoch[49 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18585449; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02727s; TotalTimePerSample = 0.10907ms; SamplesPerSecond = 9168
-Finished Epoch[49 of 50]: [Training Set] TrainLossPerSample = 0.15413536; EvalErrPerSample = 0.074299999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.095979
+Finished Epoch[49 of 50]: [Training Set] TrainLossPerSample = 0.15413536; EvalErrPerSample = 0.074299999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.095979
 Starting Epoch 50: learning rate per sample = 0.004000  effective momentum = 0.900000 
 starting epoch 49 at record count 490000, and file position 0
 already there from last epoch
@@ -3213,7 +3213,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[50 of 50]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.18471582; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02743s; TotalTimePerSample = 0.10974ms; SamplesPerSecond = 9112
  Epoch[50 of 50]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.15677246; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02729s; TotalTimePerSample = 0.10915ms; SamplesPerSecond = 9161
  Epoch[50 of 50]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14656787; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02727s; TotalTimePerSample = 0.10907ms; SamplesPerSecond = 9168
-Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.153244; EvalErrPerSample = 0.073600002; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.095388
+Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.153244; EvalErrPerSample = 0.073600002; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.095388
 CNTKCommandTrainEnd: Simple_Demo
 reading uci file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Data/SimpleDataTest.txt
 
@@ -4425,48 +4425,48 @@ already there from last epoch
 Starting minibatch loop.
 randomordering: 1948 retries for 10000 elements (19.5%) to ensure window condition
 randomordering: recached sequence for seed 49: 2737, 4106, ...
- Epoch[50 of 50]-Minibatch[   1-  10 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15773889; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.16745s; TotalTimePerSample = 0.66981ms; SamplesPerSecond = 1492
- Epoch[50 of 50]-Minibatch[  11-  20 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16013403; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02794s; TotalTimePerSample = 0.11177ms; SamplesPerSecond = 8946
- Epoch[50 of 50]-Minibatch[  21-  30 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15597742; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02723s; TotalTimePerSample = 0.10892ms; SamplesPerSecond = 9180
- Epoch[50 of 50]-Minibatch[  31-  40 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.19367725; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.02738s; TotalTimePerSample = 0.10953ms; SamplesPerSecond = 9129
- Epoch[50 of 50]-Minibatch[  41-  50 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13024823; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02914s; TotalTimePerSample = 0.11655ms; SamplesPerSecond = 8579
- Epoch[50 of 50]-Minibatch[  51-  60 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14464355; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02804s; TotalTimePerSample = 0.11215ms; SamplesPerSecond = 8916
- Epoch[50 of 50]-Minibatch[  61-  70 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13660968; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02777s; TotalTimePerSample = 0.11109ms; SamplesPerSecond = 9001
- Epoch[50 of 50]-Minibatch[  71-  80 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14630908; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02737s; TotalTimePerSample = 0.10949ms; SamplesPerSecond = 9133
- Epoch[50 of 50]-Minibatch[  81-  90 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18942554; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02740s; TotalTimePerSample = 0.10958ms; SamplesPerSecond = 9125
- Epoch[50 of 50]-Minibatch[  91- 100 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14486499; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02760s; TotalTimePerSample = 0.11041ms; SamplesPerSecond = 9057
+ Epoch[50 of 50]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.15773889; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.16745s; TotalTimePerSample = 0.66981ms; SamplesPerSecond = 1492
+ Epoch[50 of 50]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.16013403; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02794s; TotalTimePerSample = 0.11177ms; SamplesPerSecond = 8946
+ Epoch[50 of 50]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.15597742; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02723s; TotalTimePerSample = 0.10892ms; SamplesPerSecond = 9180
+ Epoch[50 of 50]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.19367725; EvalErr[0]PerSample = 0.10800000; TotalTime = 0.02738s; TotalTimePerSample = 0.10953ms; SamplesPerSecond = 9129
+ Epoch[50 of 50]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.13024823; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02914s; TotalTimePerSample = 0.11655ms; SamplesPerSecond = 8579
+ Epoch[50 of 50]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.14464355; EvalErr[0]PerSample = 0.07600000; TotalTime = 0.02804s; TotalTimePerSample = 0.11215ms; SamplesPerSecond = 8916
+ Epoch[50 of 50]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.13660968; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02777s; TotalTimePerSample = 0.11109ms; SamplesPerSecond = 9001
+ Epoch[50 of 50]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.14630908; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02737s; TotalTimePerSample = 0.10949ms; SamplesPerSecond = 9133
+ Epoch[50 of 50]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.18942554; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.02740s; TotalTimePerSample = 0.10958ms; SamplesPerSecond = 9125
+ Epoch[50 of 50]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.14486499; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02760s; TotalTimePerSample = 0.11041ms; SamplesPerSecond = 9057
 WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[50 of 50]-Minibatch[ 101- 110 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15029260; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02747s; TotalTimePerSample = 0.10988ms; SamplesPerSecond = 9100
- Epoch[50 of 50]-Minibatch[ 111- 120 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13354980; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02735s; TotalTimePerSample = 0.10940ms; SamplesPerSecond = 9140
- Epoch[50 of 50]-Minibatch[ 121- 130 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.19891504; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02747s; TotalTimePerSample = 0.10986ms; SamplesPerSecond = 9102
- Epoch[50 of 50]-Minibatch[ 131- 140 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.12173914; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02770s; TotalTimePerSample = 0.11078ms; SamplesPerSecond = 9026
- Epoch[50 of 50]-Minibatch[ 141- 150 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.11227881; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02745s; TotalTimePerSample = 0.10980ms; SamplesPerSecond = 9107
- Epoch[50 of 50]-Minibatch[ 151- 160 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16764697; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02729s; TotalTimePerSample = 0.10916ms; SamplesPerSecond = 9160
- Epoch[50 of 50]-Minibatch[ 161- 170 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16297925; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02770s; TotalTimePerSample = 0.11080ms; SamplesPerSecond = 9024
- Epoch[50 of 50]-Minibatch[ 171- 180 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14261255; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02762s; TotalTimePerSample = 0.11048ms; SamplesPerSecond = 9051
- Epoch[50 of 50]-Minibatch[ 181- 190 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13979248; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02749s; TotalTimePerSample = 0.10996ms; SamplesPerSecond = 9094
- Epoch[50 of 50]-Minibatch[ 191- 200 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13189990; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02738s; TotalTimePerSample = 0.10951ms; SamplesPerSecond = 9131
- Epoch[50 of 50]-Minibatch[ 201- 210 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18064307; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02753s; TotalTimePerSample = 0.11010ms; SamplesPerSecond = 9082
- Epoch[50 of 50]-Minibatch[ 211- 220 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.10665430; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02743s; TotalTimePerSample = 0.10972ms; SamplesPerSecond = 9113
- Epoch[50 of 50]-Minibatch[ 221- 230 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.11337573; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02742s; TotalTimePerSample = 0.10968ms; SamplesPerSecond = 9117
- Epoch[50 of 50]-Minibatch[ 231- 240 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18341089; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.02835s; TotalTimePerSample = 0.11341ms; SamplesPerSecond = 8817
- Epoch[50 of 50]-Minibatch[ 241- 250 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14659692; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02733s; TotalTimePerSample = 0.10930ms; SamplesPerSecond = 9148
- Epoch[50 of 50]-Minibatch[ 251- 260 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.11995776; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02731s; TotalTimePerSample = 0.10924ms; SamplesPerSecond = 9154
- Epoch[50 of 50]-Minibatch[ 261- 270 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15982104; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02747s; TotalTimePerSample = 0.10987ms; SamplesPerSecond = 9101
- Epoch[50 of 50]-Minibatch[ 271- 280 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17094141; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02756s; TotalTimePerSample = 0.11024ms; SamplesPerSecond = 9071
- Epoch[50 of 50]-Minibatch[ 281- 290 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.13222607; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02738s; TotalTimePerSample = 0.10954ms; SamplesPerSecond = 9129
- Epoch[50 of 50]-Minibatch[ 291- 300 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15150635; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02743s; TotalTimePerSample = 0.10971ms; SamplesPerSecond = 9115
- Epoch[50 of 50]-Minibatch[ 301- 310 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16618652; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02751s; TotalTimePerSample = 0.11003ms; SamplesPerSecond = 9088
- Epoch[50 of 50]-Minibatch[ 311- 320 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16101416; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02757s; TotalTimePerSample = 0.11026ms; SamplesPerSecond = 9069
- Epoch[50 of 50]-Minibatch[ 321- 330 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16108643; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02751s; TotalTimePerSample = 0.11002ms; SamplesPerSecond = 9088
- Epoch[50 of 50]-Minibatch[ 331- 340 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.17528662; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02723s; TotalTimePerSample = 0.10893ms; SamplesPerSecond = 9180
- Epoch[50 of 50]-Minibatch[ 341- 350 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15865771; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02760s; TotalTimePerSample = 0.11041ms; SamplesPerSecond = 9057
- Epoch[50 of 50]-Minibatch[ 351- 360 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15342627; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02752s; TotalTimePerSample = 0.11009ms; SamplesPerSecond = 9083
- Epoch[50 of 50]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18002588; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02761s; TotalTimePerSample = 0.11042ms; SamplesPerSecond = 9056
- Epoch[50 of 50]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.18474365; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02747s; TotalTimePerSample = 0.10990ms; SamplesPerSecond = 9099
- Epoch[50 of 50]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.15674365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02766s; TotalTimePerSample = 0.11065ms; SamplesPerSecond = 9037
- Epoch[50 of 50]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14657764; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02728s; TotalTimePerSample = 0.10914ms; SamplesPerSecond = 9162
-Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15325543; EvalErrPerSample = 0.073899999; Ave LearnRatePerSample = 0.00400000019; EpochTime=1.249205
+ Epoch[50 of 50]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.15029260; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02747s; TotalTimePerSample = 0.10988ms; SamplesPerSecond = 9100
+ Epoch[50 of 50]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.13354980; EvalErr[0]PerSample = 0.06000000; TotalTime = 0.02735s; TotalTimePerSample = 0.10940ms; SamplesPerSecond = 9140
+ Epoch[50 of 50]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.19891504; EvalErr[0]PerSample = 0.10400000; TotalTime = 0.02747s; TotalTimePerSample = 0.10986ms; SamplesPerSecond = 9102
+ Epoch[50 of 50]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.12173914; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02770s; TotalTimePerSample = 0.11078ms; SamplesPerSecond = 9026
+ Epoch[50 of 50]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.11227881; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02745s; TotalTimePerSample = 0.10980ms; SamplesPerSecond = 9107
+ Epoch[50 of 50]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.16764697; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02729s; TotalTimePerSample = 0.10916ms; SamplesPerSecond = 9160
+ Epoch[50 of 50]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.16297925; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02770s; TotalTimePerSample = 0.11080ms; SamplesPerSecond = 9024
+ Epoch[50 of 50]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.14261255; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02762s; TotalTimePerSample = 0.11048ms; SamplesPerSecond = 9051
+ Epoch[50 of 50]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.13979248; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02749s; TotalTimePerSample = 0.10996ms; SamplesPerSecond = 9094
+ Epoch[50 of 50]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.13189990; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02738s; TotalTimePerSample = 0.10951ms; SamplesPerSecond = 9131
+ Epoch[50 of 50]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.18064307; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02753s; TotalTimePerSample = 0.11010ms; SamplesPerSecond = 9082
+ Epoch[50 of 50]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.10665430; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02743s; TotalTimePerSample = 0.10972ms; SamplesPerSecond = 9113
+ Epoch[50 of 50]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.11337573; EvalErr[0]PerSample = 0.04800000; TotalTime = 0.02742s; TotalTimePerSample = 0.10968ms; SamplesPerSecond = 9117
+ Epoch[50 of 50]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.18341089; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.02835s; TotalTimePerSample = 0.11341ms; SamplesPerSecond = 8817
+ Epoch[50 of 50]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.14659692; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02733s; TotalTimePerSample = 0.10930ms; SamplesPerSecond = 9148
+ Epoch[50 of 50]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.11995776; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02731s; TotalTimePerSample = 0.10924ms; SamplesPerSecond = 9154
+ Epoch[50 of 50]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.15982104; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02747s; TotalTimePerSample = 0.10987ms; SamplesPerSecond = 9101
+ Epoch[50 of 50]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.17094141; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02756s; TotalTimePerSample = 0.11024ms; SamplesPerSecond = 9071
+ Epoch[50 of 50]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.13222607; EvalErr[0]PerSample = 0.05200000; TotalTime = 0.02738s; TotalTimePerSample = 0.10954ms; SamplesPerSecond = 9129
+ Epoch[50 of 50]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.15150635; EvalErr[0]PerSample = 0.07200000; TotalTime = 0.02743s; TotalTimePerSample = 0.10971ms; SamplesPerSecond = 9115
+ Epoch[50 of 50]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.16618652; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02751s; TotalTimePerSample = 0.11003ms; SamplesPerSecond = 9088
+ Epoch[50 of 50]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.16101416; EvalErr[0]PerSample = 0.08400000; TotalTime = 0.02757s; TotalTimePerSample = 0.11026ms; SamplesPerSecond = 9069
+ Epoch[50 of 50]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.16108643; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02751s; TotalTimePerSample = 0.11002ms; SamplesPerSecond = 9088
+ Epoch[50 of 50]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.17528662; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02723s; TotalTimePerSample = 0.10893ms; SamplesPerSecond = 9180
+ Epoch[50 of 50]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.15865771; EvalErr[0]PerSample = 0.06400000; TotalTime = 0.02760s; TotalTimePerSample = 0.11041ms; SamplesPerSecond = 9057
+ Epoch[50 of 50]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.15342627; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02752s; TotalTimePerSample = 0.11009ms; SamplesPerSecond = 9083
+ Epoch[50 of 50]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.18002588; EvalErr[0]PerSample = 0.08800000; TotalTime = 0.02761s; TotalTimePerSample = 0.11042ms; SamplesPerSecond = 9056
+ Epoch[50 of 50]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.18474365; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02747s; TotalTimePerSample = 0.10990ms; SamplesPerSecond = 9099
+ Epoch[50 of 50]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.15674365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.02766s; TotalTimePerSample = 0.11065ms; SamplesPerSecond = 9037
+ Epoch[50 of 50]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.14657764; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.02728s; TotalTimePerSample = 0.10914ms; SamplesPerSecond = 9162
+Finished Epoch[50 of 50]: [Training Set] TrainLossPerSample = 0.15325543; EvalErrPerSample = 0.073899999; AvgLearningRatePerSample = 0.00400000019; EpochTime=1.249205
 CNTKCommandTrainEnd: Simple_Demo
 reading uci file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/Speech/Data/SimpleDataTest.txt
 

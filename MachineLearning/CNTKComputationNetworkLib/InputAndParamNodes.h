@@ -414,29 +414,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        //void ComputeInputPartialMap(const size_t inputIndex)
-        //{
-        //    if (inputIndex > 1)
-        //        InvalidArgument("LookupTable operation only takes two inputs.");
-        //
-        //    //DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
-        //    //DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
-        //    //Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
-        //
-        //    if (inputIndex == 0)  //left derivative
-        //    {
-        //        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-        //    }
-        //    else  //right derivative
-        //    {
-        //        ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
-        //    }
-        //    //Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
-        //}
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & t) override
         {
-            //if (t.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             if (inputIndex == 0)        // left derivative (embedding matrix)
             {
                 // This is a reduction operation, hence we need to mask out gaps.
@@ -501,18 +480,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
-            //DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
-            //DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
-            //input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
-
             auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
             functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
-            //size_t rows = functionValues.GetNumRows();
-            //functionValues.Reshape(rows * wordsInEachSample, cols1);
-
-            //input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
-
-            //input1.Reshape(rows1, cols1);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
