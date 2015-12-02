@@ -234,6 +234,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePr
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test
 		Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
 	EndProjectSection
@@ -243,6 +244,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
@@ -454,6 +456,28 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{2A
 		Tests\Image\QuickE2E\Macros.ndl = Tests\Image\QuickE2E\Macros.ndl
 		Tests\Image\QuickE2E\run-test = Tests\Image\QuickE2E\run-test
 		Tests\Image\QuickE2E\testcases.yml = Tests\Image\QuickE2E\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SVD", "SVD", "{669B6203-9675-4950-B526-7CD72D55E5E1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\SVD\baseline.cpu.txt = Tests\Speech\SVD\baseline.cpu.txt
+		Tests\Speech\SVD\baseline.gpu.txt = Tests\Speech\SVD\baseline.gpu.txt
+		Tests\Speech\SVD\baseline.windows.cpu.txt = Tests\Speech\SVD\baseline.windows.cpu.txt
+		Tests\Speech\SVD\baseline.windows.gpu.txt = Tests\Speech\SVD\baseline.windows.gpu.txt
+		Tests\Speech\SVD\cntk.config = Tests\Speech\SVD\cntk.config
+		Tests\Speech\SVD\run-test = Tests\Speech\SVD\run-test
+		Tests\Speech\SVD\testcases.yml = Tests\Speech\SVD\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\Simple\baseline.cpu.txt = Tests\Speech\Simple\baseline.cpu.txt
+		Tests\Speech\Simple\baseline.gpu.txt = Tests\Speech\Simple\baseline.gpu.txt
+		Tests\Speech\Simple\baseline.windows.cpu.txt = Tests\Speech\Simple\baseline.windows.cpu.txt
+		Tests\Speech\Simple\baseline.windows.gpu.txt = Tests\Speech\Simple\baseline.windows.gpu.txt
+		Tests\Speech\Simple\cntk.config = Tests\Speech\Simple\cntk.config
+		Tests\Speech\Simple\run-test = Tests\Speech\Simple\run-test
+		Tests\Speech\Simple\testcases.yml = Tests\Speech\Simple\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -746,5 +770,7 @@ Global
 		{8071EF60-30F7-4A77-81AA-ADCA0E18B1E3} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{76F9323D-34A1-43A5-A594-C4798931FF21} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
+		{669B6203-9675-4950-B526-7CD72D55E5E1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 	EndGlobalSection
 EndGlobal

@@ -153,6 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+        // BUGBUG: Unlike ColumnSlice(), this does not return a view. Must be renamed.
         Matrix<ElemType> RowSlice(size_t startRow, size_t numRows) const;
 
         // difference between AssignColumnSlice and SetColumnSlice 
@@ -165,6 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
         void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
+
         Matrix<ElemType> Diagonal() const;
         Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
         void ShiftBy(int numShift);
