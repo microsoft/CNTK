@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_elemSizeAllocated, deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
-        m_sliceViewOffset = deepCopy.m_sliceViewOffset;
+        m_sliceViewOffset = 0; // reset to zero as we only start copying starting from the offset in the source matrix
 
         CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
