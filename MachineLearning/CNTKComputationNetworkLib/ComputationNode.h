@@ -38,22 +38,24 @@
 
 #pragma warning (disable: 4267)
 
-//version number to control how to read and write 
+// version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
-// #define TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
+// helper mode for debugging
+// If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
+// #define TRACK_GAP_NANS
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    enum CopyNodeFlags
+    enum CopyNodeFlags  // flags to be passed to the CopyTo() function
     {
-        copyNodeNull = 0,               // invalid value
-        copyNodeValue=1,                // copy everything but the children links
-        copyNodeChildren=2,             // only copy over children links
-        copyNodeAll=3,                  // copy everything
-        copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
+        copyNodeNull                 = 0,   // invalid value
+        copyNodeValue                = 1,   // copy everything but the children links
+        copyNodeChildren             = 2,   // only copy over children links
+        copyNodeAll                  = 3,   // copy everything
+        copyNodeChildrenCrossNetwork = 4,   // allow a cross network child copy
     };
 
 #pragma region base computation class
@@ -72,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
-#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
+#define OperationNameOf(T) (T<float>::TypeName())               // convenience macro
 
         virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
@@ -103,7 +105,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs() = 0;
         virtual void SaveToFile(File& fstream) const = 0;
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
-        // TODO: is this always just called with deviceId == m_deviceId?   TODO: Where is this actually EVERY called?? I don't see it!
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
         // --- optional overrides that describe a feature or property of the node
@@ -116,6 +117,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
     protected:
         virtual ~IComputationNode() { }
+    };
+
+    // =======================================================================
+    //  This provide a interface for stateful node (e.g., DelayNodeBase) and definition of state
+    //  This interface allows to Export and Import state from elsewhere 
+    //  It is needed when doing sub-minibatch implementation 
+    // =======================================================================
+
+    class INodeState: public std::enable_shared_from_this<INodeState>
+    {
+    public:
+        virtual ~INodeState() {} 
+    };
+
+    struct /*interface*/ IStateFulNode
+    {
+        typedef std::shared_ptr<INodeState> NodeStatePtr;
+        virtual NodeStatePtr ExportState() = 0;
+        virtual void ImportState(const NodeStatePtr& pImportedState) = 0;
     };
 
     // =======================================================================
@@ -180,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
-    // TimeStamp -- helper class to manage a time stamp
+    // TimeStamp -- helper class to manage a "time stamp" (unique value) of a computation result to avoid recomputation
     // =======================================================================
 
     class TimeStamp
@@ -1473,6 +1493,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
         }
     };
+
+
 
     // =======================================================================
     // helper macro to ease access to base members in presence of C++ two-phase name lookup

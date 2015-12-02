@@ -113,9 +113,10 @@ protected:
     int m_traceLevel;
    
     // feature and label data are parallel arrays
-    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext;
-    std::vector<vector<LabelIdType>> m_featureData;
+    // The following two hold the actual MB data internally, created by EnsureDataAvailable().
+    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext; // [parSeq + t * numParSeq] word n-tuple in order of storage in m_functionValues matrix
     std::vector<LabelIdType> m_labelIdData;
+
     std::vector<ElemType> m_labelData;
     std::vector<size_t> m_sequence;
 
@@ -233,7 +234,6 @@ public:
     using LUSequenceReader<ElemType>::m_labelsIdBuffer;
     using LUSequenceReader<ElemType>::m_mbSize;
     using LUSequenceReader<ElemType>::m_epochSize;
-    using LUSequenceReader<ElemType>::m_featureData;
     using LUSequenceReader<ElemType>::m_sequence;
     using LUSequenceReader<ElemType>::m_labelData;
     using LUSequenceReader<ElemType>::m_labelIdData;
