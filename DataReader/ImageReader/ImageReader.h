@@ -10,6 +10,8 @@
 #include "DataReader.h"
 #include <random>
 #include <memory>
+#include <future>
+#include <array>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -62,7 +64,7 @@ private:
     size_t m_labDim;
 
     using StrIntPairT = std::pair<std::string, int>;
-    std::vector<StrIntPairT> files;
+    std::vector<StrIntPairT> m_files;
 
     size_t m_epochSize;
     size_t m_mbSize;
@@ -70,12 +72,22 @@ private:
 
     size_t m_epochStart;
     size_t m_mbStart;
-    std::vector<ElemType> m_featBuf;
-    std::vector<ElemType> m_labBuf;
+
+    //std::vector<ElemType> m_featBuf;
+    //std::vector<ElemType> m_labBuf;
+
+    std::vector<std::future<void>> m_mbFut;
+    int m_mbIdx;
+    std::array<std::vector<ElemType>, 2> m_featBuf;
+    std::array<std::vector<ElemType>, 2> m_labBuf;
 
     bool m_imgListRand;
 
     MBLayoutPtr m_pMBLayout;
     DataFormat m_mbFmt;
+
+private:
+    void Prefetch();
+    void ReadImage(size_t idxFile, size_t idxInMB);
 };
 }}}
