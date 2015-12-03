@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& outT, Mat& out, Mat workspace) override
+            const Tensor4D& outT, Mat& out, Mat& workspace) override
         {
             assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& gradT, Mat& grad, Mat workspace) override
+            const Tensor4D& gradT, Mat& grad, Mat& workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc, 
-            const Filter& filterT, Mat& filter, bool allowReuse, Mat workspace) override
+            const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) override
         {
             assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
             assert(srcGradT.n() == srcGrad.GetNumCols());
