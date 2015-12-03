@@ -556,6 +556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
         m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
         m_pArray = moveFrom.m_pArray;
+        m_sliceViewOffset = moveFrom.m_sliceViewOffset;
         m_format = moveFrom.m_format;
         m_externalBuffer = moveFrom.m_externalBuffer;
         m_matrixName=moveFrom.m_matrixName;
@@ -584,6 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
             m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
             m_pArray = moveFrom.m_pArray;
+            m_sliceViewOffset = moveFrom.m_sliceViewOffset;
             m_format = moveFrom.m_format;
             m_externalBuffer = moveFrom.m_externalBuffer;
 
