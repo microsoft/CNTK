@@ -1122,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // progress tracing for compute cluster management
-        ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0);
+        ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
         ProgressTracing::TraceObjectivePercentage(m_lastFinishedEpochEvalErr);
 
         // since we linked feature nodes. we need to remove it from the deletion
@@ -2053,7 +2053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         mbProg = (double)numMBsRun / ((double)m_maxComputedEpochSize / (double)tunedMBSize);
                     }                    
-                    wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg);
+                    wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
 
                     // progress tracing for regular log
 #if 1
