@@ -1512,7 +1512,9 @@ void DoCommands(const ConfigParameters& config)
 
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+    {
         ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+    }
 
     size_t fullEpochsOffset = 0;
 
@@ -1524,7 +1526,9 @@ void DoCommands(const ConfigParameters& config)
         ConfigArray action = commandParams("action", "train");
 
         if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
+        {
             ProgressTracing::SetStepOffset(fullEpochsOffset);   // this is the epoch number that SGD will log relative to
+        }
 
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
