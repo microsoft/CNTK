@@ -432,6 +432,8 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     {
         const auto& p = files[i + m_mbStart];
         cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
+        if (!img.data)
+            RuntimeError("Cannot read image file " + p.first);
         for (auto& t: m_transforms)
             t->Apply(img);
        
