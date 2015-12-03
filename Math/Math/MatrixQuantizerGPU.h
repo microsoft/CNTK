@@ -32,6 +32,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
         void WaitUnquantizeAsyncDone() override;            
 
+        static void SetDevice(int deviceId);
+
     private:        
         // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
         QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated);
