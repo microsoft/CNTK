@@ -32,8 +32,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_totalNumberOfSteps;        // total number of epochs in entire training run
         size_t m_currentStepOffset;         // current offset
         Timer m_progressTracingTimer;
-        ProgressTracing() : m_enabled(false), m_totalNumberOfSteps(0), m_currentStepOffset(0) { }
-        static ProgressTracing & GetStaticInstance() { static ProgressTracing us; return us; } // wrap static state in an accessor, so we won't need a CPP file
+        
+        ProgressTracing() 
+            : m_enabled(false), m_totalNumberOfSteps(0), m_currentStepOffset(0) 
+        { 
+        }
+
+        static ProgressTracing & GetStaticInstance() 
+        { 
+            static ProgressTracing us; 
+            return us; 
+        } // wrap static state in an accessor, so we won't need a CPP file
+
     public:
         // call TraceTotalNumberOfSteps() to set the total number of steps
         // Calling this with totalNumberOfSteps>0 will enable progress tracing.
@@ -47,40 +57,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 us.m_progressTracingTimer.Start();
             }
         }
+
         // call SetStepOffset() at start of a multi-epoch training to set the index of the first epoch in that training
         // This value is added to the local epoch index in TraceProgress().
-        static void SetStepOffset(size_t currentStepOffset) { GetStaticInstance().m_currentStepOffset = currentStepOffset; }
+        static void SetStepOffset(size_t currentStepOffset) 
+        { 
+            GetStaticInstance().m_currentStepOffset = currentStepOffset; 
+        }
+
         // emit the trace message for global progress
         // 'currentStep' will be offset by m_currentStepOffset.
         // This only prints of enough time (10s) has elapsed since last print, and the return value is 'true' if it did print.
-        static bool TraceProgressPercentage(size_t currentStep, double progressWithinStep/*0..1*/)
+        static bool TraceProgressPercentage(size_t epochNumber, double mbProg/*0..100*/)
         {
             auto & us = GetStaticInstance();
             if (!us.m_enabled)
+            {
                 return false;
-            // in case we are not able to estimate, we will increase as needed
-            // BUGBUG: This is a workaround because in BrainScript we cannot estimate the total number of epochs without actually running the actions.
-            if (currentStep + 1 > us.m_totalNumberOfSteps)
-                us.m_totalNumberOfSteps = currentStep + 1;
+            }
+
             // compute global progress
             bool needToPrint = us.m_progressTracingTimer.ElapsedSeconds() > 0;// 10;
             if (needToPrint)
             {
-                size_t globalStep = currentStep + us.m_currentStepOffset;
-                double globalStepPartial = (double)globalStep + progressWithinStep;
-                double progress = globalStepPartial / us.m_totalNumberOfSteps;
-                printf("PROGRESS: %.2f%%\n", 100.0 * progress);
+                double epochProg = ((100.0f * (float)(us.m_currentStepOffset + epochNumber)) / (double)us.m_totalNumberOfSteps);
+                mbProg = (mbProg * 100.0f) / (float)us.m_totalNumberOfSteps;
+                printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
                 us.m_progressTracingTimer.Restart();
             }
             return needToPrint;
         }
+
         // emit a trace message for the error objective
         // The value is printed in percent.
         static void TraceObjectivePercentage(double err)
         {
             auto & us = GetStaticInstance();
+
             if (!us.m_enabled)
+            {
                 return;
+            }
+
             printf("EVALERR: %.2f%%\n", 100.0 * err);
         }
     };
