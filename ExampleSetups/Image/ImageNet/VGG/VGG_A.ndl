@@ -24,13 +24,13 @@ ndlMnistMacros = [
     poolvs = 2
     
     # Initial parameter values.
-    convWScale = 1 #7
+    convWScale = 0.01 #7
     convBValue = 0
-    fc1WScale = 8
+    fc1WScale = 0.01 #8
     fc1BValue = 0
-    fc2WScale = 3.2
+    fc2WScale = 0.01 #3.2
     fc2BValue = 0
-    fc3WScale = 3.2
+    fc3WScale = 0.01 #3.2
     fc3BValue = 0
 ]
 

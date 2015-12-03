@@ -171,13 +171,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~ConvolutionEngine() = default;
 
         virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& outT, Mat& out, Mat workspace) = 0;
+            const Tensor4D& outT, Mat& out, Mat& workspace) = 0;
 
         virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& gradT, Mat& grad, Mat workspace) = 0;
+            const Tensor4D& gradT, Mat& grad, Mat& workspace) = 0;
 
         virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-            const Filter& filterT, Mat& filter, bool allowReuse, Mat workspace) = 0;
+            const Filter& filterT, Mat& filter, bool allowReuse, Mat& workspace) = 0;
 
         virtual void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) = 0;
         virtual void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) = 0;

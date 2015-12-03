@@ -303,7 +303,7 @@ template<class ElemType>
 static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose);
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>()), m_mbFmt(DataFormat::Nchw)
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>()), m_mbFmt(DataFormat::NCHW)
 {
     m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
     m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
@@ -340,7 +340,7 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     // Get mini-batch format.
     std::string mbFmt = featSect.second("mbFormat", "nchw");
     if (AreEqual(mbFmt, "nhwc"))
-        m_mbFmt = DataFormat::Nhwc;
+        m_mbFmt = DataFormat::NHWC;
     else if (!AreEqual(mbFmt, "nchw"))
         RuntimeError("ImageReader does not support the mini-batch format %s.", mbFmt.c_str());
 
@@ -438,7 +438,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
         assert(img.rows * img.cols * img.channels() == m_featDim);
         // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
         // Transpose is required if requested mini-batch format is NCHW.
-        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::Nchw);
+        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::NCHW);
         m_labBuf[m_labDim * i + p.second] = 1;
     }
 

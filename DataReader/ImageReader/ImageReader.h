@@ -39,7 +39,7 @@ public:
 
 private:
     // Mini-batch format: NCHW (default, cuDNN) or NHWC (legacy).
-    enum class DataFormat { Nchw, Nhwc };
+    enum class DataFormat { NCHW, NHWC };
 
     unsigned int m_seed;
     std::mt19937 m_rng;
