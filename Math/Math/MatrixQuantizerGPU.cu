@@ -51,6 +51,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    /*static*/ void MatrixQuantizerGPU<ElemType>::SetDevice(int deviceId)
+    {
+        assert(deviceId >= 0);
+        cudaSetDevice(deviceId) || "cudaSetDevice failed!";
+    }
+
+    template<class ElemType>
     void MatrixQuantizerGPU<ElemType>::Sync()
     {
         cudaDeviceSynchronize() || "cudaDeviceSynchronize failed";
