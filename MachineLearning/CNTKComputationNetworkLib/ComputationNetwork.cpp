@@ -550,6 +550,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
     // Basically, it invalidates all post-processing, reducing the network to the graph.
+    // TODO: This will go away once we validate/build/process the network in a non-lazy fashion.
     void ComputationNetwork::ClearCalcOrderCaches()
     {
         for (auto & it : m_cacheEvalOrders)

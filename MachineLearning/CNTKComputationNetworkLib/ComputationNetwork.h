@@ -813,15 +813,15 @@ protected:
     // -----------------------------------------------------------------------
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
+    // TODO: Can this be moved to a separate class?
 private:
+
     void ClearCalcOrderCaches();
 
     // This is part of the FormRecurrentLoops() process, and only called from there.
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCs(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
-    void UniqRecurrentLoops();
     void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
