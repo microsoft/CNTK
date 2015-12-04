@@ -26,7 +26,7 @@ ndlMacroDefine=[
     #Base feed Forward network, defines Bias and wieght parameters
     BFF(in, rows, cols)
     {
-        B=Parameter(rows, init="fixedValue", value=0)
+        B=Parameter(rows, init=fixedvalue, value=0)
         W=Parameter(rows, cols)
         FF = FF(in, w, b)
     }
@@ -65,9 +65,9 @@ ndlMacroDefine=[
         DO=Dropout(SFF)
     }
     #Sigmoid Feed Forward with Dropout
-    SBFFD(input,rowCount,colCount)
+    SBFFD(inValue,rowCount,colCount)
     {
-        SBFF=SBFF(input,rowCount,colCount)
+        SBFF=SBFF(inValue,rowCount,colCount)
         DO=Dropout(SBFF)
     }
     #SoftMax Feed Forward
@@ -96,7 +96,7 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init="fixedValue", value=0.1)
+        B=Parameter(rowCount, init=fixedvalue, value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
         S = Sigmoid(BFF_final);
@@ -106,103 +106,113 @@ ndlMacroDefine=[
      {
         BFF1 = BFF(in1, rowCount, colCount1);
         BFF2 = BFF(in2, rowCount, colCount2);
-        B=Parameter(rowCount, init="fixedValue", value=0.1)
+        B=Parameter(rowCount, init=fixedvalue, value=0.1)
         
         BFF_final = Plus(BFF1, BFF2)
     }
 
-    LSTMComponent(inputDim, outputDim, input)
+    LSTMComponent(inputDim, cellDim, inputx, cellDimX2, cellDimX3, cellDimX4, initScale, initBias)
     {
-        Wxo = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
-        Wxi = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
-        Wxf = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
-        Wxc = Parameter(outputDim, inputDim, init="uniform", initValueScale=6);
+        wx = Parameter(cellDimX4, inputDim, init=uniform, initValueScale=initScale);
+        b = Parameter(cellDimX4, init=fixedValue, value=initBias);
+        Wh = Parameter(cellDimX4, cellDim, init=uniform, initValueScale=initScale);
 
-        bo = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
-        bc = Parameter(outputDim, 1, init="fixedValue", value=0.0);
-        bi = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
-        bf = Parameter(outputDim, 1, init="fixedValue", value=-1.0);
+        Wci = Parameter(cellDim, init=uniform, initValueScale=initScale);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=initScale);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=initScale);
 
-        Whi = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
-        Wci = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
-        Whf = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
-        Wcf = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
-        Who = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
-        Wco = Parameter(outputDim, 1,         init="uniform", initValueScale=6);
-        Whc = Parameter(outputDim, outputDim, init="uniform", initValueScale=6);
+        dh = PastValue(cellDim, output, timeStep=1);
+        dc = PastValue(cellDim, ct, timeStep=1);
 
-        delayHI = Delay(outputDim, outputTest, delayTime=1);
-        delayHF = Delay(outputDim, outputTest, delayTime=1);
-        delayHO = Delay(outputDim, outputTest, delayTime=1);
-        delayHC = Delay(outputDim, outputTest, delayTime=1);
-        delayCI = Delay(outputDim, ct, delayTime=1);
-        delayCF = Delay(outputDim, ct, delayTime=1);
-        delayCC = Delay(outputDim, ct, delayTime=1);
-
-        WxiInput = Times(Wxi, input);
-        WhidelayHI = Times(Whi, delayHI);
-        WcidelayCI = DiagTimes(Wci, delayCI);
-
-        it = Sigmoid (Plus ( Plus (Plus (WxiInput, bi), WhidelayHI), WcidelayCI));
-
-        WxcInput = Times(Wxc, input);
-        WhcdelayHC = Times(Whc, delayHC);
-        bit = ElementTimes(it, Tanh( Plus(WxcInput, Plus(WhcdelayHC, bc))));
+        wxx = Times(wx, inputx);
+        wxxpb = Plus(wxx, b);
         
-        Wxfinput = Times(Wxf, input);
-        WhfdelayHF = Times(Whf, delayHF);
-        WcfdelayCF = DiagTimes(Wcf, delayCF);
+        whh = Times(wh, dh);
 
-        ft = Sigmoid( Plus (Plus (Plus(Wxfinput, bf), WhfdelayHF), WcfdelayCF));
+		wxxpbpwhh = Plus(wxxpb,whh)	
+				
+		G1 = RowSlice(0, cellDim, wxxpbpwhh)		
+		G2 = RowSlice(cellDim, cellDim, wxxpbpwhh)
+		G3 = RowSlice(cellDimX2, cellDim, wxxpbpwhh);
+		G4 = RowSlice(cellDimX3, cellDim, wxxpbpwhh);
+		
+        Wcidc = DiagTimes(Wci, dc);
+        it = Sigmoid (Plus ( G1, Wcidc));
 
-        bft = ElementTimes(ft, delayCC);
+        bit = ElementTimes(it, Tanh( G2 ));
+
+        Wcfdc = DiagTimes(Wcf, dc);
+        ft = Sigmoid( Plus (G3, Wcfdc));
+
+        bft = ElementTimes(ft, dc);
 
         ct = Plus(bft, bit);
 
-        Wxoinput = Times(Wxo, input);
-        WhodelayHO = Times(Who, delayHO);
         Wcoct = DiagTimes(Wco, ct);
+        ot = Sigmoid( Plus( G4, Wcoct));
 
-        ot = Sigmoid( Plus( Plus( Plus(Wxoinput, bo), WhodelayHO), Wcoct));
-
-        outputTest = ElementTimes(ot, Tanh(ct));
-        
-        
+        output = ElementTimes(ot, Tanh(ct));
     }
-
 
 ]
 
-
 ndlCreateNetwork=[
 
-	#define basic i/o
-	featDim=2832
-    # should be inputDim * 3
     inputDim=944
+	featDim=2832  # should be inputDim * 3
+    
     lookupDim=50
-    lookupedDim=150
+    lookupedDim=150  #should be lookupDim * 3 since we use lookupTableOrder of 3
+    
 	labelDim=127
+	
 	hiddenDim=300
+	hiddenDimX2=600  #following three are not needed in BrainScript since they can computed by the compiler
+	hiddenDimX3=900
+	hiddenDimX4=1200
+	
+  	initScale=6
+  	initBias=-1.0
 
-	features=Input(featDim, tag="feature")
-	labels=Input(labelDim, tag="label")
+	features=Input(featDim, tag=feature)
+	labels=Input(labelDim, tag=label)
 
 	# define network
-    Wlookup = Parameter(lookupDim, inputDim, init="uniform", initValueScale=6);
-    featLookuped = LookupTable(Wlookup, features, init="uniform", initValueScale=6);
+    Wlookup = Parameter(lookupDim, inputDim, init=Uniform, initValueScale=initScale);
+    featLookuped = LookupTable(Wlookup, features, init=Uniform, initValueScale=initScale);
     
-    LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, init="uniform", initValueScale=6);
-    W1 = Parameter(labelDim, hiddenDim, init="uniform", initValueScale=6);
+#if you want to use 3 LSTM layers uncomment following and comment out the next block
 
-    LSTMoutputW1 = Times(W1, LSTMoutput, tag="outputs");
-
-    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion");
-    Err = CrossEntropyWithSoftmax(labels,LSTMoutputW1,tag="eval");
+    #LSTM Layer 1
+    LSTMoutput1 = LSTMComponent(lookupedDim, hiddenDim, featLookuped, hiddenDimX2, hiddenDimX3, hiddenDimX4, initScale, initBias);
+    #LSTM Layer 2
+    LSTMoutput2 = LSTMComponent(hiddenDim, hiddenDim, LSTMoutput1, hiddenDimX2, hiddenDimX3, hiddenDimX4, initScale, initBias);
+    #LSTM Layer 3
+    LSTMoutput = LSTMComponent(hiddenDim, hiddenDim, LSTMoutput2, hiddenDimX2, hiddenDimX3, hiddenDimX4, initScale, initBias);
     
-#    logPrior = LogPrior(labels)	 
+#else if you want to use just 1 LSTM layer uncomment following and comment out the above block
 
-#    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag="output")
-    outputs=SoftMax(LSTMoutputW1,tag="output")
+    #LSTM Layer 1
+    LSTMoutput = LSTMComponent(lookupedDim, hiddenDim, featLookuped, hiddenDimX2, hiddenDimX3, hiddenDimX4, initScale, initBias);
 
+#end if
+
+    W = Parameter(labelDim, hiddenDim, init=Uniform, initValueScale=initScale);
+    
+#if you want to include a bias at last layer uncomment following and comment the next block
+
+#	b = Parameter(labelDim, init=fixedvalue, value=0);
+#	outvalue = Plus(Times(W, LSTMoutput3), b);
+
+#else if you don't want to include a bias uncommment following and comment the above block
+
+    outvalue = Times(W, LSTMoutput3);
+    
+#end if
+	
+    cr = CrossEntropyWithSoftmax(labels, outvalue);
+    
+    CriterionNodes = (cr)
+    EvalNodes = (cr)
+    OutputNodes = (outvalue)
 ]
