@@ -76,9 +76,8 @@ public:
 
     }
 
-    virtual void Init(const ConfigParameters& /*config*/)
-    {
-    }
+    virtual void Init(const ConfigParameters & /*config*/) override { }
+    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { }
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
@@ -89,7 +88,8 @@ public:
 
     // EvalReader Constructor
     // config - [in] configuration parameters for the datareader 
-    EvalReader(const ConfigParameters& config)
+    template<class ConfigRecordType>
+    EvalReader(const ConfigRecordType& config)
     {
         m_recordCount = m_currentRecord = 0;
         Init(config);
@@ -225,7 +225,7 @@ public:
         return m_currentRecord < m_recordCount;
     }
 
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & /*latticeinput*/, vector<size_t> & /*uids*/, 
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>> & /*latticeinput*/, vector<size_t> & /*uids*/, 
         vector<size_t> & /*boundaries*/, vector<size_t> &/*extrauttmap*/)
     {
         return true;

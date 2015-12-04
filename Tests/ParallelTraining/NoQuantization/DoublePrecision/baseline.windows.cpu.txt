@@ -338,47 +338,47 @@ MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction(labels[2, MBSiz
 MPI Rank 0: 
 MPI Rank 0: 9 out of 20 nodes do not share the minibatch layout with the input data.
 MPI Rank 0: 
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[   1-  10 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15573s; TotalTimePerSample = 0.62291ms; SamplesPerSecond = 1605
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  11-  20 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16534s; TotalTimePerSample = 0.66135ms; SamplesPerSecond = 1512
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  21-  30 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11919s; TotalTimePerSample = 0.47674ms; SamplesPerSecond = 2097
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  31-  40 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15473s; TotalTimePerSample = 0.61893ms; SamplesPerSecond = 1615
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  41-  50 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13339s; TotalTimePerSample = 0.53354ms; SamplesPerSecond = 1874
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  51-  60 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10991s; TotalTimePerSample = 0.43963ms; SamplesPerSecond = 2274
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  61-  70 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.11897s; TotalTimePerSample = 0.47588ms; SamplesPerSecond = 2101
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  71-  80 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12077s; TotalTimePerSample = 0.48310ms; SamplesPerSecond = 2069
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  81-  90 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11573s; TotalTimePerSample = 0.46290ms; SamplesPerSecond = 2160
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  91- 100 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11561s; TotalTimePerSample = 0.46243ms; SamplesPerSecond = 2162
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 101- 110 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10758s; TotalTimePerSample = 0.43031ms; SamplesPerSecond = 2323
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 111- 120 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.10992s; TotalTimePerSample = 0.43968ms; SamplesPerSecond = 2274
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 121- 130 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10389s; TotalTimePerSample = 0.41558ms; SamplesPerSecond = 2406
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 131- 140 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09721s; TotalTimePerSample = 0.38882ms; SamplesPerSecond = 2571
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 141- 150 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.10897s; TotalTimePerSample = 0.43589ms; SamplesPerSecond = 2294
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 151- 160 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11671s; TotalTimePerSample = 0.46683ms; SamplesPerSecond = 2142
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 161- 170 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09701s; TotalTimePerSample = 0.38805ms; SamplesPerSecond = 2577
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 171- 180 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09381s; TotalTimePerSample = 0.37526ms; SamplesPerSecond = 2664
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 181- 190 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10526s; TotalTimePerSample = 0.42105ms; SamplesPerSecond = 2375
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 191- 200 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09288s; TotalTimePerSample = 0.37150ms; SamplesPerSecond = 2691
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 201- 210 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11269s; TotalTimePerSample = 0.45077ms; SamplesPerSecond = 2218
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 211- 220 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08481s; TotalTimePerSample = 0.33926ms; SamplesPerSecond = 2947
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 221- 230 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09191s; TotalTimePerSample = 0.36765ms; SamplesPerSecond = 2719
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 231- 240 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15200s; TotalTimePerSample = 0.60801ms; SamplesPerSecond = 1644
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 241- 250 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09088s; TotalTimePerSample = 0.36351ms; SamplesPerSecond = 2750
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 251- 260 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08060s; TotalTimePerSample = 0.32239ms; SamplesPerSecond = 3101
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 261- 270 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11875s; TotalTimePerSample = 0.47501ms; SamplesPerSecond = 2105
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 271- 280 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08960s; TotalTimePerSample = 0.35841ms; SamplesPerSecond = 2790
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10385s; TotalTimePerSample = 0.41539ms; SamplesPerSecond = 2407
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12711s; TotalTimePerSample = 0.50845ms; SamplesPerSecond = 1966
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.10012s; TotalTimePerSample = 0.40048ms; SamplesPerSecond = 2497
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09796s; TotalTimePerSample = 0.39182ms; SamplesPerSecond = 2552
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 321- 330 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10544s; TotalTimePerSample = 0.42176ms; SamplesPerSecond = 2371
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 331- 340 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09892s; TotalTimePerSample = 0.39568ms; SamplesPerSecond = 2527
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 341- 350 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10110s; TotalTimePerSample = 0.40439ms; SamplesPerSecond = 2472
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 351- 360 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10604s; TotalTimePerSample = 0.42415ms; SamplesPerSecond = 2357
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 361- 370 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09404s; TotalTimePerSample = 0.37616ms; SamplesPerSecond = 2658
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11023s; TotalTimePerSample = 0.44091ms; SamplesPerSecond = 2268
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11400s; TotalTimePerSample = 0.45600ms; SamplesPerSecond = 2193
-MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09990s; TotalTimePerSample = 0.39959ms; SamplesPerSecond = 2502
-MPI Rank 0: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; Ave LearnRatePerSample = 0.01999999955; EpochTime=4.466933
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15573s; TotalTimePerSample = 0.62291ms; SamplesPerSecond = 1605
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16534s; TotalTimePerSample = 0.66135ms; SamplesPerSecond = 1512
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11919s; TotalTimePerSample = 0.47674ms; SamplesPerSecond = 2097
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15473s; TotalTimePerSample = 0.61893ms; SamplesPerSecond = 1615
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13339s; TotalTimePerSample = 0.53354ms; SamplesPerSecond = 1874
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10991s; TotalTimePerSample = 0.43963ms; SamplesPerSecond = 2274
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.11897s; TotalTimePerSample = 0.47588ms; SamplesPerSecond = 2101
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12077s; TotalTimePerSample = 0.48310ms; SamplesPerSecond = 2069
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11573s; TotalTimePerSample = 0.46290ms; SamplesPerSecond = 2160
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11561s; TotalTimePerSample = 0.46243ms; SamplesPerSecond = 2162
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10758s; TotalTimePerSample = 0.43031ms; SamplesPerSecond = 2323
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.10992s; TotalTimePerSample = 0.43968ms; SamplesPerSecond = 2274
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10389s; TotalTimePerSample = 0.41558ms; SamplesPerSecond = 2406
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09721s; TotalTimePerSample = 0.38882ms; SamplesPerSecond = 2571
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.10897s; TotalTimePerSample = 0.43589ms; SamplesPerSecond = 2294
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11671s; TotalTimePerSample = 0.46683ms; SamplesPerSecond = 2142
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09701s; TotalTimePerSample = 0.38805ms; SamplesPerSecond = 2577
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09381s; TotalTimePerSample = 0.37526ms; SamplesPerSecond = 2664
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10526s; TotalTimePerSample = 0.42105ms; SamplesPerSecond = 2375
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09288s; TotalTimePerSample = 0.37150ms; SamplesPerSecond = 2691
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11269s; TotalTimePerSample = 0.45077ms; SamplesPerSecond = 2218
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08481s; TotalTimePerSample = 0.33926ms; SamplesPerSecond = 2947
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09191s; TotalTimePerSample = 0.36765ms; SamplesPerSecond = 2719
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15200s; TotalTimePerSample = 0.60801ms; SamplesPerSecond = 1644
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09088s; TotalTimePerSample = 0.36351ms; SamplesPerSecond = 2750
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08060s; TotalTimePerSample = 0.32239ms; SamplesPerSecond = 3101
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11875s; TotalTimePerSample = 0.47501ms; SamplesPerSecond = 2105
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08960s; TotalTimePerSample = 0.35841ms; SamplesPerSecond = 2790
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10385s; TotalTimePerSample = 0.41539ms; SamplesPerSecond = 2407
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12711s; TotalTimePerSample = 0.50845ms; SamplesPerSecond = 1966
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.10012s; TotalTimePerSample = 0.40048ms; SamplesPerSecond = 2497
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09796s; TotalTimePerSample = 0.39182ms; SamplesPerSecond = 2552
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10544s; TotalTimePerSample = 0.42176ms; SamplesPerSecond = 2371
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09892s; TotalTimePerSample = 0.39568ms; SamplesPerSecond = 2527
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10110s; TotalTimePerSample = 0.40439ms; SamplesPerSecond = 2472
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10604s; TotalTimePerSample = 0.42415ms; SamplesPerSecond = 2357
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09404s; TotalTimePerSample = 0.37616ms; SamplesPerSecond = 2658
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11023s; TotalTimePerSample = 0.44091ms; SamplesPerSecond = 2268
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11400s; TotalTimePerSample = 0.45600ms; SamplesPerSecond = 2193
+MPI Rank 0:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09990s; TotalTimePerSample = 0.39959ms; SamplesPerSecond = 2502
+MPI Rank 0: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; AvgLearningRatePerSample = 0.01999999955; EpochTime=4.466933
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -424,7 +424,7 @@ MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16641132; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09116s; TotalTimePerSample = 0.36463ms; SamplesPerSecond = 2742
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20390250; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.08700s; TotalTimePerSample = 0.34802ms; SamplesPerSecond = 2873
 MPI Rank 0:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14610650; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.25517s; TotalTimePerSample = 1.02066ms; SamplesPerSecond = 979
-MPI Rank 0: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; Ave LearnRatePerSample = 0.00800000038; EpochTime=5.142891
+MPI Rank 0: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; AvgLearningRatePerSample = 0.00800000038; EpochTime=5.142891
 MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -470,7 +470,7 @@ MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16647750; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09813s; TotalTimePerSample = 0.39251ms; SamplesPerSecond = 2547
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20592959; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.07667s; TotalTimePerSample = 0.30668ms; SamplesPerSecond = 3260
 MPI Rank 0:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14622605; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.08880s; TotalTimePerSample = 0.35520ms; SamplesPerSecond = 2815
-MPI Rank 0: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.301922
+MPI Rank 0: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.301922
 MPI Rank 0: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 0: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -516,7 +516,7 @@ MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16644425; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.10310s; TotalTimePerSample = 0.41239ms; SamplesPerSecond = 2424
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20619428; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.09224s; TotalTimePerSample = 0.36895ms; SamplesPerSecond = 2710
 MPI Rank 0:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624377; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.09126s; TotalTimePerSample = 0.36503ms; SamplesPerSecond = 2739
-MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.243167
+MPI Rank 0: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.243167
 MPI Rank 0: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 0: COMPLETED
 MPI Rank 0: ~MPIWrapper
@@ -823,47 +823,47 @@ MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction(labels[2, MBSiz
 MPI Rank 1: 
 MPI Rank 1: 9 out of 20 nodes do not share the minibatch layout with the input data.
 MPI Rank 1: 
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[   1-  10 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15575s; TotalTimePerSample = 0.62301ms; SamplesPerSecond = 1605
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  11-  20 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16533s; TotalTimePerSample = 0.66130ms; SamplesPerSecond = 1512
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  21-  30 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11728s; TotalTimePerSample = 0.46912ms; SamplesPerSecond = 2131
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  31-  40 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15646s; TotalTimePerSample = 0.62582ms; SamplesPerSecond = 1597
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  41-  50 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13528s; TotalTimePerSample = 0.54113ms; SamplesPerSecond = 1847
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  51-  60 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10637s; TotalTimePerSample = 0.42548ms; SamplesPerSecond = 2350
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  61-  70 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12177s; TotalTimePerSample = 0.48708ms; SamplesPerSecond = 2053
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  71-  80 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11959s; TotalTimePerSample = 0.47836ms; SamplesPerSecond = 2090
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  81-  90 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11570s; TotalTimePerSample = 0.46280ms; SamplesPerSecond = 2160
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  91- 100 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11717s; TotalTimePerSample = 0.46866ms; SamplesPerSecond = 2133
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 101- 110 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10747s; TotalTimePerSample = 0.42986ms; SamplesPerSecond = 2326
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 111- 120 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.10850s; TotalTimePerSample = 0.43400ms; SamplesPerSecond = 2304
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 121- 130 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10534s; TotalTimePerSample = 0.42137ms; SamplesPerSecond = 2373
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 131- 140 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09707s; TotalTimePerSample = 0.38830ms; SamplesPerSecond = 2575
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 141- 150 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.10784s; TotalTimePerSample = 0.43135ms; SamplesPerSecond = 2318
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 151- 160 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11529s; TotalTimePerSample = 0.46116ms; SamplesPerSecond = 2168
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 161- 170 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09835s; TotalTimePerSample = 0.39341ms; SamplesPerSecond = 2541
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 171- 180 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09520s; TotalTimePerSample = 0.38078ms; SamplesPerSecond = 2626
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 181- 190 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10237s; TotalTimePerSample = 0.40948ms; SamplesPerSecond = 2442
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 191- 200 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09554s; TotalTimePerSample = 0.38217ms; SamplesPerSecond = 2616
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 201- 210 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11127s; TotalTimePerSample = 0.44510ms; SamplesPerSecond = 2246
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 211- 220 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08376s; TotalTimePerSample = 0.33505ms; SamplesPerSecond = 2984
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 221- 230 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37230ms; SamplesPerSecond = 2686
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 231- 240 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15075s; TotalTimePerSample = 0.60300ms; SamplesPerSecond = 1658
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 241- 250 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09200s; TotalTimePerSample = 0.36802ms; SamplesPerSecond = 2717
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 251- 260 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08061s; TotalTimePerSample = 0.32244ms; SamplesPerSecond = 3101
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 261- 270 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11872s; TotalTimePerSample = 0.47487ms; SamplesPerSecond = 2105
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 271- 280 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08958s; TotalTimePerSample = 0.35832ms; SamplesPerSecond = 2790
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10265s; TotalTimePerSample = 0.41061ms; SamplesPerSecond = 2435
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12957s; TotalTimePerSample = 0.51829ms; SamplesPerSecond = 1929
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09756s; TotalTimePerSample = 0.39025ms; SamplesPerSecond = 2562
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09797s; TotalTimePerSample = 0.39188ms; SamplesPerSecond = 2551
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 321- 330 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10778s; TotalTimePerSample = 0.43113ms; SamplesPerSecond = 2319
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 331- 340 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09908s; TotalTimePerSample = 0.39630ms; SamplesPerSecond = 2523
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 341- 350 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10106s; TotalTimePerSample = 0.40424ms; SamplesPerSecond = 2473
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 351- 360 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10609s; TotalTimePerSample = 0.42436ms; SamplesPerSecond = 2356
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 361- 370 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09411s; TotalTimePerSample = 0.37644ms; SamplesPerSecond = 2656
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11030s; TotalTimePerSample = 0.44121ms; SamplesPerSecond = 2266
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11404s; TotalTimePerSample = 0.45614ms; SamplesPerSecond = 2192
-MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.10405s; TotalTimePerSample = 0.41619ms; SamplesPerSecond = 2402
-MPI Rank 1: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; Ave LearnRatePerSample = 0.01999999955; EpochTime=4.472182
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15575s; TotalTimePerSample = 0.62301ms; SamplesPerSecond = 1605
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16533s; TotalTimePerSample = 0.66130ms; SamplesPerSecond = 1512
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11728s; TotalTimePerSample = 0.46912ms; SamplesPerSecond = 2131
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15646s; TotalTimePerSample = 0.62582ms; SamplesPerSecond = 1597
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13528s; TotalTimePerSample = 0.54113ms; SamplesPerSecond = 1847
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10637s; TotalTimePerSample = 0.42548ms; SamplesPerSecond = 2350
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12177s; TotalTimePerSample = 0.48708ms; SamplesPerSecond = 2053
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11959s; TotalTimePerSample = 0.47836ms; SamplesPerSecond = 2090
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11570s; TotalTimePerSample = 0.46280ms; SamplesPerSecond = 2160
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11717s; TotalTimePerSample = 0.46866ms; SamplesPerSecond = 2133
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10747s; TotalTimePerSample = 0.42986ms; SamplesPerSecond = 2326
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.10850s; TotalTimePerSample = 0.43400ms; SamplesPerSecond = 2304
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10534s; TotalTimePerSample = 0.42137ms; SamplesPerSecond = 2373
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09707s; TotalTimePerSample = 0.38830ms; SamplesPerSecond = 2575
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.10784s; TotalTimePerSample = 0.43135ms; SamplesPerSecond = 2318
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11529s; TotalTimePerSample = 0.46116ms; SamplesPerSecond = 2168
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09835s; TotalTimePerSample = 0.39341ms; SamplesPerSecond = 2541
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09520s; TotalTimePerSample = 0.38078ms; SamplesPerSecond = 2626
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10237s; TotalTimePerSample = 0.40948ms; SamplesPerSecond = 2442
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09554s; TotalTimePerSample = 0.38217ms; SamplesPerSecond = 2616
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11127s; TotalTimePerSample = 0.44510ms; SamplesPerSecond = 2246
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08376s; TotalTimePerSample = 0.33505ms; SamplesPerSecond = 2984
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37230ms; SamplesPerSecond = 2686
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15075s; TotalTimePerSample = 0.60300ms; SamplesPerSecond = 1658
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09200s; TotalTimePerSample = 0.36802ms; SamplesPerSecond = 2717
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08061s; TotalTimePerSample = 0.32244ms; SamplesPerSecond = 3101
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11872s; TotalTimePerSample = 0.47487ms; SamplesPerSecond = 2105
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08958s; TotalTimePerSample = 0.35832ms; SamplesPerSecond = 2790
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10265s; TotalTimePerSample = 0.41061ms; SamplesPerSecond = 2435
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12957s; TotalTimePerSample = 0.51829ms; SamplesPerSecond = 1929
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09756s; TotalTimePerSample = 0.39025ms; SamplesPerSecond = 2562
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09797s; TotalTimePerSample = 0.39188ms; SamplesPerSecond = 2551
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10778s; TotalTimePerSample = 0.43113ms; SamplesPerSecond = 2319
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09908s; TotalTimePerSample = 0.39630ms; SamplesPerSecond = 2523
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10106s; TotalTimePerSample = 0.40424ms; SamplesPerSecond = 2473
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10609s; TotalTimePerSample = 0.42436ms; SamplesPerSecond = 2356
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09411s; TotalTimePerSample = 0.37644ms; SamplesPerSecond = 2656
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11030s; TotalTimePerSample = 0.44121ms; SamplesPerSecond = 2266
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11404s; TotalTimePerSample = 0.45614ms; SamplesPerSecond = 2192
+MPI Rank 1:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.10405s; TotalTimePerSample = 0.41619ms; SamplesPerSecond = 2402
+MPI Rank 1: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; AvgLearningRatePerSample = 0.01999999955; EpochTime=4.472182
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -909,7 +909,7 @@ MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16641132; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36470ms; SamplesPerSecond = 2742
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20390250; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.08701s; TotalTimePerSample = 0.34804ms; SamplesPerSecond = 2873
 MPI Rank 1:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14610650; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.25977s; TotalTimePerSample = 1.03907ms; SamplesPerSecond = 962
-MPI Rank 1: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; Ave LearnRatePerSample = 0.00800000038; EpochTime=5.147493
+MPI Rank 1: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; AvgLearningRatePerSample = 0.00800000038; EpochTime=5.147493
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -955,7 +955,7 @@ MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16647750; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09816s; TotalTimePerSample = 0.39263ms; SamplesPerSecond = 2546
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20592959; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.07674s; TotalTimePerSample = 0.30697ms; SamplesPerSecond = 3257
 MPI Rank 1:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14622605; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.08724s; TotalTimePerSample = 0.34894ms; SamplesPerSecond = 2865
-MPI Rank 1: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.301544
+MPI Rank 1: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.301544
 MPI Rank 1: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 1: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -1001,7 +1001,7 @@ MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16644425; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.10183s; TotalTimePerSample = 0.40732ms; SamplesPerSecond = 2455
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20619428; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.09462s; TotalTimePerSample = 0.37850ms; SamplesPerSecond = 2642
 MPI Rank 1:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624377; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.09356s; TotalTimePerSample = 0.37426ms; SamplesPerSecond = 2671
-MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.24663
+MPI Rank 1: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.24663
 MPI Rank 1: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 1: COMPLETED
 MPI Rank 1: ~MPIWrapper
@@ -1308,47 +1308,47 @@ MPI Rank 2: Validating --> EvalErrorPrediction = ErrorPrediction(labels[2, MBSiz
 MPI Rank 2: 
 MPI Rank 2: 9 out of 20 nodes do not share the minibatch layout with the input data.
 MPI Rank 2: 
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[   1-  10 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15574s; TotalTimePerSample = 0.62296ms; SamplesPerSecond = 1605
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  11-  20 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16529s; TotalTimePerSample = 0.66116ms; SamplesPerSecond = 1512
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  21-  30 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11724s; TotalTimePerSample = 0.46894ms; SamplesPerSecond = 2132
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  31-  40 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15469s; TotalTimePerSample = 0.61875ms; SamplesPerSecond = 1616
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  41-  50 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13524s; TotalTimePerSample = 0.54096ms; SamplesPerSecond = 1848
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  51-  60 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10805s; TotalTimePerSample = 0.43219ms; SamplesPerSecond = 2313
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  61-  70 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12056s; TotalTimePerSample = 0.48223ms; SamplesPerSecond = 2073
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  71-  80 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12072s; TotalTimePerSample = 0.48286ms; SamplesPerSecond = 2070
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  81-  90 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11726s; TotalTimePerSample = 0.46905ms; SamplesPerSecond = 2131
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  91- 100 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11408s; TotalTimePerSample = 0.45634ms; SamplesPerSecond = 2191
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 101- 110 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10607s; TotalTimePerSample = 0.42428ms; SamplesPerSecond = 2356
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 111- 120 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.11131s; TotalTimePerSample = 0.44525ms; SamplesPerSecond = 2245
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 121- 130 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10387s; TotalTimePerSample = 0.41546ms; SamplesPerSecond = 2406
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 131- 140 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09717s; TotalTimePerSample = 0.38869ms; SamplesPerSecond = 2572
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 141- 150 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.11039s; TotalTimePerSample = 0.44154ms; SamplesPerSecond = 2264
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 151- 160 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11387s; TotalTimePerSample = 0.45547ms; SamplesPerSecond = 2195
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 161- 170 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09835s; TotalTimePerSample = 0.39339ms; SamplesPerSecond = 2542
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 171- 180 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09520s; TotalTimePerSample = 0.38078ms; SamplesPerSecond = 2626
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 181- 190 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10237s; TotalTimePerSample = 0.40947ms; SamplesPerSecond = 2442
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 191- 200 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09426s; TotalTimePerSample = 0.37704ms; SamplesPerSecond = 2652
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 201- 210 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11126s; TotalTimePerSample = 0.44505ms; SamplesPerSecond = 2246
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 211- 220 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08489s; TotalTimePerSample = 0.33958ms; SamplesPerSecond = 2944
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 221- 230 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37232ms; SamplesPerSecond = 2685
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 231- 240 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15075s; TotalTimePerSample = 0.60299ms; SamplesPerSecond = 1658
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 241- 250 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09079s; TotalTimePerSample = 0.36316ms; SamplesPerSecond = 2753
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 251- 260 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08179s; TotalTimePerSample = 0.32715ms; SamplesPerSecond = 3056
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 261- 270 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11873s; TotalTimePerSample = 0.47491ms; SamplesPerSecond = 2105
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 271- 280 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08958s; TotalTimePerSample = 0.35833ms; SamplesPerSecond = 2790
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10381s; TotalTimePerSample = 0.41525ms; SamplesPerSecond = 2408
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12709s; TotalTimePerSample = 0.50834ms; SamplesPerSecond = 1967
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09875s; TotalTimePerSample = 0.39500ms; SamplesPerSecond = 2531
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09790s; TotalTimePerSample = 0.39160ms; SamplesPerSecond = 2553
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 321- 330 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10661s; TotalTimePerSample = 0.42642ms; SamplesPerSecond = 2345
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 331- 340 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09891s; TotalTimePerSample = 0.39563ms; SamplesPerSecond = 2527
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 341- 350 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.09982s; TotalTimePerSample = 0.39927ms; SamplesPerSecond = 2504
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 351- 360 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10719s; TotalTimePerSample = 0.42875ms; SamplesPerSecond = 2332
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 361- 370 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09403s; TotalTimePerSample = 0.37613ms; SamplesPerSecond = 2658
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11022s; TotalTimePerSample = 0.44088ms; SamplesPerSecond = 2268
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11394s; TotalTimePerSample = 0.45574ms; SamplesPerSecond = 2194
-MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09991s; TotalTimePerSample = 0.39966ms; SamplesPerSecond = 2502
-MPI Rank 2: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; Ave LearnRatePerSample = 0.01999999955; EpochTime=4.466963
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15574s; TotalTimePerSample = 0.62296ms; SamplesPerSecond = 1605
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16529s; TotalTimePerSample = 0.66116ms; SamplesPerSecond = 1512
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11724s; TotalTimePerSample = 0.46894ms; SamplesPerSecond = 2132
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15469s; TotalTimePerSample = 0.61875ms; SamplesPerSecond = 1616
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13524s; TotalTimePerSample = 0.54096ms; SamplesPerSecond = 1848
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10805s; TotalTimePerSample = 0.43219ms; SamplesPerSecond = 2313
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12056s; TotalTimePerSample = 0.48223ms; SamplesPerSecond = 2073
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12072s; TotalTimePerSample = 0.48286ms; SamplesPerSecond = 2070
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11726s; TotalTimePerSample = 0.46905ms; SamplesPerSecond = 2131
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11408s; TotalTimePerSample = 0.45634ms; SamplesPerSecond = 2191
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10607s; TotalTimePerSample = 0.42428ms; SamplesPerSecond = 2356
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.11131s; TotalTimePerSample = 0.44525ms; SamplesPerSecond = 2245
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10387s; TotalTimePerSample = 0.41546ms; SamplesPerSecond = 2406
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09717s; TotalTimePerSample = 0.38869ms; SamplesPerSecond = 2572
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.11039s; TotalTimePerSample = 0.44154ms; SamplesPerSecond = 2264
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11387s; TotalTimePerSample = 0.45547ms; SamplesPerSecond = 2195
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09835s; TotalTimePerSample = 0.39339ms; SamplesPerSecond = 2542
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09520s; TotalTimePerSample = 0.38078ms; SamplesPerSecond = 2626
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10237s; TotalTimePerSample = 0.40947ms; SamplesPerSecond = 2442
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09426s; TotalTimePerSample = 0.37704ms; SamplesPerSecond = 2652
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11126s; TotalTimePerSample = 0.44505ms; SamplesPerSecond = 2246
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08489s; TotalTimePerSample = 0.33958ms; SamplesPerSecond = 2944
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37232ms; SamplesPerSecond = 2685
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15075s; TotalTimePerSample = 0.60299ms; SamplesPerSecond = 1658
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09079s; TotalTimePerSample = 0.36316ms; SamplesPerSecond = 2753
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08179s; TotalTimePerSample = 0.32715ms; SamplesPerSecond = 3056
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11873s; TotalTimePerSample = 0.47491ms; SamplesPerSecond = 2105
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08958s; TotalTimePerSample = 0.35833ms; SamplesPerSecond = 2790
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10381s; TotalTimePerSample = 0.41525ms; SamplesPerSecond = 2408
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12709s; TotalTimePerSample = 0.50834ms; SamplesPerSecond = 1967
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09875s; TotalTimePerSample = 0.39500ms; SamplesPerSecond = 2531
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.09790s; TotalTimePerSample = 0.39160ms; SamplesPerSecond = 2553
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10661s; TotalTimePerSample = 0.42642ms; SamplesPerSecond = 2345
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09891s; TotalTimePerSample = 0.39563ms; SamplesPerSecond = 2527
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.09982s; TotalTimePerSample = 0.39927ms; SamplesPerSecond = 2504
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10719s; TotalTimePerSample = 0.42875ms; SamplesPerSecond = 2332
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09403s; TotalTimePerSample = 0.37613ms; SamplesPerSecond = 2658
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11022s; TotalTimePerSample = 0.44088ms; SamplesPerSecond = 2268
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11394s; TotalTimePerSample = 0.45574ms; SamplesPerSecond = 2194
+MPI Rank 2:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09991s; TotalTimePerSample = 0.39966ms; SamplesPerSecond = 2502
+MPI Rank 2: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; AvgLearningRatePerSample = 0.01999999955; EpochTime=4.466963
 MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1394,7 +1394,7 @@ MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16641132; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36468ms; SamplesPerSecond = 2742
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20390250; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.08576s; TotalTimePerSample = 0.34302ms; SamplesPerSecond = 2915
 MPI Rank 2:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14610650; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.26557s; TotalTimePerSample = 1.06228ms; SamplesPerSecond = 941
-MPI Rank 2: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; Ave LearnRatePerSample = 0.00800000038; EpochTime=5.152123
+MPI Rank 2: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; AvgLearningRatePerSample = 0.00800000038; EpochTime=5.152123
 MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1440,7 +1440,7 @@ MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16647750; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09811s; TotalTimePerSample = 0.39244ms; SamplesPerSecond = 2548
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20592959; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.07790s; TotalTimePerSample = 0.31159ms; SamplesPerSecond = 3209
 MPI Rank 2:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14622605; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.08358s; TotalTimePerSample = 0.33432ms; SamplesPerSecond = 2991
-MPI Rank 2: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.297952
+MPI Rank 2: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.297952
 MPI Rank 2: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 2: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1486,7 +1486,7 @@ MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16644425; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.10182s; TotalTimePerSample = 0.40730ms; SamplesPerSecond = 2455
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20619428; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.09462s; TotalTimePerSample = 0.37849ms; SamplesPerSecond = 2642
 MPI Rank 2:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624377; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.09356s; TotalTimePerSample = 0.37426ms; SamplesPerSecond = 2671
-MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.246647
+MPI Rank 2: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.246647
 MPI Rank 2: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 2: COMPLETED
 MPI Rank 2: ~MPIWrapper
@@ -1793,47 +1793,47 @@ MPI Rank 3: Validating --> EvalErrorPrediction = ErrorPrediction(labels[2, MBSiz
 MPI Rank 3: 
 MPI Rank 3: 9 out of 20 nodes do not share the minibatch layout with the input data.
 MPI Rank 3: 
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[   1-  10 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15859s; TotalTimePerSample = 0.63437ms; SamplesPerSecond = 1576
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  11-  20 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16321s; TotalTimePerSample = 0.65285ms; SamplesPerSecond = 1531
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  21-  30 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11758s; TotalTimePerSample = 0.47032ms; SamplesPerSecond = 2126
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  31-  40 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15497s; TotalTimePerSample = 0.61987ms; SamplesPerSecond = 1613
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  41-  50 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13542s; TotalTimePerSample = 0.54167ms; SamplesPerSecond = 1846
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  51-  60 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10855s; TotalTimePerSample = 0.43420ms; SamplesPerSecond = 2303
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  61-  70 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12085s; TotalTimePerSample = 0.48340ms; SamplesPerSecond = 2068
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  71-  80 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12105s; TotalTimePerSample = 0.48420ms; SamplesPerSecond = 2065
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  81-  90 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11591s; TotalTimePerSample = 0.46364ms; SamplesPerSecond = 2156
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  91- 100 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11583s; TotalTimePerSample = 0.46332ms; SamplesPerSecond = 2158
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 101- 110 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10633s; TotalTimePerSample = 0.42530ms; SamplesPerSecond = 2351
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 111- 120 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.11147s; TotalTimePerSample = 0.44589ms; SamplesPerSecond = 2242
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 121- 130 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10402s; TotalTimePerSample = 0.41609ms; SamplesPerSecond = 2403
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 131- 140 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09733s; TotalTimePerSample = 0.38931ms; SamplesPerSecond = 2568
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 141- 150 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.11053s; TotalTimePerSample = 0.44212ms; SamplesPerSecond = 2261
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 151- 160 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11401s; TotalTimePerSample = 0.45604ms; SamplesPerSecond = 2192
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 161- 170 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09847s; TotalTimePerSample = 0.39387ms; SamplesPerSecond = 2538
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 171- 180 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09391s; TotalTimePerSample = 0.37564ms; SamplesPerSecond = 2662
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 181- 190 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10387s; TotalTimePerSample = 0.41547ms; SamplesPerSecond = 2406
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 191- 200 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09437s; TotalTimePerSample = 0.37750ms; SamplesPerSecond = 2649
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 201- 210 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11135s; TotalTimePerSample = 0.44539ms; SamplesPerSecond = 2245
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 211- 220 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08508s; TotalTimePerSample = 0.34032ms; SamplesPerSecond = 2938
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 221- 230 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37233ms; SamplesPerSecond = 2685
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 231- 240 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15077s; TotalTimePerSample = 0.60308ms; SamplesPerSecond = 1658
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 241- 250 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09076s; TotalTimePerSample = 0.36306ms; SamplesPerSecond = 2754
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 251- 260 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08180s; TotalTimePerSample = 0.32722ms; SamplesPerSecond = 3056
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 261- 270 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11870s; TotalTimePerSample = 0.47479ms; SamplesPerSecond = 2106
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 271- 280 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08956s; TotalTimePerSample = 0.35825ms; SamplesPerSecond = 2791
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 281- 290 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10503s; TotalTimePerSample = 0.42011ms; SamplesPerSecond = 2380
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 291- 300 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12592s; TotalTimePerSample = 0.50367ms; SamplesPerSecond = 1985
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 301- 310 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09874s; TotalTimePerSample = 0.39494ms; SamplesPerSecond = 2532
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 311- 320 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.10036s; TotalTimePerSample = 0.40144ms; SamplesPerSecond = 2491
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 321- 330 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10420s; TotalTimePerSample = 0.41679ms; SamplesPerSecond = 2399
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 331- 340 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09894s; TotalTimePerSample = 0.39576ms; SamplesPerSecond = 2526
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 341- 350 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.09987s; TotalTimePerSample = 0.39950ms; SamplesPerSecond = 2503
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 351- 360 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10715s; TotalTimePerSample = 0.42860ms; SamplesPerSecond = 2333
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 361- 370 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09402s; TotalTimePerSample = 0.37610ms; SamplesPerSecond = 2658
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 371- 380 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11024s; TotalTimePerSample = 0.44096ms; SamplesPerSecond = 2267
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 381- 390 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11390s; TotalTimePerSample = 0.45558ms; SamplesPerSecond = 2194
-MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 391- 400 of -1]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09992s; TotalTimePerSample = 0.39967ms; SamplesPerSecond = 2502
-MPI Rank 3: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; Ave LearnRatePerSample = 0.01999999955; EpochTime=4.466934
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[   1-  10]: SamplesSeen = 250; TrainLossPerSample =  0.70086032; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.15859s; TotalTimePerSample = 0.63437ms; SamplesPerSecond = 1576
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  11-  20]: SamplesSeen = 250; TrainLossPerSample =  0.71633890; EvalErr[0]PerSample = 0.52000000; TotalTime = 0.16321s; TotalTimePerSample = 0.65285ms; SamplesPerSecond = 1531
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  21-  30]: SamplesSeen = 250; TrainLossPerSample =  0.73052449; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.11758s; TotalTimePerSample = 0.47032ms; SamplesPerSecond = 2126
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  31-  40]: SamplesSeen = 250; TrainLossPerSample =  0.70078639; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.15497s; TotalTimePerSample = 0.61987ms; SamplesPerSecond = 1613
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  41-  50]: SamplesSeen = 250; TrainLossPerSample =  0.70601308; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.13542s; TotalTimePerSample = 0.54167ms; SamplesPerSecond = 1846
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  51-  60]: SamplesSeen = 250; TrainLossPerSample =  0.71578014; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.10855s; TotalTimePerSample = 0.43420ms; SamplesPerSecond = 2303
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  61-  70]: SamplesSeen = 250; TrainLossPerSample =  0.72152013; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12085s; TotalTimePerSample = 0.48340ms; SamplesPerSecond = 2068
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  71-  80]: SamplesSeen = 250; TrainLossPerSample =  0.79851181; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.12105s; TotalTimePerSample = 0.48420ms; SamplesPerSecond = 2065
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  81-  90]: SamplesSeen = 250; TrainLossPerSample =  0.69664642; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.11591s; TotalTimePerSample = 0.46364ms; SamplesPerSecond = 2156
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[  91- 100]: SamplesSeen = 250; TrainLossPerSample =  0.70718048; EvalErr[0]PerSample = 0.49200000; TotalTime = 0.11583s; TotalTimePerSample = 0.46332ms; SamplesPerSecond = 2158
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 101- 110]: SamplesSeen = 250; TrainLossPerSample =  0.71416250; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.10633s; TotalTimePerSample = 0.42530ms; SamplesPerSecond = 2351
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 111- 120]: SamplesSeen = 250; TrainLossPerSample =  0.69529134; EvalErr[0]PerSample = 0.43600000; TotalTime = 0.11147s; TotalTimePerSample = 0.44589ms; SamplesPerSecond = 2242
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 121- 130]: SamplesSeen = 250; TrainLossPerSample =  0.70067522; EvalErr[0]PerSample = 0.44000000; TotalTime = 0.10402s; TotalTimePerSample = 0.41609ms; SamplesPerSecond = 2403
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 131- 140]: SamplesSeen = 250; TrainLossPerSample =  0.71854614; EvalErr[0]PerSample = 0.54800000; TotalTime = 0.09733s; TotalTimePerSample = 0.38931ms; SamplesPerSecond = 2568
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 141- 150]: SamplesSeen = 250; TrainLossPerSample =  0.72067070; EvalErr[0]PerSample = 0.48800000; TotalTime = 0.11053s; TotalTimePerSample = 0.44212ms; SamplesPerSecond = 2261
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 151- 160]: SamplesSeen = 250; TrainLossPerSample =  0.71791312; EvalErr[0]PerSample = 0.55200000; TotalTime = 0.11401s; TotalTimePerSample = 0.45604ms; SamplesPerSecond = 2192
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 161- 170]: SamplesSeen = 250; TrainLossPerSample =  0.74164505; EvalErr[0]PerSample = 0.50000000; TotalTime = 0.09847s; TotalTimePerSample = 0.39387ms; SamplesPerSecond = 2538
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 171- 180]: SamplesSeen = 250; TrainLossPerSample =  0.71826243; EvalErr[0]PerSample = 0.51600000; TotalTime = 0.09391s; TotalTimePerSample = 0.37564ms; SamplesPerSecond = 2662
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 181- 190]: SamplesSeen = 250; TrainLossPerSample =  0.71527599; EvalErr[0]PerSample = 0.48400000; TotalTime = 0.10387s; TotalTimePerSample = 0.41547ms; SamplesPerSecond = 2406
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 191- 200]: SamplesSeen = 250; TrainLossPerSample =  0.71701336; EvalErr[0]PerSample = 0.53200000; TotalTime = 0.09437s; TotalTimePerSample = 0.37750ms; SamplesPerSecond = 2649
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 201- 210]: SamplesSeen = 250; TrainLossPerSample =  0.71715640; EvalErr[0]PerSample = 0.52400000; TotalTime = 0.11135s; TotalTimePerSample = 0.44539ms; SamplesPerSecond = 2245
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 211- 220]: SamplesSeen = 250; TrainLossPerSample =  0.72053644; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08508s; TotalTimePerSample = 0.34032ms; SamplesPerSecond = 2938
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 221- 230]: SamplesSeen = 250; TrainLossPerSample =  0.71972404; EvalErr[0]PerSample = 0.50800000; TotalTime = 0.09308s; TotalTimePerSample = 0.37233ms; SamplesPerSecond = 2685
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 231- 240]: SamplesSeen = 250; TrainLossPerSample =  0.71226383; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.15077s; TotalTimePerSample = 0.60308ms; SamplesPerSecond = 1658
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 241- 250]: SamplesSeen = 250; TrainLossPerSample =  0.69571064; EvalErr[0]PerSample = 0.50400000; TotalTime = 0.09076s; TotalTimePerSample = 0.36306ms; SamplesPerSecond = 2754
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 251- 260]: SamplesSeen = 250; TrainLossPerSample =  0.70030562; EvalErr[0]PerSample = 0.51200000; TotalTime = 0.08180s; TotalTimePerSample = 0.32722ms; SamplesPerSecond = 3056
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 261- 270]: SamplesSeen = 250; TrainLossPerSample =  0.70641960; EvalErr[0]PerSample = 0.54400000; TotalTime = 0.11870s; TotalTimePerSample = 0.47479ms; SamplesPerSecond = 2106
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 271- 280]: SamplesSeen = 250; TrainLossPerSample =  0.69616822; EvalErr[0]PerSample = 0.52800000; TotalTime = 0.08956s; TotalTimePerSample = 0.35825ms; SamplesPerSecond = 2791
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 281- 290]: SamplesSeen = 250; TrainLossPerSample =  0.69109880; EvalErr[0]PerSample = 0.44800000; TotalTime = 0.10503s; TotalTimePerSample = 0.42011ms; SamplesPerSecond = 2380
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 291- 300]: SamplesSeen = 250; TrainLossPerSample =  0.69091183; EvalErr[0]PerSample = 0.48000000; TotalTime = 0.12592s; TotalTimePerSample = 0.50367ms; SamplesPerSecond = 1985
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 301- 310]: SamplesSeen = 250; TrainLossPerSample =  0.68895296; EvalErr[0]PerSample = 0.54000000; TotalTime = 0.09874s; TotalTimePerSample = 0.39494ms; SamplesPerSecond = 2532
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 311- 320]: SamplesSeen = 250; TrainLossPerSample =  0.68058400; EvalErr[0]PerSample = 0.36400000; TotalTime = 0.10036s; TotalTimePerSample = 0.40144ms; SamplesPerSecond = 2491
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 321- 330]: SamplesSeen = 250; TrainLossPerSample =  0.68249988; EvalErr[0]PerSample = 0.46800000; TotalTime = 0.10420s; TotalTimePerSample = 0.41679ms; SamplesPerSecond = 2399
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 331- 340]: SamplesSeen = 250; TrainLossPerSample =  0.69178891; EvalErr[0]PerSample = 0.46000000; TotalTime = 0.09894s; TotalTimePerSample = 0.39576ms; SamplesPerSecond = 2526
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 341- 350]: SamplesSeen = 250; TrainLossPerSample =  0.67594589; EvalErr[0]PerSample = 0.47600000; TotalTime = 0.09987s; TotalTimePerSample = 0.39950ms; SamplesPerSecond = 2503
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 351- 360]: SamplesSeen = 250; TrainLossPerSample =  0.64524894; EvalErr[0]PerSample = 0.30800000; TotalTime = 0.10715s; TotalTimePerSample = 0.42860ms; SamplesPerSecond = 2333
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 361- 370]: SamplesSeen = 250; TrainLossPerSample =  0.61674568; EvalErr[0]PerSample = 0.21200000; TotalTime = 0.09402s; TotalTimePerSample = 0.37610ms; SamplesPerSecond = 2658
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 371- 380]: SamplesSeen = 250; TrainLossPerSample =  0.58202897; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.11024s; TotalTimePerSample = 0.44096ms; SamplesPerSecond = 2267
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 381- 390]: SamplesSeen = 250; TrainLossPerSample =  0.52372775; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.11390s; TotalTimePerSample = 0.45558ms; SamplesPerSecond = 2194
+MPI Rank 3:  Epoch[ 1 of 4]-Minibatch[ 391- 400]: SamplesSeen = 250; TrainLossPerSample =  0.42024396; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.09992s; TotalTimePerSample = 0.39967ms; SamplesPerSecond = 2502
+MPI Rank 3: Finished Epoch[ 1 of 4]: [Training Set] TrainLossPerSample = 0.69029201; EvalErrPerSample = 0.4593; AvgLearningRatePerSample = 0.01999999955; EpochTime=4.466934
 MPI Rank 3: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1879,7 +1879,7 @@ MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16641132; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09117s; TotalTimePerSample = 0.36470ms; SamplesPerSecond = 2742
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20390250; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.08575s; TotalTimePerSample = 0.34301ms; SamplesPerSecond = 2915
 MPI Rank 3:  Epoch[ 2 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14610650; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.25633s; TotalTimePerSample = 1.02534ms; SamplesPerSecond = 975
-MPI Rank 3: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; Ave LearnRatePerSample = 0.00800000038; EpochTime=5.142867
+MPI Rank 3: Finished Epoch[ 2 of 4]: [Training Set] TrainLossPerSample = 0.18345717; EvalErrPerSample = 0.0781; AvgLearningRatePerSample = 0.00800000038; EpochTime=5.142867
 MPI Rank 3: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1925,7 +1925,7 @@ MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16647750; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.09809s; TotalTimePerSample = 0.39237ms; SamplesPerSecond = 2548
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20592959; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.07669s; TotalTimePerSample = 0.30674ms; SamplesPerSecond = 3260
 MPI Rank 3:  Epoch[ 3 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14622605; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.08477s; TotalTimePerSample = 0.33909ms; SamplesPerSecond = 2949
-MPI Rank 3: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.297901
+MPI Rank 3: Finished Epoch[ 3 of 4]: [Training Set] TrainLossPerSample = 0.15935929; EvalErrPerSample = 0.077; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.297901
 MPI Rank 3: Starting Epoch 4: learning rate per sample = 0.008000  effective momentum = 0.900000 
 MPI Rank 3: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1971,7 +1971,7 @@ MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 361- 370 of 400]: SamplesSeen = 250; Trai
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 371- 380 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.16644425; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.10185s; TotalTimePerSample = 0.40740ms; SamplesPerSecond = 2454
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 381- 390 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.20619428; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.09337s; TotalTimePerSample = 0.37346ms; SamplesPerSecond = 2677
 MPI Rank 3:  Epoch[ 4 of 4]-Minibatch[ 391- 400 of 400]: SamplesSeen = 250; TrainLossPerSample =  0.14624377; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.09126s; TotalTimePerSample = 0.36503ms; SamplesPerSecond = 2739
-MPI Rank 3: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.243121
+MPI Rank 3: Finished Epoch[ 4 of 4]: [Training Set] TrainLossPerSample = 0.159072; EvalErrPerSample = 0.0774; AvgLearningRatePerSample = 0.00800000038; EpochTime=4.243121
 MPI Rank 3: CNTKCommandTrainEnd: SimpleMultiGPU
 MPI Rank 3: COMPLETED
 MPI Rank 3: ~MPIWrapper

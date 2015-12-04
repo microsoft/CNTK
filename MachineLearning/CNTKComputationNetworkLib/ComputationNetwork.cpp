@@ -18,6 +18,7 @@
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
+#include "EsotericNodes.h"
 #include "MPIWrapper.h"                 // TODO: does not belong here
 #include <string>
 #include <vector>
@@ -62,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cacheGradientCalcOrders.clear();
         m_cachedOuterLoopNodes.clear();
 
-        m_inputs.clear();
+        m_inputValues.clear();
         m_learnableParameters.clear();
 
         m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
@@ -140,17 +141,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_labels[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
+        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes");
         fstream << m_finalCriteria.size();
         for (size_t i = 0; i < m_finalCriteria.size(); i++)
             fstream << m_finalCriteria[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
-        fstream << m_requestNodesMultiSeqHandling.size();
-        for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
-            fstream << m_requestNodesMultiSeqHandling[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
+        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
         fstream << m_evalNodes.size();
@@ -328,65 +323,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             wstring nodeName;
             size_t num;
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
-            fstream >> num;
-
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes"))
             {
-                fstream >> nodeName;
-                m_features.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_features.push_back(GetNodeFromName(nodeName));
+                }
+
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
             }
 
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes"))
             {
-                fstream >> nodeName;
-                m_labels.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_labels.push_back(GetNodeFromName(nodeName));
+                }
             }
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_finalCriteria.push_back(GetNodeFromName(nodeName));
-            }
-
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
-
-            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes") ||
+                fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes" /*legacy*/))
             {
                 fstream >> num;
-                for (size_t i = 0; i<num; i++)
+                for (size_t i = 0; i < num; i++)
                 {
                     fstream >> nodeName;
-                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                    m_finalCriteria.push_back(GetNodeFromName(nodeName));
                 }
+
+                if (!fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes"  /*legacy*/))
+                {
+                    fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");  //check legacy first so err msg will use new name
+                }
+            }
+
+            // TODO: this section is defunct
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
+            {
+                fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                    fstream >> nodeName;
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes"))
             {
-                fstream >> nodeName;
-                m_evalNodes.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_evalNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
             }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes"))
             {
-                fstream >> nodeName;
-                m_outputNodes.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_outputNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
             }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
             {
@@ -404,8 +412,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
-        //some internal values in the nodes are computed during validation
+        // some internal values in the nodes are computed during validation
         ValidateNetwork(false, bAllowNoCriterionNode);
+        ResetEvalTimeStamp();
     }
 
     // -----------------------------------------------------------------------
@@ -471,11 +480,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (minibatchDifferent)
         {
             for (ComputationNodeBasePtr node : inputs)
-                node->Resize(node->GetNumRows(), minibatchMax);
+                node->SetDims(node->GetNumRows(), minibatchMax);
         }
     }
 
-    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
         // TODO: just use return!
@@ -492,32 +500,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
 
         return false;
-    }
-
-    // test for user-specified request for masking to the individual nodes
-    // This will go away. It is currently only needed if users explicitly perform reduce-like operations, to work around current limitations of CNTK.
-    // It makes no sense for some nodes, so we skip those.
-    template <typename T>
-    static bool VectorContains(const vector<T> & v, const T & what)
-    {
-        // TODO: I am sure there is some std algorithm for this, need to look for it
-        for (const auto & elem : v)
-            if (elem == what)
-                return true;
-        return false;
-    }
-    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
-    {
-        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
-        if (maskingWasRequested &&
-            (node->OperationName() == OperationNameOf(SumElementsNode) ||
-             node->OperationName() == OperationNameOf(TransposeNode) ||
-             node->OperationName() == OperationNameOf(MeanNode) ||
-             node->OperationName() == OperationNameOf(InvStdDevNode)))
-        {
-            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
-        }
-        return maskingWasRequested;
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
@@ -584,12 +566,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cachedOuterLoopNodes.clear();
     }
 
-    // lazily reate the m_inputs[] and m_learnableParameters lists
+    // lazily reate the m_inputValues[] and m_learnableParameters lists
     // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
     void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
     {
         //not found
-        if (m_inputs.find(rootNode) == m_inputs.end())
+        if (m_inputValues.find(rootNode) == m_inputValues.end())
         {
             list<ComputationNodeBasePtr> inputs;
 
@@ -598,12 +580,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNodeBasePtr node = *nodeIter;
                 if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
-                    node->OperationName() == InputValue<float>::SparseTypeName())
+                    node->OperationName() == OperationNameOf(SparseInputValue) /*L"SparseInputValue"*/)
                 {
                     inputs.push_back(node);
                 }
             }
-            m_inputs[rootNode] = inputs;
+            m_inputValues[rootNode] = inputs;
         }
 
         //not found
@@ -639,12 +621,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
+    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
     {
         if (dropoutRate != prevDropoutRate)
         {
             fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
-            list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
+            list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
             if (dropoutNodes.size() == 0 && dropoutRate > 0)
                 fprintf(stderr, "WARNING: there is no dropout node.\n");
             else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
@@ -660,10 +642,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
     template<class ElemType>
-    void ComputationNetwork::SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
+    void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
     {
         fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
-        list<ComputationNodeBasePtr> seqNodes = net.GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
+        list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
         if (seqNodes.size() == 0)
         {
             fprintf(stderr, "WARNING: there is no sequence node.\n");
@@ -681,11 +663,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 	template<class ElemType>
-    void ComputationNetwork::SetCTCParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum)
+	void ComputationNetwork::SetCTCParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum)
 	{
 
 		fprintf(stderr, "set blank phone num %d\n", blanknum);
-		std::list<ComputationNodeBasePtr> ctcNodes = net.GetNodesWithType(OperationNameOf(CTCwithSoftmaxNode), criterionNode);
+		std::list<ComputationNodeBasePtr> ctcNodes = net->GetNodesWithType(OperationNameOf(CTCwithSoftmaxNode), criterionNode);
 		if (ctcNodes.size() == 0)
 		{
 			fprintf(stderr, "WARNING: there is no CTC creterion node.\n");
@@ -699,7 +681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			}
 		}
 
-        ctcNodes = net.GetNodesWithType(OperationNameOf(PhoneErrorNode), evaluationNode);
+        ctcNodes = net->GetNodesWithType(OperationNameOf(PhoneErrorNode), evaluationNode);
 		if (ctcNodes.size() == 0)
 		{
 			fprintf(stderr, "WARNING: there is no CTC evaluation node.\n");
@@ -715,10 +697,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 
 
-    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
+    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
     {
         fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
-        list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
+        list<ComputationNodeBasePtr> convolutionNodes = net->GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
         if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
         {
             fprintf(stderr, "WARNING: there is no convolution node.\n");
@@ -893,8 +875,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
-        // nodes that requires multi sequence handling 
-        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_requestNodesMultiSeqHandling);            
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
@@ -936,8 +916,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"\t\t rank=sink ; ";
         line.clear();
         for (const auto & x : m_finalCriteria)
-            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (const auto & x : m_requestNodesMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
@@ -1174,8 +1152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pLeft->FunctionValues() = redU;
                 pRight->FunctionValues() = redVT;
 
-                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"/*, m, n*/), pLeft, pRight);
-                // BUGBUG: This ^^ is reported to cause a crash since m_functionValues is no longer created.
+                shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
                 //========================================
                 // Step 3. remove old node
@@ -1189,13 +1166,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-    template void ComputationNetwork::SetCTCParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
+    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+	template void ComputationNetwork::SetCTCParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-    template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
-    template void ComputationNetwork::SetCTCParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
+    template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+	template void ComputationNetwork::SetCTCParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum);
+
+    // register ComputationNetwork with the ScriptableObject system
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetwork> registerComputationNetwork(L"ComputationNetwork");
 }}}

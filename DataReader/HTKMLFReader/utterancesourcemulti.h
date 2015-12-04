@@ -52,14 +52,13 @@ class minibatchutterancesourcemulti : public minibatchsource
 
         const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
         size_t numframes() const { return parsedpath.numframes(); }
-        const wstring key() const                           // key used for looking up lattice (not stored to save space)
+        wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
-#ifdef _WIN32
+#ifdef _MSC_VER
             static const wstring emptywstring;
             static const wregex deleteextensionre (L"\\.[^\\.\\\\/:]*$");
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
-#endif
-#ifdef __unix__
+#else
             return removeExtension(logicalpath());
 #endif
         }
@@ -166,7 +165,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;          // set of utterances organized in chunks, referred to by an iterator (not an index)
     std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids;            // [classidsbegin+t] concatenation of all state sequences
-    std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> phoneboundaries;
+    std::vector<unique_ptr<biggrowablevector<HMMIDTYPE>>> phoneboundaries;
     bool issupervised() const { return !classids.empty(); }
     size_t numutterances;           // total number of utterances
     size_t _totalframes;             // total frames (same as classids.size() if we have labels)
@@ -281,15 +280,15 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         return allclassids;   // nothing to return
     }
-    template<class UTTREF> std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> getphonebound(const UTTREF & uttref)  // return sub-vector of classids[] for a given utterance
+    template<class UTTREF> std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> getphonebound(const UTTREF & uttref)  // return sub-vector of classids[] for a given utterance
     {
-        std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> allphoneboundaries;
+        std::vector<shiftedvector<biggrowablevector<HMMIDTYPE>>> allphoneboundaries;
         allphoneboundaries.empty();
 
         if (!issupervised())
         {
             foreach_index(i, classids)
-                allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>>((*phoneboundaries[i]), 0, 0)));
+                allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<HMMIDTYPE>>((*phoneboundaries[i]), 0, 0)));
             return allphoneboundaries;     // nothing to return
         }
         const auto & chunk = randomizedchunks[0][uttref.chunkindex];
@@ -298,9 +297,9 @@ class minibatchutterancesourcemulti : public minibatchsource
         const size_t n = chunkdata.numframes(uttref.utteranceindex);
         foreach_index(i, phoneboundaries)
         {
-            if ((*phoneboundaries[i])[classidsbegin + n] != (CLASSIDTYPE)-1)
+            if ((*phoneboundaries[i])[classidsbegin + n] != (HMMIDTYPE)-1)
                 LogicError("getclassids: expected boundary marker not found, internal data structure screwed up");
-            allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>>((*phoneboundaries[i]), classidsbegin, n)));
+            allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<HMMIDTYPE>>((*phoneboundaries[i]), classidsbegin, n)));
         }
         return allphoneboundaries;   // nothing to return
     }
@@ -318,8 +317,6 @@ public:
         // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {    
         // process infiles to know dimensions of things (but not loading features)
-        std::vector<utterancedesc> utteranceset;// read all utterances to here first; at the end, distribute to chunks
-        utteranceset.reserve (infiles.size());
         size_t nomlf = 0;                       // number of entries missing in MLF (diagnostics)
         size_t nolat = 0;                       // number of entries missing in lattice archive (diagnostics)
         std::vector<size_t> numclasses;                  // number of output classes as found in the label file (diagnostics)
@@ -345,7 +342,7 @@ public:
         foreach_index (i, labels)
         {
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            phoneboundaries.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
+            phoneboundaries.push_back(unique_ptr<biggrowablevector<HMMIDTYPE>>(new biggrowablevector<HMMIDTYPE>()));
             //std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             //std::unordered_map<std::string,size_t> modelsymmap;
             //lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
@@ -374,7 +371,7 @@ public:
                     RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %ls\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
@@ -407,7 +404,8 @@ public:
         size_t utterancesetsize = 0;
         foreach_index (m, infiles)
         {
-            utteranceset.clear();
+            std::vector<utterancedesc> utteranceset;// read all utterances to here first; at the end, distribute to chunks
+            utteranceset.reserve(infiles[m].size());
                     //if (m==0)
                     //    numutts = infiles[m].size();
                     //else
@@ -434,7 +432,7 @@ public:
                         //    RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                         //if (uttframes > frameref::maxframesperutterance)
                         //{
-                        //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                        //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %ls", i, uttframes, frameref::maxframesperutterance, key.c_str());
                         //    continue;
                         //}
 
@@ -450,13 +448,13 @@ public:
                         lacksmlf = (labelsiter == labels[0].end());
                         if (lacksmlf)
                             if (nomlf++ < 5)
-                                fprintf (stderr, " [no labels for  %S]", key.c_str());
+                                fprintf (stderr, " [no labels for  %ls]", key.c_str());
                         // check if lattice is available (when in lattice mode)
                         // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
                         const bool lackslat = !lattices.empty() && !lattices.haslattice (key); // ('true' if we have no lattices)
                         if (lackslat)
                             if (nolat++ < 5)
-                                fprintf (stderr, " [no lattice for %S]", key.c_str());
+                                fprintf (stderr, " [no lattice for %ls]", key.c_str());
                         // skip if either one is missing
                             if (lacksmlf || lackslat){
                                 uttisvalid[i] = false;
@@ -481,7 +479,7 @@ public:
                                 size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                                 if (labframes != uttframes)
                                 {
-                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", (int)labframes, (int)uttframes, key.c_str());
+                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %ls]", (int)labframes, (int)uttframes, key.c_str());
                                     nomlf++;
                                     uttisvalid[i] = false;
                                     //continue;   // skip this utterance at all
@@ -502,11 +500,11 @@ public:
                                         const auto & e = labseq[i];
                                         if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
                                         {
-                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                            RuntimeError("minibatchutterancesource: labels not in consecutive order MLF in label set: %ls", key.c_str());
                                         }
                                         if (e.classid >= udim[j])
                                         {
-                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim[j], key.c_str()));
+                                            RuntimeError("minibatchutterancesource: class id %d exceeds model output dimension %d in file %ls", (int)e.classid, (int)udim[j], key.c_str());
                                         }
                                         if (e.classid != (CLASSIDTYPE) e.classid)
                                             RuntimeError("CLASSIDTYPE has too few bits");
@@ -534,10 +532,10 @@ public:
                                     }
 
                                     classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
-                                phoneboundaries[j]->push_back((CLASSIDTYPE)-1); // append a boundary marker marker for checking
+                                    phoneboundaries[j]->push_back((HMMIDTYPE)-1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                        LogicError(msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                        LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
                                     assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                                 }
                             }
@@ -610,9 +608,6 @@ public:
                 (int)numutterances, (int)thisallchunks.size(), numutterances / (double) thisallchunks.size(), _totalframes / (double) thisallchunks.size());
             // Now utterances are stored exclusively in allchunks[]. They are never referred to by a sequential utterance id at this point, only by chunk/within-chunk index.
         }
-        // preliminary mem allocation for frame references (if in frame mode)
-        if (framemode)
-            randomizedframerefs.resize (_totalframes);
     }
 
 private:
@@ -661,7 +656,7 @@ private:
     static void checkoverflow (size_t fieldval, size_t targetval, const char * fieldname)
     {
         if (fieldval != targetval)
-            RuntimeError(msra::strfun::strprintf ("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, targetval, fieldval));
+            RuntimeError("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (int)targetval, (int)fieldval);
     }
 
     // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')
@@ -881,6 +876,10 @@ private:
         {
             // This sets up the following members:
             //  - randomizedframerefs
+
+            // Lazy mem allocation for frame references
+            if (randomizedframerefs.size() != _totalframes)
+                randomizedframerefs.resize(_totalframes);
 
             srand ((unsigned int) sweep + 1);
             // An original timeline is established by the randomized chunks, denoted by 't'.

@@ -25,6 +25,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef BaseMatrix<ElemType> B; using B::m_elemSizeAllocated; using B::m_computeDevice; using B::m_externalBuffer; using B::m_format; using B::m_matrixName;
         using B::m_numCols; using B::m_numRows; using B::m_nz; using B::m_pArray;    // without this, base members would require to use thi-> in GCC
+        using B::OwnBuffer;
         using B::Clear;
     public:
         using B::SetMatrixName;
@@ -32,14 +33,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void ZeroInit();
         void CheckInit(const MatrixFormat format);
+        void ReleaseMemory();
 
     public:
         CPUSparseMatrix(const MatrixFormat format);
         CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
         CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //copy constructor, deep copy
         CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
-        
-        
+        CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom);  //move constructor, shallow copy
+        CPUSparseMatrix<ElemType>& operator=(CPUSparseMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
         ~CPUSparseMatrix();
 
     public:
@@ -53,7 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
 
-        CPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+        CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+        CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         CPUMatrix<ElemType> DiagonalToDense() const;
 
@@ -135,8 +138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     public:
-        const ElemType* NzValues() const { return m_pArray; }
-        inline ElemType* NzValues() { return m_pArray; }
+        const ElemType* NzValues() const { return m_nzValues; }
+        inline ElemType* NzValues() { return m_nzValues; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
@@ -167,6 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         int m_colIdx; //used to SetValue()
         size_t m_compIndexSize;
+        ElemType* m_nzValues;
 
         //non-zero values are stored in m_pArray
         CPUSPARSE_INDEX_TYPE *m_unCompIndex; //row/col ids in CSC/CSR format
@@ -174,6 +178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
+        size_t m_blockIdShift; //used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
     };
 
     typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

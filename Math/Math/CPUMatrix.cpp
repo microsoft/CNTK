@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 #include "Basics.h"
-#include "fileutil.h"
+#include "File.h"
 
 #include <assert.h>
 #include <stdexcept>
@@ -376,9 +376,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
-        //if (a.IsEmpty())
-        //    LogicError("AssignRowSliceValuesOf: input matrix a is empty.");
-
         if (startIndex + numRows > a.GetNumRows())
             LogicError("AssignRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
 
@@ -497,7 +494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
     {
         if (m_numRows != m_numCols)
-            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m_numRows, m_numCols);
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", (int)m_numRows, (int)m_numCols);
 
         CPUMatrix<ElemType> diag(1, m_numCols);
 
@@ -2297,6 +2294,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 sum = log(sum);
                 foreach_column(j,us)
                     us(i,j) -= sum;
+            }
+
+        }
+
+        return *this;
+    }
+
+    //[this]=hardmax([this]) 
+    //the max element is 1 else is 0
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceHardmax(const bool isColWise)
+    {
+        return AssignHardmaxOf(*this, isColWise);
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            LogicError("AssignHardmaxOf: Matrix a is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+
+        if (isColWise)
+        {
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                //we need to extract max
+                ElemType maxV = a(0, j);
+                long maxI = 0;
+                foreach_row(i, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxI = i;
+                    }
+                }
+
+                foreach_row(i, us)
+                    us(i, j) = (i == maxI) ? 1.0f : 0.0f;
+            }
+
+        }
+        else
+        {
+#pragma omp parallel for
+            foreach_row(i, a)
+            {
+                //we need to extract max 
+                ElemType maxV = a(i, 0);
+                long maxJ = 0;
+                foreach_column(j, a)
+                {
+                    if (maxV < a(i, j))
+                    {
+                        maxV = a(i, j);
+                        maxJ = j;
+                    }
+                }
+
+                foreach_column(j, us)
+                    us(i, j) = (j == maxJ)? 1.0f : 0.0f;
             }
 
         }
@@ -5627,6 +5690,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    // note: this function does not depend on the <ElemType> parameter
     template<class ElemType>
     int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     {

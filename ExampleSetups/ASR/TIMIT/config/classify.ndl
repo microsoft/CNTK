@@ -24,18 +24,18 @@ ndlCreateNetwork=[
 	featDim=792
 	labelDim=183
 	hiddenDim=512
-	myFeatures=Input(featDim, tag=feature)
-	myLabels=Input(labelDim, tag=label)
+	myFeatures=Input(featDim, tag="feature")
+	myLabels=Input(labelDim, tag="label")
 			       			       
 	 # define network
 	 featNorm = MeanVarNorm(myFeatures)
 	 L1 = SBFF(featNorm,hiddenDim,featDim)
 	 L2 = SBFF(L1,hiddenDim,hiddenDim)
 	 L3 = SBFF(L2,hiddenDim,hiddenDim)
-	 CE = SMBFF(L3,labelDim,hiddenDim,myLabels,tag=Criteria)
-	 Err = ErrorPrediction(myLabels,CE.BFF.FF.P,tag=Eval)
+	 CE = SMBFF(L3,labelDim,hiddenDim,myLabels,tag="criterion")
+	 Err = ErrorPrediction(myLabels,CE.BFF.FF.P,tag="eval")
 
 	 # define output (scaled loglikelihood)
      	 logPrior = LogPrior(myLabels)	 
-	 ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
+	 ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag="output")
 ]

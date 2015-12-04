@@ -7,19 +7,14 @@
 #pragma once
 
 #include "Basics.h"
-//#include "Helpers.h"    // for foreach_column() macro
-//#include "fileutil.h"
 #include "DataReader.h"
-//#include "DataWriter.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
-//#include "CompositeComputationNodes.h"
 #include <vector>
 #include <string>
-//#include <fstream>
-//#include <queue>
+#include <set>
 
 using namespace std;
 
@@ -29,11 +24,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SimpleEvaluator
     {
-    protected:
-
     public:
-
-        SimpleEvaluator(ComputationNetwork& net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
+        SimpleEvaluator(ComputationNetworkPtr net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
             : m_net(net), m_numMBsToShowResult(numMBsToShowResult), m_traceLevel(traceLevel)
         {
         }
@@ -41,41 +33,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
         vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
         {
-            //specify evaluation nodes
+            // determine nodes to evaluate
             std::vector<ComputationNodeBasePtr> evalNodes;
 
+            set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log critera
             if (evalNodeNames.size() == 0)
             {
                 fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
-                if (m_net.EvaluationNodes().size() == 0 && m_net.FinalCriterionNodes().size() == 0)
+                if (m_net->EvaluationNodes().size() == 0 && m_net->FinalCriterionNodes().size() == 0)
                     LogicError("There is no default evalnodes or training criterion node specified in the network.");
 
-                for (int i = 0; i < m_net.EvaluationNodes().size(); i++)
-                    evalNodes.push_back(m_net.EvaluationNodes()[i]);
+                for (const auto & node : m_net->EvaluationNodes())
+                    if (criteriaLogged.insert(node).second)
+                        evalNodes.push_back(node);
 
-                for (int i = 0; i < m_net.FinalCriterionNodes().size(); i++)
-                    evalNodes.push_back(m_net.FinalCriterionNodes()[i]);
+                for (const auto & node : m_net->FinalCriterionNodes())
+                    if (criteriaLogged.insert(node).second)
+                        evalNodes.push_back(node);
             }
             else
             {
                 for (int i = 0; i < evalNodeNames.size(); i++)
                 {
-                    const auto & node = m_net.GetNodeFromName(evalNodeNames[i]);
-                    m_net.BuildAndValidateSubNetwork(node);
+                    const auto & node = m_net->GetNodeFromName(evalNodeNames[i]);
+                    if (!criteriaLogged.insert(node).second)
+                        continue;
+                    m_net->BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
                         LogicError("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
                     evalNodes.push_back(node);
                 }
             }
 
-            //initialize eval results
+            // initialize eval results
             std::vector<double> evalResults;
             for (int i = 0; i < evalNodes.size(); i++)
                 evalResults.push_back((double)0);
 
-            //prepare features and labels
-            auto & featureNodes = m_net.FeatureNodes();
-            auto & labelNodes = m_net.LabelNodes();
+            // prepare features and labels
+            auto & featureNodes = m_net->FeatureNodes();
+            auto & labelNodes = m_net->LabelNodes();
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
@@ -83,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < labelNodes.size(); i++)
                 inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
 
-            //evaluate through minibatches
+            // evaluate through minibatches
             size_t totalEpochSamples = 0;
             size_t numMBsRun = 0;
             size_t actualMBSize = 0;
@@ -95,25 +92,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 evalResultsLastMBs.push_back((ElemType)0);
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
-            m_net.StartEvaluateMinibatchLoop(evalNodes);
+            m_net->StartEvaluateMinibatchLoop(evalNodes);
 
             while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                //dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                //m_net.VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
-
-                //for now since we share the same label masking flag we call this on one node only
-                //Later, when we apply different labels on different nodes
-                //we need to add code to call this function multiple times, one for each criteria node
-                size_t numSamplesWithLabel = m_net.GetNumSamplesWithLabel(actualMBSize);
+                // for now since we share the same label masking flag we call this on one node only
+                // Later, when we apply different labels on different nodes
+                // we need to add code to call this function multiple times, one for each criteria node
+                size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
                 for (int i = 0; i < evalNodes.size(); i++)
                 {
-                    m_net.Evaluate(evalNodes[i]);
-                    evalResults[i] += (double)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
+                    m_net->Evaluate(evalNodes[i]);
+                    evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
                 }
 
                 totalEpochSamples += numSamplesWithLabel;
@@ -136,8 +129,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                /// call DataEnd to check if end of sentence is reached
-                /// datareader will do its necessary/specific process for sentence ending 
+                // call DataEnd to check if end of sentence is reached
+                // datareader will do its necessary/specific process for sentence ending 
                 dataReader->DataEnd(endDataSentence);
             }
 
@@ -203,7 +196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        ComputationNetwork& m_net;
+        ComputationNetworkPtr m_net;
         size_t m_numMBsToShowResult;
         int m_traceLevel;
         void operator=(const SimpleEvaluator&); // (not assignable)

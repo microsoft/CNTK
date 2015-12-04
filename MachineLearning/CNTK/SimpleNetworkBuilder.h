@@ -5,24 +5,23 @@
 //
 #pragma once
 
-#include <stdexcept>
-#include <regex>
-#include <string>
-
 #include "Basics.h"
 #include "Matrix.h"
 #include "BestGpu.h"
 
 #include "ComputationNetwork.h"
-#include "IComputationNetBuilder.h"
 #include "commandArgUtil.h"
 
 // TODO: giving up moving stuff for now, running out of time. The following #includes should not be necessary once the hard-working code in here gets moved to .cpp
 #include "InputAndParamNodes.h"
 
+#include <stdexcept>
+#include <regex>
+#include <string>
+
 #pragma warning (disable: 4661)
 
-using namespace std;
+using namespace std;    // TODO: ugh!
 
 /// this is for sparse input, useful when input dimension is very large and sparse such as language modeling
 /// to-do: need to use it guided by argument
@@ -42,10 +41,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UNIDIRECTIONALLSTM = 19,
         BIDIRECTIONALLSTM = 20,
         ALIGNMENTSIMILARITYGENERATOR = 21,
-        ALIGNMENTSIMILARITYGFORWARDDECODER =22
+        ALIGNMENTSIMILARITYGFORWARDDECODER = 22
     };
 
-    enum class TrainingCriterion : int
+    enum class TrainingCriterion : int  // TODO: camel-case these
     {
         CrossEntropyWithSoftmax,
         CrossEntropy,
@@ -70,14 +69,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		SequenceWithSoftmax,
 		CTCwithSoftmax,
         NCECrossEntropyWithSoftmax,
-        CRF
+        CRF        
     };
 
     extern TrainingCriterion ParseTrainingCriterionString(wstring s);
     extern EvalCriterion ParseEvalCriterionString(wstring s);
 
     template<class ElemType>
-    class SimpleNetworkBuilder : public IComputationNetBuilder<ElemType>
+    class SimpleNetworkBuilder
     {
     protected:
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -92,6 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Init(config);
         }
+        SimpleNetworkBuilder(const ScriptableObjects::IConfigRecord &) { NOT_IMPLEMENTED; }
 
         // full parameter Init routine
         void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion,
@@ -101,8 +101,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool uniformInit = true, const ElemType initValueScale = 1.0f,
             const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
+            if (deviceId == AUTOPLACEMATRIX)
+                deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
+            deviceId = EnforceOneGPUOnly(deviceId);      // see EnforceOneGPUOnly() for comment on what this is
+
             m_deviceId = deviceId;
-            m_net = new ComputationNetwork(m_deviceId);
+            m_net = make_shared<ComputationNetwork>(m_deviceId);
+
+            if (m_deviceId < 0)
+                fprintf(stderr, "SimpleNetworkBuilder Using CPU\n");
+            else
+                fprintf(stderr, "SimpleNetworkBuilder Using GPU %d\n", m_deviceId);
 
             m_outputLayerSize = outputLayerSize;
             m_layerSizes = layerSizes;
@@ -116,17 +125,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initValueScale = initValueScale;
             if (m_layerSizes.size() < 2)
                 InvalidArgument("A network should have at least two layers (one input and one output)");
-
-            if (m_deviceId == AUTOPLACEMATRIX)
-                m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-            m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
-
-            m_net->SetDeviceId(m_deviceId);
-            if (m_deviceId < 0)
-                fprintf(stderr, "SimpleNetworkBuilder Using CPU\n");
-            else
-                fprintf(stderr, "SimpleNetworkBuilder Using GPU %d\n", m_deviceId);
-
         }
 
         void InitAttentionNetworkConfig(const ConfigParameters& config)
@@ -250,54 +248,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        virtual ~SimpleNetworkBuilder()
-        {
-            delete m_net;
-        }
+        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr);
 
-        static bool CheckDbnTag(File &fstream, const std::string expectedTag)
-        {
-            char tag[5];
-            for (int i = 0; i<4; i++)
-                fstream >> tag[i];
-            tag[4] = 0;
-            return std::string(tag) == expectedTag;
-        }
-
-        // this load function allows an alternative file format of an early internal predecessor of CNTK, internally called DBN.exe
-        virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
-        {
-            if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-            {
-                bool isDBN = false;
-
-                {  //force fstream to close when out of range
-                    File fstream(modelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-                    isDBN = CheckDbnTag(fstream, "DBN\n");
-                }
-
-                if (isDBN)
-                    BuildNetworkFromDbnFile(modelFileName);
-                else
-                    m_net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion, anotherNetwork);
-            }
-
-            m_net->ResetEvalTimeStamp();
-            return m_net;
-        }
-
-        ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* encoderNet);
+        ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // support for fseide's Microsoft-internal legacy tool "DBN.exe"
 
         RNNTYPE RnnType(){ return m_rnnType; }
 
     protected:
 
-        ComputationNetwork* BuildSimpleDNN();
+        ComputationNetworkPtr BuildSimpleDNN();
 
-        ComputationNetwork* BuildSimpleRNN(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSimpleRNN(size_t mbSize = 1);
 
-        ComputationNetwork* BuildClassEntropyNetwork(size_t mbSize = 1);
+        ComputationNetworkPtr BuildClassEntropyNetwork(size_t mbSize = 1);
 
         ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
@@ -307,35 +270,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
-        ComputationNetwork* BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildNeuralProbNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNeuralProbNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork* BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
+        ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
 
-        ComputationNetwork* BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
-
-        ComputationNetwork* BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);
+        ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
 
         //layer is 0 based
         ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
         ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr);
+
+        static bool CheckDbnTag(File &fstream, const std::string expectedTag)
+        {
+            char tag[5];
+            for (int i = 0; i<4; i++)
+                fstream >> tag[i];
+            tag[4] = 0;
+            return std::string(tag) == expectedTag;
+        }
 
         Matrix<ElemType> ReadMatrixFromDbnFile(File &fstream, const std::string expectedName)
         {
@@ -347,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
             {
-                InvalidArgument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
+                InvalidArgument("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str());
             }
 
             if (numCols>1) // transpose W because dbn stores that way apparently
@@ -379,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
 
-        ComputationNetwork* m_net;
+        ComputationNetworkPtr m_net;
 
         int m_outputLayerSize;
         intargvector m_layerSizes;

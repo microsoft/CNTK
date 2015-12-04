@@ -1,5 +1,7 @@
 // Platform.h -- mapping platform-dependent stuff. E.g. contains a few emulations of VS-proprietary CRT functions for Linux.
 
+#pragma once
+
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
@@ -29,6 +31,10 @@
 // emulation of some MSVC proprietary CRT
 // ===========================================================================
 
+// ----------------------------------------------------------------------------
+// some mappings for non-Windows builds
+// ----------------------------------------------------------------------------
+
 #ifndef _MSC_VER
 // necessary header files for API conversion
 //#include <cstdint>
@@ -40,9 +46,12 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <string>
 #include <stdexcept>
+#include <chrono>
+#include <thread>
 // basic type conversion
 typedef int BOOL;
 typedef unsigned char BYTE;
@@ -137,7 +146,20 @@ inline int fscanf_s(FILE *stream, const char *format, ...)
 	return res;
 }
 
-static inline std::string wtocharpath (const wchar_t *p)
+// --- basic string functions
+
+static inline wchar_t* wcstok_s (wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+static inline int _stricmp  (const char * a, const char * b)                 { return ::strcasecmp (a, b); }
+static inline int _strnicmp (const char * a, const char * b, size_t n)       { return ::strncasecmp (a, b, n); }
+static inline int _wcsicmp  (const wchar_t * a, const wchar_t * b)           { return ::wcscasecmp (a, b); }
+static inline int _wcsnicmp (const wchar_t * a, const wchar_t * b, size_t n) { return ::wcsncasecmp (a, b, n); }
+static inline int _wtoi(const wchar_t * s) { return (int)wcstol(s, 0, 10); }
+static inline int64_t  _strtoi64  (const char * s, char ** ep, int r) { return strtoll (s, ep, r); }    // TODO: check if correct
+static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return strtoull (s, ep, r); }   // TODO: correct for size_t?
+static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
+#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
+
+static inline std::string wtocharpath(const wchar_t *p)
 {
     size_t len = wcslen(p);
     std::string buf;
@@ -146,6 +168,7 @@ static inline std::string wtocharpath (const wchar_t *p)
     buf.resize(strlen(&buf[0]));        // set size correctly for shorter strings
     return buf;
 }
+static inline std::string wtocharpath(const std::wstring & s) { return wtocharpath(s.c_str()); }
 
 inline errno_t _wfopen_s(FILE **file, const wchar_t *fileName, const wchar_t *mode)
 {
@@ -163,10 +186,25 @@ inline pid_t GetCurrentProcessId()
 	return getpid();
 }
 
+static inline FILE* _wfopen (const wchar_t * path, const wchar_t * mode) { return fopen(wtocharpath(path).c_str(), wtocharpath(mode).c_str()); }
+static inline int _wunlink (const wchar_t * p) { return unlink (wtocharpath(p).c_str()); }
+static inline int _wmkdir (const wchar_t * p) { return mkdir (wtocharpath(p).c_str(), 0777/*correct?*/); }
 static inline int _wsystem(const wchar_t *command) { return system(wtocharpath(command).c_str()); }
 static inline int _wchdir(const wchar_t *path) { return chdir(wtocharpath(path).c_str()); }
 static inline FILE * _wpopen(const wchar_t * command, const wchar_t *mode) { return popen(wtocharpath(command).c_str(), wtocharpath(mode).c_str()); }
 static inline int _pclose(FILE *stream) { return pclose(stream); }
+
+#if defined(__GNUC__) && !defined(__cpp_lib_make_unique)
+namespace std
+{
+    // make_unique was added in GCC 4.9.0. Requires using -std=c++11.
+    template<typename T, typename... Args>
+    unique_ptr<T> make_unique(Args&&... args)
+    {
+        return unique_ptr<T>(new T(forward<Args>(args)...));
+    }
+}
+#endif
 
 #endif // !_MSC_VER
 

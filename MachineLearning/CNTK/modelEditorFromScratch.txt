@@ -10,8 +10,8 @@ m1=[
         local=test
     }
 
-    features=Input(SDim, tag=feature)
-    labels=Input(LDim, tag=label)
+    features=Input(SDim, tag="feature")
+    labels=Input(LDim, tag="label")
 
     # compute mean/stddev for mean/stddev normalization
     meanVal = Mean(features);
@@ -22,8 +22,8 @@ m1=[
     L1 = RBFF(normInput, HDim, SDim)
     L2 = RBFF(L1, HDim, HDim)
     L3 = RBFF(L2, HDim, HDim)
-    CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
-    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag="eval")
 
     # rootNodes defined here
     OutputNodes=(CE.BFF.FF.P)
@@ -75,7 +75,7 @@ Rename(L*.S,L*.RL)
 
 #add a new sigmoid hidden layer
 HDIM=256
-L2=SBFF(L1.RL,HDIM,HDIM, init=uniform)
+L2=SBFF(L1.RL,HDIM,HDIM, init="uniform")
 SetInput(L3.*.T, 1, L2.S)
 
 Dump(m1, "c:\temp\dump3.txt")

@@ -11,11 +11,13 @@
 #include "CommonMatrix.h"
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
+#include "ConcStack.h"
 #include <string>
 #include <vector>
 #include <ctime>
-#include <limits.h>     // for ULONG_MAX
 #include <iostream>     // for cout/cerr
+#include <memory>       // for unique_ptr
+#include <limits.h>     // for ULONG_MAX
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -45,9 +47,10 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
-    void PrepareDevice(DEVICEID_TYPE deviceId);
+    // -----------------------------------------------------------------------
+    // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
+    // -----------------------------------------------------------------------
 
-    //This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
     template<class ElemType>
     class MATH_API DeviceBoundNumber
     {
@@ -64,6 +67,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
+
+    // -----------------------------------------------------------------------
+    // GPUMatrix
+    // -----------------------------------------------------------------------
+
+    void PrepareDevice(DEVICEID_TYPE deviceId);
 
     template<class ElemType>
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>
@@ -233,6 +242,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
 
+        GPUMatrix<ElemType>& InplaceHardmax(const bool isColWise);
+        GPUMatrix<ElemType>& AssignHardmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
+
         //sequence training
         GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
         GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
@@ -395,6 +407,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
+        static void CreateCurandObject(unsigned long seed, const char *caller);
+        static void ResetCurandObject(unsigned long seed, const char *caller);
         static GPUMatrix<ElemType> Ones(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Eye(const size_t rows, int deviceId);

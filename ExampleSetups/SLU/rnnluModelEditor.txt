@@ -1,4 +1,4 @@
-m1=LoadModel("C:\temp\cntkdebug.fix.lrg.pj50.d300.mb6.lr0.1.dnn", format=cntk)
+m1 = LoadModel("C:\temp\cntkdebug.fix.lrg.pj50.d300.mb6.lr0.1.dnn", format="cntk")
 SetDefaultModel(m1)
 # to print out estimated parameters, use includeData=true
 # Dump(m1, "c:\temp\dump1.txt", includeData = true)
@@ -7,14 +7,14 @@ Dump(m1, "c:\temp\dump1.txt")
 # add AR delays
 hiddenDim=300
 labelDim=127
-BD0=Parameter(labelDim, init=fixedvalue, value=0)
-BD1=Parameter(labelDim, init=fixedvalue, value=0)
-BD2=Parameter(labelDim, init=fixedvalue, value=0)
-BD3=Parameter(labelDim, init=fixedvalue, value=0)
-D0=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
-D1=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
-D2=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
-D3=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
+BD0=Parameter(labelDim, 1, init="fixedValue", value=0)
+BD1=Parameter(labelDim, 1, init="fixedValue", value=0)
+BD2=Parameter(labelDim, 1, init="fixedValue", value=0)
+BD3=Parameter(labelDim, 1, init="fixedValue", value=0)
+D0=Parameter(labelDim, 1, init="fixedValue", value=1.0)
+D1=Parameter(labelDim, 1, init="fixedValue", value=1.0)
+D2=Parameter(labelDim, 1, init="fixedValue", value=1.0)
+D3=Parameter(labelDim, 1, init="fixedValue", value=1.0)
 DNN_A_delay1=Delay(labelDim, AutoName39, delayTime=1)
 DNN_A_delay2=Delay(labelDim, AutoName39, delayTime=2)
 DNN_A_delay3=Delay(labelDim, AutoName39, delayTime=3)
@@ -40,7 +40,7 @@ SetInput(CrossEntropyWithSoftmax, 1, AUTOREGRESSRESPONSE)
 Rename(outputs, oldoutputs);
 
 # set outputs
-BOUTPUT=Parameter(labelDim, init=fixedvalue, value=0)
+BOUTPUT=Parameter(labelDim, init="fixedValue", value=0)
 SetProperty(BOUTPUT, ComputeGradient, false);
 #outputs = Plus(AUTOREGRESSRESPONSE, BOUTPUT);
 
@@ -48,6 +48,4 @@ CopyNode(AUTOREGRESSRESPONSE, outputs);
 
 Dump(m1, "c:\temp\dump1ar.txt")
 
-SaveModel(m1, "c:\temp\cntkdebug.ar3.lrg.pj50.d300.mb6.lr0.1.dnn.1", format=cntk)
-
-#
+SaveModel(m1, "c:\temp\cntkdebug.ar3.lrg.pj50.d300.mb6.lr0.1.dnn.1", format="cntk")

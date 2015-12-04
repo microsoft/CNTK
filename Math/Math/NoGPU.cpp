@@ -235,7 +235,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::InplaceTranspose() { }
 
     template<class ElemType>
-    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    {
+        GPUSparseMatrix<ElemType> a;
+        return a;
+    }
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         GPUMatrix<ElemType> a(0);
         return a;
@@ -484,7 +490,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {
         GPUMatrix<ElemType> slice(0);
-
         return slice;
     }
 
@@ -666,12 +671,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanhOf(const GPUMatrix<ElemType>& /*a*/) { return *this; }
 
-    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise)
-    {
-        return *this;
-    }
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf(const GPUMatrix<ElemType>& /*a*/, const bool isColWise) { return *this; }
+
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceHardmax(const bool isColWise) { return *this; }
+
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemType>& /*a*/, const bool isColWise) { return *this; }
+
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha) { return *this; }
 
@@ -1029,6 +1036,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c) { }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char *caller)
+    {
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ResetCurandObject(unsigned long seed, const char *caller)
+    {
+    }
 
     template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols, int deviceId)
     {

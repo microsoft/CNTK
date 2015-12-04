@@ -11,9 +11,13 @@
 #include <windows.h>
 #include "DbgHelp.h"
 #include <WinBase.h>
-#include <iostream>
 #pragma comment(lib, "Dbghelp.lib")
-#endif    // _WIN32
+#else
+#include <execinfo.h>
+#include <cxxabi.h>
+#endif
+
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

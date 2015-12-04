@@ -286,7 +286,19 @@ namespace CNTKMathTest
             M2(0,0) = 0.0900; M2(0,1) = 0.2447; M2(0,2) = 0.6652;
             M2(1,0) = 0.0900; M2(1,1) = 0.2447; M2(1,2) = 0.6652;
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
-           
+
+            M3.SetValue(M0);
+            M3.InplaceHardmax(true);
+            M2(0, 0) = 0.0; M2(0, 1) = 0.0; M2(0, 2) = 0.0;
+            M2(1, 0) = 1.0; M2(1, 1) = 1.0; M2(1, 2) = 1.0;
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001));
+
+            M3.SetValue(M0);
+            M3.InplaceHardmax(false);
+            M2(0, 0) = 0.0; M2(0, 1) = 0.0; M2(0, 2) = 1.0;
+            M2(1, 0) = 0.0; M2(1, 1) = 0.0; M2(1, 2) = 1.0;
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001));
+
             M3.SetValue(M0);
             M3.InplaceSqrt();
             M2(0,0) = 1; M2(0,1) = 1.4142; M2(0,2) = 1.7321;
@@ -660,5 +672,41 @@ namespace CNTKMathTest
 
             Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
         }
+
+		TEST_METHOD(CPUAssignMatrixByColumnSlice)
+		{
+			printf("starts here\n");
+			Matrix M0 = Matrix::RandomUniform(400, 50, -100, 100); 
+
+
+			vector<size_t> columnrange = { 0, 3, 5, 4 };
+			Matrix M1; 
+			try
+			{
+				M1.AssignMatrixByColumnSlice(M0, columnrange);
+			}
+			catch (exception& e)
+			{
+				printf("%s\n", e.what()); 
+				Assert::Fail(); 
+			}
+		
+
+			for (size_t des = 0; des < columnrange.size(); des ++)
+			{
+				size_t src = columnrange[des]; 
+
+				double err = 0; 
+				for (size_t r = 0; r < 400; r++)
+				{
+					double diff = (M0(r, src) - M1(r, des)); 
+					diff *= diff; 
+					err += diff; 
+				}
+				Assert::AreEqual(err, 0, 1e-7);
+			}
+
+		}
+
     };
 }

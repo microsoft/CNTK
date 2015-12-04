@@ -30,9 +30,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UCIFastReader.h" />
     <ClInclude Include="UCIParser.h" />
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -46,6 +43,9 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

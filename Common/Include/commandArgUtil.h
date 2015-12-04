@@ -6,12 +6,13 @@
 #pragma once
 #include "Basics.h"
 #include <vector>
-#include <string>
 #include <map>
 #include <stdexcept>
 #include <stdint.h>
 
 using namespace std;
+
+#pragma warning(disable : 4996) // Caused by the TODO below (line ~1280)
 
 // helper for numeric parameter arguments for multiple layers
 // This parses arguments of the form a:b*n:c where b gets duplicated n times and c unlimited times.
@@ -35,8 +36,14 @@ static const std::size_t closingBraceVarSize = strlen(closingBraceVar);
 // str - string to trim
 // NOTE: if the entire string is empty, then the string will be set to an empty string
 void Trim(std::string& str);
+
+// TrimQuotes - trim surrounding quotation marks
+// str - string to trim
+void TrimQuotes(std::string& str);
+
 class ConfigValue;
 typedef std::map<std::string, ConfigValue, nocase_compare> ConfigDictionary;
+
 class ConfigParameters;
 std::string::size_type ParseKeyValue(const std::string& token,
                                      std::string::size_type pos,
@@ -108,10 +115,12 @@ public:
 
     // it auto-casts to the common types
     // Note: This is meant to read out a parameter once to assign it, instead of over again.
+#if 0
     operator std::string() const
     {
         return *this;
     } // TODO: does not seem to work
+#endif
 
     operator const char *() const
     {
@@ -135,7 +144,7 @@ public:
             {
                 return std::numeric_limits<double>::infinity();
             }
-            RuntimeError("ConfigValue (double): invalid input string");
+            RuntimeError("ConfigValue (double): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -154,7 +163,7 @@ private:
         long value = strtol(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (long): invalid input string");
+            RuntimeError("ConfigValue (long): invalid input string '%s'", c_str());
         }
 
         return value;
@@ -167,7 +176,7 @@ private:
         unsigned long value = strtoul(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (unsigned long): invalid input string");
+            RuntimeError("ConfigValue (unsigned long): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -237,7 +246,7 @@ public:
         int64_t value = _strtoi64(c_str(), &ep, 10);
         if (empty() || *ep != 0)
         {
-            RuntimeError("ConfigValue (int64_t): invalid input string");
+            RuntimeError("ConfigValue (int64_t): invalid input string '%s'", c_str());
         }
         return value;
     }
@@ -249,7 +258,7 @@ public:
 
         uint64_t value = _strtoui64(c_str(), &ep, 10);
         if (empty() || *ep != 0) {
-            RuntimeError("ConfigValue (uint64_t): invalid input string");
+            RuntimeError("ConfigValue (uint64_t): invalid input string '%s'", c_str());
         }
 
         return value;
@@ -316,7 +325,7 @@ public:
     ConfigParser(char separator, const std::wstring& configname)
         : m_separator(separator)
     {
-        m_configName = msra::strfun::utf8(configname);
+        m_configName = string(configname.begin(), configname.end());
     }
 
     ConfigParser(char separator)
@@ -505,7 +514,8 @@ public:
                     const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
 
                     if (customSeperators.find(stringParse[tokenStart]) != npos
-                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0         // [fseide] otherwise this will nuke leading . or .. in a pathname... Aargh!
+                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0
+                        && stringParse.substr(tokenStart).find("./") != 0 && stringParse.substr(tokenStart).find("\\\\") != 0         // [fseide] otherwise this will nuke leading . or .. or \\ in a pathname... Aargh!
                         )
                     {
                         char separator = stringParse[tokenStart];
@@ -608,8 +618,7 @@ public:
                 tokenEnd++;
             }
             // While we have tokens to parse
-        }
-        while (tokenEnd != npos);
+        } while (tokenEnd != npos);
     }
 
     // StripComments - This method removes the section of a config line corresponding to a comment.
@@ -656,7 +665,7 @@ public:
 
     void SetName(const std::wstring& name)
     {
-        m_configName = msra::strfun::utf8(name);
+        m_configName = string(name.begin(), name.end());
     }
 
     void SetName(const std::string& name)
@@ -735,11 +744,30 @@ public:
         return *this;
     }
 
-    // hide new so only stack allocated
-    void * operator new(size_t /*size*/)
+private:
+    // hide new so only stack allocated   --TODO: Why do we care?
+    void * operator new(size_t /*size*/);
+public:
+
+    // used as default argument to operator(id, default) to retrieve ConfigParameters
+    static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }
+    // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
+    template<class V> static const V & Array(const V & vec) { return vec; }
+
+    // get the names of all members in this record (but not including parent scopes)
+    vector<wstring> GetMemberIds() const
     {
-        return NULL;
+        vector<wstring> ids;
+        for (auto iter = begin(); iter != end(); ++iter)
+        {
+            auto id = iter->first;
+            ids.push_back(wstring(id.begin(), id.end()));
+        }
+        return ids;
     }
+
+    bool CanBeConfigRecord(const wstring & /*id*/) const { return true; }
+    bool CanBeString(const wstring & /*id*/) const { return true; }
 
 public:
     // explicit copy function. Only to be used when a copy must be made.
@@ -893,12 +921,13 @@ public:
     {
         return (find(name) != end());
     }
+    bool ExistsCurrent(const wchar_t * name) const { return ExistsCurrent(string(name, name + wcslen(name))); }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
                            const wchar_t* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -912,7 +941,7 @@ public:
     ConfigValue operator()(const std::wstring& name,
                            const char* defaultvalue) const
     {
-        return operator()(msra::strfun::utf8(name), defaultvalue);
+        return operator()(string(name.begin(), name.end()), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -923,6 +952,27 @@ public:
         return value;
     }
 
+    // version for defaults with types
+    template<typename Type>
+    Type operator()(const wchar_t * name,
+                    const Type & defaultValue) const
+    {
+        // find the value
+        // TODO: unify with the Find() function below
+        for (auto * dict = this; dict; dict = dict->m_parent)
+        {
+            auto iter = dict->find(string(name, name + wcslen(name)));
+            if (iter != dict->end())
+            {
+                if (iter->second == "default")
+                    break;  // use the default value
+                return (Type)iter->second;
+            }
+        }
+        // we get here if no dict in the chain contains the entry, or if the entry's string value says "default"
+        return defaultValue;
+    }
+
     ConfigValue Find(const std::string& name,
                      const char* defaultvalue = NULL) const
     {
@@ -930,6 +980,7 @@ public:
         ConfigValue result;
 
         // if we aren't found, or they want the default value
+        // TODO: What the hell is this?
         if (iter == end() || iter->second == "default")
         {
             // not found but the parent exists, check there
@@ -1068,7 +1119,7 @@ public:
     // dict(name): read out a mandatory parameter value
     ConfigValue operator()(const std::wstring& name) const
     {
-        return operator()(msra::strfun::utf8(name));
+        return operator()(string(name.begin(), name.end()));
     }
 
     // dict(name): read out a mandatory parameter value
@@ -1094,6 +1145,10 @@ public:
     {
         std::string value = Find(key);
         return !_stricmp(compareValue.c_str(), value.c_str());
+    }
+    bool Match(const std::wstring& key, const std::wstring& compareValue) const
+    {
+        return Match(string(key.begin(), key.end()), msra::strfun::utf8(compareValue));
     }
 
     // return the entire path to this config element
@@ -1309,10 +1364,12 @@ public:
 };
 
 // get config sections that define files (used for readers)
-void GetFileConfigNames(const ConfigParameters& readerConfig,
+template<class ConfigRecordType>
+void GetFileConfigNames(const ConfigRecordType& readerConfig,
                         std::vector<std::wstring>& features,
                         std::vector<std::wstring>& labels);
-void FindConfigNames(const ConfigParameters& config, std::string key,
+template<class ConfigRecordType>
+void FindConfigNames(const ConfigRecordType& config, std::string key,
                      std::vector<std::wstring>& names);
 
 // Version of argument vectors that preparse everything instead of parse on demand
@@ -1398,6 +1455,14 @@ public:
             push_back(val);
         }
     }
+
+    // constructor from ConfigValue to convert from config array to constant array
+    argvector(const ConfigValue& configValue) : argvector((ConfigArray)configValue)
+    { }
+
+    // constructor from std::vector
+    argvector(const std::vector<T> configVector) : std::vector<T>(configVector)
+    { }
 
     // operator[] repeats last value infinitely
     T operator[](size_t i) const

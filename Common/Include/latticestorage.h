@@ -23,16 +23,7 @@ namespace msra { namespace lattices {
 static void checkoverflow (size_t fieldval, size_t targetval, const char * fieldname)
 {
     if (fieldval != targetval)
-    {
-        char buf[1000];
-#if defined(_MSC_VER) && _MSC_VER < 1900
-        sprintf_s
-#else
-        std::snprintf
-#endif
-            (buf, sizeof(buf), "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
-        RuntimeError(buf);
-    }
+        RuntimeError("lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
 }
 
 struct nodeinfo

@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
         size_t pos = how.find(L'%');
         if (pos != wstring::npos)
-            RuntimeError("FormatConfigValue: format string must not contain %");
+            RuntimeError("FormatConfigValue: format string must not contain %%");
         if (arg.Is<String>())
         {
             return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
         // inputs and output
-        vector<ComputationNodePtr> m_children;  // these are the inputs
+        vector<ComputationNodePtr> m_inputs;  // these are the inputs
         MatrixPtr m_functionValue;              // this is the result
 
         // other
@@ -183,29 +183,29 @@ namespace Microsoft { namespace MSR { namespace BS {
 
         virtual void AttachInputs(ComputationNodePtr arg)
         {
-            m_children.resize(1);
-            m_children[0] = arg;
+            m_inputs.resize(1);
+            m_inputs[0] = arg;
         }
         virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
         {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
+            m_inputs.resize(2);
+            m_inputs[0] = leftNode;
+            m_inputs[1] = rightNode;
         }
         virtual void AttachInputs(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
         {
-            m_children.resize(3);
-            m_children[0] = arg1;
-            m_children[1] = arg2;
-            m_children[2] = arg3;
+            m_inputs.resize(3);
+            m_inputs[0] = arg1;
+            m_inputs[1] = arg2;
+            m_inputs[2] = arg3;
         }
         void AttachInputs(vector<ComputationNodePtr> && inputs, size_t num = 0/*0 means all OK*/)
         {
             if (num != 0 && inputs.size() != num)
                 LogicError("AttachInputs: called with incorrect number of arguments");
-            m_children = inputs;
+            m_inputs = inputs;
         }
-        const std::vector<ComputationNodePtr> & GetChildren() const { return m_children; }
+        const std::vector<ComputationNodePtr> & GetChildren() const { return m_inputs; }
 
         /*HasToString::*/ wstring ToString() const
         {
@@ -213,12 +213,12 @@ namespace Microsoft { namespace MSR { namespace BS {
             wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
             if (!m_tag.empty())
                 result += L" {tag: " + m_tag + L"}";
-            if (m_children.empty()) result.append(L"()");
+            if (m_inputs.empty()) result.append(L"()");
             else
             {
                 wstring args;
                 bool first = true;
-                for (auto & child : m_children)
+                for (auto & child : m_inputs)
                 {
                     if (first)
                         first = false;
@@ -669,7 +669,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
-    // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
+    // Evaluation converts a parse tree from ParseConfigDictFromString/File() into a graph of live C++ objects.
     // =======================================================================
 
     // -----------------------------------------------------------------------
@@ -762,7 +762,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
 
     // Debug is a special class that just dumps its argument's value to log and then returns that value
-    struct Debug { };   // fake class type to get the template below trigger
+    struct Debug : public Object { Debug(const IConfigRecordPtr) { } };   // fake class type to get the template below trigger
     template<>
     /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
     {
@@ -789,6 +789,9 @@ namespace Microsoft { namespace MSR { namespace BS {
     // get information about configurable runtime types
     static const ConfigurableRuntimeType * FindRuntimeTypeInfo(const wstring & typeId)
     {
+#if 1
+        return ConfigurableRuntimeTypeRegister::Find(typeId);
+#else
         // lookup table for "new" expression
         // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
         static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
@@ -810,7 +813,18 @@ namespace Microsoft { namespace MSR { namespace BS {
 
         // not our own type: check external types
         return FindExternalRuntimeTypeInfo(typeId);
+#endif
     }
+
+    // register ComputationNetwork with the ScriptableObject system
+    // Functions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
+    // Actions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
+    // Special
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
 
     // -----------------------------------------------------------------------
     // name lookup
@@ -867,13 +881,14 @@ namespace Microsoft { namespace MSR { namespace BS {
     typedef function<ConfigValuePtr(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)> InfixOp /*const*/;
     struct InfixOps
     {
-        InfixOp NumbersOp;            // number OP number -> number
-        InfixOp StringsOp;            // string OP string -> string
-        InfixOp BoolOp;               // bool OP bool -> bool
-        InfixOp ComputeNodeOp;        // one operand is ComputeNode -> ComputeNode
-        InfixOp DictOp;               // dict OP dict
-        InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
-            : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp) { }
+        wstring prettyName;             // pretty-printable name of this op, e.g. "Plus" for +
+        InfixOp NumbersOp;              // number OP number -> number
+        InfixOp StringsOp;              // string OP string -> string
+        InfixOp BoolOp;                 // bool OP bool -> bool
+        InfixOp ComputeNodeOp;          // one operand is ComputeNode -> ComputeNode
+        InfixOp DictOp;                 // dict OP dict
+        InfixOps(const wchar_t * name, InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
+            : prettyName(name), NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp) { }
     };
 
     // functions that implement infix operations
@@ -986,29 +1001,39 @@ namespace Microsoft { namespace MSR { namespace BS {
             valueWithName->SetName(value.GetExpressionName());
         return value;
     };
+    static ConfigValuePtr DictOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    {
+        if(e->op != L"with")
+            LogicError("unexpected infix op");
+        let left  = leftVal.AsPtr<ConfigRecord>();
+        let right = rightVal.AsPtr<ConfigRecord>();
+        left; right; scope; exprPath;  // TODO: create a composite dictionary
+        return leftVal;
+    };
     static ConfigValuePtr BadOp(const ExpressionPtr & e, ConfigValuePtr, ConfigValuePtr, const IConfigRecordPtr &, const wstring &) { InvalidInfixOpTypes(e); };
 
     // lookup table for infix operators
     // This lists all infix operators with lambdas for evaluating them.
     static map<wstring, InfixOps> infixOps =
     {
-        // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp  TODO: this comment is incomplete
-        { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
-        { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp) },
-        { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
-        { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
-        { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
-        { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
-        { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) }
+        // PrettyName NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+        { L"with", InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, DictOp) },
+        { L"*",    InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"/",    InfixOps(L"Div",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L".*",   InfixOps(L"DotTimes", BadOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"**",   InfixOps(L"Pow",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L"%",    InfixOps(L"Mod",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
+        { L"+",    InfixOps(L"Plus",     NumOp, StrOp, BadOp,  NodeOp, BadOp)  },
+        { L"-",    InfixOps(L"Minus",    NumOp, BadOp, BadOp,  NodeOp, BadOp)  },
+        { L"==",   InfixOps(L"Equal",    NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"!=",   InfixOps(L"NotEqual", NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"<",    InfixOps(L"LT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L">",    InfixOps(L"GT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"<=",   InfixOps(L"LE",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L">=",   InfixOps(L"GT",       NumOp, StrOp, BoolOp, BadOp,  BadOp)  },
+        { L"&&",   InfixOps(L"And",      BadOp, BadOp, BoolOp, BadOp,  BadOp)  },
+        { L"||",   InfixOps(L"Or",       BadOp, BadOp, BoolOp, BadOp,  BadOp)  },
+        { L"^",    InfixOps(L"Xor",      BadOp, BadOp, BoolOp, BadOp,  BadOp)  }
     };
 
     // -----------------------------------------------------------------------
@@ -1241,11 +1266,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
                 {
                     let & expr = e->args[i];
-                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"[%d]", i));           // result can be an item or a vector
-                    if (item.Is<ConfigArray>())
-                        arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
-                    else
-                        arr->Append(item);
+                    arr->Append(move(MakeEvaluateThunkPtr(expr, scope, msra::strfun::wstrprintf(L"%ls[%d]", exprPath.c_str(), i), L"")));
                 }
                 return ConfigValuePtr(arr, MakeFailFn(e->location), exprPath);  // location will be that of the first ':', not sure if that is best way
             }
@@ -1319,12 +1340,12 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 let opIter = infixOps.find(e->op);
                 if (opIter == infixOps.end())
-                    LogicError("e->op " + utf8(e->op) + " not implemented");
+                    LogicError("e->op '%ls' not implemented", e->op.c_str());
                 let & functions = opIter->second;
                 let & leftArg = e->args[0];
                 let & rightArg = e->args[1];
-                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"/*" + e->op + L"*/left");
-                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"/*" + e->op + L"*/right");
+                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, functions.prettyName + L"_left");
+                let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"_right");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -1338,7 +1359,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNodeObject>())
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
-                // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
+                else if (leftValPtr.Is<ConfigRecord>() && rightValPtr.Is<ConfigRecord>())
+                    return functions.DictOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else
                     InvalidInfixOpTypes(e);
             }

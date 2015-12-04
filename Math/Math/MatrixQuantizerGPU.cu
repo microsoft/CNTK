@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool dieoncudafailure = false;       
         if (!dieoncudafailure)
         {
-            RuntimeError(msg);
+            RuntimeError("%s", msg);
         }
         fprintf(stderr, "%s\n", msg);
         fprintf(stderr, "cudafail: terminating\n"), fflush(stderr);

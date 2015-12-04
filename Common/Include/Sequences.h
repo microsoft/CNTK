@@ -12,6 +12,36 @@
 #include <vector>
 #include <memory>   // for shared_ptr
 
+enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
+{
+    None = 0,
+    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+    NoLabel = 1 << 3,               // binary 1000  frame has no label
+
+    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
+    SequenceStartOrNoFeature = SequenceStart | NoFeature,
+    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
+    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
+};
+
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
+{
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
+{
+    a = a | b;
+    return a;
+}
+
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Forward declarations
@@ -571,23 +601,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                          const FrameRange & frameRange/*select frame or entire batch*/,
                                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
-        // TODO: for now we verify that we always pass in layouts in frameRange that match data.
-        //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
+        // MBLayout of data and of FrameRange must be identical pointers,
+        // or in case of broadcasting, respective parent pointers.
+        // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
+        // For those cases, use a ReconcileMBLayout node.
         if (frameRange.m_pMBLayout != pMBLayout)
         {
             // if broadcast allowed then it is allowed to broadcast from an outer-loop value
             // Currently, the only 'outer' loop we have is to have no layout.
             if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
                 return data.AsReference();
-            LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
+            if (frameRange.m_pMBLayout && pMBLayout && *frameRange.m_pMBLayout == *pMBLayout)
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            else
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
         }
         // if FrameRange refers to whole minibatch (map mode)
         // or if we don't even have a layout
         // then return the whole matrix
+        // but as a reference (e.g. it cannot be resized)
         if (!pMBLayout || frameRange.IsAllFrames())
         {
             if (frameRange.seqIndex == SIZE_MAX)
-                return data.ColumnSlice(0, data.GetNumCols());
+                return data.AsReference();
             else
             {
                 if (!pMBLayout)

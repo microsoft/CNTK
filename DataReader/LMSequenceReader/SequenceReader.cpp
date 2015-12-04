@@ -183,7 +183,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         //fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
 
                         std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
-                        RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int)epochSample);
                     }
 
                     if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
@@ -410,7 +410,8 @@ void SequenceReader<ElemType>::Destroy()
 //  ]
 //]
 template<class ElemType>
-void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -444,30 +445,31 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     else
         RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-    ConfigParameters featureConfig = readerConfig(m_featuresName,"");
-    ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
+    const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
     class_size = 0;
-    m_featureDim = featureConfig("dim");
+    m_featureDim = featureConfig(L"dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
     {
-        m_labelInfo[index].idMax = 0; 
-        m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
-        m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
+        const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
+
+        m_labelInfo[index].idMax = 0;
+        m_labelInfo[index].beginSequence = msra::strfun::utf8(labelConfig(L"beginSequence", L""));
+        m_labelInfo[index].endSequence   = msra::strfun::utf8(labelConfig(L"endSequence", L""));
 
         // determine label type desired
-        std::string labelType(labelConfig[index]("labelType","Category"));
-        if (labelType == "Category")
+        wstring labelType(labelConfig(L"labelType", L"Category"));
+        if (labelType == L"Category")
         {
             m_labelInfo[index].type = labelCategory;
         }
-        else if (labelType == "NextWord")
+        else if (labelType == L"NextWord")
         {
             // in this case, it's all identical to the Input labels, except the data type
             m_labelInfo[index].type = labelNextWord;
             m_labelInfo[index].dim = m_labelInfo[labelInfoIn].dim;
         }
-        else if (labelType == "None")
+        else if (labelType == L"None")
         {
             m_labelInfo[index].type = labelNone;
             m_labelInfo[index].dim = 0;   // override for no labels
@@ -476,8 +478,8 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         // if we have labels, we need a label Mapping file, it will be a file with one label per line
         if (m_labelInfo[index].type != labelNone)
         {
-            std::wstring wClassFile = readerConfig("wordclass", "");
-            nwords = labelConfig[index]("labelDim");
+            std::wstring wClassFile = readerConfig(L"wordclass", L"");
+            nwords = labelConfig(L"labelDim");
             if (wClassFile != L""){
                 ReadClassInfo(wClassFile, class_size,
                     word4idx,
@@ -490,7 +492,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             }
 
             std::vector<string> arrayLabels;
-            std::wstring labelPath = labelConfig[index]("labelMappingFile");
+            std::wstring labelPath = labelConfig(L"labelMappingFile");
             if (fexists(labelPath))
             {
                 LoadLabelFile(labelPath, arrayLabels);
@@ -532,7 +534,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             }
         }
 
-        m_labelInfo[index].dim = labelConfig[index]("labelDim");
+        m_labelInfo[index].dim = (LabelIdType)(size_t)labelConfig(L"labelDim");
 
         // update dimension if the file says it's bigger
         if (m_labelInfo[index].dim < m_labelInfo[index].idMax)
@@ -546,14 +548,14 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_endReached = false;
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig(L"file");
     if (m_traceLevel > 0)
     {
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
@@ -565,7 +567,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     /// read unk sybol
-    mUnk = readerConfig("unk", "<unk>");
+    mUnk = readerConfig(L"unk", "<unk>");
 
 }
 
@@ -652,7 +654,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& class
  
     if (idx4class.size() < nwords)
     {
-        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", idx4class.size(), nwords);
+        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", (int)idx4class.size(), (int)nwords);
     }
     std::vector<double> counts(idx4cnt.size());
     for (const auto & p : idx4cnt)
@@ -672,7 +674,7 @@ template<class ElemType>
 void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
 {
     // check for a writer tag first (lets us know we are caching)
-    if (!readerConfig.Exists("writerType"))
+    if (!readerConfig.Exists(L"writerType"))
         return;
 
     // first try to open the binary cache
@@ -682,10 +684,10 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
         // TODO: need to go down to all levels, maybe search for sectionType
         ConfigArray filesList(',');
         vector<std::wstring> names;
-        if (readerConfig.Exists("wfile"))
+        if (readerConfig.Exists(L"wfile"))
         {
-            filesList.push_back(readerConfig("wfile"));
-            if (fexists(readerConfig("wfile")))
+            filesList.push_back(readerConfig(L"wfile"));
+            if (fexists(readerConfig(L"wfile")))
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
@@ -1166,8 +1168,9 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         actualmbsize = m_sequence[0];
     }
 
-    if (actualmbsize > m_mbSize){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+    if (actualmbsize > m_mbSize)
+    {
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
     }
 
     // hit the end of the dataset, 
@@ -1261,9 +1264,10 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("Features size not sufficiently large. The asked minibatch size is %d. Check minibatchSize in the feature definition.", (int)actualmbsize);
     }
 
     try
@@ -1285,9 +1289,10 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
             Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
             labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
+        RuntimeError("cannot find matrices for %ls", m_labelsName[labelInfoOut].c_str());
     }
 
     // we read some records, so process them
@@ -1349,7 +1354,8 @@ template class SequenceReader<double>;
 template class SequenceReader<float>;
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -1383,37 +1389,38 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     else
         RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-    ConfigParameters featureConfig = readerConfig(m_featuresName,"");
-    ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
-    string mode = featureConfig("mode","class");//class, softmax, nce
+    const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
+    wstring mode = featureConfig(L"mode", L"class");//class, softmax, nce
     std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
 
-    if (mode == "nce")
+    if (mode == L"nce")
     {
         readerMode = ReaderMode::NCE;
     
-        this->noise_sample_size = featureConfig("noise_number", "0");
+        this->noise_sample_size = featureConfig(L"noise_number", 0);
     }
-    else if (mode == "softmax")
+    else if (mode == L"softmax")
         readerMode = ReaderMode::Softmax;
-    else if (mode == "class")
+    else if (mode == L"class")
         readerMode = ReaderMode::Class;
     else 
-        LogicError("unsupported format %s", mode.c_str()); 
+        LogicError("unsupported format %ls", mode.c_str()); 
 
     /// read unk sybol
-    this->mUnk = readerConfig("unk", "<unk>");
+    this->mUnk = msra::strfun::utf8(readerConfig(L"unk", L"<unk>"));
 
     class_size = 0;
-    m_featureDim = featureConfig("dim");
+    m_featureDim = featureConfig(L"dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
     {
-        m_labelInfo[index].idMax = 0; 
-        m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
-        m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
+        const ConfigRecordType & labelConfig = readerConfig(m_labelsName[index].c_str(), ConfigRecordType::Record());
+
+        m_labelInfo[index].idMax = 0;
+        m_labelInfo[index].beginSequence = msra::strfun::utf8(labelConfig(L"beginSequence", L""));
+        m_labelInfo[index].endSequence   = msra::strfun::utf8(labelConfig(L"endSequence", L""));
 
         // determine label type desired
-        std::string labelType(labelConfig[index]("labelType","Category"));
+        std::string labelType(labelConfig(L"labelType","Category"));
         if (labelType == "Category")
         {
             m_labelInfo[index].type = labelCategory;
@@ -1433,8 +1440,8 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         // if we have labels, we need a label Mapping file, it will be a file with one label per line
         if (m_labelInfo[index].type != labelNone)
         {
-            std::wstring wClassFile = readerConfig("wordclass", "");
-            nwords = labelConfig[index]("labelDim");
+            std::wstring wClassFile = readerConfig(L"wordclass", L"");
+            nwords = labelConfig(L"labelDim");
             if (wClassFile != L""){
                 ReadClassInfo(wClassFile, class_size,
                     word4idx,
@@ -1447,7 +1454,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             }
 
             std::vector<string> arrayLabels;
-            std::wstring labelPath = labelConfig[index]("labelMappingFile");
+            std::wstring labelPath = labelConfig(L"labelMappingFile");
             if (fexists(labelPath))
             {
                 LoadLabelFile(labelPath, arrayLabels);
@@ -1473,7 +1480,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
                         false);
                     if (word4idx.size() != nwords)
                     {
-                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file L%s is not consistent", nwords, word4idx.size(), wClassFile.c_str());
+                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file %ls is not consistent", (int)nwords, (int)word4idx.size(), wClassFile.c_str());
                     }
                     int iMax = -1, i; 
                     for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
@@ -1493,7 +1500,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             }
         }
 
-        m_labelInfo[index].dim = labelConfig[index]("labelDim");
+        m_labelInfo[index].dim = (LabelIdType)(size_t)labelConfig(L"labelDim");
 
         // update dimension if the file says it's bigger
         if (m_labelInfo[index].dim < m_labelInfo[index].idMax)
@@ -1507,23 +1514,23 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_endReached = false;
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
-    if (readerConfig.Exists("randomize"))
+    if (readerConfig.Exists(L"randomize"))
     {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
+        string randomizeString = readerConfig(L"randomize");
+        if (!_stricmp(randomizeString.c_str(), "none"))
         {
             ;
         }
-        else if (randomizeString == "Auto")
+        else if (!_stricmp(randomizeString.c_str(), "auto"))
         {
             ;
         }
         else
         {
-            ;//readerConfig("randomize");
+            ;//readerConfig(L"randomize");
         }
     }
     else
@@ -1535,7 +1542,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file", "");
+    std::wstring m_file = readerConfig(L"file", L"");
     if (m_traceLevel > 0)
     {
         fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
@@ -1546,7 +1553,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    mRequestedNumParallelSequences = readerConfig(L"nbruttsineachrecurrentiter", (size_t)1);
 }
 
 template<class ElemType>
@@ -1704,10 +1711,14 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
             sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
         }
         if (sln == m_parser.mSentenceIndex2SentenceInfo[seq].sLen &&
-            mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            mProcessed[seq] == false &&
+            mToProcess.size() < mRequestedNumParallelSequences)
+        {
             mToProcess.push_back(seq);
+        }
 
-        if (mToProcess.size() == mBlgSize) break;
+        if (mToProcess.size() == mRequestedNumParallelSequences)
+            break;
     }
 
     return sln;
@@ -1742,7 +1753,6 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
         if (mNumRead == 0) return false;
 
-        //if (mDoRandomize)
         std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
 
         m_readNextSampleLine += mNumRead;
@@ -1835,9 +1845,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size() ; 
-    if (actualmbsize > m_mbSize * mToProcess.size()){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
-    }
+    if (actualmbsize > m_mbSize * mToProcess.size())
+        RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
 
     // now get the labels
     const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
@@ -1914,9 +1923,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
-    }catch(...)
+    }
+    catch(...)
     {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %d. check minibatchSize in the feature definition", (int)actualmbsize);
     }
 
     // we read some records, so process them
@@ -2063,7 +2073,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
                     size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
                 if (wrd < lft || lft > rgt || wrd >= rgt)
                 {
-                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
+                               (int)wrd, (int)lft, (int)rgt, (int)lft, (int)wrd, (int)rgt);
                 }
                 labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class

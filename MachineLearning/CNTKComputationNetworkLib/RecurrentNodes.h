@@ -25,15 +25,66 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
+    // The following defines a state of a delay node which is going to be exported to others (saving for the next minibatch)
+    // -----------------------------------------------------------------------
+    template<class ElemType>
+    class DelayedValueNodeState: public INodeState
+    {
+        public:
+            DelayedValueNodeState(int deviceID) :
+                m_cachedActivity((size_t)0, (size_t)0, deviceID), 
+                m_delayedActivationMBLayout(nullptr), 
+                m_isEmpty(true)
+            {
+
+            }
+            void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
+            {
+                m_delayedActivationMBLayout = make_shared<MBLayout>();
+                m_delayedActivationMBLayout->CopyFrom(pMBLayout);
+            }
+            void CacheState(const Matrix<ElemType>& cachedActivity)
+            {
+                m_cachedActivity.SetValue(cachedActivity); 
+                m_isEmpty = false; 
+            }
+            void ExportDelayedMBLayout(MBLayoutPtr& pMBLayout)
+            {
+                pMBLayout->CopyFrom(m_delayedActivationMBLayout); 
+            }
+            bool IsEmpty()
+            {
+                return m_isEmpty; 
+            }
+            const Matrix<ElemType>& ExportCachedActivity()
+            {
+                return m_cachedActivity; 
+            }
+            ~DelayedValueNodeState(){}
+            
+        protected:
+            Matrix<ElemType>    m_cachedActivity; // 1 column per parallel sequence 
+            // MBLayoutPtr         m_shiftedMBLayout;   
+            // Currently, we only support saving state for m_timeStep == 1
+            // there is no need for this m_shiftedMBLayout if m_timeStep == 1
+            MBLayoutPtr         m_delayedActivationMBLayout; 
+            bool                m_isEmpty;      // in some case 
+            // (e.g., at the boundary of sentence end or begin/full utterance mode), we don't need to store state (but we do need to need know m_delayedActivationMBLayout)
+    };
+    
+
+    // -----------------------------------------------------------------------
     // DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // -----------------------------------------------------------------------
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
-    class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    class DelayedValueNodeBase : public ComputationNode<ElemType>, public
+                                 ILateAttachingNode, public IStateFulNode,  public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr; 
         static const std::wstring TypeName() { return L"DelayedValue"; }
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
@@ -41,12 +92,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             CreateMatrixIfNull(m_functionValues);
-            Resize(row_size, col_size);
-            //m_delayedActivation.Resize(row_size, col_size);     // TODO: relevance of col_size? Why not timeStep?
+            SetDims(row_size, col_size);
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
     protected:
-        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
@@ -62,10 +111,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_timeStep = (int)timeStep;
 
             m_functionValues->SetValue(m_initialActivationValue);
-            //m_delayedActivation.SetValue(m_initialActivationValue);
-
-            //m_gradientValues->Resize(row_size, col_size);
-            //m_gradientValues->SetValue(0.0f);
+        }
+        DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
+            DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"rows"), configp->Get(L"cols"), configp->Get(L"timeStep"))
+        {
+            // We do NOT attach the inputs, as we cannot resolve them without causing a circular reference.
+            // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
+            // This is a contract between ComputationNetwork and this specific node type.
+            m_attachInputsFn = [this, configp]()   // This is the lambda to complete the process. Note that config captured as a shared_ptr.
+            {
+                AttachInputs(GetInputsFromConfig(configp));    // this is executed by network builder while iterating the nodes
+            };
+        }
+        virtual void /*ILateAttachingNode::*/LateAttachInputs() override final
+        {
+            m_attachInputsFn();
+            m_attachInputsFn = [](){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
         }
     public:
         void SaveToFile(File& fstream) const
@@ -89,7 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
 
             // Note: Do we need load cols for delay node? I just set to zero to see if there is any problem.
-            Resize(rows, 0);
+            SetDims(rows, 0);
             m_delayedActivation.Resize(rows, 0);    // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
@@ -239,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = frameRange.t();
 
-            VerifySize(Inputs(0));
+            VerifyDims(Inputs(0));
 
             size_t T = GetNumTimeSteps();
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0;  // (note: should never happen in full-sequence mode)
@@ -288,9 +349,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 out.SetValue(inp);
             }
-
-            //MaskMissingValuesColumnsToZero(t);  // fix gaps if any  --TODO: make this take a FrameRange
-            // TODO: why is masking needed here? We should never carry over data from those into valid regions, right?
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -299,7 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // this function is only used for PairNetworkNode (on PastValueNode)
-        // BUGBUG: Need to transfer the layout as well. PairNetworkNod will go away.
+        // BUGBUG: Need to transfer the layout as well. PairNetworkNode will go away.
         bool GetHistory(Matrix<ElemType>& hist, bool)
         {
             DEVICEID_TYPE device = hist.GetDeviceId();
@@ -345,6 +403,125 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        //========================================
+        // implement the IStateFulNode interface
+        //========================================
+
+        virtual NodeStatePtr ExportState()
+        {
+            NodeStatePtr pExportedState;
+            size_t nT = m_pMBLayout->GetNumTimeSteps();
+            size_t nU = m_pMBLayout->GetNumParallelSequences();
+            int dir = direction; 
+            if (m_timeStep != 1)
+            {
+                // not support yet; give user a hint 
+                RuntimeError("Currently importing/exporting state info for timeStep>1 is not supported. Contact erw@microsoft.com for more detail");
+            }
+            if (dir == -1) // we look into past 
+            {
+                bool   allAtBoundary = true;
+                // if the current last frames are all sentence end or no feature , there is no need to carry on state info
+                if (m_pMBLayout->Is(nT-1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                {
+                    for (size_t u = 0; u < nU; u++)
+                    {
+                        if (!m_pMBLayout->Is(u, nT - 1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                        {
+                            allAtBoundary = false;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    allAtBoundary = false; 
+                }
+
+                if (allAtBoundary)
+                {
+                    auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
+                    pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
+                    // return an empty one 
+                }
+                else
+                {
+                    auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId);
+                    pState->CacheState(m_delayedActivation.ColumnSlice((nT - 1)*nU, nU)); 
+                    pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
+                    pExportedState = pState; 
+                }
+            }
+            if (dir == 1) // we look into future 
+            {
+                // TODO: check whether all at boundary and don't carry state if it is the case 
+                size_t nT = m_pMBLayout->GetNumTimeSteps(); 
+                size_t nU = m_pMBLayout->GetNumParallelSequences(); 
+                bool allAtBoundary = true; 
+                if (m_pMBLayout->Is(0, MinibatchPackingFlags::NoFeature | MinibatchPackingFlags::SequenceStart))
+                {
+                    for (size_t u = 0; u < nU; u++)
+                    {
+                        if (!m_pMBLayout->Is(u, 0, MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::NoFeature))
+                        {
+                            allAtBoundary = false; 
+                            break;
+                        }
+                    }
+                }
+                if (allAtBoundary)
+                {
+                    auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
+                    pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
+                    pExportedState = pState; 
+                }
+                else
+                {
+                    auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId);
+                    pState->CacheState(m_delayedActivation.ColumnSlice((nT-1)*nU, nU));
+                    pState->CacheDelayedMBLayout(m_delayedActivationMBLayout);
+                    pExportedState = pState;
+                }
+            }
+            if (dir != -1 && dir != 1)
+            {
+                RuntimeError("Unrecognized direction in DelayedValueNodeBase");
+            }
+            return pExportedState;
+        }
+        virtual void ImportState(const NodeStatePtr& pImportedState) override
+        {
+            DelayedNodeStatePtr pState = dynamic_pointer_cast<DelayedValueNodeState<ElemType>> (pImportedState); 
+
+            if (!pState)
+                RuntimeError("Expecting DelayValueNodeState after down casting"); 
+
+            pState->ExportDelayedMBLayout(m_delayedActivationMBLayout);  // pstate copy to m_delayedActivationMBLayout
+            if (pState->IsEmpty())
+            {
+                return;
+            }
+
+            const Matrix<ElemType>& delayedActivation = pState->ExportCachedActivity();
+            size_t nT = m_delayedActivationMBLayout->GetNumTimeSteps();
+            size_t nU = m_delayedActivationMBLayout->GetNumParallelSequences();
+
+            int dir = direction;
+            if (dir == -1) // looking backward 
+            {
+                m_delayedActivation.SetColumnSlice(delayedActivation, (nT - 1)*nU, nU);
+            }
+            if (dir == 1)
+            {
+                //m_delayedActivation.CopyColumnsStrided(delayedActivation, nU, 1, nT);
+                m_delayedActivation.SetColumnSlice(delayedActivation, 0, nU);
+            }
+            if (dir != -1 && dir == 1)
+            {// it is really a compile error ? 
+                RuntimeError("Unrecognized direction in DelayedValueNodeBase");
+            }
+
+        }
     protected:
 
         ElemType m_initialActivationValue;          // starting value for hidden activation vector at boundary
@@ -352,14 +529,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
         int      m_timeStep;                        // delay in frames (typ. 1)
         MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
-        bool m_isHistoryCarryOverManagedExternally;                   // for PastValueNode only
+        bool m_isHistoryCarryOverManagedExternally; // for PastValueNode only
+        function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_pShiftedMBLayout; using Base::m_isHistoryCarryOverManagedExternally;
 
-    // =======================================================================
     // -----------------------------------------------------------------------
     // PastValueNode (input) -- delay node
     // TODO: Can this just be a typedef?
@@ -376,6 +553,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
+        { }
+        PastValueNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
         { }
     };
 
@@ -399,6 +579,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
+        { }
+        FutureValueNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp)
         { }
     };
 
@@ -430,6 +613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LSTM"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LSTMNode);
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
@@ -841,11 +1025,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int GetSegInfo(size_t t, size_t streamid)
         {
             if (streamid >= GetNumParallelSequences())
-                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, GetNumParallelSequences());
+                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int)streamid, (int)GetNumParallelSequences());
 
             size_t nT = Inputs(0)->GetNumCols();
             if (t >= nT)
-                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
+                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
 
             int utt_t = (int)t / GetNumParallelSequences();
             auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
@@ -885,7 +1069,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t outputDim = Inputs(1)->GetNumRows();
 
             {
-                Resize(outputDim, nT);
+                SetDims(outputDim, nT);
                 FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
                 m_State.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
@@ -1255,7 +1439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            Resize(noutdim, nT);
+            SetDims(noutdim, nT);
             FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
         }
 
@@ -1292,18 +1476,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < nT; i++)
                     target(0, i) = 1;
 
-                Inputs(0)->Resize(nInput, nT);
+                Inputs(0)->SetDims(nInput, nT);
                 Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
                 Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(1)->Resize(nHidden, nInput + nOutput + 2);
+                Inputs(1)->SetDims(nHidden, nInput + nOutput + 2);
                 Inputs(1)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(2)->Resize(nHidden, nInput + nHidden + 2);
+                Inputs(2)->SetDims(nHidden, nInput + nHidden + 2);
                 Inputs(2)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(3)->Resize(nOutput, nInput + nHidden + 2);
+                Inputs(3)->SetDims(nOutput, nInput + nHidden + 2);
                 Inputs(3)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(4)->Resize(nOutput, nHidden + nInput + 1);
+                Inputs(4)->SetDims(nOutput, nHidden + nInput + 1);
                 Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
-                Resize(nOutput, nT);
+                SetDims(nOutput, nT);
 
                 m_DefaultState = 0.0;
                 EvaluateThisNode(FrameRange(m_pMBLayout));
@@ -1369,16 +1553,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(1, false);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
-        //{
-        //    m_children.resize(5);
-        //    m_children[0] = obs;
-        //    m_children[1] = inputGate;
-        //    m_children[2] = forgetGate;
-        //    m_children[3] = outputGate;
-        //    m_children[4] = memoryCellWgt;
-        //}
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
@@ -1461,9 +1635,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
-
-    protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     protected:
         size_t m_inputDim;

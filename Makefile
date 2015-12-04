@@ -54,7 +54,7 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKActionsLib MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -150,6 +150,7 @@ ifeq ("$(BUILDTYPE)","debug")
   endif
 
   CXXFLAGS += -g
+  LDFLAGS += -rdynamic
   CPPFLAGS += -D_DEBUG
   CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
@@ -162,6 +163,7 @@ ifeq ("$(BUILDTYPE)","release")
   endif
 
   CXXFLAGS += -O4
+  CPPFLAGS += -DNDEBUG
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
@@ -180,13 +182,25 @@ ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
 
+
+########################################
+# Build info 
+########################################
+
+BUILDINFO:= MachineLearning/CNTK/buildinfo.h
+GENBUILD:=Scripts/genrate_build_info 
+
+$(BUILDINFO): Scripts/genrate_build_info
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@$(GENBUILD) $(BUILD_TOP)/Config.make
+
+
 ########################################
 # Math library
 ########################################
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/BestGpu.cpp \
 	Common/ConfigFile.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
@@ -208,7 +222,6 @@ MATH_SRC =\
 ifdef CUDA_PATH
 MATH_SRC +=\
 	Math/Math/GPUMatrix.cu \
-	Math/Math/GPUMatrixCUDAKernels.cu \
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
 	Math/Math/MatrixQuantizerGPU.cu \
@@ -418,15 +431,21 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
+	MachineLearning/CNTKActionsLib/TrainActions.cpp \
+	MachineLearning/CNTKActionsLib/EvalActions.cpp \
+	MachineLearning/CNTKActionsLib/OtherActions.cpp \
+	MachineLearning/CNTKActionsLib/EsotericActions.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
 	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
+	Common/BestGpu.cpp \
 	Common/MPIWrapper.cpp \
 
 
@@ -447,11 +466,11 @@ CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(C
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(BUILDINFO)  $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
 
 ########################################
 # General compile and dependency rules
@@ -481,7 +500,10 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: clean buildall all
+.PHONY: force clean buildall all
+
+force:	$(BUILDINFO)
+	
 
 clean:
 	@echo $(SEPARATOR)

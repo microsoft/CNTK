@@ -4,9 +4,6 @@
     <CudaCompile Include="GPUMatrix.cu">
       <Filter>GPU</Filter>
     </CudaCompile>
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu">
-      <Filter>GPU</Filter>
-    </CudaCompile>
     <CudaCompile Include="GPUSparseMatrix.cu">
       <Filter>GPU</Filter>
     </CudaCompile>
@@ -21,6 +18,9 @@
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <Filter>GPU\SequenceTraining</Filter>
+    </CudaCompile>
+    <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
+      <Filter>GPU</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

@@ -23,14 +23,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     private:
-        ComputationNetwork* m_net;
+        ComputationNetworkPtr m_net;
 
     public:
-        NDLUtil(ComputationNetwork * net) : m_net(net)
-        {
-        }
-
-        ~NDLUtil()
+        NDLUtil(ComputationNetworkPtr net) : m_net(net)
         {
         }
 
@@ -106,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_net->DumpAllNodesToFile(false, dumpFileName, false);
                 m_net->ValidateNetwork(!fullValidate);
             }
-            SynchronousNodeEvaluator<ElemType> ndlEvaluator(*m_net);
+            SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
             NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
             if (ndlPass == ndlPassResolve)
             {
@@ -173,13 +169,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: seems to be specific to SynchronousExecutionEngine, should be in a derived class for that execution engine
         void SetOutputNodes(NDLScript<ElemType>* script)
         {
-            // NOTE: all optional parameter nodes (i.e. tag=feature) have already been processed in ProcessOptionalParameters()
+            // NOTE: all optional parameter nodes (i.e. tag="feature") have already been processed in ProcessOptionalParameters()
 
             // handle the alternate way of specifying nodes, the array of nodes method
             CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
             CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
-            CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
-            CheckOutputNodes(script, "NodesReqMultiSeqHandling", m_net->RequestNodesMultiSeqHandling());
+            CheckOutputNodes(script, "CriterionNodes", m_net->FinalCriterionNodes());
+            CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); //legacy
             CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
             CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
         }

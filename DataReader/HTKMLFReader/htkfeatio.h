@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "basetypes.h"
 #include "fileutil.h"
 #include "simple_checked_arrays.h"
 
@@ -19,8 +20,12 @@
 #include <limits.h>
 #include <wchar.h>
 #include "simplesenonehmm.h"   
+#include <array>
+#include "minibatchsourcehelpers.h"
 
 namespace msra { namespace asr {
+
+using namespace std;
 
 // ===========================================================================
 // htkfeatio -- common base class for reading and writing HTK feature files
@@ -54,7 +59,7 @@ protected:
         else                    // set already: check if consistent
         {
             if (featkind != kind || featdim != dim || featperiod != period)
-                RuntimeError(msra::strfun::strprintf ("setkind: inconsistent feature kind for file '%S'", path.c_str()));
+                RuntimeError("setkind: inconsistent feature kind for file '%ls'", path.c_str());
         }
     }
 
@@ -312,13 +317,12 @@ public:
     {
     protected:
         friend class htkfeatreader;
-        bool isarchive;         // true if archive (range specified)
-        bool isidxformat;        // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
-        wstring xpath;          // original full path specification as passed to constructor (for error messages)
         wstring logicalpath;    // virtual path that this file should be understood to belong to
         wstring archivepath;    // physical path of archive file
         size_t s, e;            // first and last frame inside the archive file; (0, INT_MAX) if not given
-        void malformed(const wstring& path) const { RuntimeError(msra::strfun::strprintf("parsedpath: malformed path '%S'", path.c_str())); }
+        bool isarchive;         // true if archive (range specified)
+        bool isidxformat;       // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
+        void malformed(const wstring& path) const { RuntimeError("parsedpath: malformed path '%ls'", path.c_str()); }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
         wstring consume (wstring & input, const wchar_t * delim)
@@ -332,8 +336,10 @@ public:
     public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
-        parsedpath(const wstring& pathParam) : xpath(pathParam)
+        parsedpath(const wstring& pathParam)
         {
+            wstring xpath(pathParam);
+
             // parse out logical path
             logicalpath = consume (xpath, L"=");
             isidxformat = false;
@@ -499,9 +505,9 @@ public:
         if (ppath.isarchive)    // reading a sub-range from an archive
         {
             if (ppath.s > ppath.e)
-                RuntimeError(msra::strfun::strprintf ("open: start frame > end frame in '%S'", ppath.e, physicalframes, ppath.xpath.c_str()));
+                RuntimeError("open: start frame %d > end frame %d in '%ls'", (int)ppath.s, (int)ppath.e, ppath.logicalpath.c_str());
             if (ppath.e >= physicalframes)
-                RuntimeError(msra::strfun::strprintf ("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.xpath.c_str()));
+                RuntimeError("open: end frame exceeds archive's total number of frames %d in '%ls'", (int)physicalframes, ppath.logicalpath.c_str());
 
             int64_t dataoffset = physicaldatastart + ppath.s * vecbytesize;
             fsetpos (f, dataoffset);    // we assume fsetpos(), which is our own, is smart to not flush the read buffer
@@ -622,9 +628,8 @@ struct htkmlfentry
 {
     unsigned int firstframe;    // range [firstframe,firstframe+numframes)
     unsigned int numframes;
-    //unsigned short classid;     // numeric state id
-    unsigned int classid;     // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
-    unsigned int phonestart;     // numeric phone start  time
+    msra::dbn::CLASSIDTYPE classid;     // numeric state id
+    msra::dbn::HMMIDTYPE phonestart;     // numeric phone start  time
     
 private:
     // verify and save data
@@ -634,7 +639,7 @@ private:
         // save
         firstframe = (unsigned int) ts;
         numframes = (unsigned int) (te - ts);
-        classid = (unsigned int) uid;
+        classid = (msra::dbn::CLASSIDTYPE) uid;
         // check for numeric overflow
         if (firstframe != ts || firstframe + numframes != te || classid != uid)
             RuntimeError("htkmlfentry: not enough bits for one of the values");
@@ -672,7 +677,7 @@ public:
         parseframerange (toks, ts, te, htkTimeToFrame);
         auto iter = statelisthash.find (toks[2]);
         if (iter == statelisthash.end())
-            RuntimeError(msra::strfun::strprintf ("htkmlfentry: state %s not found in statelist", toks[2]));
+            RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second;                    // get state index
         setdata (ts, te, uid);
 		phonestart = 65535;
@@ -683,13 +688,16 @@ public:
             {
                 auto hmmiter = hmmnamehash.find(toks[4]);
                 if (hmmiter == hmmnamehash.end())
-                    RuntimeError(msra::strfun::strprintf("htkmlfentry: hmm %s not found in hmmlist", toks[4]));
-                phonestart = (unsigned short)(hmmiter->second + 1);
+                    RuntimeError("htkmlfentry: hmm %s not found in hmmlist", toks[4]);
+                phonestart = (msra::dbn::HMMIDTYPE)(hmmiter->second + 1);
+
+                // check for numeric overflow
+                if ((hmmiter->second + 1) != phonestart)
+                    RuntimeError("htkmlfentry: not enough bits for one of the values");
             }
             else
                 phonestart = 0;
         }
-
     }
 
     // ... note: this will be too simplistic for parsing more complex MLF formats. Fix when needed.
@@ -721,7 +729,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
     }
     void malformed (string what)
     {
-        RuntimeError(msra::strfun::strprintf ("htkmlfreader: %s in '%S'", what.c_str(), curpath.c_str()));
+        RuntimeError("htkmlfreader: %s in '%ls'", what.c_str(), curpath.c_str());
     }
 
     vector<char*> readlines (const wstring & path, vector<char> & buffer)
@@ -740,56 +748,36 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         return lines;
     }
 
-    // determine mlf entry lines range
-    // lines range: [s,e)
-    size_t getnextmlfstart (vector<char*> & lines, size_t s)
-    {
-        // determine lines range
-        size_t e;
-        for (e = s ; ; e++)
-        {
-            if (e >= lines.size()) malformed ("unexpected end in mid-utterance");
-            char * ll = lines[e];
-            if (ll[0] == '.' && ll[1] == 0) // end delimiter: a single dot on a line
-                break;
-        }
-        return (e + 1);
-        // lines range: [s,e)
-    }
-
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
-    void parseentry (vector<char*> & lines, size_t & line, const set<wstring> & restricttokeys,
-                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo> & alignseqbuffer,
+    void parseentry (const vector<std::string> & lines, size_t line, const set<wstring> & restricttokeys,
+                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap,
+                     vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo> & alignseqbuffer,
                      const double htkTimeToFrame)
     {
-        assert (line < lines.size());
-        string filename = lines[line++];
+        size_t idx = 0;
+        string filename = lines[idx++];
         while (filename == "#!MLF!#")   // skip embedded duplicate MLF headers (so user can 'cat' MLFs)
-            filename = lines[line++];
+            filename = lines[idx++];
 
         // some mlf file have write errors, so skip malformed entry
         if (filename.length() < 3 || filename[0] != '"' || filename[filename.length()-1] != '"')
         {
             fprintf (stderr, "warning: filename entry (%s)\n", filename.c_str());
-            size_t s = line;
-            line = getnextmlfstart (lines, s);
-            fprintf (stderr, "skip current mlf entry form line (%lu) until line (%lu).\n", s, line);
+            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", line + idx, line + lines.size());
             return;
         }
 
         filename = filename.substr (1, filename.length() -2);   // strip quotes
         if (filename.find ("*/") == 0) filename = filename.substr (2);
-#ifdef _WIN32
-        wstring key = msra::strfun::utf16 (regex_replace (filename, regex ("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
-#endif
-#ifdef __unix__
-        wstring key = msra::strfun::utf16 (removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
+#ifdef _MSC_VER
+        wstring key = msra::strfun::utf16(regex_replace(filename, regex("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
+#else
+        wstring key = msra::strfun::utf16(msra::dbn::removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
 #endif
 
         // determine lines range
-        size_t s = line;
-        line = getnextmlfstart (lines, line);
-        size_t e = line - 1;
+        size_t s = idx;
+        size_t e = lines.size() - 1;
         // lines range: [s,e)
 
         // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
@@ -797,14 +785,15 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
             return;
 
         vector<ENTRY> & entries = (*this)[key];    // this creates a new entry
-        if (!entries.empty()) malformed (msra::strfun::strprintf ("duplicate entry '%S'", key.c_str()));
+        if (!entries.empty()) malformed (msra::strfun::strprintf ("duplicate entry '%ls'", key.c_str()));
         entries.resize (e-s);
         wordseqbuffer.resize (0);
         alignseqbuffer.resize (0);
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
-            strtok (lines[i], " \t", toks);
+            // We can mutate the original string as it is no longer needed after tokenization
+            strtok(const_cast<char*>(lines[i].c_str()), " \t", toks);
             if (statelistmap.size() == 0)
                 entries[i-s].parse (toks, htkTimeToFrame);
             else
@@ -826,12 +815,12 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                         const char * u = toks[4];                   // the triphone name
                         auto iter = unitmap->find (u);              // map to unit id
                         if (iter == unitmap->end())
-                            RuntimeError(string ("parseentry: unknown unit ") + u + " in utterance " + strfun::utf8 (key));
+                            RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
                         const size_t uid = iter->second;
                         alignseqbuffer.push_back (typename WORDSEQUENCE::aligninfo (uid, 0/*#frames--we accumulate*/));
                     }
                     if (alignseqbuffer.empty())
-                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance " + strfun::utf8 (key));
+                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
                     alignseqbuffer.back().frames += entries[i-s].numframes; // (we do not have an overflow check here, but should...)
                 }
             }
@@ -839,7 +828,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         if (wordmap)        // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
             if (!entries.empty() && wordseqbuffer.empty())
-                RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance " + strfun::utf8 (key));
+                RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
             // post-process silence
             //  - first !silence -> !sent_start
             //  - last !silence -> !sent_end
@@ -927,20 +916,84 @@ public:
         if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
 
-        fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
+        fprintf (stderr, "htkmlfreader: reading MLF file %ls ...", path.c_str());
         curpath = path;         // for error messages only
 
-        vector<char> buffer;    // buffer owns the characters--don't release until done
-        vector<char*> lines = readlines (path, buffer);
-        vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        auto_file_ptr f(fopenOrDie(path, L"rb"));
+        std::string headerLine = fgetline(f);
+        if (headerLine != "#!MLF!#")
+            malformed("header missing");
 
-        if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
+        // Read the file in blocks and parse MLF entries
+        std::vector<typename WORDSEQUENCE::word> wordsequencebuffer;
+        std::vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        size_t readBlockSize = 1000000;
+        std::vector<char> currBlockBuf(readBlockSize + 1);
+        size_t currLineNum = 1;
+        std::vector<string> currMLFLines;
+        bool reachedEOF = (feof(f) != 0);
+        char* nextReadPtr = currBlockBuf.data();
+        size_t nextReadSize = readBlockSize;
+        while (!reachedEOF)
+        {
+            size_t numBytesRead = fread(nextReadPtr, sizeof(char), nextReadSize, f);
+            reachedEOF = (numBytesRead != nextReadSize);
+            if (ferror(f))
+                RuntimeError("error reading from file: %s", strerror(errno));
 
-        // parse entries
-        size_t line = 1;
-        while (line < lines.size() && (restricttokeys.empty() || this->size() < restricttokeys.size()))
-            parseentry (lines, line, restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+            // Add 0 at the end to make it a proper C string
+            nextReadPtr[numBytesRead] = 0;
+
+            // Now extract lines from the currBlockBuf and parse MLF entries
+            char* context = nullptr;
+            const char* delim = "\r\n";
+
+            auto consumeMLFLine = [&](const char* mlfLine) 
+            {
+                currLineNum++;
+                currMLFLines.push_back(mlfLine);
+                if ((mlfLine[0] == '.') && (mlfLine[1] == 0)) // utterance end delimiter: a single dot on a line
+                {
+                    if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
+                    {
+                        parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+                    }
+
+                    currMLFLines.clear();
+                }
+            };
+
+            char* prevLine = strtok_s(currBlockBuf.data(), delim, &context);
+            for (char* currLine = strtok_s(NULL, delim, &context); currLine; currLine = strtok_s(NULL, delim, &context))
+            {
+                consumeMLFLine(prevLine);
+                prevLine = currLine;
+            }
+
+            // The last line read from the block may be a full line or part of a line
+            // We can tell by whether the terminating NULL for this line is the NULL
+            // we inserted after reading from the file
+            size_t prevLineLen = strlen(prevLine);
+            if ((prevLine + prevLineLen) == (nextReadPtr + numBytesRead))
+            {
+                // This is not a full line, but just a truncated part of a line.
+                // Lets copy this to the start of the currBlockBuf and read new data
+                // from there on
+                strcpy_s(currBlockBuf.data(), currBlockBuf.size(), prevLine);
+                nextReadPtr = currBlockBuf.data() + prevLineLen;
+                nextReadSize = readBlockSize - prevLineLen;
+            }
+            else
+            {
+                // A full line
+                consumeMLFLine(prevLine);
+                nextReadPtr = currBlockBuf.data();
+                nextReadSize = readBlockSize;
+            }
+        }
+
+        if (!currMLFLines.empty())
+            malformed("unexpected end in mid-utterance");
 
         curpath.clear();
         fprintf (stderr, " total %lu entries\n", this->size());
@@ -961,10 +1014,10 @@ public:
                 issilstatetable.push_back (issilstate (lines[index]));
             }
             if (index != statelistmap.size())
-                RuntimeError(msra::strfun::strprintf ("readstatelist: lines (%d) not equal to statelistmap size (%d)", index, statelistmap.size()));
+                RuntimeError("readstatelist: lines (%d) not equal to statelistmap size (%d)", (int)index, (int)statelistmap.size());
             if (statelistmap.size() != issilstatetable.size())
-                RuntimeError(msra::strfun::strprintf ("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", issilstatetable.size(), statelistmap.size()));
-            fprintf (stderr, "total %lu state names in state list %S\n", statelistmap.size(), stateListPath.c_str());
+                RuntimeError("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", (int)issilstatetable.size(), (int)statelistmap.size());
+            fprintf (stderr, "total %lu state names in state list %ls\n", statelistmap.size(), stateListPath.c_str());
         }
     }
 

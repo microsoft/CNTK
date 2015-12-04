@@ -12,6 +12,7 @@
 // and the following magic values
 #define CPUDEVICE                 (DEVICEID_TYPE)-1    // device is the CPU
 #define DEVICEID_NOTYETDETERMINED (DEVICEID_TYPE)-3    // not yet set
+#define DEVICEID_AUTO             (DEVICEID_TYPE)-4    // device should be picked automatically
 #define AUTOPLACEMATRIX           (DEVICEID_TYPE)1000  // used in parameters only
 
 // EnforceOneGPUOnly - enforce that we only use one GPU (because we don't really support more than one at this point in time)
@@ -33,7 +34,7 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
         static bool shown = false;
         if (!shown)
         {
-            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d now %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
+            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d to %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
             shown = true;
         }
     }
@@ -155,6 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numRows;  
         size_t m_numCols;
         size_t m_elemSizeAllocated;
+        size_t m_sliceViewOffset; // this is used to get a column slice view of a matrix in the Sparse CSC format
         MatrixFormat m_format;
         bool m_externalBuffer; // is the buffer used by this matrix, 
         ElemType *m_pArray;

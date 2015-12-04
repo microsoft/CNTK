@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     // -----------------------------------------------------------------------
-    // ErrorPredictionNode (label, prediction)    --TODO: is that correct?
+    // ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -26,6 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ErrorPrediction"; }
     public:
+        DeclareConstructorFromConfig(ErrorPredictionNode);
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -77,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_topK = 1;
             // TODO: Make topK a constructor parameter
-            if (m_children.size() == 3)
+            if (m_inputs.size() == 3)
             {
                 if (Inputs(2)->GetNumRows() != 1 || Inputs(2)->GetNumCols() != 1)
                     throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
@@ -95,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -127,8 +128,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);
         }
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
@@ -222,7 +221,7 @@ protected:
 		{
 			InferImageDimsFromInput(0, false);
 
-			m_outputImageLayout = ImageLayout();
+			m_imageLayout = ImageLayout();
 		}
 
 

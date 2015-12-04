@@ -1,16 +1,35 @@
-DNNLayer(inDim, outDim, x, parmScale)
+DNNSigmoidLayer(inDim, outDim, x, parmScale)
 {
     W = Parameter(outDim, inDim, init = Uniform, initValueScale = parmScale) 
     b = Parameter(outDim, init = Uniform, initValueScale = parmScale) 
     t = Times(W, x)
     z = Plus(t, b)
-    y = sigmoid(z)
+    y = Sigmoid(z)
 }
 
-DNNLastLayer(LabelDim, hiddenDim, x, parmScale)
+DNNLayer(inDim, outDim, x, parmScale)
 {
-    W = Parameter(LabelDim, hiddenDim, init = Uniform, initValueScale = parmScale)
-    b = Parameter(LabelDim, init = Uniform, initValueScale = parmScale)
+    W = Parameter(outDim, inDim, init = Uniform, initValueScale = parmScale)
+    b = Parameter(outDim, init = Uniform, initValueScale = parmScale)
     t = Times(W, x)
     z = Plus(t, b)
+}
+
+ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
+{
+    convW = Parameter(outMap, inWCount, init = Uniform, initValueScale = wScale)
+    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding = false)
+    convB = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    convPlusB = Plus(conv, convB);
+    act = RectifiedLinear(convPlusB);
+}
+
+BatchNorm(dim, x, scaleInit, biasInit)
+{
+    m = Mean(x)
+    isd = InvStdDev(x)
+    norm = ColumnElementTimes(Minus(x, m), isd)
+    sc = Parameter(dim, 1, init=Uniform, initValueScale=scaleInit)
+    b = Parameter(dim, 1, init=Uniform, initValueScale=biasInit)
+    bn_norm = Plus(ColumnElementTimes(norm, sc), b)
 }

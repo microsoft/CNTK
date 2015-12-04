@@ -168,7 +168,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         CPUMatrix<ElemType>& AssignLogSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise);
-        
+
+        CPUMatrix<ElemType>& InplaceHardmax(const bool isColWise);
+        CPUMatrix<ElemType>& AssignHardmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise);
+
 		//sequence training
 		CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold);
 		CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
@@ -300,7 +303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
     public:
-        static int SetNumThreads(int numThreads);
+        static int SetNumThreads(int numThreads);   // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 
         //static BLAS functions
         static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);

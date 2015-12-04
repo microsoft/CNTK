@@ -17,6 +17,7 @@
 #include "Platform.h"
 #include "BestGpu.h"
 #include "commandArgUtil.h" // for ConfigParameters
+#include "ScriptableObjects.h"
 #include "DebugUtil.h"
 #ifndef CPUONLY
 #pragma comment (lib, "cudart.lib")
@@ -112,86 +113,82 @@ public:
     static const int RequeryDevices = -2;  // Requery refreshing statistics and picking the same number as last query
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal ); // get multiple devices
 private:
-    bool LockDevice(int deviceID, bool trial = true);
+    bool LockDevice(int deviceId, bool trial = true);
 };
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
 //Symbol - Meaning
-// Auto - automatically pick a single GPU based on ?BestGpu? score
-// CPU  - use the CPU
-// 0    - or some other single number, use a single GPU with CUDA ID same as the number
-// 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
-// *3   - a count of GPUs to use (PTask)
-// All  - Use all the GPUs (PTask)
-static DEVICEID_TYPE SelectDeviceFromConfig(const ConfigParameters& config)  // internal version, wrapped by exported DeviceFromConfig() function
+// 'auto' - automatically pick a single GPU based on ?BestGpu? score
+// 'cpu'  - use the CPU
+// 0      - or some other single number, use a single GPU with CUDA ID same as the number
+// This can only be called with the same parameters each time, and 'auto' is determined upon first call.
+static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU)
 {
-    static BestGpu* g_bestGpu = NULL;
-    static DEVICEID_TYPE deviceId = CPUDEVICE;
+    // This can only be called with the same parameter.
+    static DEVICEID_TYPE lastDeviceId = DEVICEID_NOTYETDETERMINED;
+    if (lastDeviceId == DEVICEID_NOTYETDETERMINED)
+        lastDeviceId = deviceId;
+    else if (lastDeviceId != deviceId)
+        InvalidArgument("SelectDevice: Attempted to change device selection from %d to %d (%d means 'auto').", (int)lastDeviceId, (int)deviceId, (int)DEVICEID_AUTO);
 
-    ConfigValue val = config("deviceId", "auto");
-    ConfigValue bLockGPUstr = config("LockGPU", "true");
-    bool bLockGPU = bLockGPUstr;
-
-    //recommend to use CPU. Adding -1 for backward compatability
-    if (!_stricmp(val.c_str(), "CPU") || !_stricmp(val.c_str(), "-1"))
+    if (deviceId == DEVICEID_AUTO)
     {
-        return CPUDEVICE;
+        static DEVICEID_TYPE bestDeviceId = DEVICEID_NOTYETDETERMINED;
+        if (bestDeviceId == DEVICEID_NOTYETDETERMINED)      // we only choose once
+        {
+            // GPU device to be auto-selected, so init our class
+            static BestGpu* g_bestGpu = nullptr;
+            if (g_bestGpu == nullptr)
+                g_bestGpu = new BestGpu();
+            deviceId = (DEVICEID_TYPE)
+                g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
+            bestDeviceId = deviceId;
+        }
+        else            // already chosen
+            deviceId = bestDeviceId;
     }
-
-    // potential GPU device, so init our class
-    if (g_bestGpu == NULL)
+    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
+    return EnforceOneGPUOnly(deviceId);
+}
+//#ifdef MATH_EXPORTS
+//__declspec(dllexport)
+//#endif
+DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord & config)
+{
+    bool bLockGPU = config(L"lockGPU", true);
+    // we need to deal with the old CNTK config semantics where 'deviceId' can be either a string or an int
+    auto valpp = config.Find(L"deviceId");
+    if (!valpp)
+        return SelectDevice(DEVICEID_AUTO, bLockGPU);   // not given at all: default
+    auto valp = *valpp;                                 // (the type is not determined at this point)
+    if (valp.Is<ScriptableObjects::String>())
     {
-        g_bestGpu = new BestGpu();
-    }
-    else if (bLockGPU && deviceId >= 0)
-    {
-        return deviceId;   
-    }  
-
-    if (!_stricmp(val.c_str(), "Auto"))
-    {
-        deviceId = (DEVICEID_TYPE)
-            g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
-    }
-    else if (!_stricmp(val.c_str(), "All"))
-    {
-        std::vector<int> devices =
-            g_bestGpu->GetDevices(BestGpu::AllDevices, BestGpuFlags(bLockGPU ? bestGpuNormal | bestGpuExclusiveLock : bestGpuNormal));
-        deviceId = (DEVICEID_TYPE)devices[0];
-    }
-    else if (val.size() == 2 && val[0] == '*' && isdigit(val[1]))
-    {
-        int number = (int)(val[1] - '0');
-        std::vector<int> devices =
-            g_bestGpu->GetDevices(number, BestGpuFlags(bLockGPU ? bestGpuNormal | bestGpuExclusiveLock : bestGpuNormal));
-        deviceId = (DEVICEID_TYPE)devices[0];
+        wstring val = valp;
+        if (val == L"cpu")
+            return SelectDevice(CPUDEVICE, false);
+        else if (val == L"auto")
+            return SelectDevice(DEVICEID_AUTO, bLockGPU);
+        else
+            InvalidArgument("Invalid value '%ls' for deviceId parameter. Allowed are 'auto' and 'cpu' (case-sensitive).", val.c_str());
     }
     else
-    {
-        ConfigArray arr = val;
-        if (arr.size() == 1)
-        {
-            deviceId = arr[0];
-        }
-        else
-        {
-            argvector<int> allowed = arr;
-            g_bestGpu->SetAllowedDevices(allowed);
-
-            std::vector<int> devices =
-                g_bestGpu->GetDevices(BestGpu::AllDevices, BestGpuFlags(bLockGPU ? bestGpuNormal | bestGpuExclusiveLock : bestGpuNormal));
-            deviceId = (DEVICEID_TYPE)devices[0];
-        }
-    }
-    return deviceId;
+        return SelectDevice(valp, bLockGPU);
 }
-#ifdef MATH_EXPORTS
-__declspec(dllexport)
-#endif
+// legacy version for old CNTK config
+//#ifdef MATH_EXPORTS
+//__declspec(dllexport)
+//#endif
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
-    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
-    return EnforceOneGPUOnly(SelectDeviceFromConfig(config));
+    ConfigValue val = config("deviceId", "auto");
+    bool bLockGPU = config(L"lockGPU", true);
+
+    if (!_stricmp(val.c_str(), "cpu"))
+        return SelectDevice(CPUDEVICE, false);
+    else if (!_stricmp(val.c_str(), "auto"))
+        return SelectDevice(DEVICEID_AUTO, bLockGPU);
+    else
+        return SelectDevice((int)val, bLockGPU);
 }
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
@@ -271,7 +268,7 @@ void BestGpu::Init()
     {
         const char* errmsg = cudaGetErrorString(err);
         fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        RuntimeError(errmsg);
+        RuntimeError("%s", errmsg);
     }
 
     ProcessorData pdEmpty = { 0 };
@@ -615,34 +612,35 @@ void BestGpu::QueryNvmlData()
     return;
 }
 
-bool BestGpu::LockDevice(int deviceID, bool trial)
+bool BestGpu::LockDevice(int deviceId, bool trial)
 {
-    if (deviceID < 0) // don't lock CPU, always return true 
+    if (deviceId < 0) // don't lock CPU, always return true 
     {
         return true;
     }    
     // ported from dbn.exe, not perfect but it works in practice 
     char buffer[80];
-    sprintf (buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceID);
+    sprintf (buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceId);
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
     if (!mutex->Acquire(false))  // failure  --this should not really happen
     {
-        fprintf(stderr, "LockDevice: can't lock the device %d\n", deviceID);
+        fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
         return false;
     }
     else
     {
-        fprintf(stderr, "LockDevice: Capture device %d and lock it for exclusive use\n", deviceID);
+        fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
         if (!trial)
-        {
-            m_GPUMutex[deviceID] = std::move(mutex);
-        }
+            m_GPUMutex[deviceId] = std::move(mutex);
+        else
+            fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
     }
     return true;
 }
 
 #ifdef _WIN32
 
+#if 0
 // ---------------------------------------------------------------------------
 // some interfacing with the Windows DLL system to ensure clean shutdown vs. Delay loading of CUDA DLLs
 // ---------------------------------------------------------------------------
@@ -697,6 +695,8 @@ PfnDliHook __pfnDliNotifyHook2 = (PfnDliHook)DelayLoadNofify;
 ExternC
 PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNofify;
 #endif  // _WIN32
+#endif
+
 }}}
 
 #endif  // CPUONLY

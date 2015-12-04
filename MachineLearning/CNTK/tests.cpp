@@ -71,13 +71,13 @@ void TestBing(const ConfigParameters& config)
 #endif
 
 template <typename ElemType> void DoEval(const ConfigParameters& config);
-template <typename ElemType> void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
+template <class ConfigRecordType, typename ElemType> void DoTrain(const ConfigRecordType & config);
 
 template <typename ElemType>
 void TestMNist(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("mnistTrain"));
-    DoTrain<ElemType>(config, 1, 1);
+    DoTrain<ConfigParameters, ElemType>(config);
     ConfigParameters configTest (configBase("mnistTest"));
     DoEval<ElemType>(configTest);
 }
@@ -86,7 +86,7 @@ template <typename ElemType>
 void TestSpeech(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("speechTrain"));
-    DoTrain<ElemType>(config, 1, 1);
+    DoTrain<ConfigParameters, ElemType>(config);
     ConfigParameters configTest (configBase("speechTest"));
     DoEval<ElemType>(configTest);
 }
@@ -173,7 +173,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
 
         // get names of features and labels
         std::vector<std::wstring> files;
-        files.push_back(readerConfig("file"));
+        files.push_back(readerConfig(L"file"));
 
         // setup minibatch matrices
         Matrix<ElemType> featuresMatrix;
@@ -212,7 +212,7 @@ template <typename ElemType>
 void TestMacros(const ConfigParameters& configBase)
 {
     NDLScript<ElemType> script = configBase("ndlFull");
-    ComputationNetwork net;
+    ComputationNetworkPtr net = make_shared<ComputationNetwork>();
     SynchronousNodeEvaluator<ElemType> nodeEvaluator(net);
     script.Evaluate(nodeEvaluator, L"", ndlPassInitial);
 }
@@ -317,10 +317,19 @@ void TestConfiguration(const ConfigParameters& configBase)
             }
         }
 
-        if (configRoots.Exists("CriteriaNodes"))
+        if (configRoots.Exists("CriterionNodes"))
+        {
+            configNode = configRoots("CriterionNodes");
+            for (size_t i=0; i<configNode.size(); i++)
+            {
+                std::wstring nodeName = configNode[i];
+            }
+        }
+
+        if (configRoots.Exists("CriteriaNodes"))  //legacy
         {
             configNode = configRoots("CriteriaNodes");
-            for (size_t i=0; i<configNode.size(); i++)
+            for (size_t i = 0; i<configNode.size(); i++)
             {
                 std::wstring nodeName = configNode[i];
             }
@@ -333,6 +342,7 @@ void TestConfiguration(const ConfigParameters& configBase)
             {
                 std::wstring nodeName = configNode[i];
             }
+            fprintf(stderr, "WARNING: 'NodesReqMultiSeqHandling' flag is defunct\n");
         }
 
         if (configRoots.Exists("EvalNodes"))

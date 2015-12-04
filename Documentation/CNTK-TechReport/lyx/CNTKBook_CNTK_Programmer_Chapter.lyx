@@ -3032,17 +3032,17 @@ nNodePtr Value)
 
 \begin_layout Plain Layout
 
-    m_children.resize(2);             
+    m_inputs.resize(2);             
 \end_layout
 
 \begin_layout Plain Layout
 
-    m_children[0] = scalarValue;             
+    m_inputs[0] = scalarValue;             
 \end_layout
 
 \begin_layout Plain Layout
 
-    m_children[1] = Value;         
+    m_inputs[1] = Value;         
 \end_layout
 
 \begin_layout Plain Layout
@@ -3149,7 +3149,7 @@ virtual void Validate()
 
 \begin_layout Plain Layout
 
-    if (m_children.size() != 2)                  
+    if (m_inputs.size() != 2)                  
 \end_layout
 
 \begin_layout Plain Layout

@@ -109,8 +109,8 @@
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
+    <ClInclude Include="..\..\Common\Include\RandomOrdering.h" />
     <ClInclude Include="LibSVMBinaryReader.h" />
-    <ClInclude Include="minibatchsourcehelpers.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

@@ -121,12 +121,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetDataLocation(CurrentDataLocation location, MatrixType type=UNDETERMINED) const;
 
     public:
-        MatrixType GetMatrixType() const {return m_matrixType;};
+        MatrixType GetMatrixType() const { return m_matrixType; }
         MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
-        bool OwnBuffer() const {return m_baseMatrix->OwnBuffer();}
+        bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
         int GetDeviceId() const; //-1 if CPU, otherwise GPU CUDA device id
         DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; //-1 if CPU, otherwise GPU CUDA device id
-        void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId){ if (m_preferredDeviceId != preferredDeviceId) m_preferredDeviceId = preferredDeviceId; }
+        void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
         //Moves matrix from device id_from to device with id_to. 
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false,/*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
@@ -153,7 +153,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
-
 
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
@@ -298,6 +297,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         Matrix<ElemType>& AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
+
+        Matrix<ElemType>& InplaceHardmax(const bool isColWise);
+        Matrix<ElemType>& AssignHardmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
         //sequence training 
         Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
@@ -444,6 +446,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
         static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
+        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c, size_t stepSize, bool padding);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);

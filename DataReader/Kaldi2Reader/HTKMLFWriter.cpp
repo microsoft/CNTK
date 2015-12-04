@@ -31,8 +31,6 @@
 #include <vld.h> // for memory leak detection
 #endif
 
-
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Create a Data Writer
@@ -51,11 +49,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
         
-        m_verbosity = writerConfig("verbosity", "2");
-        m_overflowValue = writerConfig("overflowValue", "50");
-        m_maxNumOverflowWarning = writerConfig("maxNumOverflowWarning", "10");
+        m_verbosity = writerConfig(L"verbosity", "2");
+        m_overflowValue = writerConfig(L"overflowValue", "50");
+        m_maxNumOverflowWarning = writerConfig(L"maxNumOverflowWarning", "10");
 
-        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        ConfigArray outputNames = writerConfig(L"outputNodeNames","");
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
         int counter = 0;
@@ -64,19 +62,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ConfigParameters thisOutput = writerConfig(outputNames[i]);
 
             if (thisOutput.Exists("dim"))
-                udims.push_back(thisOutput("dim"));
+                udims.push_back(thisOutput(L"dim"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer need to specify dim of output");
             if (thisOutput.Exists("file"))
-                scriptpaths.push_back(thisOutput("file"));
+                scriptpaths.push_back(thisOutput(L"file"));
             else if (thisOutput.Exists("scpFile"))
-                scriptpaths.push_back(thisOutput("scpFile"));
+                scriptpaths.push_back(thisOutput(L"scpFile"));
             else
                 RuntimeError("HTKMLFWriter::Init: writer needs to specify scpFile for output");
             
             if (thisOutput.Exists("Kaldicmd"))
             {
-                kaldicmd.push_back(thisOutput("Kaldicmd"));
+                kaldicmd.push_back(thisOutput(L"Kaldicmd"));
                 kaldi::BaseFloatMatrixWriter wfea;
                 feature_writer.push_back(wfea);
                 feature_writer[i].Open(msra::strfun::utf8(kaldicmd[counter]));
@@ -84,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
  
             outputNameToIdMap[outputNames[i]]= i;
             outputNameToDimMap[outputNames[i]]=udims[i];
-            wstring type = thisOutput("type","Real");
+            wstring type = thisOutput(L"type","Real");
             if (type == L"Real")
             {
                 outputNameToTypeMap[outputNames[i]] = OutputTypes::outputReal;

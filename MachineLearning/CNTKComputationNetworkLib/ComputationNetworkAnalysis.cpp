@@ -229,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (cur->m_lowLink == cur->m_index)   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
             // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
-            RecurrentFlowControlNode rInfo(loopId, cur);
+            SEQTraversalFlowControlNode rInfo(loopId, cur);
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!bFound)
                 {
                     // TODO: construct rInfo down here
-                    m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
+                    m_recurrentInfo.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
                     loopId++;                           // and count it
                 }
             }
@@ -270,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
 
         // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        vector<shared_ptr<RecurrentFlowControlNode>> m_recurrentInfoTmp;
+        vector<shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfoTmp;
         for (const auto & iter : m_recurrentInfo)    // enumerate all loops
         {
             bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
@@ -360,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<bool> accessed(m_recurrentInfo.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            const shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, *nodeIter);
+            const shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, *nodeIter);
             if (recInfo)
             {
                 int iId = recInfo->m_loopId;

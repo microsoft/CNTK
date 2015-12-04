@@ -48,7 +48,7 @@ namespace msra { namespace lattices {
         }
             
             
-        void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
+        void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<shared_ptr<const msra::dbn::latticepair>> &lattices, const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
             Microsoft::MSR::CNTK::Matrix<ElemType>&  labels, Microsoft::MSR::CNTK::Matrix<ElemType>& gammafromlattice, std::vector<size_t> &uids, std::vector<size_t> &boundaries,
             size_t samplesInRecurrentStep, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, std::vector<size_t> &extrauttmap, bool doreferencealign)
         {

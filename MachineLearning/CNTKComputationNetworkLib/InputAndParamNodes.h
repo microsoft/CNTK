@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "ComputationNode.h"
+#include "ScriptableObjects.h"
+#include "Matrix.h"
+#include "File.h"   // for LoadMatrixFromTextFile()
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,11 +22,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "File.h"   // for LoadMatrixFromTextFile()
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -40,16 +40,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayout(1, SIZE_MAX, 1);
+            m_imageLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_imageLayout = ImageLayoutWHC(1, rows, 1);
+            // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
             CreateMatrixIfNull(m_functionValues);
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            UpdateFunctionValuesSize();   // this allocates the matrix
             FunctionValues().SetValue(0);
+        }
+        LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
+            LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+            // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+            // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
+            SetParameterUpdateRequired(configp->Get(L"needGradient"));
+            wstring initString = configp->Get(L"init");
+            if (initString == L"fixedValue")
+                FunctionValues().SetValue((ElemType)configp->Get(L"value"));
+            else if (initString == L"uniform" || initString == L"gaussian")
+            {
+                // TODO: add these options also to old NDL
+                static unsigned long randomSeed = 1;
+                int forcedRandomSeed = configp->Get(L"randomSeed");   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
+                InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
+            }
+            else if (initString == L"fromFile")
+            {
+                wstring initFromFilePath = configp->Get(L"initFromFilePath");
+                if (initFromFilePath.empty())
+                    RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                InitFromFile(initFromFilePath);
+            }
+            else
+                RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -68,15 +97,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_parameterUpdateRequired;
             fstream >> rows >> cols;
 
-            //intentionally comment out to support automatic dimension inference
-            //if (rows * cols == 0) 
-            //    LogicError("This LearnableParameter dimension is 0.");
+            SetDims(rows, cols);
+            LoadFunctionValues(fstream);
 
-            CreateMatrixIfNull(m_functionValues);
-            Resize(rows, cols);
-            fstream >> FunctionValues();
-
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_imageLayout = ImageLayoutWHC(1, rows, 1);
         }
 
         // initialize with random numbers
@@ -124,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numRows != nRows || numCols != nCols)
             {
                 RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                    m_nodeName.c_str(), reviseFromFilePath.c_str(), nRows, nCols, numRows, numCols);
+                    m_nodeName.c_str(), reviseFromFilePath.c_str(), (int)nRows, (int)nCols, (int)numRows, (int)numCols);
             }
 
             FunctionValues().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
@@ -169,6 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SparseLearnableParameter);
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
@@ -195,21 +220,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SparseLearnableParameter<double>;
 
     // -----------------------------------------------------------------------
-    // InputValue (/*no input*/)
-    // an input value (typically fed by a DataReader)
+    // InputValueBase (/*no input*/)
+    // Base class for InputValue and SparseInputValue (typically fed by a DataReader)
     // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
-    // TODO: There is still debate whether an InputValue without layout makes sense.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class InputValue : public ComputationNode<ElemType>, public NumInputs<0>
+    class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        static const std::wstring TypeName() { return L"InputValue"; }
-        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
-        // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
-        //         This is bad. It should just write m_isSparse, or be a different type.
 
         void Init(size_t rows, size_t cols, bool isSparse)
         {
@@ -218,33 +237,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            Resize(rows, cols);
+            SetDims(rows, cols);
+            UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
         }
-    public:
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+    protected:
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
-            m_outputImageLayout.Invalidate();
-            Init(0, 0, false);
-        }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
-            Base(deviceId, name)
-        {
-            m_outputImageLayout.Invalidate();
+            m_imageLayout.Invalidate();
             Init(0, 0, isSparse);
         }
-        // ^^ TODO: merge the two above with optional arg
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
             Base(deviceId, name)
         {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputImageLayout = ImageLayout(1, rows, 1);
+            m_imageLayout = ImageLayoutVector(rows);
             Init(rows, cols, isSparse);
         }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse) :
             Base(deviceId, name)
         {
             size_t rows = imageLayout.GetNumElements();
@@ -253,10 +266,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputImageLayout = imageLayout;
+            m_imageLayout = imageLayout;
 
             Init(rows, cols, isSparse);
         }
+        InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
+            Base(configp->Get(L"deviceId"), L"<placeholder>")
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+            bool isImage  = configp->Get(L"isImage");
+            if (!isImage)
+            {
+                size_t rows = configp->Get(L"rows");
+                size_t cols = configp->Get(L"cols");
+                m_imageLayout = ImageLayoutVector(rows);    // no tensor, just a vector
+                Init(rows, cols, isSparse);
+            }
+            else
+            {
+                m_imageLayout = ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"));
+                size_t rows = m_imageLayout.GetNumElements();
+                size_t cols = configp->Get(L"numImages");         // this is actually the MB size
+                Init(rows, cols, isSparse);
+            }
+        }
+    public:
 
         virtual void SaveToFile(File& fstream) const override
         {
@@ -264,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to LoadFromFile()
             size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
             fstream << rows << cols;
-            fstream << m_outputImageLayout.width << m_outputImageLayout.height << m_outputImageLayout.channels;
+            m_imageLayout.SaveToFile(fstream);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -275,25 +309,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
             if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
                 cols = 0;
-            fstream >> m_outputImageLayout.width >> m_outputImageLayout.height >> m_outputImageLayout.channels; 
-
-            CreateMatrixIfNull(m_functionValues);
-            if (m_isSparse)
-                ConvertToSparseMatrix();
-
-            Resize(rows, cols);
-            //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
-            m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
+            m_imageLayout.LoadFromFile(fstream);
+            Init(rows, cols, m_isSparse);
         }
-
-        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
-        virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
         virtual void UpdateFunctionMBSize() override
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                VerifySize(GetNumRows(), m_pMBLayout->GetNumCols());
+                VerifyDims(GetNumRows(), m_pMBLayout->GetNumCols());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
@@ -311,20 +335,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
         {
-            size_t rows = m_functionValues->GetNumRows();
-            size_t cols = m_functionValues->GetNumCols();
             m_functionValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
     };
 
-    template class InputValue<float>; 
+    // -----------------------------------------------------------------------
+    // InputValue (/*no input*/)
+    // an input value (typically fed by a DataReader)
+    // this covers two types: (regular vs. image)
+    // TODO: There is still debate whether an InputValue without layout makes sense.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class InputValue : public InputValueBase<ElemType>
+    {
+        typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"InputValue"; }
+    public:
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name, false)
+        { }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            Base(deviceId, name, rows, cols, false)
+        { }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages) :
+            Base(deviceId, name, imageLayout, numImages, false)
+        { }
+        InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp, false)
+        { }
+    };
+
+    template class InputValue<float>;
     template class InputValue<double>;
 
     // -----------------------------------------------------------------------
-    // LookupTableNode (weight matrix, bag-of-word representation of the inputs)
-    // originally designed to extract word embedding representation from bag-of-word
-    // TODO: what does this do?
+    // SparseInputValue (/*no input*/)
+    // a sparse input value (typically fed by a DataReader)
+    // this covers two types: (regular vs. image)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class SparseInputValue : public InputValueBase<ElemType>
+    {
+        typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SparseInputValue"; }
+    public:
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name, true)
+        { }
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            Base(deviceId, name, rows, cols, true)
+        { }
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages) :
+            Base(deviceId, name, imageLayout, numImages, true)
+        { }
+        SparseInputValue(const ScriptableObjects::IConfigRecordPtr configp) :
+            Base(configp, true)
+        { }
+    };
+
+    template class SparseInputValue<float>;
+    template class SparseInputValue<double>;
+
+    // -----------------------------------------------------------------------
+    // LookupTableNode (embedding matrix, bag-of-word representation of the inputs)
+    // implements an embedding, assuming a specific representation of the input data
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -333,46 +409,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LookupTable"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LookupTableNode);
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & t) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("LookupTable operation only takes two inputs.");
-
-            DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
-            DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
-            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
-
-            if (inputIndex == 0)  //left derivative
+            if (inputIndex == 0)        // left derivative (embedding matrix)
             {
-                ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-            }
-            else  //right derivative
-            {
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
-            }
-            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
-        }
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
-        {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
-            if (inputIndex > 1)
-                InvalidArgument("LookupTable operation only takes two inputs.");
-
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            if (inputIndex == 0)  //left derivative
-            {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                // This is a reduction operation, hence we need to mask out gaps.
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->MaskedValueSlice(t);
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(t);
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
-            else  //right derivative
+            else if (inputIndex == 1)   // right derivative (input)
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(t);
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(t);
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
@@ -380,7 +435,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
         {
-            size_t rows1 =inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
+            size_t rows1 = inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
             int wordsInEachSample = rows1 / inputGradientValues.GetNumCols();
 
@@ -408,49 +463,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Reshape(rowsp, colsp);
         }
 
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & t) override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-#ifdef DEBUG_DECODER
-            fprintf(stderr, "LookupTableNode node %ls: Input[0]=%.8e Input[1]=%.8e output = %.8e\n", this->NodeName().c_str(), Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm(), FunctionValues().FrobeniusNorm());
-#endif
-        }
+            // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
+            Matrix<ElemType> functionValues = ValueSlice(t);
+            const Matrix<ElemType>&  input0 = Inputs(0)->FunctionValues();
+            Matrix<ElemType>         input1 = Inputs(1)->ValueSlice(t);
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
-        {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-        }
-
-        //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
-        {
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
 
             if (rows1 % cols0 != 0)
-                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size. ");
+                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size.");
 
             int wordsInEachSample = rows1 / cols0;
 
-            input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+            auto input1Reshaped = input1.Reshaped(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
-            DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
-            DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
-            input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
-
-            functionValues.AssignProductOf(input0, false, input1, false);
-
-            input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
-
-            input1.Reshape(rows1, cols1);
-            size_t rows = functionValues.GetNumRows();
-            functionValues.Reshape(rows * wordsInEachSample, cols1);
+            auto functionValuesReshaped = functionValues.Reshaped(input0.GetNumRows(), input1Reshaped.GetNumCols());
+            functionValuesReshaped.AssignProductOf(input0, false, input1Reshaped, false);
         }
-            
+
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
@@ -460,7 +493,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
 
-            Resize(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
+            SetDims(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -474,17 +507,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Inputs(0)->Resize(nInput, nHidden);
+                Inputs(0)->SetDims(nInput, nHidden);
+                Inputs(0)->UpdateFunctionValuesSize();
                 Inputs(0)->FunctionValues().SetValue(1.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Inputs(1)->Resize(nHidden, nOutput);
+                Inputs(1)->SetDims(nHidden, nOutput);
+                Inputs(1)->UpdateFunctionValuesSize();
                 Inputs(1)->FunctionValues().SetValue(0.0);
                 Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
                 Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                Resize(nInput, nOutput);
+                SetDims(nInput, nOutput);
+                UpdateFunctionValuesSize();
 
                 EvaluateThisNode(FrameRange(m_pMBLayout));
 
@@ -549,9 +585,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t row_size, size_t col_size)
         {
             CreateMatrixIfNull(m_functionValues);
-            m_functionValues->Resize(row_size, col_size);
+            SetDims(row_size, col_size);
+            UpdateFunctionValuesSize();
         }
     public:
+        DeclareConstructorFromConfigWithNumInputs(PairNetworkNode);
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
             Base(deviceId, name)
         {
@@ -604,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
-                Resize(Inputs(0));
+                SetDims(Inputs(0));
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
@@ -632,9 +670,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 #endif
-protected:
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-
     };
 
     template class PairNetworkNode<float>;

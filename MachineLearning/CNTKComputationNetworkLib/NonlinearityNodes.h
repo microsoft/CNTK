@@ -37,6 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DeclareConstructorFromConfigWithNumInputs(NonlinearityNodeBase);
         NonlinearityNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -105,11 +106,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(RectifiedLinearNode);
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
+        void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
         {
             gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
 #if DUMPOUTPUT
@@ -121,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
 #if NANCHECK
@@ -146,6 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -201,6 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Tanh"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(TanhNode);
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -258,6 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Log"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LogNode);
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -314,40 +319,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Exp"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(ExpNode);
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
-        // TODO: get rid of code dup
-        void ComputeInputPartialMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
-        }
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            m_gradient->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
+            sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradient);
         }
+        virtual void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { NOT_IMPLEMENTED; }   // not needed
 
-        // should be:
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
-        {
-            gradient.AssignExpOf(inputFunctionValues); // Exp(x) is its own partial
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignExpOf(inputFunctionValues);
 #if NANCHECK
@@ -369,6 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Cosine"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(CosineNode);
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -392,7 +383,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
-
 
         // should be:
         /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
@@ -427,6 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Softmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(SoftmaxNode);
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -516,6 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(LogSoftmaxNode);
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
@@ -605,6 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(GMMLogLikelihoodNode);
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNode<ElemType>(deviceId, name)
         { }
@@ -931,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
-            Resize(1, cols[3]);
+            SetDims(1, cols[3]);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -940,7 +933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(3, false);
 
-            m_outputImageLayout = ImageLayout();
+            m_imageLayout = ImageLayout();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1003,6 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Dropout"; }
     public:
+        DeclareConstructorFromConfigWithNumInputs(DropoutNode);
         DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_dropoutRate(0)
@@ -1057,7 +1051,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                Resize(Inputs(0));
+                SetDims(Inputs(0));
                 m_maskOfDropout->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
                 sliceMask = DataSlice(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             }
@@ -1156,4 +1150,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
+    // -----------------------------------------------------------------------
+    // Hardmax(prediction) 
+    // -----------------------------------------------------------------------
+    // the result is a 1 of n coding in which the (r, c) = 1 if row r has max value in column c
+    // this node is not differentiable and so cannot be used in the backpropagation
+    // TODO: make function value sparse?
+    template<class ElemType>
+    class HardmaxNode : public NonlinearityNodeBase/*ComputationNode*/<ElemType>
+    {
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Hardmax"; }
+
+    public:
+        DeclareConstructorFromConfigWithNumInputs(HardmaxNode);
+        HardmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //TODO: this is still needed?
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/) override
+        {
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
+        }
+
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) 
+        { 
+            gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  
+            LogicError("wrong signature :( need to unify code more"); 
+        }
+
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            //TODO: temp solution, we need to write a math function specifically for this
+            functionValues.AssignHardmaxOf(inputFunctionValues, true);
+#if NANCHECK
+            functionValues.HasNan("Hardmax");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+    };
+
+    template class HardmaxNode<float>;
+    template class HardmaxNode<double>;
 }}}

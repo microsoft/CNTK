@@ -67,19 +67,26 @@ void SparsePCReader<ElemType>::Destroy()
 // Init - Reader Initialize for multiple data sets
 // config - [in] configuration parameters for the datareader
 template<class ElemType>
-void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
+template<class ConfigRecordType>
+void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
 {
+    // Sparse PC reader considers every consecutive N rows to be part of a single block.
+    // This is used later to compute the corss-entropy with softmax per block.
+    // Default value is 1 to indicate all rows are independent.
+    m_microBatchSize = readerConfig(L"microbatchSize", (size_t)1);
+
     m_miniBatchSize = 0;
-    m_traceLevel = readerConfig("traceLevel", "0");
-    m_maxReadData = readerConfig("maxReadData", "0");
-    m_doGradientCheck = readerConfig("gradientCheck", "false");
-    m_returnDense = readerConfig("returnDense", "false");
-    m_sparsenessFactor = (m_doGradientCheck ? 1 : SPARSENESS_FACTOR_DEFAULT); // Disable sparseness test if gradient check is enabled
+    m_traceLevel = readerConfig(L"traceLevel", 0);
+    m_maxReadData = readerConfig(L"maxReadData", (size_t)0);
+    m_doGradientCheck = readerConfig(L"gradientCheck", false);
+    m_returnDense = readerConfig(L"returnDense", false);
+    m_sparsenessFactor = readerConfig(L"sparsenessFactor", (size_t)50); // We don't expect more than one in 50 input positions to have non-zero values
+    m_verificationCode = (int32_t)readerConfig(L"verificationCode", (size_t)0);
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
 
-    m_file = readerConfig("file");
+    m_file = (const wstring &)readerConfig(L"file");
 
     // Determine the names of the features and lables sections in the config file.
     // features - [in,out] a vector of feature name strings
@@ -181,20 +188,16 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         return false;
 
     if (m_currOffset >= m_filePositionMax)
-    {
         return false;
-    }
 
-    Matrix<ElemType>* labels = nullptr;
+    Matrix<ElemType>* labels = nullptr;     // labels to return, or NULL if no labels in matrix set
     auto labelEntry = matrices.find(m_labelName);
-    bool useLabels = false;
     if (labelEntry != matrices.end())
     {
         labels = labelEntry->second;
-        if (labels != nullptr)
-        {
-            useLabels = true;
-        }
+
+        if (labels->GetNumRows() != 1)
+            RuntimeError("SparsePCReader only supports single label value per column but the network expected %d.", (int)labels->GetNumRows());
     }
     
     std::vector<int32_t> currIndex = std::vector<int32_t>(m_featureCount);
@@ -232,16 +235,21 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         m_labelsBuffer[j] = label;
         m_currOffset += sizeof(ElemType);
 
-        int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
-
-        if (verifCode != VERIFICATION_CODE)
+        if (m_verificationCode != 0)
         {
-            RuntimeError("Verification code did not match - error in reading data");
-            return false;
-        }
+            int32_t verifCode = *(int32_t*)((char*)m_dataBuffer + m_currOffset);
 
-        m_currOffset += sizeof(int32_t);
+            if (verifCode != m_verificationCode)
+            {
+                RuntimeError("Verification code did not match (expected %d) - error in reading data", m_verificationCode);
+                return false;
+            }
+
+            m_currOffset += sizeof(int32_t);
+        }
     }
+
+    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize, false);
 
     for (int i = 0; i < m_featureCount; i++)
     {
@@ -261,18 +269,11 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         (*matrices[m_featureNames[1]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
     }
 
-    if (useLabels)
+    if (labels)
     {
-        size_t labelRows = (*labels).GetNumRows();
-        size_t labelCols = (*labels).GetNumCols();
-
-        if (labelCols != j)
-        {
-            (*labels).Resize(labelRows, j);
-        }
-
-        (*labels).SetValue((ElemType)0);
-        (*labels).SetValue(labelRows, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
+        labels->Resize(1, j);
+        labels->SetValue((ElemType)0);
+        labels->SetValue(1, j, labels->GetDeviceId(), m_labelsBuffer, 0);
     }
 
     return true;

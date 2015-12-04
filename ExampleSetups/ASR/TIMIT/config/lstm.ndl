@@ -28,10 +28,10 @@ ndlMacroDefine=[
         Wxf = Parameter(outputDim, inputDim)
         Wxc = Parameter(outputDim, inputDim)
 
-        bo = Parameter(outputDim, init=fixedvalue, value=-1.0)
-        bc = Parameter(outputDim, init=fixedvalue, value=0.0)
-        bi = Parameter(outputDim, init=fixedvalue, value=-1.0)
-        bf = Parameter(outputDim, init=fixedvalue, value=-1.0)
+        bo = Parameter(outputDim, init="fixedValue", value=-1.0)
+        bc = Parameter(outputDim, init="fixedValue", value=0.0)
+        bi = Parameter(outputDim, init="fixedValue", value=-1.0)
+        bf = Parameter(outputDim, init="fixedValue", value=-1.0)
 
         Whi = Parameter(outputDim, outputDim)
         Wci = Parameter(outputDim)
@@ -90,8 +90,8 @@ ndlCreateNetwork=[
 	featDim=72
 	labelDim=183
 	hiddenDim=1024
-	features=Input(featDim, tag=feature)
-	labels=Input(labelDim, tag=label)
+	features=Input(featDim, tag="feature")
+	labels=Input(labelDim, tag="label")
 
 	# define network
 	featNorm = MeanVarNorm(features)
@@ -101,10 +101,10 @@ ndlCreateNetwork=[
 
     LSTMoutputW1 = Times(W1, LSTMoutput)
 
-    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Criteria)
-    Err = ErrorPrediction(labels,LSTMoutputW1,tag=Eval)
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag="criterion")
+    Err = ErrorPrediction(labels,LSTMoutputW1,tag="eval")
     
     logPrior = LogPrior(labels)	 
-    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag=Output)
+    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag="output")
 
 ]

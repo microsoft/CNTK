@@ -1,0 +1,151 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork_LSTMP_c1024_p256_x3
+
+ndlMacroDefine=[
+    #Feed Forward
+    FF(X1, W1, B1)
+    {
+        T=Times(W1,X1)
+        P=Plus(T, B1)
+    }
+
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF(in, w, b)
+    }
+
+    # Macro definitions
+    MeanVarNorm(x)=[
+        xMean = Mean(x);
+        xStdDev = InvStdDev(x)
+        xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    ]
+
+    LogPrior(labels)
+    {
+        Prior=Mean(labels)
+        LogPrior=Log(Prior)
+    }
+
+    LSTMPComponent(inputDim, outputDim, cellDim, inputx)
+    {
+        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+
+        bo = Parameter(cellDim, init=fixedValue, value=0.0);
+        bc = Parameter(cellDim, init=fixedValue, value=0.0);
+        bi = Parameter(cellDim, init=fixedValue, value=0.0);
+        bf = Parameter(cellDim, init=fixedValue, value=1.0);
+
+        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        Wci = Parameter(cellDim, init=uniform, initValueScale=1);
+
+
+        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=1);
+        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=1);
+        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+
+        dh = Delay(outputDim, output, delayTime=1);
+        dc = Delay(cellDim, ct, delayTime=1);
+
+
+        Wxix = Times(Wxi, inputx);
+        Whidh = Times(Whi, dh);
+        Wcidc = DiagTimes(Wci, dc);
+
+        it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+
+        Wxcx = Times(Wxc, inputx);
+        Whcdh = Times(Whc, dh);
+        bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+
+        Wxfx = Times(Wxf, inputx);
+        Whfdh = Times(Whf, dh);
+        Wcfdc = DiagTimes(Wcf, dc);
+
+        ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+
+        bft = ElementTimes(ft, dc);
+
+        ct = Plus(bft, bit);
+
+        Wxox  = Times(Wxo, inputx);
+        Whodh = Times(Who, dh);
+        Wcoct = DiagTimes(Wco, ct);
+
+        ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+
+        mt = ElementTimes(ot, Tanh(ct));
+
+        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1);
+        output = Times(Wmr, mt);
+
+    }
+
+    #Sigmoid Base Feed Forward with multi input
+    BFF_multi6(in1, in2, in3, in4, in5, in6, inDim, outDim)
+     {
+        BFF1 = BFF(in1, outDim, inDim);
+        BFF2 = BFF(in2, outDim, inDim);
+        BFF3 = BFF(in3, outDim, inDim);
+        BFF4 = BFF(in4, outDim, inDim);
+        BFF5 = BFF(in5, outDim, inDim);
+        BFF6 = BFF(in6, outDim, inDim);
+
+        BFF_final = Plus(Plus(Plus(Plus(Plus(BFF1, BFF2), BFF3), BFF4), BFF5), BFF6)
+    }
+
+]
+
+ndlCreateNetwork_LSTMP_c1024_p256_x3=[
+
+    #define basic i/o
+    baseFeatDim=$baseFeatDim$
+    RowSliceStart=$RowSliceStart$
+    FeatDim=$featDim$
+    labelDim=$labelDim$
+    cellDim=1024
+    hiddenDim=512
+
+    features=Input(FeatDim, tag=feature)
+    labels=Input(labelDim, tag=label)
+    feashift=RowSlice(RowSliceStart, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} )
+
+
+    featNorm = MeanVarNorm(feashift)
+
+
+    # layer 1
+    LSTMoutput1 = LSTMPComponent(baseFeatDim, hiddenDim, cellDim, featNorm);
+    # layer 2
+    LSTMoutput2 = LSTMPComponent(hiddenDim, hiddenDim, cellDim, LSTMoutput1);
+    # layer 3
+    LSTMoutput3 = LSTMPComponent(hiddenDim, hiddenDim, cellDim, LSTMoutput2);
+
+    Delay1 = Delay(hiddenDim, LSTMoutput3, delayTime=1)
+    Delay2 = Delay(hiddenDim, LSTMoutput3, delayTime=2)
+    Delay3 = Delay(hiddenDim, LSTMoutput3, delayTime=3)
+    Delay4 = Delay(hiddenDim, LSTMoutput3, delayTime=4)
+    Delay5 = Delay(hiddenDim, LSTMoutput3, delayTime=5)
+
+    LSTMoutputW = BFF_multi6(Delay1, Delay2, Delay3, Delay4, Delay5, LSTMoutput3, hiddenDim, labelDim)
+    #W = Parameter(labelDim, hiddenDim, init=uniform, initValueScale=1);
+    #b = Parameter(labelDim, init=fixedvalue, value=0);
+    #LSTMoutputW = Plus(Times(W, LSTMoutput3), b);
+
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag=Criteria);
+    Err = ErrorPrediction(labels,LSTMoutputW,tag=Eval);
+
+    logPrior = LogPrior(labels)
+    ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag=Output)
+
+]
+

@@ -1,38 +1,39 @@
-load=ndlMacroDefine
-run=DNN
+load = ndlMacroDefine
+run = DNN
 
-ndlMacroDefine=[
+ndlMacroDefine = [
     # Macro definitions
-    MeanVarNorm(x)=[
+    MeanVarNorm(x) = [
         xMean = Mean(x);
         xStdDev = InvStdDev(x)
-        xNorm=PerDimMeanVarNormalization(x, xMean, xStdDev)
+        xNorm = PerDimMeanVarNormalization(x, xMean, xStdDev)
     ]
 ]
 
-DNN=[
+DNN = [
     #define basic i/o
-    featDim=363
-    LabelDim=132
-    hiddenDim=512
+    featDim = 363
+    LabelDim = 132
+    hiddenDim = 512
 
-    features=Input(featDim, tag=feature)
-    labels=Input(LabelDim, tag=label)
+    features = Input(featDim, tag="feature")
+    labels = Input(LabelDim, tag="label")
 
-    GlobalMean=Parameter(featDim,   init=fromFile, initFromFilePath=$GlobalMean$,   computeGradient=false) 
-    GlobalInvStd=Parameter(featDim, init=fromFile, initFromFilePath=$GlobalInvStd$, computeGradient=false)
-    GlobalPrior=Parameter(LabelDim, init=fromFile, initFromFilePath=$GlobalPrior$,  computeGradient=false)
-    logPrior=Log(GlobalPrior)
+    # TODO: not a good idea to use the same variable name for the pathname and the node
+    globalMean   = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalMeanPath$",   computeGradient=false) 
+    globalInvStd = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalInvStdPath$", computeGradient=false)
+    globalPrior  = Parameter(LabelDim, 1, init="fromFile", initFromFilePath="$globalPriorPath$",  computeGradient=false)
+    logPrior = Log(globalPrior)
 
     # define network
-    featNorm=PerDimMeanVarNormalization(features, GlobalMean, GlobalInvStd)
+    featNorm = PerDimMeanVarNormalization(features, globalMean, globalInvStd)
 
     # layer 1   363 X 512
-    HL1=DNNLayer(featDim, hiddenDim, featNorm); 
+    HL1 = DNNLayer(featDim, hiddenDim, featNorm); 
     # last layer 512 X 132 
-    OL=DNNLastLayer(hiddenDim, LabelDim, HL1);
+    OL = DNNLastLayer(hiddenDim, LabelDim, HL1);
 
-    cr = CrossEntropyWithSoftmax(labels, OL, tag=Criteria);
-    Err = ErrorPrediction(labels, OL, tag=Eval);
-    ScaledLogLikelihood=Minus(OL, logPrior, tag=Output)
+    cr = CrossEntropyWithSoftmax(labels, OL, tag="criterion");
+    err = ErrorPrediction(labels, OL, tag="eval");
+    scaledLogLikelihood = Minus(OL, logPrior, tag="output")
 ]
