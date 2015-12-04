@@ -88,9 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return needToPrint;
         }
 
-        // emit a trace message for the error objective
+        // emit a trace message for the train loss value
         // The value is printed in percent.
-        static void TraceObjectivePercentage(double err)
+        static void TraceTrainLoss(double err)
         {
             auto & us = GetStaticInstance();
 
@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            printf("EVALERR: %.2f%%\n", 100.0 * err);
+            printf("EVALERR: %.2f%%\n", err);
         }
     };
 
