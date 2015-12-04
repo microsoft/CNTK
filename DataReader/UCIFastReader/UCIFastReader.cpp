@@ -747,11 +747,12 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 template<class ElemType>
 bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    if (m_prefetchEnabled && m_pendingAsyncGetMinibatch.valid())
+    bool minibatchesRemaining = true;
+    if (m_pendingAsyncGetMinibatch.valid())
     {
         // An async GetMinibatch is in flight. Wait for it to finish and swap
         // the contents of the m_prefetchedMatrices and parameter matrices
-        bool minibatchesRemaining = m_pendingAsyncGetMinibatch.get();
+        minibatchesRemaining = m_pendingAsyncGetMinibatch.get();
 
         // Now swap the m_prefetchedMatrices and parameter matrices
         for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
@@ -764,63 +765,45 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
             Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
             std::swap(*(iter->second), *prefetchMatrix);
         }
-
-        // Fire a new prefetch if there are any minibatches remaining
-        if (minibatchesRemaining)
-        {
-            Matrix<ElemType>& features = *matrices[m_featuresName];
-            int deviceId = features.GetDeviceId();
-            m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
-            {
-                // Set the device since this will execute on a new thread
-                Matrix<ElemType>::SetDevice(deviceId);
-
-                std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
-                for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
-                {
-                    prefetchMatrices[iter->first] = iter->second.get();
-                }
-
-                return GetMinibatchImpl(prefetchMatrices);
-            });
-        }
-
-        return minibatchesRemaining;
     }
     else
     {
-        bool minibatchesRemaining = GetMinibatchImpl(matrices);
+        minibatchesRemaining = GetMinibatchImpl(matrices);
 
-        // Fire a new prefetch if configured and there are any minibatches remaining
+        // Allocate prefetch matrices if we would be firing an async minibatch prefetch
         if (minibatchesRemaining && m_prefetchEnabled)
         {
-            // Freshly allocate the m_prefetchMatrices
+            // DeAllocate the existing m_prefetchMatrices
             m_prefetchMatrices.clear();
 
             for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
             {
                 m_prefetchMatrices[iter->first].reset(new Matrix<ElemType>(iter->second->GetDeviceId()));
             }
-
-            Matrix<ElemType>& features = *matrices[m_featuresName];
-            int deviceId = features.GetDeviceId();
-            m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
-            {
-                // Set the device since this will execute on a new thread
-                Matrix<ElemType>::SetDevice(deviceId);
-
-                std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
-                for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
-                {
-                    prefetchMatrices[iter->first] = iter->second.get();
-                }
-
-                return GetMinibatchImpl(prefetchMatrices);
-            });
         }
-
-        return minibatchesRemaining;
     }
+
+    // Fire a new prefetch if there are any minibatches remaining
+    if (minibatchesRemaining && m_prefetchEnabled)
+    {
+        Matrix<ElemType>& features = *matrices[m_featuresName];
+        int deviceId = features.GetDeviceId();
+        m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
+        {
+            // Set the device since this will execute on a new thread
+            Matrix<ElemType>::SetDevice(deviceId);
+
+            std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
+            for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
+            {
+                prefetchMatrices[iter->first] = iter->second.get();
+            }
+
+            return GetMinibatchImpl(prefetchMatrices);
+        });
+    }
+
+    return minibatchesRemaining;
 }
 
 // GetMinibatchImpl - The actual implementation of getting the next minibatch (features and labels)
