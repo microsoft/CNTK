@@ -322,6 +322,8 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     m_traceLevel = readerConfig(L"traceLevel", 0);
     m_parser.SetTraceLevel(m_traceLevel);
 
+    m_prefetchEnabled = readerConfig(L"prefetch", false);
+
     // set the feature count to at least one (we better have one feature...)
     assert (m_featureCount != 0);
 
@@ -537,14 +539,8 @@ UCIFastReader<ElemType>::~UCIFastReader()
 template<class ElemType>
 void UCIFastReader<ElemType>::ReleaseMemory()
 {
-    if (m_featuresBuffer!=NULL)
-        delete[] m_featuresBuffer;
     m_featuresBuffer=NULL;
-    if (m_labelsBuffer!=NULL)
-        delete[] m_labelsBuffer;
     m_labelsBuffer=NULL;
-    if (m_labelsIdBuffer!=NULL)
-        delete[] m_labelsIdBuffer;
     m_labelsIdBuffer=NULL;
     m_featureData.clear();
     m_labelIdData.clear();
@@ -679,33 +675,12 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         return;
     } 
 
-    if (m_featuresBuffer==NULL || mbSize > m_mbSize)
+    // if we are reallocating bigger, release the original
+    if (mbSize > m_mbSize)
     {
-        // if we are reallocating bigger, release the original
-        if (m_featuresBuffer != NULL)
-            delete[] m_featuresBuffer;
-        m_featuresBuffer = new ElemType[mbSize*m_featureCount];
-        memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*m_featureCount);
-    }
-
-    if (m_labelsBuffer == NULL || mbSize > m_mbSize)
-    {
-        // if we are reallocating bigger, release the original
-        if (m_labelsBuffer != NULL)
-            delete[] m_labelsBuffer;
-        if (m_labelType == labelCategory)
-        {
-            m_labelsBuffer = new ElemType[m_labelDim*mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*m_labelDim*mbSize);
-            m_labelsIdBuffer = new LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
-        }
-        else if (m_labelType != labelNone)
-        {
-            m_labelsBuffer = new ElemType[mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
-            m_labelsIdBuffer = NULL;
-        }
+        m_featuresBuffer = NULL;
+        m_labelsBuffer = NULL;
+        m_labelsIdBuffer = NULL;
     }
 
     m_mbSize = mbSize;
@@ -772,6 +747,89 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 template<class ElemType>
 bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    if (m_prefetchEnabled && m_pendingAsyncGetMinibatch.valid())
+    {
+        // An async GetMinibatch is in flight. Wait for it to finish and swap
+        // the contents of the m_prefetchedMatrices and parameter matrices
+        bool minibatchesRemaining = m_pendingAsyncGetMinibatch.get();
+
+        // Now swap the m_prefetchedMatrices and parameter matrices
+        for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
+        {
+            if (m_prefetchMatrices.find(iter->first) == m_prefetchMatrices.end())
+            {
+                LogicError("No mathing prefetch matrix found for matrix named %S!", iter->first.c_str());
+            }
+
+            Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
+            std::swap(*(iter->second), *prefetchMatrix);
+        }
+
+        // Fire a new prefetch if there are any minibatches remaining
+        if (minibatchesRemaining)
+        {
+            Matrix<ElemType>& features = *matrices[m_featuresName];
+            int deviceId = features.GetDeviceId();
+            m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
+            {
+                // Set the device since this will execute on a new thread
+                Matrix<ElemType>::SetDevice(deviceId);
+
+                std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
+                for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
+                {
+                    prefetchMatrices[iter->first] = iter->second.get();
+                }
+
+                return GetMinibatchImpl(prefetchMatrices);
+            });
+        }
+
+        return minibatchesRemaining;
+    }
+    else
+    {
+        bool minibatchesRemaining = GetMinibatchImpl(matrices);
+
+        // Fire a new prefetch if configured and there are any minibatches remaining
+        if (minibatchesRemaining && m_prefetchEnabled)
+        {
+            // Freshly allocate the m_prefetchMatrices
+            m_prefetchMatrices.clear();
+
+            for (auto iter = matrices.begin(); iter != matrices.end(); ++iter)
+            {
+                m_prefetchMatrices[iter->first].reset(new Matrix<ElemType>(iter->second->GetDeviceId()));
+            }
+
+            Matrix<ElemType>& features = *matrices[m_featuresName];
+            int deviceId = features.GetDeviceId();
+            m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
+            {
+                // Set the device since this will execute on a new thread
+                Matrix<ElemType>::SetDevice(deviceId);
+
+                std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
+                for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
+                {
+                    prefetchMatrices[iter->first] = iter->second.get();
+                }
+
+                return GetMinibatchImpl(prefetchMatrices);
+            });
+        }
+
+        return minibatchesRemaining;
+    }
+}
+
+// GetMinibatchImpl - The actual implementation of getting the next minibatch (features and labels)
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
+//             [out] each matrix resized if necessary containing data. 
+// returns - true if there are more minibatches, false if no more minibatchs remain
+template<class ElemType>
+bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
     if (m_cachingReader)
     {
         return m_cachingReader->GetMinibatch(matrices);
@@ -818,14 +876,36 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         actualmbsize = min(m_totalSamples-recordStart,actualmbsize);
     }
 
+    if (m_featuresBuffer == NULL)
+    {
+        m_featuresBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_mbSize * m_featureCount);
+        memset(m_featuresBuffer.get(), 0, sizeof(ElemType) * m_mbSize * m_featureCount);
+    }
+
+    if (m_labelsBuffer == NULL)
+    {
+        if (m_labelType == labelCategory)
+        {
+            m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_labelDim * m_mbSize);
+            m_labelsIdBuffer = std::shared_ptr<LabelIdType>(new LabelIdType[m_mbSize], [](LabelIdType* p) {
+                delete[] p;
+            });
+        }
+        else if (m_labelType != labelNone)
+        {
+            m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_mbSize);
+            m_labelsIdBuffer = NULL;
+        }
+    }
+
     if (m_labelType == labelCategory)
     {
-        memset(m_labelsBuffer,0,sizeof(ElemType)*m_labelDim*actualmbsize);
-        memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*actualmbsize);
+        memset(m_labelsBuffer.get(), 0, sizeof(ElemType)*m_labelDim*actualmbsize);
+        memset(m_labelsIdBuffer.get(), 0, sizeof(LabelIdType)*actualmbsize);
     }
     else if (m_labelType != labelNone)
     {
-        memset(m_labelsBuffer,0,sizeof(ElemType)*1*actualmbsize);        
+        memset(m_labelsBuffer.get(), 0, sizeof(ElemType) * 1 * actualmbsize);
     }
 
     if (actualmbsize > 0)
@@ -845,22 +925,22 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
             jRand %= m_epochSize;
          
             // vector of feature data goes into matrix column
-            memcpy(&m_featuresBuffer[j*m_featureCount],&m_featureData[jRand*m_featureCount],sizeof(ElemType)*m_featureCount);
+            memcpy(&m_featuresBuffer.get()[j*m_featureCount], &m_featureData[jRand*m_featureCount], sizeof(ElemType)*m_featureCount);
 
             if (m_labelType == labelCategory)
             {            
-                m_labelsBuffer[j*m_labelDim + m_labelIdData[jRand]] = (ElemType)1;    
-                m_labelsIdBuffer[j] = m_labelIdData[jRand];
+                m_labelsBuffer.get()[j*m_labelDim + m_labelIdData[jRand]] = (ElemType)1;
+                m_labelsIdBuffer.get()[j] = m_labelIdData[jRand];
             }
             else if (m_labelType != labelNone)
             {
                 if (m_labelType == labelRegression)
                 {
-                    m_labelsBuffer[j] = (ElemType)atof(m_labelData[jRand].c_str());
+                    m_labelsBuffer.get()[j] = (ElemType)atof(m_labelData[jRand].c_str());
                 }
                 else
                 {
-                    StoreLabel(m_labelsBuffer[j],m_labelData[jRand]);            
+                    StoreLabel(m_labelsBuffer.get()[j], m_labelData[jRand]);
                 }
             }
         }
@@ -874,16 +954,16 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
     if (m_cachingWriter)
     {
         map<std::wstring, void*, nocase_compare> writeBuffer;
-        writeBuffer[m_featuresName] = m_featuresBuffer;
+        writeBuffer[m_featuresName] = m_featuresBuffer.get();
         if (m_labelType == labelCategory)
         {
-            writeBuffer[m_labelsName] = m_labelsIdBuffer;
+            writeBuffer[m_labelsName] = m_labelsIdBuffer.get();
             if (!m_labelsCategoryName.empty())
-                writeBuffer[m_labelsCategoryName] = m_labelsBuffer;
+                writeBuffer[m_labelsCategoryName] = m_labelsBuffer.get();
         }
         else if (m_labelType != labelNone)
         {
-            writeBuffer[m_labelsName] = m_labelsBuffer;
+            writeBuffer[m_labelsName] = m_labelsBuffer.get();
         }
 
         // write out the data, on a second pass compute statistics as needed
@@ -917,7 +997,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
     }
 
     // now transfer to the GPU as needed
-    features.SetValue(m_featureCount, actualmbsize, features.GetDeviceId(), m_featuresBuffer, matrixFlagNormal);
+    features.SetValue(m_featureCount, actualmbsize, features.GetDeviceId(), m_featuresBuffer.get(), matrixFlagNormal);
     if (m_labelType == labelCategory)
     {
         auto labelEntry = matrices.find(m_labelsName);
@@ -925,7 +1005,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(m_labelDim, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
+                labels->SetValue(m_labelDim, actualmbsize, labels->GetDeviceId(), m_labelsBuffer.get(), matrixFlagNormal);
         }
     }
     else if (m_labelType != labelNone)
@@ -935,7 +1015,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
+                labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer.get(), matrixFlagNormal);
         }
     }
     // we read some records, so process them
@@ -1015,6 +1095,44 @@ bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     }
     return ret;
+}
+
+template<class ElemType>
+unique_ptr<CUDAPageLockedMemAllocator>& UCIFastReader<ElemType>::GetCUDAAllocator(int deviceID)
+{
+    if (m_cudaAllocator != nullptr)
+    {
+        if (m_cudaAllocator->GetDeviceId() != deviceID)
+        {
+            m_cudaAllocator.reset(nullptr);
+        }
+    }
+
+    if (m_cudaAllocator == nullptr)
+    {
+        m_cudaAllocator.reset(new CUDAPageLockedMemAllocator(deviceID));
+    }
+
+    return m_cudaAllocator;
+}
+
+template<class ElemType>
+std::shared_ptr<ElemType> UCIFastReader<ElemType>::AllocateIntermediateBuffer(int deviceID, size_t numElements)
+{
+    if (deviceID >= 0)
+    {
+        // Use pinned memory for GPU devices for better copy performance
+        size_t totalSize = sizeof(ElemType) * numElements;
+        return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+            this->GetCUDAAllocator(deviceID)->Free((char*)p);
+        });
+    }
+    else
+    {
+        return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+            delete[] p;
+        });
+    }
 }
 
 // instantiate all the combinations we expect to be used

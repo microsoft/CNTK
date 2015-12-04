@@ -110,6 +110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
 
+        static void SetDevice(DEVICEID_TYPE deviceId);
+
         void Clear();
         ~Matrix();
 

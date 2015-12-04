@@ -548,6 +548,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void Matrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
+    {
+        if (deviceId >= 0)
+            GPUMatrix<ElemType>::SetDevice(deviceId);
+    }
+
+    template<class ElemType>
     void Matrix<ElemType>::Read(File& stream)
     {
         Matrix<ElemType>& M = *this;
