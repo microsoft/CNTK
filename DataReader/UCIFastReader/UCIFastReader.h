@@ -74,6 +74,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::future<bool> m_pendingAsyncGetMinibatch;
         std::map<std::wstring, std::unique_ptr<Matrix<ElemType>>> m_prefetchMatrices;
 
+        // Distributed reading related fields
+        size_t m_subsetNum;
+        size_t m_numSubsets;
+
         bool m_endReached;
         int m_traceLevel;
 
@@ -125,7 +129,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Destroy();
         UCIFastReader() { m_pMBLayout=make_shared<MBLayout>(); }
         virtual ~UCIFastReader();
-        virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+
+        virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+        {
+            return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+        }
+
+        virtual bool SupportsDistributedMBRead() const override
+        {
+            return ((m_cachingReader == nullptr) || m_cachingReader->SupportsDistributedMBRead());
+        }
+
+        virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
+
         virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
         bool GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices);

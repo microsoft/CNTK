@@ -655,8 +655,11 @@ void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz)
 // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 //   this value must be a multiple of mbSize, if it is not, it will be rounded up to one.
 template<class ElemType>
-void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize */)
 {
+    m_subsetNum = subsetNum;
+    m_numSubsets = numSubsets;
+
     if (mOneLinePerFile)
         mbSize = mRequestedNumParallelSequences; /// each file has only one observation, therefore the number of data to read is the number of files
 
@@ -929,12 +932,18 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         }
     }
 
+    // There may be multiple parallel trainers reading at the same time in which case
+    // we will slice the data to only return the share of the current trainer's subset
+    size_t currSubsetStartCol = (actualmbsize * m_subsetNum) / m_numSubsets;
+    size_t currSubsetEndCol = (actualmbsize * (m_subsetNum + 1)) / m_numSubsets;
+    size_t currSubsetSize = currSubsetEndCol - currSubsetStartCol;
+
     // create the respective MBLayout
     // Every sample is returned as a sequence of 1 frame.
-    m_pMBLayout->Init(actualmbsize, 1, false/*means it is not sequential*/);
+    m_pMBLayout->Init(currSubsetSize, 1, false/*means it is not sequential*/);
 
     // if we are writing out to the caching writer, do it now
-    if (m_cachingWriter)
+    if (m_cachingWriter && (m_subsetNum == 0))
     {
         map<std::wstring, void*, nocase_compare> writeBuffer;
         writeBuffer[m_featuresName] = m_featuresBuffer.get();
@@ -974,13 +983,13 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     // if they don't want partial minibatches, skip data transfer and return
     if (actualmbsize < m_mbSize && !m_partialMinibatch
-        || actualmbsize == 0) // no records found (end of minibatch)
+        || actualmbsize == 0 || currSubsetSize == 0) // no records found (end of minibatch)
     {
         return false;
     }
 
     // now transfer to the GPU as needed
-    features.SetValue(m_featureCount, actualmbsize, features.GetDeviceId(), m_featuresBuffer.get(), matrixFlagNormal);
+    features.SetValue(m_featureCount, currSubsetSize, features.GetDeviceId(), m_featuresBuffer.get() + (m_featureCount * currSubsetStartCol), matrixFlagNormal);
     if (m_labelType == labelCategory)
     {
         auto labelEntry = matrices.find(m_labelsName);
@@ -988,7 +997,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(m_labelDim, actualmbsize, labels->GetDeviceId(), m_labelsBuffer.get(), matrixFlagNormal);
+                labels->SetValue(m_labelDim, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (m_labelDim * currSubsetStartCol), matrixFlagNormal);
         }
     }
     else if (m_labelType != labelNone)
@@ -998,7 +1007,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer.get(), matrixFlagNormal);
+                labels->SetValue(1, currSubsetSize, labels->GetDeviceId(), m_labelsBuffer.get() + (1 * currSubsetStartCol), matrixFlagNormal);
         }
     }
     // we read some records, so process them
