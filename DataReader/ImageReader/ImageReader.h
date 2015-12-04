@@ -73,11 +73,8 @@ private:
     size_t m_epochStart;
     size_t m_mbStart;
 
-    //std::vector<ElemType> m_featBuf;
-    //std::vector<ElemType> m_labBuf;
-
-    std::vector<std::future<void>> m_mbFut;
-    int m_mbIdx;
+    std::future<size_t> m_mbFut;
+    int m_idxBuf;
     std::array<std::vector<ElemType>, 2> m_featBuf;
     std::array<std::vector<ElemType>, 2> m_labBuf;
 
@@ -87,7 +84,6 @@ private:
     DataFormat m_mbFmt;
 
 private:
-    void Prefetch();
-    void ReadImage(size_t idxFile, size_t idxInMB);
+    size_t ReadImages();
 };
 }}}
