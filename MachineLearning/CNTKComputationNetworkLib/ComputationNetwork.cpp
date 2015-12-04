@@ -141,11 +141,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_labels[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
+        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes");
         fstream << m_finalCriteria.size();
         for (size_t i = 0; i < m_finalCriteria.size(); i++)
             fstream << m_finalCriteria[i]->NodeName();
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
+        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
         fstream << m_evalNodes.size();
@@ -323,64 +323,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             wstring nodeName;
             size_t num;
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
-            fstream >> num;
-
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes"))
             {
-                fstream >> nodeName;
-                m_features.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_features.push_back(GetNodeFromName(nodeName));
+                }
+
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
             }
 
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes"))
             {
-                fstream >> nodeName;
-                m_labels.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_labels.push_back(GetNodeFromName(nodeName));
+                }
             }
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes") ||
+                fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes" /*legacy*/))
             {
-                fstream >> nodeName;
-                m_finalCriteria.push_back(GetNodeFromName(nodeName));
-            }
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_finalCriteria.push_back(GetNodeFromName(nodeName));
+                }
 
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
+                if (!fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes"  /*legacy*/))
+                {
+                    fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");  //check legacy first so err msg will use new name
+                }
+            }
 
             // TODO: this section is defunct
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
             {
                 fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
                 fstream >> num;
-                for (size_t i = 0; i<num; i++)
+                for (size_t i = 0; i < num; i++)
                     fstream >> nodeName;
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes"))
             {
-                fstream >> nodeName;
-                m_evalNodes.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_evalNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
             }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
 
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes"))
             {
-                fstream >> nodeName;
-                m_outputNodes.push_back(GetNodeFromName(nodeName));
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_outputNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
             }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
             {

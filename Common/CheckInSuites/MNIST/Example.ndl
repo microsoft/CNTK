@@ -22,7 +22,7 @@ ndlFull=[
     ErrPredict=ErrorPrediction(labels, Plus2)
     FeatureNodes=(features)
     LabelNodes=(labels)
-    CriteriaNodes=(CE)
+    CriterionNodes=(CE)
     EvalNodes=(ErrPredict)
     OutputNodes=(Plus2)
 ]
@@ -359,6 +359,6 @@ ndlMacroUseMask=[
 
     # rootNodes defined here
     OutputNodes=(O)
-    CriteriaNodes=(CE)
+    CriterionNodes=(CE)
     EvaluationNodes(Err)
 ]
