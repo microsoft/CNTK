@@ -425,16 +425,12 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
         m_mbStart = 0;
     }
 
-    //m_featBuf.resize(m_mbSize * m_featDim);
-    //m_labBuf.resize(m_mbSize * m_labDim);
-
     for (auto& b : m_featBuf)
         b.resize(m_mbSize * m_featDim);
     for (auto& b : m_labBuf)
         b.resize(m_mbSize * m_labDim);
-    m_mbFut.resize(m_mbSize);
-    m_mbIdx = 0;
-    Prefetch();
+    m_idxBuf = 0;
+    m_mbFut = std::async(std::launch::async, [this]() { return ReadImages(); });
 }
 
 template<class ElemType>
@@ -444,66 +440,23 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     assert(matrices.find(m_featName) != matrices.end());
     assert(m_mbSize > 0);
 
-    size_t mbSize = 0;
-    for (auto& fut: m_mbFut)
-    {
-        if (fut.valid())
-        {
-            fut.get();
-            mbSize++;
-        }
-    }
+    size_t mbSize = m_mbFut.valid() ? m_mbFut.get() : 0;
 
     if (mbSize == 0)
         return false;
 
     Matrix<ElemType>& features = *matrices[m_featName];
-    features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf[m_mbIdx].data(), matrixFlagNormal);
+    features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf[m_idxBuf].data(), matrixFlagNormal);
 
     Matrix<ElemType>& labels = *matrices[m_labName];
-    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf[m_mbIdx].data(), matrixFlagNormal);
+    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf[m_idxBuf].data(), matrixFlagNormal);
 
     m_pMBLayout->Init(mbSize, 1, false);
 
     m_mbStart += mbSize;
-    m_mbIdx ^= 1;
-    Prefetch();
+    m_idxBuf ^= 1;
+    m_mbFut = std::async(std::launch::async, [this]() { return ReadImages(); });
 
-//    Matrix<ElemType>& features = *matrices[m_featName];
-//    Matrix<ElemType>& labels = *matrices[m_labName];
-//
-//    if (m_mbStart >= m_files.size() || m_mbStart >= m_epochStart + m_epochSize)
-//        return false;
-//
-//    size_t mbLim = m_mbStart + m_mbSize;
-//    if (mbLim > m_files.size())
-//        mbLim = m_files.size();
-//
-//    std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
-//    
-//#pragma omp parallel for ordered schedule(dynamic)
-//    for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
-//    {
-//        const auto& p = m_files[i + m_mbStart];
-//        cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
-//        if (!img.data)
-//            RuntimeError("Cannot read image file " + p.first);
-//        for (auto& t: m_transforms)
-//            t->Apply(img);
-//       
-//        assert(img.rows * img.cols * img.channels() == m_featDim);
-//        // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
-//        // Transpose is required if requested mini-batch format is NCHW.
-//        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::NCHW);
-//        m_labBuf[m_labDim * i + p.second] = 1;
-//    }
-//
-//    size_t mbSize = mbLim - m_mbStart;
-//    features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf.data(), matrixFlagNormal);
-//    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf.data(), matrixFlagNormal);
-//    m_pMBLayout->Init(mbSize, 1, false);
-//
-//    m_mbStart = mbLim;
     return true;
 }
 
@@ -537,46 +490,35 @@ void ImageReader<ElemType>::SetRandomSeed(unsigned int seed)
 }
 
 template<class ElemType>
-void ImageReader<ElemType>::Prefetch()
+size_t ImageReader<ElemType>::ReadImages()
 {
     if (m_mbStart >= m_files.size() || m_mbStart >= m_epochStart + m_epochSize)
-    {
-        for (size_t i = 0; i < m_mbFut.size(); i++)
-            m_mbFut[i] = std::future<void>();
-        return;
-    }
-
-    std::fill(m_labBuf[m_mbIdx].begin(), m_labBuf[m_mbIdx].end(), static_cast<ElemType>(0));
+        return 0;
 
     size_t mbLim = m_mbStart + m_mbSize;
     if (mbLim > m_files.size())
         mbLim = m_files.size();
     
-    auto launchPolicy = std::launch::async | std::launch::deferred;
-    size_t i = 0;
-    for (; i < mbLim - m_mbStart; i++)
-        m_mbFut[i] = std::async(launchPolicy, [i, this]() { ReadImage(m_mbStart + i, i); });
-    for (; i < m_mbFut.size(); i++)
-        m_mbFut[i] = std::future<void>();
-}
+    std::fill(m_labBuf[m_idxBuf].begin(), m_labBuf[m_idxBuf].end(), static_cast<ElemType>(0));
 
-template<class ElemType>
-void ImageReader<ElemType>::ReadImage(size_t idxFile, size_t idxInMB)
-{
-    //UNUSED(idxFile); UNUSED(idxInMB); 
-    const auto& p = m_files[idxFile];
-    cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
-    if (!img.data)
-        RuntimeError("Cannot read image file " + p.first);
+#pragma omp parallel for ordered schedule(dynamic)
+    for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
+    {
+        const auto& p = m_files[i + m_mbStart];
+        cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
+        if (!img.data)
+            RuntimeError("Cannot read image file " + p.first);
+        for (auto& t: m_transforms)
+            t->Apply(img);
+       
+        assert(img.rows * img.cols * img.channels() == m_featDim);
+        // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
+        // Transpose is required if requested mini-batch format is NCHW.
+        CopyFromImage(img, m_featBuf[m_idxBuf], m_featDim * i, m_mbFmt == DataFormat::NCHW);
+        m_labBuf[m_idxBuf][m_labDim * i + p.second] = 1;
+    }
 
-    for (auto& t : m_transforms)
-        t->Apply(img);
-
-    assert(img.rows * img.cols * img.channels() == m_featDim);
-    // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
-    // Transpose is required if requested mini-batch format is NCHW.
-    CopyFromImage(img, m_featBuf[m_mbIdx], m_featDim * idxInMB, m_mbFmt == DataFormat::NCHW);
-    m_labBuf[m_mbIdx][m_labDim * idxInMB + p.second] = 1;
+    return mbLim - m_mbStart;
 }
 
 template class ImageReader<double>;
