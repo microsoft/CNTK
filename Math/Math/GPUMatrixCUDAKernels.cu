@@ -3455,9 +3455,9 @@ static __inline__ __device__ ElemType logadd(ElemType x, ElemType y)
         temp = x; x = y; y = temp;
     }
     diff = y - x; 
-    if (diff < MINLOGEXP)
+	if (diff < cnminLogExp)
     {
-        return (x < LSMALL)?LZERO:x;
+		return (x < LSMALL) ? CNLOGZERO : x;
     }
     else
     {
@@ -4784,6 +4784,8 @@ __global__ void _assignBetaScore(
 							y = Betascore[(t + 1)*M + id + i];
 							x = logadd(x, y);
 						}
+						else
+							printf("not in this\n");
 					}
 				}
 			}

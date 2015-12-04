@@ -308,7 +308,7 @@ namespace msra { namespace lattices {
 
 				finalscore += -1 * beta.Get00Element();
 				ElemType ftemp = -1 * beta.Get00Element() / numframes;
-				if (ftemp > 100)
+				//if (ftemp > 100)
 				{
 					tempmatrix.Print("prob");
 					alpha.Print("alpha");
