@@ -2531,25 +2531,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         switch (kind)
         {
         case 0:
-            _inplaceSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 1:
-            _inplaceTanhOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 2:
-            _inplaceSqrtOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 3:
-            _inplaceExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 4:
-            _inplaceLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 5:
-            _inplaceAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
             break;
         case 6:
-            _inplaceLinRectDerivative<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);
+            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray, m_pArray, N);
         } 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
