@@ -480,7 +480,7 @@ public:
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    bool m_validateAfterModelReloading;
+    bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
