@@ -901,20 +901,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr,
                     "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, (int) m_maxEpochs, epochCriterion);
-
+            m_lastFinishedEpochTrainLoss = epochCriterion;
             if (epochEvalErrors.size() == 0)    // no eval criterion, only train criterion itself
             {
                 fprintf(stderr,
                         "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
-                m_lastFinishedEpochEvalErr = epochCriterion;
+
             }
             else if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
                         "EvalErrPerSample = %.8g; AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         epochEvalErrors[0], learnRatePerSample, epochTime);
-                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
             }
             else
             {
@@ -923,7 +922,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j]);
                 }
-                m_lastFinishedEpochEvalErr = epochEvalErrors.back();
 
                 fprintf(stderr, "AvgLearningRatePerSample = %.8g; EpochTime=%.6g\n",
                         learnRatePerSample, epochTime);
@@ -1123,7 +1121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // progress tracing for compute cluster management
         ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
-        ProgressTracing::TraceObjectivePercentage(m_lastFinishedEpochEvalErr);
+        ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);
 
         // since we linked feature nodes. we need to remove it from the deletion
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -2108,7 +2106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
                 {
-                    ProgressTracing::TraceObjectivePercentage(evalError);
+                    ProgressTracing::TraceTrainLoss(trainLossPerSample);
                 }
 
                 if (m_traceLevel > 0)
