@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
+    // TODO: Can this be moved to a separate class?
 
     // MAIN ENTRY POINT for network recurrent-loop analysis. All other functions below are called from this one.
 
@@ -41,18 +41,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // determine the strongly connected cliques -> m_recurrentInfo[]
         DetermineSCCs(rootNode);
+        // now we have formed all loops, with all nodes assigned to a loop or none
 
         list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
         // recover m_visitedOrder
         size_t i = 1;       // BUGBUG: why not 0? (left-over of refactoring)
         for (auto & node : nodes)
             node->m_visitedOrder = i++;
-
-        // purge identical loops (i.e. loops that have the same source node)
-        // TODO: Is this for the case that we call this function multiple times, or do the nodes of a loop generate multiple entries? Comment this.
-        UniqRecurrentLoops();
-
-        // now we have formed all loops, with all nodes assigned to a loop or none
 
         // update m_visitedOrder of all nodes
         // This was originally set by EnumerateNodes(), which gets called from GetEvalOrder().
@@ -71,19 +66,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // implant m_loopId in all nodes in all loops
         for (auto & iter : m_recurrentInfo)
         {
-#if 1       // instead of the redundant sort() below, we just verify
-            for (auto & node : iter->m_nestedNodes)
-                if (node->m_visitedOrder != iter->m_nestedNodes.front()->m_visitedOrder)
-                    LogicError("FormRecurrentLoops: m_visitedOrder was set to a constant, but actually... wasn't?");
-#else
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
-            // BUGBUG: This sort() seems to do nothing, since the above loop sets all m_visitedOrder to the same value??
-            sort(iter->m_nestedNodes.begin(),
-                 iter->m_nestedNodes.end(),
-                 iter->m_nestedNodes[0]->ByVisitedOrder);
-#endif
-
             for (auto & node : iter->m_nestedNodes)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
@@ -262,33 +244,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // purge identical loops (i.e. loops that have the same source node)
-    // TODO: Delete this function once we find it never triggers.
-    void ComputationNetwork::UniqRecurrentLoops()
-    {
-        if (m_recurrentInfo.size() <= 1)
-            return;
-
-        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        vector<shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfoTmp;
-        for (const auto & iter : m_recurrentInfo)    // enumerate all loops
-        {
-            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (const auto & iter2 : m_recurrentInfoTmp)
-            {
-                if ((*iter2).m_sourceNode == iter->m_sourceNode)
-                {
-                    bFound = true;
-                    LogicError("UniqRecurrentLoops: Duplicate loops should no longer occur.");  // ...since tested when creating in the first place.
-                    //break;
-                }
-            }
-            if (!bFound)
-                m_recurrentInfoTmp.push_back(iter);
-        }
-        m_recurrentInfo = move(m_recurrentInfoTmp);
-    }
-
     // recovers the processing order within a recurrent loop
     void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
                                                        unordered_set<ComputationNodeBasePtr>& recStack,
@@ -330,13 +285,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int i = 0; i < node->ChildrenSize(); i++)
             GatherLoopNodesR(node->Inputs(i), visited, recurrentResult, noRecurrentResult);
 
-#if 0
-        //children first for function evaluation
-        // TODO: This seems not necessary here. Why does this get set here?
-        if (!IsLeaf())
-            m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-#endif
-
         if (node->m_loopId >= 0)
             recurrentResult[node->m_loopId].push_back(node);
         else
@@ -348,7 +296,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - that order is preserved for all nodes outside loops
     //  - each node that belongs to a loop is replaced by all nodes of that loop in loop order
     // Called only from FormRecurrentLoops().
-    // TODO: This could be a good place to insert sentinel nodes for nesting?
     void ComputationNetwork::ReorderLoops(list<ComputationNodeBasePtr>& nodes,
                                           const map<int, list<ComputationNodeBasePtr>>& /*recurrentNodes*/,
                                           const list<ComputationNodeBasePtr> & /*noRecurrentNodes*/)
