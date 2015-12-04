@@ -952,7 +952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
+                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize);
 
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
@@ -1275,7 +1275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            m_pMBLayout->Init(1, feat.cols(), true/*sequential*/);
+                            m_pMBLayout->Init(1, feat.cols());
                             m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
                             m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
