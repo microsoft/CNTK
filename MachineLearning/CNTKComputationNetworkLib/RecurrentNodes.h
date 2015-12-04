@@ -383,7 +383,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // need a layout as well
             // EvaluateThisNode() expects it to have the same number of parallel sequences.
             if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
-            m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences(), true/*sequential*/);
+            m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences());
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1457,7 +1457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
                 ElemType initStateValue = m_DefaultState;
                 auto pMBLayout = make_shared<MBLayout>();
-                pMBLayout->Init(1, nT, true);
+                pMBLayout->Init(1, nT);
                 //Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
                 //vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
