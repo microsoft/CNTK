@@ -35,6 +35,8 @@
 #endif
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
+#define CALCULATE_ELEMENTWISE_INDEX CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; if (id>=N) return;
+
 #define threadsPerBlock 512
 
 #ifdef __GNUC__
@@ -50,73 +52,70 @@ template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
     ElemType alpha,     
     const ElemType *a, 
-    ElemType* c,    
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (alpha==0)
     {
-        c[id]=1;
+        res[id]=1;
     }
     else if (alpha==1)
     {
-        c[id]=a[id];
+        res[id]=a[id];
     }
     else if (alpha==2)
     {
-        c[id]=a[id]*a[id];
+        res[id]=a[id]*a[id];
     }
     else if (alpha==3)
     {
-        c[id]=a[id]*a[id]*a[id];
+        res[id]=a[id]*a[id]*a[id];
     }
     else
     {
         if (sizeof(ElemType)==sizeof(double))
         {
-            c[id]=pow(a[id],alpha);
+            res[id]=pow(a[id],alpha);
         }
         else
         {
-            c[id]=powf(a[id],alpha);
+            res[id]=powf(a[id],alpha);
         }
     }    
 };
 
 template<class ElemType>
-__global__ void _inplaceSigmoidOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseSigmoidOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        if (c[id]>=0)
+        if (a[id]>=0)
         {
-            double e = exp(-1*c[id]);
-            c[id]=1/(1+e);
+            double e = exp(-1*a[id]);
+            res[id]=1/(1+e);
         }
         else
         {
-            double e = exp(c[id]);
-            c[id]=e/(1+e);
+            double e = exp(a[id]);
+            res[id]=e/(1+e);
         }
     }
     else
     {
-        if (c[id]>=0)
+        if (res[id]>=0)
         {
-            float e = expf(-1*c[id]);
-            c[id]=1/(1+e);
+            float e = expf(-1*a[id]);
+            res[id]=1/(1+e);
         }
         else
         {
-            float e = exp(c[id]);
-            c[id]=e/(1+e);
+            float e = exp(a[id]);
+            res[id]=e/(1+e);
         }
     }
 };
@@ -132,67 +131,39 @@ __device__ __forceinline__ double _exp(double f)
 }
 
 template<class ElemType>
-__global__ void _assignSigmoidOf(
-    const ElemType* a,
-    ElemType* res,
+__global__ void _elementWiseLinRectDerivativeOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (id >= N)
-    {
-        return;
-    }
-
-    // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
-    // and e^x / (1 + e^x) if x is positive.
-    ElemType negElem = -a[id];
-    ElemType e = _exp(negElem);
-
-    res[id] = 1 / (e + 1);
-};
-
-template<class ElemType>
-__global__ void _inplaceLinRectDerivative(    
-    ElemType* c,    
-    const CUDA_LONG N)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (c[id]<=0)
-        c[id]=0;
-    else
-        c[id]=1;
+    CALCULATE_ELEMENTWISE_INDEX;
+    res[id] = (a[id] <= 0) ? 0 : 1;
 }
 
 template<class ElemType>
-__global__ void _assignSigmoidDerivative( 
+__global__ void _elementWiseSigmoidDerivativeOnCuda( 
     ElemType *a,
-    ElemType *c,
+    ElemType *res,
     CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    c[id] = a[id] * (1-a[id]);
+    CALCULATE_ELEMENTWISE_INDEX;
+    res[id] = a[id] * (1-a[id]);
 }
 
 template<class ElemType>
-__global__ void _inplaceTanhOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseTanhOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=tanh(c[id]);
+        res[id]=tanh(a[id]);
     }
     else
     {
-        c[id]=tanhf(c[id]);
+        res[id]=tanhf(a[id]);
     }
 
 };
@@ -200,117 +171,111 @@ __global__ void _inplaceTanhOnCuda(
 //to prevent negative values caused by floating operations, we force inputs to be >=0
 //this may, however, hide problems in the caller.
 template<class ElemType>
-__global__ void _inplaceSqrtOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseSqrtOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=sqrt(max((ElemType)0, c[id]));
+        res[id]=sqrt(max((ElemType)0, a[id]));
     }
     else
     {
-        c[id]=sqrtf(max(ElemType(0), c[id]));
+        res[id]=sqrtf(max(ElemType(0), a[id]));
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceExpOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseExpOnCuda(  
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=exp(c[id]);
+        res[id]=exp(a[id]);
     }
     else
     {
-        c[id]=expf(c[id]);
+        res[id]=expf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceLogOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseLogOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (c[id]<EPS_IN_LOG)
+    CALCULATE_ELEMENTWISE_INDEX;
+    if (a[id]<EPS_IN_LOG)
     {
-        c[id]=LOG_OF_EPS_IN_LOG;
+        res[id]=LOG_OF_EPS_IN_LOG;
     }
     else
     {
         if (sizeof(ElemType)==sizeof(double))
         {
-            c[id]=log(c[id]);
+            res[id]=log(a[id]);
         }
         else
         {
-            c[id]=logf(c[id]);
+            res[id]=logf(a[id]);
         }
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceAbsOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseAbsOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=fabs(c[id]);
+        res[id]=fabs(a[id]);
     }
     else
     {
-        c[id]=fabsf(c[id]);
+        res[id]=fabsf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceCosineOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseCosineOnCuda(
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=cos(c[id]);
+        res[id]=cos(a[id]);
     }
     else
     {
-        c[id]=cosf(c[id]);
+        res[id]=cosf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceNegativeSineOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseNegativeSineOnCuda(    
+    ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=-sin(c[id]);
+        res[id]=-sin(a[id]);
     }
     else
     {
-        c[id]=-sinf(c[id]);
+        res[id]=-sinf(a[id]);
     }
 };
 
