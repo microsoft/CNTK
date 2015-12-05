@@ -126,9 +126,6 @@
     <ClInclude Include="SimpleOutputWriter.h">
       <Filter>Eval</Filter>
     </ClInclude>
-    <ClInclude Include="IComputationNetBuilder.h">
-      <Filter>SGD</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -164,6 +161,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="IComputationNetBuilder.h">
+      <Filter>MultiNetworks</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

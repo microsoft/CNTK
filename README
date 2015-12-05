@@ -5,7 +5,7 @@
 ##############################################################################
 
 -------------------------------
-1. Documentation
+1. Documentation and Demos
 -------------------------------
 
 The detailed introduction of the Computational Network and its
@@ -29,7 +29,7 @@ Toolkit (CNTK) can be found at
 
     Available through Codeplex and inside the repository.
 
-For Examples and Demos see the ExampleSetups/ folder.
+For examples, check out the Demos/ folder.
 
 There are also four files in the Documentation/ directory of the source
 that contain additional details.
