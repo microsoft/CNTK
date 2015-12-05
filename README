@@ -27,9 +27,11 @@ Toolkit (CNTK) can be found at
 
     Microsoft Technical Report MSR-TR-2014-112, 2014.
 
+    Available through Codeplex and inside the repository.
+
 For Examples and Demos see the ExampleSetups/ folder.
 
-There are also four files in the Doocumentation/ directory of the source
+There are also four files in the Documentation/ directory of the source
 that contain additional details.
 
 
@@ -57,7 +59,7 @@ CodePlex page and clone the CNTK source code with the command
 3. Cloning Source Code (Linux/Mac)
 -------------------------------
 
-Linux users should clone from this URL: https://git01.codeplex.com/cntk
+Linux users should clone from this URL: https://git.codeplex.com/cntk
 
     git clone https://git.codeplex.com/cntk
 
@@ -78,17 +80,17 @@ Install CUDA 7.0 from
 
     https://developer.nvidia.com/cuda-toolkit-70
 
-NVidia CUB from
+and NVidia CUB from
 
-    https://github.com/NVlabs/cub/archive/1.4.1.zip .
+    https://github.com/NVlabs/cub/archive/1.4.1.zip
 
-Unzip the archive.  Set environment variable CUB_PATH to CUB folder, e.g.:
+by unzipping the archive and setting environment variable CUB_PATH to the location, e.g.:
 
     CUB_PATH=c:\src\cub-1.4.1
 
 The easiest way to set a global environment variable is to press the windows
 key, and then in the search interface start typing: edit environment
-variables.
+variables. Then close and reopen CMD shells and Visual Studio.
 
 Install ACML 5.3.1 or above (specifically the ifort64_mp variant, e.g.,
 acml5.3.1-ifort64.exe) from
@@ -101,7 +103,7 @@ the folder you installed the library to, e.g.
     ACML_PATH=C:\AMD\acml5.3.1\ifort64_mp
 
 If you are running on an Intel processor with FMA3 support, we also
-advise to set ACML_FMA=0 in your environment to work around issue in
+advise to set ACML_FMA=0 in your environment to work around an issue in
 the ACML library.
 
 Alternatively if you have an MKL license, you can install Intel MKL
@@ -145,7 +147,7 @@ Document/Ctrl+E,D).
  -------------------------------
 
 Install needed libraries as indicated in the Windows section above on
-your Linux box.
+your Linux box. You need GCC 4.8.4 or above.
 
 Create a directory to build in and make a Config.make in the
 directory that provides:
