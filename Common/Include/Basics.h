@@ -23,6 +23,8 @@
 
 #define UNUSED(x) (void)(x) // for variables that are, e.g., only used in _DEBUG builds
 
+#pragma warning (disable: 4702)     // disable some incorrect unreachable-code warnings
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
