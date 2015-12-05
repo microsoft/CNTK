@@ -273,7 +273,7 @@ public:
         m_trainCriterionNodeName((const wstring &)configSGD(L"trainCriterionNodeName", L"")),
         m_evalCriterionNodeName((const wstring &)configSGD(L"evalCriterionNodeName", L"")),
         m_prevChosenMinibatchSize(0),
-        m_lastFinishedEpochEvalErr(0.0),
+        m_lastFinishedEpochTrainLoss(0.0),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr)
     {
@@ -483,13 +483,13 @@ public:
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    bool m_validateAfterModelReloading;
+    bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
     size_t m_prevChosenMinibatchSize;
-    double m_lastFinishedEpochEvalErr;
+    double m_lastFinishedEpochTrainLoss;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;

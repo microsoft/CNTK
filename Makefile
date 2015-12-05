@@ -163,6 +163,7 @@ ifeq ("$(BUILDTYPE)","release")
   endif
 
   CXXFLAGS += -O4
+  CPPFLAGS += -DNDEBUG
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 

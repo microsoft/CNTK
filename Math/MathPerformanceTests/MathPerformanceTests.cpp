@@ -43,7 +43,7 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 }
 
 template<class ElemType>
-void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& colBegin, const Matrix<ElemType>& needToCompute)
+void rnnForwardPropSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& colBegin, const Matrix<ElemType>& needToCompute)
 {
     size_t ncol = functionValues.GetNumCols();
     size_t ntime = ncol / mNbr;
@@ -74,7 +74,7 @@ void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matri
 }
 
 template<class ElemType>
-void oldRnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues)
+void oldRnnForwardPropSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues)
 {
     size_t ncol = functionValues.GetNumCols();
     size_t ntime = ncol / mNbr;
@@ -88,13 +88,13 @@ void oldRnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Ma
             {
                 reset = true;
             }
-            oldRNNEvaluateThisNodeSRP<ElemType>(timeIdxInSeq, 1, reset, (ElemType) 0.1, functionValues, pastActivity, inputFunctionValues, i, mNbr);
+            oldRNNForwardPropSRP<ElemType>(timeIdxInSeq, 1, reset, (ElemType) 0.1, functionValues, pastActivity, inputFunctionValues, i, mNbr);
         }
     }
 }
 
 template<class ElemType>
-void oldRNNEvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t indexInBatch, const size_t mNbr)
+void oldRNNForwardPropSRP(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t indexInBatch, const size_t mNbr)
 {
     assert(delay > 0);
 
@@ -128,7 +128,7 @@ void oldRNNEvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, const
 The new way of resetting RNN state. 
 */
 template<class ElemType>
-void TestRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
+void TestRnnForwardPropSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
 {
     Matrix<ElemType> functionValues(deviceID);
     Matrix<ElemType> colBegin(deviceID);
@@ -144,16 +144,16 @@ void TestRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mN
     needToCompute.SetValue(0);
     needToCompute.ColumnSlice(0, 1).SetValue(1);
     auto t_start = clock();
-    rnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues, colBegin, needToCompute);
+    rnnForwardPropSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues, colBegin, needToCompute);
     auto t_end = clock();
-    std::cout << "testRnnEvaluateThisNodeSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
+    std::cout << "testRnnForwardPropSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
 }
 
 /**
 The old way of resetting RNN state, which used if statement. Also only supports up to two sentences within a minibatch
 */
 template<class ElemType>
-void TestOldRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
+void TestOldRnnForwardPropSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
 {
     Matrix<ElemType> functionValues(deviceID);
     Matrix<ElemType> colBegin(deviceID);
@@ -165,9 +165,9 @@ void TestOldRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t
     pastActivity.Resize(nRow, nCol);
     inputFunctionValues.Resize(nRow, nCol);
     auto t_start = clock();
-    oldRnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues);
+    oldRnnForwardPropSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues);
     auto t_end = clock();
-    std::cout << "TestOldRnnEvaluateThisNodeSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
+    std::cout << "TestOldRnnForwardPropSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
 }
 
 template<class ElemType>
@@ -441,9 +441,9 @@ int wmain()
 {
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 
-    TestRnnEvaluateThisNodeSRP<float>();
+    TestRnnForwardPropSRP<float>();
 
-    TestOldRnnEvaluateThisNodeSRP<float>();
+    TestOldRnnForwardPropSRP<float>();
 
     //MandSTest<float>(100, 2);
 

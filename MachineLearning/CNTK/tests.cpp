@@ -317,10 +317,19 @@ void TestConfiguration(const ConfigParameters& configBase)
             }
         }
 
-        if (configRoots.Exists("CriteriaNodes"))
+        if (configRoots.Exists("CriterionNodes"))
+        {
+            configNode = configRoots("CriterionNodes");
+            for (size_t i=0; i<configNode.size(); i++)
+            {
+                std::wstring nodeName = configNode[i];
+            }
+        }
+
+        if (configRoots.Exists("CriteriaNodes"))  //legacy
         {
             configNode = configRoots("CriteriaNodes");
-            for (size_t i=0; i<configNode.size(); i++)
+            for (size_t i = 0; i<configNode.size(); i++)
             {
                 std::wstring nodeName = configNode[i];
             }

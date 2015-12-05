@@ -75,9 +75,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
-                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Output();
             for (size_t i = 0; i < labelNodes.size(); i++)
-                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
+                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Output();
             inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net->GetDeviceId());
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
@@ -117,9 +117,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     featureNodes[npos]->UpdateEvalTimeStamp();
                     labelNodes[npos]->UpdateEvalTimeStamp();
 
-                    m_net->Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
+                    m_net->ForwardProp(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
 
-                    m_net->Evaluate(evaluationNodes[npos]);
+                    m_net->ForwardProp(evaluationNodes[npos]);
 
                     double mbCrossEntropy = (double)criterionNodes[npos]->Get00Element(); // criterionNode should be a scalar
                     epochCrossEntropy += mbCrossEntropy;
@@ -135,10 +135,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     //TODO: add support to dump multiple outputs
                     ComputationNodePtr outputNode = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->OutputNodes()[0]);
-                    foreach_column(j, outputNode->FunctionValues())
+                    foreach_column(j, outputNode->Output())
                     {
-                        foreach_row(i, outputNode->FunctionValues())
-                            outputStream << outputNode->FunctionValues()(i, j) << " ";
+                        foreach_row(i, outputNode->Output())
+                            outputStream << outputNode->Output()(i, j) << " ";
                         outputStream << endl;
                     }
                 }
@@ -223,11 +223,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 map<wstring, Matrix<ElemType>*>* pMap = new map<wstring, Matrix<ElemType>*>();
                 for (auto pf = featNodes.begin(); pf != featNodes.end(); pf++)
                 {
-                    (*pMap)[(*pf)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*pf)->FunctionValues();
+                    (*pMap)[(*pf)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*pf)->Output();
                 }
                 for (auto pl = lablPtr.begin(); pl != lablPtr.end(); pl++)
                 {
-                    (*pMap)[(*pl)->NodeName()] = &(dynamic_pointer_cast<ComputationNode<ElemType>>(*pl)->FunctionValues());
+                    (*pMap)[(*pl)->NodeName()] = &(dynamic_pointer_cast<ComputationNode<ElemType>>(*pl)->Output());
                 }
                 inputMatrices.push_back(pMap);
             }
@@ -282,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
-                        (*ptr)->Evaluate(*ptr2);
+                        (*ptr)->ForwardProp(*ptr2);
                 }
 
                 decoderNet = nets[iNumNets - 1];
@@ -302,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (auto ptr = decoderEvaluationNodes.begin(); ptr != decoderEvaluationNodes.end(); ptr++, i++)
                 {
-                    decoderNet->Evaluate(*ptr);
+                    decoderNet->ForwardProp(*ptr);
                     if ((*ptr)->GetNumRows() != 1 || (*ptr)->GetNumCols() != 1)
                         LogicError("EvaluateEncoderDecoderWithHiddenStates: decoder evaluation should return a scalar value");
 
@@ -431,22 +431,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const auto & featNodes = (*ptr)->FeatureNodes();
                 for (auto ptr2 = featNodes.begin(); ptr2 != featNodes.end(); ptr2++)
-                    inputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->FunctionValues();
+                    inputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->Output();
 
                 const auto & lablNodes = (*ptr)->LabelNodes();
                 for (auto ptr2 = lablNodes.begin(); ptr2 != lablNodes.end(); ptr2++)
-                    inputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->FunctionValues();
+                    inputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->Output();
             }
 
             /// for the last network
             auto ptr = nets.end() - 1;
             const auto & featNodes = (*ptr)->FeatureNodes();
             for (auto ptr2 = featNodes.begin(); ptr2 != featNodes.end(); ptr2++)
-                decoderInputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->FunctionValues();
+                decoderInputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->Output();
 
             const auto & lablNodes = (*ptr)->LabelNodes();
             for (auto ptr2 = lablNodes.begin(); ptr2 != lablNodes.end(); ptr2++)
-                decoderInputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->FunctionValues();
+                decoderInputMatrices[(*ptr2)->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(*ptr2)->Output();
 
             //evaluate through minibatches
             size_t totalEpochSamples = 0;
@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
-                        (*ptr)->Evaluate(*ptr2);
+                        (*ptr)->ForwardProp(*ptr2);
                 }
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
@@ -572,7 +572,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
-                node->EvaluateThisNode(FrameRange(node->GetMBLayout(), atTime));
+                node->ForwardProp(FrameRange(node->GetMBLayout(), atTime));
                 if (node->GetNumCols() != node->GetNumParallelSequences())
                     RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
             }
@@ -606,7 +606,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
-                net.Evaluate(*nodeIter);
+                net.ForwardProp(*nodeIter);
 
             //mark done
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
@@ -629,10 +629,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t dim = outputNodes[i]->GetNumRows();
                 outputNodes[i]->SetDims(dim, bSize);
                 dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateFunctionValuesSize();
-                dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(0);
+                dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Output().SetValue(0);
                 for (int k = 0; k < bSize; k++)
-                    dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues().SetValue(best_path[k], k, 1.0);
-                outputMatrices[outputNodes[i]->NodeName()] = (void *)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues());
+                    dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Output().SetValue(best_path[k], k, 1.0);
+                outputMatrices[outputNodes[i]->NodeName()] = (void *)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Output());
                 // TODO: void* --really?
             }
 
@@ -659,9 +659,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
-                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Output();
             for (size_t i = 0; i < labelNodes.size(); i++)
-                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
+                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Output();
 
             //evaluate through minibatches
             size_t totalEpochSamples = 0;
@@ -800,9 +800,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
-                        evalnet->Evaluate(evalNodes[i]);
+                        evalnet->ForwardProp(evalNodes[i]);
                         vector<pair<int, double>> retPair;
-                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->FunctionValues(), from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
+                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->Output(), from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
                             == false)
                             continue;
 
@@ -970,9 +970,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
-                        evalnet->Evaluate(evalNodes[i]);
+                        evalnet->ForwardProp(evalNodes[i]);
                         vector<pair<int, double>> retPair;
-                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->FunctionValues(),
+                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->Output(),
                                                            from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
                             == false)   // ==false??? !(.)?
                             continue;

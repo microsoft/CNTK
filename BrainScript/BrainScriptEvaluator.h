@@ -15,7 +15,6 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // -----------------------------------------------------------------------
     // functions exposed by this module
-    // TODO: This is the only thing that should stay in an actual BrainScriptEvaluator.h.
     // -----------------------------------------------------------------------
 
     // understand and execute from the syntactic expression tree

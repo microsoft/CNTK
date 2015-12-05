@@ -68,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // emit the trace message for global progress
         // 'currentStep' will be offset by m_currentStepOffset.
         // This only prints of enough time (10s) has elapsed since last print, and the return value is 'true' if it did print.
-        static bool TraceProgressPercentage(size_t epochNumber, double mbProg/*0..100*/)
+        static bool TraceProgressPercentage(size_t epochNumber, double mbProg/*0..100*/, bool isTimerPaced)
         {
             auto & us = GetStaticInstance();
             if (!us.m_enabled)
@@ -77,20 +77,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // compute global progress
-            bool needToPrint = us.m_progressTracingTimer.ElapsedSeconds() > 0;// 10;
-            if (needToPrint)
+            bool needToPrint = us.m_progressTracingTimer.ElapsedSeconds() > 10;
+            if (needToPrint || isTimerPaced)
             {
-                double epochProg = ((100.0f * (float)(us.m_currentStepOffset + epochNumber)) / (double)us.m_totalNumberOfSteps);
-                mbProg = (mbProg * 100.0f) / (float)us.m_totalNumberOfSteps;
+                double epochProg = ((100.0f * (double)(us.m_currentStepOffset + epochNumber)) / (double)us.m_totalNumberOfSteps);
+                mbProg = (mbProg * 100.0f) / (double)us.m_totalNumberOfSteps;
                 printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
                 us.m_progressTracingTimer.Restart();
             }
             return needToPrint;
         }
 
-        // emit a trace message for the error objective
+        // emit a trace message for the train loss value
         // The value is printed in percent.
-        static void TraceObjectivePercentage(double err)
+        static void TraceTrainLoss(double err)
         {
             auto & us = GetStaticInstance();
 
@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            printf("EVALERR: %.2f%%\n", 100.0 * err);
+            printf("EVALERR: %.2f%%\n", err);
         }
     };
 
