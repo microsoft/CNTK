@@ -108,6 +108,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // When constructing an image tensor with the usual W, H, C format, use the following function instead.
     // This will sort the three parameters into the correct order.
+    // BUGBUG: at several places, a comment says "after multiplication the structure is lost" and the vector dimension
+    //         is set as the image height. However, the image height is actually the wrong dimension since images are assumed transposed.
+    //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
     static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
         return TensorShape(std::vector<size_t> { channels, width, height });
@@ -117,6 +120,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return TensorShape(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
     }
-    // TODO: we need a constructor from config; that will generalize
+    // TODO: we need a constructor from config; that will allow us to generalize
 
 }}}
