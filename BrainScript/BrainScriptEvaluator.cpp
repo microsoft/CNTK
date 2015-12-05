@@ -259,6 +259,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     DefineBinaryComputationNode(Times);
     DefineBinaryComputationNode(DiagTimes);
     DefineBinaryComputationNode(Scale);
+    DefineBinaryComputationNode(ColumnElementTimes);
     DefineUnaryComputationNode(Log);
     DefineUnaryComputationNode(Sigmoid);
     DefineUnaryComputationNode(Mean);
@@ -373,6 +374,8 @@ namespace Microsoft { namespace MSR { namespace BS {
         // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode; need to create a Const first
         else if (classId == L"Scale")
             return make_shared<ScaleNode>(GetInputs(config, 2, L"Scale"), tag);
+        else if (classId == L"ColumnElementTimes")
+            return make_shared<ColumnElementTimesNode>(GetInputs(config, 2, L"ColumnElementTimes"), tag);
         else if (classId == L"Log")
             return make_shared<LogNode>(GetInputs(config, 1, L"Log"), tag);
         else if (classId == L"Sigmoid")

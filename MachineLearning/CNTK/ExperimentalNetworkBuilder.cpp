@@ -69,7 +69,7 @@ using namespace std;
         TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores)    // TODO: better names
         QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
         // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
-        //BinaryStandardNode(ColumnElementTimesNode)
+        BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
         BinaryStandardNode(CosDistance, aVectorSequence, anotherVectorSequence)
         QuaternaryStandardNode(CosDistanceWithNegativeSamples, aVectorSequence, anotherVectorSequence, numShifts, numNegSamples)
         //BinaryStandardNode(CosDistanceWithNegativeSamplesNode)
