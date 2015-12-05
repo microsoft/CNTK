@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[0];
-            m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+            m_pMBLayout->Init(m_numSeqsPerMB, 0); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
             m_noData = false;
 
@@ -652,7 +652,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_numSeqsPerMB = (m_numSeqsPerMB / numSubsets) + ((subsetNum < (m_numSeqsPerMB % numSubsets)) ? 1 : 0);
             }
 
-            m_pMBLayout->Init(m_numSeqsPerMB, 0, !m_frameMode); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+            m_pMBLayout->Init(m_numSeqsPerMB, 0); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
             // resize the arrays
             // These are sized to the requested number. If not all can be filled, it will still return this many, just with gaps.
@@ -691,7 +691,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("Distributed reading of mini-batches is only supported for training or testing");
                 }
-                m_pMBLayout->Init(requestedMBSize, 0, false); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+                m_pMBLayout->Init(requestedMBSize, 0); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
                 StartMinibatchLoopToWrite(requestedMBSize,epoch,requestedEpochSamples);    
             }
@@ -919,11 +919,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_frameMode)
                     {
                         assert(m_numSeqsPerMB == 1);
-                        m_pMBLayout->Init(m_mbNumTimeSteps, 1, false/*means not sequential*/);
+                        m_pMBLayout->Init(m_mbNumTimeSteps, 1);
                     }
                     else
                     {
-                        m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps, true/*sequential*/);
+                        m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps);
                     }
 
                     // create a MB with the desired utterance
@@ -1047,7 +1047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-                    m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps, true/*sequential*/);
+                    m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps);
 
                     vector<size_t> actualmbsize(m_numSeqsPerMB,0);
                     for (size_t i = 0; i < m_numSeqsPerMB; i++)
@@ -1422,7 +1422,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            m_pMBLayout->Init(1, feat.cols(), true/*sequential*/);
+                            m_pMBLayout->Init(1, feat.cols());
                             m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
                             m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
