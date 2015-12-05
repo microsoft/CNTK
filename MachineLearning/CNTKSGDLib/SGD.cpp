@@ -336,31 +336,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template SGD<double>::SGD(const ScriptableObjects::IConfigRecord &);
 
     template<class ElemType>
-    void SGD<ElemType>::ForwardBackward(ComputationNetwork& net, 
-                                        const std::vector<ComputationNodeBasePtr>& evalNodes,
-                                        shared_ptr<ComputationNodeBase> criterionNode, 
-                                        bool dobackpropogate)
-    {
-        // evaluate eval nodes
-        // The bulk of this evaluation is reused in ComputeGradient() below.
-        net.ForwardProp(evalNodes);
-
-        // compute the gradient
-        // This is where the magic happens, baby!!
-
-        // ==============================
-        // forward prop
-        // ==============================
-        net.ForwardProp(criterionNode);
-        // ==============================
-        // backprop
-        // ==============================
-        // only compute gradient when learning rate is large enough
-        if (dobackpropogate)
-            net.Backprop<ElemType>(criterionNode);
-    }
-
-    template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
@@ -1685,6 +1660,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void SGD<ElemType>::ForwardBackward(ComputationNetwork& net, 
+                                        const std::vector<ComputationNodeBasePtr>& evalNodes,
+                                        shared_ptr<ComputationNodeBase> criterionNode, 
+                                        bool isLRLargeEnough)
+    {
+        // evaluate eval nodes
+        // The bulk of this evaluation is reused in ComputeGradient() below.
+        net.ForwardProp(evalNodes);
+
+        // compute the gradient
+        // This is where the magic happens, baby!!
+
+        // forward prop
+        net.ForwardProp(criterionNode);
+
+        // backprop
+        // only compute gradient when learning rate is large enough
+        if (isLRLargeEnough)
+            net.Backprop(criterionNode);
+    }
+
+    template<class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                         ComputationNetworkPtr refNet,
                                         const ComputationNodeBasePtr& refNode,
@@ -2638,7 +2635,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->UpdateEvalTimeStamp();
 
                 net->ForwardProp(criterionNodes[npos]);
-                net->Backprop<ElemType>(criterionNodes[npos]);
+                net->Backprop(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
                 {

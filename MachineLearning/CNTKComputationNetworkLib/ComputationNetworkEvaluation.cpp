@@ -22,23 +22,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This source file contains methods related to evaluation (forward prop, backprop), network validation, and matrix memory allocation (memory sharing).
 
     // -----------------------------------------------------------------------
-    // evaluation
+    // forward and backward propagation
     // -----------------------------------------------------------------------
 
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
-    // TODO: pass a set of nodes instead of only one
-    // TODO: rename to ForwardProp()? To make it very clear?
     // This calls ForwardProp() on all nodes in order of data flow through the network.
     // By default, the network is applied concurrently on all frames in a minibatch in parallel (PAR mode, a "map" operation)
-    // Recurrent loops deviate:
+    // Recurrent loops must be treated differently:
     //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
-    //  - these must be executed frame by frame rather than as a map
+    //  - these must be executed frame by frame (SEQuential) rather than as a map
     //  - such a loop is treated as if they were a little nested network; this is done inside SEQTraversalFlowControlNodes
-    //  - these little nested networks are defined in m_recurrentInfo[]
-    void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr & rootNode)
+    //  - these little nested networks are defined in the execution network in the form of nested sentinel nodes of type SEQTraversalFlowControlNode
+    void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     {
         // caller must call BuildAndValidateSubNetwork() before
-        // TODO: Some places are hard to fix, e.g. encoder-decoder best-path functions. Those may be broken; this message will tell you.
         if (!BuiltAndValidatedSubNetwork(rootNode))
             LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
@@ -47,49 +44,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
-    // TODO: pass a set of nodes instead of only one?
-    // The actual call pattern is
+    // The typical calling pattern is:
     //  - ForwardProp() for eval nodes
-    //  - ForwardProp() for the training criterion
+    //  - ForwardProp() for the training criterion (which will reuse computation results from the previous step)
     //  - Backprop() for the training criterion
-    // I.e. we must call Evaluate() inside here as well, but it will typically only evaluate the training criterion bits because the eval nodes already require most of the network to be computed.
-    template<class ElemType>
-    void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode,         // training criterion to compute the gradients for
-                                      bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0  --This is the default.
-                                      const Matrix<ElemType>* rootGradientInitValue, // if given then this is the starting gradient from the top   --is this ever used?? f not, we can get rid of <ElemType>
-                                      bool bClearGradient,                           // if false then gradients are not cleared  --TODO: When does that happen?
-                                      bool resetTimeStampAfterComputation)
+    void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode)    // training criterion to compute the gradients for
     {
-        // TODO: can we check whether criterion node has been computed actually? IsOutputValue...?
+        ClearGradientOfAllNodes(rootNode);     // reset the flags that will trigger lazy resetting of gradients to zero
 
-        // TODO: comment what the purpose/condition of this is
-        if (bClearGradient)
-            ClearGradientOfAllNodes(rootNode);     // reset m_completedGradient, which is meant to make sure each gradient is computed only once. Only used for recurrence, actually.
-
-        // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
-        // The normal case is with the top root with a scalar gradient value of 1.0. This assumes a single and closure network. 
-        // Allowing to not initialize to 1 allows network to be open to accept gradients from somewhere.
-        // TODO: aren't these two mechanisms mutually exclusive?
-        if (bResetToOne)
+        // initialize root gradient with a scalar gradient value of 1.0
+        auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);
+        if (nodeFloat)
         {
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);    // TODO: is there not a single SetValue() call that also takes dimensions?
+            nodeFloat->GradientValues().Resize(1, 1);
+            nodeFloat->GradientValues().SetValue(1.0f);
+        }
+        else
+        {
+            auto nodeDouble = dynamic_pointer_cast<ComputationNode<double>>(rootNode);
+            if (nodeDouble)
+            {
+                nodeDouble->GradientValues().Resize(1, 1);
+                nodeDouble->GradientValues().SetValue(1.0);
+            }
+            else
+                LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
         }
 
-        if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
-
+        // backpropagate through the network
         GetOuterLoopNode(rootNode)->Backprop(FrameRange(nullptr), true, true);
-
-        // Since we allow sharing of the matrix for function value and gradient value. the function values are destroyed
-        // after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
-        // resetTimeStampAfterComputation is by default false because Backprop in normal case is followed by new batch of input
-        if (resetTimeStampAfterComputation)
-            ResetEvalTimeStamp();
     }
-
-    template void ComputationNetwork::Backprop<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
-    template void ComputationNetwork::Backprop<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
 
     // -----------------------------------------------------------------------
     // PARTraversalFlowControlNode methods -- implements PAR traversal
