@@ -129,9 +129,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_attachInputsFn = [](){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
         }
     public:
-        void SaveToFile(File& fstream) const
+        void Save(File& fstream) const
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
 
             fstream << m_timeStep;
             fstream << GetNumRows() << GetNumCols();
@@ -139,10 +139,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_initialActivationValue;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
             // the node has already been initialized e.g. w.r.t. direction and sequence flags
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
 
             fstream >> m_timeStep;
 
@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             assert(inputIndex == 0); inputIndex;
 
@@ -220,7 +220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // recursive call to ourselves
                 FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iterator
-                    ComputeInputPartial(inputIndex, t);
+                    BackpropTo(inputIndex, t);
                 return;
             }
 
@@ -253,13 +253,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void OnEvaluateBeginIteration() override      // called before first iteration step of EvaluateThisNode()
+        virtual void OnEvaluateBeginIteration() override      // called before first iteration step of ForwardProp()
         {
             Base::OnEvaluateBeginIteration();
             CacheMBLayout();
         }
 
-        virtual void OnEvaluateEndIteration() override        // called after last iteration step of EvaluateThisNode()
+        virtual void OnEvaluateEndIteration() override        // called after last iteration step of ForwardProp()
         {
             // In BPTT, we carry over left-to-right state across minibatches.
             // It is kept in m_delayedActivation, m_delayedActivationMBLayout.
@@ -282,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.
         // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
-        virtual void EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void ForwardProp(const FrameRange & frameRange) override
         {
             assert(m_pMBLayout);
 
@@ -294,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // recursive call to ourselves
                 FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.begin(); t != range.end(); t++)
-                    EvaluateThisNode(t);
+                    ForwardProp(t);
                 return;
             }
 
@@ -381,7 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
 
             // need a layout as well
-            // EvaluateThisNode() expects it to have the same number of parallel sequences.
+            // ForwardProp() expects it to have the same number of parallel sequences.
             if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
             m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences());
         }
@@ -631,16 +631,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_inputDim << m_outputDim;
             fstream << m_DefaultState;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             if (modelVersion == 2)
                 fstream >> m_inputDim >> m_outputDim;
             fstream >> m_DefaultState;
@@ -672,7 +672,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 4)
                 InvalidArgument("LSTM operation only takes five inputs.");
@@ -1063,7 +1063,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             size_t nT = Inputs(0)->GetNumCols();
             size_t outputDim = Inputs(1)->GetNumRows();
@@ -1117,7 +1117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
-                    EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
+                    ForwardPropS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
                 }
 
@@ -1313,7 +1313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(
+        /*TODO: merge with call site*/void ForwardPropS(
             const Matrix<ElemType>& mInputGate,
             const Matrix<ElemType> &mForgetGate, const Matrix<ElemType> &mOutputGate,
             const Matrix<ElemType> &mCellWgt,
@@ -1490,7 +1490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDims(nOutput, nT);
 
                 m_DefaultState = 0.0;
-                EvaluateThisNode(FrameRange(m_pMBLayout));
+                ForwardProp(FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
@@ -1510,7 +1510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)
-                    ComputeInputPartial(i, FrameRange(m_pMBLayout));
+                    BackpropTo(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi

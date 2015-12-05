@@ -444,7 +444,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (startEpoch < 0)
         {
             // Loads models.
-            origNet->LoadFromFile<ElemType>(origModelFileName);
+            origNet->Load<ElemType>(origModelFileName);
 
             // Processes feature nodes.
             std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
@@ -706,7 +706,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 g_mpi->WaitAll();
             }
 
-            net->SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
+            net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
         // BUGBUG: This is where the trainSetDataReader->GetNumParallelSequences() is used to further normalize
@@ -814,7 +814,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
-                    net->SaveToFile(m_modelPath);
+                    net->Save(m_modelPath);
                 }
                 break;
             }
@@ -1026,7 +1026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                         else
                         {
-                            net->SaveToFile(GetModelNameForEpoch(i, true));
+                            net->Save(GetModelNameForEpoch(i, true));
 
                             fprintf(stderr, "Finished training and saved final model\n\n");
                             break;
@@ -1081,7 +1081,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // persist model and check-point info
             if ((g_mpi == nullptr) || g_mpi->IsMainNode())
             {
-                net->SaveToFile(GetModelNameForEpoch(i));
+                net->Save(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
                 if (!m_keepCheckPointFiles)
                 {

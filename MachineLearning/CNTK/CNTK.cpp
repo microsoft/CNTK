@@ -108,7 +108,7 @@ void DumpNodeInfo(const ConfigParameters& config)
     bool printValues = config(L"printValues", true);
 
     ComputationNetwork net(-1);  //always use CPU
-    net.LoadFromFile<ElemType>(modelPath);
+    net.Load<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
 
@@ -530,11 +530,11 @@ void  DoParameterSVD(const ConfigParameters& config)
 
 
     ComputationNetwork net(deviceID);
-    net.LoadFromFile<ElemType>(modelPath);
+    net.Load<ElemType>(modelPath);
 
     net.PerformSVDecomposition<ElemType>(svdconfig, AlignedSize);
     if (!outputmodelPath.empty())
-        net.SaveToFile(outputmodelPath);
+        net.Save(outputmodelPath);
 
 }
 
@@ -813,7 +813,7 @@ public:
         if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load   --TODO: why all these options?
         {
             auto net = make_shared<ComputationNetwork>(m_deviceId);
-            net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+            net->Load<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
             m_net = net;
         }
         m_net->ResetEvalTimeStamp();
@@ -1372,7 +1372,7 @@ void DoConvertFromDbn(const ConfigParameters& config)
 
     auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(config);
     ComputationNetworkPtr net = netBuilder->BuildNetworkFromDbnFile(dbnModelPath);
-    net->SaveToFile(modelPath);
+    net->Save(modelPath);
 }
 
 // do topological plot of computation network 
@@ -1407,7 +1407,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     }
 
     ComputationNetwork net(-1);
-    net.LoadFromFile<ElemType>(modelPath);
+    net.Load<ElemType>(modelPath);
     net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 

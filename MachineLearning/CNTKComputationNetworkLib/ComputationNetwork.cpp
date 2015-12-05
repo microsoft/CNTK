@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
-    void ComputationNetwork::SaveToFile(const wstring& fileName, const FileOptions fileFormat) const
+    void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
     {
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
@@ -106,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = nodeIter->second;
-            nodePtr->SaveToFile(fstream);
+            nodePtr->Save(fstream);
         }
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -204,7 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> opName >> nodeName;
             ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
             // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
-            nodePtr->LoadFromFile(fstream, modelVersion);
+            nodePtr->Load(fstream, modelVersion);
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType> void ComputationNetwork::LoadFromFile(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    template<class ElemType> void ComputationNetwork::Load(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
     {
         ClearNet();
 
@@ -250,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
                 InvalidArgument("Invalid node type.");
             }
-            newNode->LoadFromFile(fstream, modelVersion);
+            newNode->Load(fstream, modelVersion);
             AddNodeToNet(newNode);
         }
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -1127,13 +1127,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::Load<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::Load<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);

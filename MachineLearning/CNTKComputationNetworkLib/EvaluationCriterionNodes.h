@@ -31,12 +31,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
         {
             LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             Inputs(0)->ValueSlice(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
@@ -96,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

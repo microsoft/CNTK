@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // In the special case of frame randomization, every frame is stored as a single-frame sequence.
     //
     // If we describe this in terms of tensors, a data matrix with sample layout (I,J,K) and
-    // MBLayout (S,T) can be interpreted as ImageLayout(I,J,K,T,S) (note that S is last, not T).
+    // MBLayout (S,T) can be interpreted as TensorShape(I,J,K,T,S) (note that S is last, not T).
     //
     // Sequences can also be concatenated, to fill the space better. For this case,
     // this object stores about every frame whether it is at the start or end of a sequence.
@@ -91,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Contract between ComputationNode, ComputationNetwork, and MBLayout:
     //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
     //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
-    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling EvaluateThisNode() on a node
+    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling ForwardProp() on a node
     // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
