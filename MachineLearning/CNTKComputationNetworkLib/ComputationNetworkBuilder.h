@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols);
         //sparse matrix size is optionally specified
-        ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
+        //ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);
