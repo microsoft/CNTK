@@ -98,32 +98,44 @@ An Introduction to Computational Networks and the Computational Network
 \end_layout
 
 \begin_layout Author
-Dong Yu, Adam Eversole, Michael L.
- Seltzer, Kaisheng Yao,
+Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, 
 \begin_inset Newline newline
 \end_inset
 
-Brian Guenter, Oleksii Kuchaiev, Yu Zhang, Frank Seide, Guoguo Chen, 
+Scott Cyphers, Jasha Droppo, Adam Eversole, Brian Guenter, 
 \begin_inset Newline newline
 \end_inset
 
-Huaming Wang, Jasha Droppo, Amit Agarwal, Chris Basoglu, 
+Mark Hillebrand, Xuedong Huang, Zhiheng Huang, Vladimir Ivanov, 
 \begin_inset Newline newline
 \end_inset
 
-Marko Padmilac, Alexey Kamenev, Vladimir Ivanov, Scott Cypher, 
+Alexey Kamenev, Philipp Kranen, Oleksii Kuchaiev, Wolfgang Manousek, 
 \begin_inset Newline newline
 \end_inset
 
-Hari Parthasarathi, Bhaskar Mitra, Zhiheng Huang, Geoffrey Zweig, 
+Avner May, Bhaskar Mitra, Olivier Nano, Gaizka Navarro, 
 \begin_inset Newline newline
 \end_inset
 
-Chris Rossbach, Jon Currey,Jie Gao, Avner May, Baolin Peng, 
+Alexey Orlov, Marko Padmilac, Hari Parthasarathi, Baolin Peng, 
 \begin_inset Newline newline
 \end_inset
 
-Andreas Stolcke, Malcolm Slaney, Xuedong Huang
+Alexey Reznichenko, Frank Seide, Michael L.
+ Seltzer, Malcolm Slaney, 
+\begin_inset Newline newline
+\end_inset
+
+Andreas Stolcke, Huaming Wang, Kaisheng Yao, Dong Yu, 
+\begin_inset Newline newline
+\end_inset
+
+Yu Zhang, Geoffrey Zweig 
+\begin_inset Newline newline
+\end_inset
+
+(*authors are listed in alphabetical order) 
 \end_layout
 
 \begin_layout Date

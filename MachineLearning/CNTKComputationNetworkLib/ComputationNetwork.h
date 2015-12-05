@@ -7,36 +7,19 @@
 #pragma once
 
 // TODOs:
-//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
-//  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
-//    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
-//    -> solve by including a layout in the FrameRange directly; then DataSlice() can compare compatibility
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 //  - code prettification:
-//     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
+//     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     EvaluateThisNode()           -> ForwardProp()        // the familiar names
-//     ComputeInputPartial()        -> BackpropTo()
-//     OnEvaluateBeginIteration()   -> BeginForwardProp()   // and similar functions likewise
-//     Inputs()                     -> Input()              // or In()? or GetInput()?
-//     Children()                   -> Inputs()
-//     ChildrenSize()               -> NumInputs()
-//     m_functionValues             -> m_output
-//     FunctionValues()             -> Output()             // or Out()?
+//     Evaluate(), ComputeGradient()
 //     frameRange                   -> t                    // make it more lightweight
-//     DataSlice(frameRange)        -> DataFor(t)           // also more lightweight; 'slice' is an implementation detail
-//     ValueSlice(.)                -> OutputFor(t)
-//     GradientSlice(.)             -> GradientFor(t)
-//     LoadFromFile()               -> Load()               // keep it simpler (where else would one load from?)
-//     SaveToFile()                 -> Save()
-//     ImageLayout                  -> DataLayout           // general tensor descriptor
 //  - finish the job:
-//     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
+//     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
 //  - known issues that need actual test cases to be fixed:
-//     - CRFNode::ComputeInputPartial() fails for >1 parallel sequence due to DataSlice() not being able to return whole sequences
+//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
 //     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
@@ -76,7 +59,7 @@ protected:
     // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
     //
     // This is to implement recurrent loops. All nodes inside a loop are listed
-    // inside this node. This node's EvaluateThisNode() function will execute
+    // inside this node. This node's ForwardProp() function will execute
     // them inside a loop over all time steps of the recurrence.
     // For every time step, the entire chain of nodes is called, with the time index
     // passed as a FrameRange object.
@@ -90,19 +73,19 @@ protected:
         // next steps:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
-        virtual void OnEvaluateBeginIteration() override;
-        virtual void EvaluateThisNode(const FrameRange &) override;
-        virtual void OnEvaluateEndIteration() override;
-        virtual void OnComputeGradientBeginIteration() override;
-        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
-        virtual void OnComputeGradientEndIteration() override;
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void BeginForwardProp() override;
+        virtual void ForwardProp(const FrameRange &) override;
+        virtual void EndForwardProp() override;
+        virtual void BeginBackprop() override;
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
+        virtual void EndBackprop() override;
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
-        virtual bool IsFuncValueOlderThanInputs() const override;
+        virtual bool IsOutputOlderThanInputs() const override;
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
@@ -121,7 +104,7 @@ protected:
     // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
     //
     // This node contains a list of nodes in a (sub-)network. This node's
-    // EvaluateThisNode() method will execute all those nodes once in PAR mode,
+    // ForwardProp() method will execute all those nodes once in PAR mode,
     // that is, by passing a FrameRange object that represents to operate
     // on all frames in the node simultaneously.
     //
@@ -133,13 +116,13 @@ protected:
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
-        virtual void OnEvaluateBeginIteration() override { }
-        virtual void EvaluateThisNode(const FrameRange &) override;
-        virtual void OnEvaluateEndIteration() override { }
-        virtual void OnComputeGradientBeginIteration() override { }
-        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
-        virtual void OnComputeGradientEndIteration() override { }
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void BeginForwardProp() override { }
+        virtual void ForwardProp(const FrameRange &) override;
+        virtual void EndForwardProp() override { }
+        virtual void BeginBackprop() override { }
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
+        virtual void EndBackprop() override { }
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
@@ -332,7 +315,7 @@ public:
         }
     }
 
-    // When external code (readers, namely) updates InputValue's m_functionValues,
+    // When external code (readers, namely) updates InputValue's m_output,
     // calling this function is required to make sure that any internal state gets updated correctly.
     // Only a change to the column dimension i sallowed
     void NotifyInputNodesFunctionValuesMBSizeModified()
@@ -347,7 +330,7 @@ public:
     // serialization
     // -----------------------------------------------------------------------
 
-    void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
+    void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
@@ -357,7 +340,7 @@ public:
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<class ElemType>
-    void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+    void Load(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
     // static helper to instantiate a network from a file
@@ -367,7 +350,7 @@ public:
                                                 const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
     {
         auto net = make_shared<ComputationNetwork>(deviceId);
-        net->LoadFromFile<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+        net->Load<ElemType>(fileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
         return net;
     }
 
@@ -518,21 +501,21 @@ public:
     // -----------------------------------------------------------------------
 
     // main entry point for forward prop
-    void Evaluate(const ComputationNodeBasePtr & rootNode);
+    void ForwardProp(const ComputationNodeBasePtr & rootNode);
 
     // main entry point for backprop
     template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr rootNode,
-                         bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
-                         const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
-                         bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
-                         bool resetTimeStampAfterComputation = false);
+    void Backprop(const ComputationNodeBasePtr rootNode,
+                  bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
+                  const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
+                  bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
+                  bool resetTimeStampAfterComputation = false);
 
     template<class NODESET>     // version that takes multiple nodes
-    void Evaluate(const NODESET & nodes)
+    void ForwardProp(const NODESET & nodes)
     {
         for (auto & node : nodes)
-            Evaluate(node);
+            ForwardProp(node);
     }
 
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
@@ -812,15 +795,15 @@ protected:
     // -----------------------------------------------------------------------
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
+    // TODO: Can this be moved to a separate class?
 private:
+
     void ClearCalcOrderCaches();
 
     // This is part of the FormRecurrentLoops() process, and only called from there.
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCs(const ComputationNodeBasePtr& rootNode);
     void DetermineSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
-    void UniqRecurrentLoops();
     void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
@@ -867,15 +850,12 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
+    void ClearGradientOfAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
 
         for (auto &node : allNodes)
-            node->ClearGradientForChildren();
-
-        //for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
-        //    recInfo->m_completedGradient = false;
+            node->ClearGradientOfInputs();
     }
 
     // -----------------------------------------------------------------------

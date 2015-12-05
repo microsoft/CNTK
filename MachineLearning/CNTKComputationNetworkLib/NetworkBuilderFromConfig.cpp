@@ -92,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 static int randomSeed = 1;
                 wstring initString = config[L"init"];
                 if (initString == L"fixedValue")
-                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->FunctionValues().SetValue((ElemType)config[L"value"]);
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->Output().SetValue((ElemType)config[L"value"]);
                 else if (initString == L"uniform" || initString == L"gaussian")
                 {
                     // TODO: add these options also to old NDL
@@ -311,11 +311,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!IsLeaf())
         {
             fstream << wstring(L"(");
-            for (size_t i = 0; i<ChildrenSize(); i++)
+            for (size_t i = 0; i<GetNumInputs(); i++)
             {
                 if (i > 0)
                     fstream << wstring(L",");
-                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+                fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
             }
             fstream << wstring(L")");
         }

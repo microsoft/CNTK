@@ -116,14 +116,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
             wstring outFile = outputFiles[outputName];
 
-            SaveToFile(outFile, outputData, idx4word[iter->first], nBests[outputName]);
+            Save(outFile, outputData, idx4word[iter->first], nBests[outputName]);
         }
 
         return true;
     }
 
     template<class ElemType>
-    void LMSequenceWriter<ElemType>::SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
+    void LMSequenceWriter<ElemType>::Save(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
     {
         size_t nT = outputData.GetNumCols();
         size_t nD = min(idx2wrd.size(), outputData.GetNumRows());

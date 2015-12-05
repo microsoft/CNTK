@@ -34,35 +34,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
 #if 1
-            auto gradient = Inputs(inputIndex)->GradientSlice(frameRange);
+            auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
 #else
             if (inputIndex == 0)
-                Inputs(0)->GradientSlice(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
+                Input(0)->GradientFor(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
             else
-                Inputs(1)->GradientSlice(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
+                Input(1)->GradientFor(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
 #endif
         }
 
         virtual void UpdateFunctionMBSize() override
         {
-            m_leftMinusRight->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_leftMinusRight->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
-            m_leftMinusRight->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
-            MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
+            FrameRange frameRange(Input(0)->GetMBLayout());
+            m_leftMinusRight->AssignDifferenceOf(Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange));
+            MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
             VerifyDims(1,1);
-            FunctionValues().SetValue(v*v / 2);
+            Output().SetValue(v*v / 2);
 #if NANCHECK
-            FunctionValues().HasNan("SquareError");
+            Output().HasNan("SquareError");
 #endif
         }
 
@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }       
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -125,23 +125,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             // left input is scalar
             if (inputIndex == 0)  //left derivative
             {
 #if DUMPOUTPUT
                 *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+                Input(0)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
 
-                auto gradient = Inputs(0)->GradientSlice(frameRange);
+                auto gradient = Input(0)->GradientFor(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
-                Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+                Input(0)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
 
         }
@@ -150,46 +150,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #if DUMPOUTPUT
                 *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
-                Inputs(0)->ValueSlice(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+                Input(0)->OutputFor(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Inputs(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+                Input(1)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
 
-                auto gradient = Inputs(1)->GradientSlice(frameRange);
-                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Inputs(0)->ValueSlice(frameRange), gradient);
+                auto gradient = Input(1)->GradientFor(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Input(0)->OutputFor(frameRange), gradient);
 #if DUMPOUTPUT
-                Inputs(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right");
+                Input(1)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
 #ifdef _DEBUG
-                Inputs(1)->InvalidateMissingGradientColumns(frameRange);  // TODO: This should not be necessary.
+                Input(1)->InvalidateMissingGradientColumns(frameRange);  // TODO: This should not be necessary.
 #endif
             }
         }
 
         virtual void UpdateFunctionMBSize() override
         {
-            m_logSoftmaxOfRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_logSoftmaxOfRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
             m_softmaxOfRight->Resize(m_logSoftmaxOfRight->GetNumRows(), m_logSoftmaxOfRight->GetNumCols());
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             // first compute the softmax (column-wise)
             // Note that we need both log and non-log for gradient computation.
-            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->ValueSlice(frameRange), true);
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->OutputFor(frameRange), true);
             m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             m_softmaxOfRight->InplaceExp();
             // flatten all gaps to zero, such that gaps will contribute zero to the sum
-            MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Inputs(1)->GetMBLayout(), frameRange);
+            MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Input(1)->GetMBLayout(), frameRange);
             // reduce over all frames
-            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->MaskedValueSlice(frameRange), *m_logSoftmaxOfRight);
-            FunctionValues() *= -1;
+            Output().AssignInnerProductOfMatrices(Input(0)->MaskedValueSlice(frameRange), *m_logSoftmaxOfRight);
+            Output() *= -1;
 #if NANCHECK
-            FunctionValues().HasNan("CrossEntropyWithSoftmax");
+            Output().HasNan("CrossEntropyWithSoftmax");
 #endif
 #if DUMPOUTPUT
-            FunctionValues().Print("CrossEntropyWithSoftmaxNode");
+            Output().Print("CrossEntropyWithSoftmaxNode");
 #endif
         }
 
@@ -202,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -250,53 +250,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(*m_logOfRight, Inputs(0)->GradientSlice(frameRange), GradientValues());
+                BackpropToLeft(*m_logOfRight, Input(0)->GradientFor(frameRange), GradientValues());
             }
             else
             {
-                ComputeInputPartialRight(*m_leftDivRight, Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange), Inputs(1)->GradientSlice(frameRange), GradientValues());
+                BackpropToRight(*m_leftDivRight, Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange), Input(1)->GradientFor(frameRange), GradientValues());
             }
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
+        /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
             const Matrix<ElemType>& gradientValues)  
         {
             //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logOfRight, inputGradientValues);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logOfRight, 1.0f, inputGradientValues);
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& leftDivRight, 
+        /*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& leftDivRight, 
             const Matrix<ElemType> inputFunctionValues0, const Matrix<ElemType> inputFunctionValues1,
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), frameRange);
+            MaskMissingColumnsToZero(leftDivRight, Input(0)->GetMBLayout(), frameRange);
             //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, leftDivRight, 1.0f, inputGradientValues);
         }
 
         virtual void UpdateFunctionMBSize() override
         {
-            m_logOfRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
-            m_leftDivRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_logOfRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
+            m_leftDivRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
         }
 
         //-sum(left_i * log(right_i))
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
-            m_logOfRight->SetValue(Inputs(1)->ValueSlice(frameRange));
+            FrameRange frameRange(Input(0)->GetMBLayout());
+            m_logOfRight->SetValue(Input(1)->OutputFor(frameRange));
             m_logOfRight->InplaceLog();
-            MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout(), frameRange);
-            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->MaskedValueSlice(frameRange), *m_logOfRight);
-            FunctionValues() *= -1;
+            MaskMissingColumnsToZero(*m_logOfRight, Input(1)->GetMBLayout(), frameRange);
+            Output().AssignInnerProductOfMatrices(Input(0)->MaskedValueSlice(frameRange), *m_logOfRight);
+            Output() *= -1;
 #if NANCHECK
             functionValues.HasNan("CrossEntropy");
 #endif
@@ -305,7 +305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-            if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
+            if (Input(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
         }
 
@@ -313,7 +313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -375,14 +375,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
+        virtual void BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange));
+            BackpropToS(*m_gradientOfL1Norm, Input(0)->GradientFor(frameRange), GradientValues(), Input(0)->OutputFor(frameRange));
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientOfL1Norm, 
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientOfL1Norm, 
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
@@ -392,16 +392,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void UpdateFunctionMBSize() override
         {
-            m_gradientOfL1Norm->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_gradientOfL1Norm->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override  
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             VerifyDims(1, 1);
-            FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).MatrixNorm1());
+            Output().SetValue(Input(0)->MaskedValueSlice(frameRange).MatrixNorm1());
 #if NANCHECK
-            FunctionValues().HasNan("MatrixL1Reg");
+            Output().HasNan("MatrixL1Reg");
 #endif
         }
 
@@ -414,7 +414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -464,26 +464,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
+        virtual void BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange), FunctionValues());
+            BackpropToS(Input(0)->GradientFor(frameRange), GradientValues(), Input(0)->OutputFor(frameRange), Output());
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
         {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);  // TODO: GPU inefficiency
             inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override  
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             VerifyDims(1,1);
-            FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
+            Output().SetValue(Input(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
 #if NANCHECK
-            FunctionValues().HasNan("MatrixL2Reg");
+            Output().HasNan("MatrixL2Reg");
 #endif
         }
 
@@ -496,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
     };
 
@@ -535,15 +535,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         // ^^ TODO: we can merge these two
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_evalMode;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_evalMode;
             if (m_evalMode > NCEEvalMode::None)
             {
@@ -558,27 +558,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
         */
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             m_needRecomputeGradientToSoftmaxInput = false;
             //gradient computation@yinggongzhao
             //inputIndex should be 2 this time
             if (m_evalMode != NCEEvalMode::None)
-                LogicError("ComputeInputPartial should only be called in training mode");
+                LogicError("BackpropTo should only be called in training mode");
             if (inputIndex == 0)
                 InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
-            Inputs(inputIndex)->GradientSlice(frameRange).AssignNCEDerivative(m_ncePrediction, Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange), Inputs(2)->FunctionValues(), inputIndex);
+            Input(inputIndex)->GradientFor(frameRange).AssignNCEDerivative(m_ncePrediction, Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange), Input(2)->Output(), inputIndex);
         }
 
 #if 0   // TODO: delete this. Seems copy-paste leftover?
-        /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void BackpropToRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
             Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
             Matrix<ElemType>::MultiplyAndAdd(obs, false, gradientValues, false, inputGradientValues);
         }
@@ -595,44 +595,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
-            if (Inputs(0)->HasMBLayout() && Inputs(0)->GetMBLayout()->HasGaps())
+            FrameRange frameRange(Input(0)->GetMBLayout());
+            if (Input(0)->HasMBLayout() && Input(0)->GetMBLayout()->HasGaps())
                 LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
-            //Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
+            //Input(0)->MaskMissingValuesColumnsToZero(frameRange);
             int positive = 0, negative = 0;
-            if (Inputs(0)->GetNumRows() == 1)
+            if (Input(0)->GetNumRows() == 1)
             {
-                for (int i = 0; i < Inputs(0)->GetNumCols(); i++)   // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
+                for (int i = 0; i < Input(0)->GetNumCols(); i++)   // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
                 {
-                    if (Inputs(0)->FunctionValues()(0, i) > 0)
+                    if (Input(0)->Output()(0, i) > 0)
                         positive++;
-                    else if (Inputs(0)->FunctionValues()(0, i) < 0)
+                    else if (Input(0)->Output()(0, i) < 0)
                         negative++;
                 }
                 assert(positive * negative == 0);
             }
-            if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->GetNumRows() == 1 && positive > 0))
+            if (m_evalMode == NCEEvalMode::Softmax || (Input(0)->GetNumRows() == 1 && positive > 0))
             {
                 // evaluation uses softmax
-                m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
-                m_logSoftmax += Inputs(3)->FunctionValues();
+                m_logSoftmax.AssignProductOf(Input(1)->Output(), true, Input(2)->Output(), false);
+                m_logSoftmax += Input(3)->Output();
                 m_logSoftmax.InplaceLogSoftmax(false);
-                MaskMissingColumnsToZero(m_logSoftmax, Inputs(1)->GetMBLayout(), frameRange);  // TODO: is this the right way to neutralize gaps?
-                FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
+                MaskMissingColumnsToZero(m_logSoftmax, Input(1)->GetMBLayout(), frameRange);  // TODO: is this the right way to neutralize gaps?
+                Output().AssignSoftmaxSum(Input(0)->Output(), m_logSoftmax);
             }
-            else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->GetNumRows() == 1 && negative > 0))
+            else if (m_evalMode == NCEEvalMode::Unnormalized || (Input(0)->GetNumRows() == 1 && negative > 0))
             {
                 // TODO: are we treating gaps correctly here?
-                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
+                Output().AssignNceUnnormalizedEval(Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output());
             }
             else
             {
                 // TODO: are we treating gaps correctly here?
                 // training criterion uses NCE
                 //likelihood                                         samples+probs                        hidden                       embedding            bias
-                FunctionValues().AssignNoiseContrastiveEstimation(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_ncePrediction);
+                Output().AssignNoiseContrastiveEstimation(Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(), m_ncePrediction);
             }
             m_needRecomputeGradientToSoftmaxInput = true;
         }
@@ -649,17 +649,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
+            if (Input(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (isFinalValidationPass)
             {
-                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows())) // input and matrix can be timed
+                if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows())) // input and matrix can be timed
                     LogicError("The Matrix dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
-                if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
+                if (!(Input(0)->GetNumCols() == Input(1)->GetNumCols())) // label and input same obs numbers
                     LogicError("The Matrix dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
             }
 
-            //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
+            //cerr << Input(3)->GetNumCols() << "\t" << Input(0)->GetNumCols() << endl;
             SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
@@ -668,7 +668,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
     protected:
@@ -693,14 +693,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     /// ClassBasedCrossEntropyWithSoftmaxNode (labels(.,t), input(.,t), inputweights, clsProbBeforeSoftmax(.,t))
     // Inputs:
-    // Inputs(0) [4 x T] label in dense matrix in
+    // Input(0) [4 x T] label in dense matrix in
     //           (0,t) the first row is the word index
     //           (1,t) the second row is the class index
     //           (2,t) the third row is the first word index of the class
     //           (3,t) the last row is the first word index of the next class
-    // Inputs(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
-    // Inputs(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
-    // Inputs(3) [nbr_cls x T] clsprob in dense matrix in. this input, if applied softmax on, is the posterior probabilty of class given observations
+    // Input(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
+    // Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
+    // Input(3) [nbr_cls x T] clsprob in dense matrix in. this input, if applied softmax on, is the posterior probabilty of class given observations
     // -----------------------------------------------------------------------
 
     // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
@@ -720,7 +720,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         */
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             // this should never be called for input[0], which is controlled through the needGradient flag
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
@@ -731,42 +731,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> grd_t;
             Matrix<ElemType> grd_to_wgt_t;
 
-            const size_t nT = Inputs(0)->GetNumTimeSteps();
-            const size_t nS = Inputs(0)->GetNumParallelSequences();
+            const size_t nT = Input(0)->GetNumTimeSteps();
+            const size_t nS = Input(0)->GetNumParallelSequences();
             size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
+                FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
+                Matrix<ElemType> lbl_t = Input(0)->OutputFor(frameRange);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
                 size_t rgt_bnd = (size_t)lbl_t(3, 0); // and end of that range
                 size_t nbr_wrd = (rgt_bnd - lft_bnd); // number of words in the class
 
                 // compute prb - 1 and prb
-                Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
+                Matrix<ElemType> weightForClass = Input(2)->Output().ColumnSlice(lft_bnd, nbr_wrd);
+                Matrix<ElemType> obs = Input(1)->OutputFor(frameRange);   // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataSliceWithMBLayout(m_clsLogSoftmax, frameRange, Inputs(3)->GetMBLayout());
+                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, frameRange, Input(3)->GetMBLayout());
 
                 switch (inputIndex)
                 {
                 case 1:
                     // gradient to input
-                    grd_t = Inputs(1)->GradientSlice(frameRange);
+                    grd_t = Input(1)->GradientFor(frameRange);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 case 2:
                     // gradient to input weight
-                    grd_to_wgt_t = Inputs(2)->GradientValues().ColumnSlice(lft_bnd, nbr_wrd);
+                    grd_to_wgt_t = Input(2)->GradientValues().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 case 3:
-                    grd_t = Inputs(3)->GradientSlice(frameRange);
-                    grd_t.SetValue(DataSliceWithMBLayout(m_clsSoftmax, frameRange, Inputs(3)->GetMBLayout()));
+                    grd_t = Input(3)->GradientFor(frameRange);
+                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, frameRange, Input(3)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 }
@@ -788,16 +788,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 m_grdToSoftMaxInput.Resize(1, m_totalNbrWords); // buffer that contains a concatenation of class-conditional values
 
-                const size_t nT = Inputs(0)->GetNumTimeSteps();
-                const size_t nS = Inputs(0)->GetNumParallelSequences();
+                const size_t nT = Input(0)->GetNumTimeSteps();
+                const size_t nS = Input(0)->GetNumParallelSequences();
                 size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
                 for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
                 {
-                    if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                    if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                         continue;
-                    FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
+                    FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                    Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
+                    Matrix<ElemType> lbl_t = Input(0)->OutputFor(frameRange);
                     size_t y_t = (size_t)lbl_t(0, 0);       // word index
                     size_t lft_bnd = (size_t)lbl_t(2, 0);   // index of first word belonging to current word token's class
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);   // and end of that range
@@ -824,40 +824,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // -sum(left_i * log(softmax_i(right)))
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
-                LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+            if (Input(0)->Output().GetDeviceId() != CPUDEVICE)
+                LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
 
             // (the below is left-over from refactoring)
-            Matrix<ElemType>& functionValues = FunctionValues();
+            Matrix<ElemType>& functionValues = Output();
             
-            const size_t hdSize = Inputs(1)->GetNumRows();    // hdSize
-            assert(m_nbrCls == Inputs(3)->GetNumRows());
+            const size_t hdSize = Input(1)->GetNumRows();    // hdSize
+            assert(m_nbrCls == Input(3)->GetNumRows());
 
             // compute the class posteriors
-            m_clsLogSoftmax = Inputs(3)->FunctionValues();
+            m_clsLogSoftmax = Input(3)->Output();
             m_clsLogSoftmax.InplaceLogSoftmax(true);        // log
             m_clsSoftmax.AssignExpOf(m_clsLogSoftmax);      // non-log
 
             // create a large workspace to contain all class-conditioned probs concatenated
             // 'sz' is the offset into that vector. We will iterate over these vectors at a few places. Always use this same boilerplate code.
             // TODO: should we pull this iteration into an iterator, to reduce the code dup?
-            const size_t nT = Inputs(0)->GetNumTimeSteps();
-            const size_t nS = Inputs(0)->GetNumParallelSequences();
+            const size_t nT = Input(0)->GetNumTimeSteps();
+            const size_t nS = Input(0)->GetNumParallelSequences();
             size_t sz = 0;
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
+                FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
+                const Matrix<ElemType> & lbl_t = Input(0)->OutputFor(frameRange);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = (rgt_bnd - lft_bnd);   // number of words in the class
                 if (nbr_wrd == 0)
-                    LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): Encountered a class of size 0. This sample seems to lack an NoInput flag.");
+                    LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): Encountered a class of size 0. This sample seems to lack an NoInput flag.");
 
                 sz += nbr_wrd;
             }
@@ -872,11 +872,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
+                FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
+                const Matrix<ElemType> & lbl_t = Input(0)->OutputFor(frameRange);
                 size_t y_t = (size_t)lbl_t(0, 0);     // current word token index
                 size_t c_t = (size_t)lbl_t(1, 0);     // current word token's class index
                 size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
@@ -886,13 +886,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // now get views of various arrays that correspond to the index range of words belonging to this class
 
                 // get hidden vectors for the words in this class
-                Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);    // [hdSize x nbr_wrd]
+                Matrix<ElemType> weightForClass = Input(2)->Output().ColumnSlice(lft_bnd, nbr_wrd);    // [hdSize x nbr_wrd]
 
                 // buffer to hold the class-conditional distribution
                 Matrix<ElemType> softMax_t    =    m_softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
+                Matrix<ElemType> obs = Input(1)->OutputFor(frameRange);   // hidden activation vector for current word token
 
                 // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
                 // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
@@ -909,7 +909,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // add  the word's class-conditional log posterior
                 if (y_t < lft_bnd || y_t >= rgt_bnd)
-                    LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): Word index out of bounds of class-member index range (word not a class member).");
+                    LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): Word index out of bounds of class-member index range (word not a class member).");
                 size_t idx_in_class = y_t - lft_bnd;
                 Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);   // (1x1)
 
@@ -932,15 +932,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))  // TODO: but why could that label not be post-processed through another node?
+            if (Input(0)->OperationName() != OperationNameOf(InputValue))  // TODO: but why could that label not be post-processed through another node?
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (isFinalValidationPass)
             {
-                if (Inputs(0)->GetNumRows() != 4) // label needs to be 4 rows
+                if (Input(0)->GetNumRows() != 4) // label needs to be 4 rows
                     LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-                if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows()) // input and matrix can be timed
+                if (Input(1)->GetNumRows() != Input(2)->GetNumRows()) // input and matrix can be timed
                     LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-                if (Inputs(0)->GetMBLayout() != Inputs(1)->GetMBLayout() || Inputs(0)->GetMBLayout() != Inputs(3)->GetMBLayout())
+                if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || Input(0)->GetMBLayout() != Input(3)->GetMBLayout())
                     InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
             }
 
@@ -948,14 +948,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
-            m_nbrCls = Inputs(3)->GetNumRows();
+            m_nbrCls = Input(3)->GetNumRows();
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
     protected:
@@ -1016,64 +1016,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         /// compute posterior probability of label y at position t
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
-            size_t nrow = Inputs(0)->GetNumRows();
-            size_t ncol = Inputs(0)->GetNumCols();
+            FrameRange frameRange(Input(0)->GetMBLayout());
+            size_t nrow = Input(0)->GetNumRows();
+            size_t ncol = Input(0)->GetNumCols();
 
             mAlpha.Resize(nrow, ncol);
             mBeta.Resize(nrow, ncol);
             mPostProb.Resize(nrow, ncol);
 
-            FunctionValues().SetValue(0.0);
-            Matrix<ElemType> funcVal = FunctionValues();    // TODO: This just creates a 1x1 matrix set to 0.
+            Output().SetValue(0.0);
+            Matrix<ElemType> funcVal = Output();    // TODO: This just creates a 1x1 matrix set to 0.
 
-            size_t nS = Inputs(0)->GetNumParallelSequences();
+            size_t nS = Input(0)->GetNumParallelSequences();
             if (nS != 1)
                 LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
             for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
             {
                 FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
                 // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
-                EvaluateThisNodeS(
-                    DataSliceWithMBLayout(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
-                    DataSliceWithMBLayout(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
-                    DataSliceWithMBLayout(mBeta,     sequenceRange, Inputs(0)->GetMBLayout()),
+                ForwardPropS(
+                    DataWithMBLayoutFor(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mAlpha,    sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mBeta,     sequenceRange, Input(0)->GetMBLayout()),
                     funcVal,
-                    Inputs(0)->ValueSlice(sequenceRange),
-                    Inputs(1)->ValueSlice(sequenceRange),
-                    Inputs(2)->FunctionValues(), mStartLbl,
+                    Input(0)->OutputFor(sequenceRange),
+                    Input(1)->OutputFor(sequenceRange),
+                    Input(2)->Output(), mStartLbl,
                     mEndLbl);
 
-                FunctionValues() += funcVal;    // aggregate over sequences
+                Output() += funcVal;    // aggregate over sequences
             }
         }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        virtual void BackpropToNonLooping(size_t inputIndex) override  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             // inputIndex 0 should not get us here, it should be prevented by the needGradient flag of input[0]
             if (inputIndex != 1 && inputIndex != 2)
                 InvalidArgument("CRFNode only takes with respect to input and weight.");
 
             if (inputIndex == 1)
             {
-                auto gradient = Inputs(1)->GradientSlice(frameRange);
-                Matrix<ElemType>::AddScaledDifference(GradientValues(), mPostProb, Inputs(0)->ValueSlice(frameRange), gradient);
+                auto gradient = Input(1)->GradientFor(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), mPostProb, Input(0)->OutputFor(frameRange), gradient);
             }
             else if (inputIndex == 2)
             {
-                assert(Inputs(inputIndex)->GradientSlice(frameRange).GetNumElements() > 0);
-                size_t nS = Inputs(0)->GetNumParallelSequences();
+                assert(Input(inputIndex)->GradientFor(frameRange).GetNumElements() > 0);
+                size_t nS = Input(0)->GetNumParallelSequences();
                 for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
                     FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
-                    auto gradient = Inputs(2)->GradientSlice(frameRange);
-                    TransGrdCompute(Inputs(0)->ValueSlice(sequenceRange),
-                                    DataSliceWithMBLayout(mAlpha, sequenceRange, Inputs(0)->GetMBLayout()),
-                                    DataSliceWithMBLayout(mBeta,  sequenceRange, Inputs(0)->GetMBLayout()),
-                                    Inputs(2)->ValueSlice(frameRange),
+                    auto gradient = Input(2)->GradientFor(frameRange);
+                    TransGrdCompute(Input(0)->OutputFor(sequenceRange),
+                                    DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
+                                    DataWithMBLayoutFor(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
+                                    Input(2)->OutputFor(frameRange),
                                     gradient,
                         mStartLbl, 1);
                 }
@@ -1083,7 +1083,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // compute forward backward algorithm
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -1219,10 +1219,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             if (isFinalValidationPass)
-                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
-                    Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                    Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
+                if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
+                    Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Input(2)->GetNumCols() == Input(2)->GetNumRows()))
             {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
@@ -1236,7 +1236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1283,20 +1283,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             //auto t_start_time = Timer::MilliSecondElapsed();
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->GradientValues(), GradientValues());
             }
             else if (inputIndex == 1)
             {
-                ComputeInputPartialRight(*m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(),
+                BackpropToRight(*m_softmaxOfRight, Input(0)->Output(), Input(inputIndex)->GradientValues(),
                                          GradientValues(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
 #ifdef _DEBUG
-                Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Inputs(inputIndex)->GetMBLayout()));
+                Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
             }
             else if (inputIndex == 2)
@@ -1304,15 +1304,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 1           // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
                 ;   // gradient does not flow here
 #else
-                Inputs(inputIndex)->SetParameterUpdateRequired(false);
-                Inputs(inputIndex)->GradientValues().SetValue(0.0);
+                Input(inputIndex)->SetParameterUpdateRequired(false);
+                Input(inputIndex)->GradientValues().SetValue(0.0);
 #endif
             }
             else
                 RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        static void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
@@ -1327,7 +1327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+        static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                                     Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
                                                     const Matrix<ElemType> & gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
         {
@@ -1346,7 +1346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // -sum(left_i * log(softmax_i(right)))
-        virtual void EvaluateThisNodeNonLooping()
+        virtual void ForwardPropNonLooping()
         {
             // Initialize m_gammaCalculator
             // TODO: Would this lend itself to a unique_ptr instead of the init flag?
@@ -1360,22 +1360,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gammaCalcInitialized = true;
             }
             //softmax
-            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Output()/*prediction*/, true);
             m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             m_softmaxOfRight->InplaceExp();
 
             m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
             m_gammaFromLattice->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
-            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/,
-                                            Inputs(0)->FunctionValues()/*labels*/, *m_gammaFromLattice,
-                                            m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(),
-                                            Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+            m_gammaCalculator.calgammaformb(Output(), m_lattices, Input(2)->Output()/*log LLs*/,
+                                            Input(0)->Output()/*labels*/, *m_gammaFromLattice,
+                                            m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+                                            Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
             
 #if NANCHECK
-            FunctionValues().HasNan("SequenceWithSoftmaxNode");
+            Output().HasNan("SequenceWithSoftmaxNode");
 #endif
 #if DUMPOUTPUT
-            FunctionValues().Print("SequenceWithSoftmaxNode");
+            Output().Print("SequenceWithSoftmaxNode");
 #endif
         }
 
@@ -1383,14 +1383,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+            if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
             if (isFinalValidationPass)
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
-                    Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&
-                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() &&
-                    Inputs(1)->GetNumCols() == Inputs(2)->GetNumCols()))
+                if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&  //match size
+                    Input(1)->GetNumRows() == Input(2)->GetNumRows() &&
+                    Input(0)->GetNumCols() == Input(1)->GetNumCols() &&
+                    Input(1)->GetNumCols() == Input(2)->GetNumCols()))
             {
                     LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
@@ -1407,7 +1407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1517,42 +1517,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             if (inputIndex != 1)
                 InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
 
-            //ComputeInputPartialRight(m_temp, Inputs(0)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_classZeroLabels, m_result);
+            //BackpropToRight(m_temp, Input(0)->Output(), Input(2)->Output(), Input(inputIndex)->GradientValues(), GradientValues(), m_classZeroLabels, m_result);
             // Create vector with 1 for class 1, and -1 for class 0
-            m_temp->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
+            m_temp->AssignDifferenceOf(Input(0)->OutputFor(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
 
-            // Multiply the vector by the Inputs(2)->FunctionValues()
+            // Multiply the vector by the Input(2)->Output()
             if (m_inputs.size() == 3) // without weight
-                m_temp->AssignElementProductOf(*m_temp, Inputs(2)->ValueSlice(frameRange));     // TODO: is Inputs(2) minibatch data? Confirm
+                m_temp->AssignElementProductOf(*m_temp, Input(2)->OutputFor(frameRange));     // TODO: is Input(2) minibatch data? Confirm
 
             // divide class by p (class 1) or (1-p) (class 0)
             m_temp->AssignElementDivisionOf(*m_temp, *m_result);            // TODO: this is in-place--does this function allow that?
 
-            //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_temp, Inputs(inputIndex)->GradientValues());
-            auto gradient = Inputs(inputIndex)->GradientSlice(frameRange);
+            //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_temp, Input(inputIndex)->GradientValues());
+            auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_temp, 1.0f, gradient);
         }
 
         virtual void UpdateFunctionMBSize() override
         {
-            m_classZeroLabels->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_result->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_temp->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_classZeroLabels->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+            m_result->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+            m_temp->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
         }
 
         //-sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             
-            const Matrix<ElemType>& classOneLabels        = Inputs(0)->ValueSlice(frameRange);
-            const Matrix<ElemType>& classOneProbabilities = Inputs(1)->ValueSlice(frameRange);
+            const Matrix<ElemType>& classOneLabels        = Input(0)->OutputFor(frameRange);
+            const Matrix<ElemType>& classOneProbabilities = Input(1)->OutputFor(frameRange);
             Matrix<ElemType>&       classZeroLabels       = *m_classZeroLabels;
 
             Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
@@ -1580,10 +1580,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // The error is the negative of the sum of the result
             if (m_inputs.size() == 2)
-                FunctionValues().AssignSumOfElements(*m_temp);
+                Output().AssignSumOfElements(*m_temp);
             else
-                FunctionValues().AssignInnerProductOf(Inputs(2)->ValueSlice(frameRange), *m_temp, false);
-            FunctionValues() *= (-1);
+                Output().AssignInnerProductOf(Input(2)->OutputFor(frameRange), *m_temp, false);
+            Output() *= (-1);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1593,20 +1593,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ValidateBinaryReduce(isFinalValidationPass);
 
-            /* Note that this is the same as ValidateInferBinaryChildrenDims, but done for the 3rd child if it exists */
+            /* Note that this is the same as ValidateInferBinaryInputDims, but done for the 3rd child if it exists */
             if (m_inputs.size() == 3)
             {
-                auto in = Inputs(2);
-                auto other = Inputs(1);
+                auto in = Input(2);
+                auto other = Input(1);
                 // borrow any unset dimension on one input from the other input
                 size_t rows =                        in->GetNumRows() == 0 ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
                 size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
 
-                ValidateInferChildDims(2, rows, cols);
+                ValidateInferInputDims(2, rows, cols);
 
                 if (isFinalValidationPass &&
-                    !(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
-                    (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
+                    !(Input(0)->GetNumRows() == Input(2)->GetNumRows() &&
+                    (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(2)->GetNumCols()))))
                 {
                     LogicError("The Matrix dimensions of the second argument in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
                 }
@@ -1634,7 +1634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

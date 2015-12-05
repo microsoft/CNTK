@@ -125,7 +125,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
-        cn->LoadFromFile<ElemType>(params[0]);
+        cn->Load<ElemType>(params[0]);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     else if (EqualInsensitive(name, "LoadModelWithName"))
@@ -137,7 +137,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
-        cn->LoadFromFile<ElemType>(params[1]);
+        cn->Load<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadNDLSnippet"))
@@ -188,7 +188,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // validate the network before we save it out
         ProcessNDLScript(m_netNdlDefault, ndlPassAll, true);
 
-        cn->SaveToFile(fileName);
+        cn->Save(fileName);
     }
     else if (EqualInsensitive(name, "SaveModel"))
     {
@@ -207,7 +207,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
-        netNdl->cn->SaveToFile(fileName);
+        netNdl->cn->Save(fileName);
     }
     else if (EqualInsensitive(name, "SetDefaultModel"))
     {

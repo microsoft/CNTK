@@ -412,6 +412,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helper functions
 
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId) { };
+
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
     //  TODO: should be replaced by BestGpu class instead, it's much better
     template<class ElemType> int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
