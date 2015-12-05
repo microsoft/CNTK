@@ -161,29 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t smallBatchSize = endSampleID - startSampleID;
                     Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
 
-                    // We optimize for three different scenarios here by handling them slightly differently.
-                    // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
-                    // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
-                    // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                    if (m_1DConvolutionOnGPUSparse)
-                    {
-                        Matrix<ElemType> inputSubBatch;
-                        Matrix<ElemType> inputSubBatchReordered(smallBatchSize * m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-                        inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize));
-                        inputSubBatch.InplaceTranspose();
-                        inputSubBatch.Reshape(smallBatchSize * m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels());
-                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch, 1, smallBatchSize, 1,
-                            m_inputImageLayout.GetWidth(), m_inputImageLayout.GetNumChannels(), 1.0f, inputSubBatchReordered, inputSubBatchReordered);
-                        inputGradientValues.Reshape(inputGradientValues.GetNumRows() * inputGradientValues.GetNumCols() / m_inputImageLayout.GetNumChannels(), m_inputImageLayout.GetNumChannels());
-
-                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatch, false, inputSubBatchReordered, false, 1, inputGradientValues,
-                            smallBatchSize, m_horizontalSubsample, m_zeroPadding, false);
-
-                        inputGradientValues.Reshape(m_imageLayout.GetNumChannels(), inputGradientValues.GetNumRows() * inputGradientValues.GetNumCols() / m_imageLayout.GetNumChannels());
-                    }
-                    else
-                    {
-                        Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                    Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                         inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
                         tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                         tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
@@ -191,8 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(),
                             m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
 
-                        Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
-                    }
+                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
                 }
             }
 
