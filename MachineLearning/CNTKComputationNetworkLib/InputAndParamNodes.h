@@ -181,12 +181,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+#if 0
     // -----------------------------------------------------------------------
     // SparseLearnableParameter (/*no input*/)
     // -----------------------------------------------------------------------
 
-    //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
-    //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
+    // WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
+    // WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
@@ -218,6 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SparseLearnableParameter<float>; 
     template class SparseLearnableParameter<double>;
+#endif
 
     // -----------------------------------------------------------------------
     // InputValueBase (/*no input*/)
@@ -567,83 +569,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LookupTableNode<float>;
     template class LookupTableNode<double>;
-
-    // -----------------------------------------------------------------------
-    // PairNetworkNode (input)
-    // -----------------------------------------------------------------------
-
-    /**
-    pair this node to a node in another network
-    this node provide an interface from this network. The next layer network then can use this interface to know which node to connect to.
-    */
-    template<class ElemType>
-    class PairNetworkNode : public ComputationNode<ElemType>, public NumInputs<1>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        static const std::wstring TypeName() { return L"PairNetwork"; }
-
-        void Init(size_t row_size, size_t col_size)
-        {
-            CreateMatrixIfNull(m_output);
-            SetDims(row_size, col_size);
-            UpdateFunctionValuesSize();
-        }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(PairNetworkNode);
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
-            Base(deviceId, name)
-        {
-            Init(row_size, col_size);
-            CreateMatrixIfNull(m_gradientValues);
-            m_gradientValues->Resize(row_size, col_size);
-            m_gradientValues->SetValue(0.0f);
-        }
-
-        virtual void Load(File& fstream, size_t modelVersion) override
-        {
-            Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
-            Base::Load(fstream, modelVersion);
-        }
-
-        /// to-do: need to change to the new way of resetting state
-        void BackpropToMap(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                InvalidArgument("PairNetwork operation only takes one input.");
-
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Input(inputIndex)->GradientValues());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(m_output->GetNumRows() == GradientValues().GetNumRows()); // original used m_output->GetNumRows() for loop dimension
-            assert(m_pMBLayout);
-
-            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(fr);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(fr), mTmp);
-        }
-
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
-        {
-            Matrix<ElemType> mTmp = OutputFor(fr);
-            mTmp.SetValue(Input(0)->OutputFor(fr));
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            Base::Validate(isFinalValidationPass);
-
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
-                SetDims(Input(0));
-
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-    };
-
-    template class PairNetworkNode<float>;
-    template class PairNetworkNode<double>;
 
 }}}

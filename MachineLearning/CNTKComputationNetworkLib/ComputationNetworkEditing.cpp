@@ -18,7 +18,7 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // This source file contains files related to model editing.
+    // This source file contains files related to model editing with MEL. Future BrainScript editing will not modify nodes in-place.
 
     // -----------------------------------------------------------------------
     // network editing
