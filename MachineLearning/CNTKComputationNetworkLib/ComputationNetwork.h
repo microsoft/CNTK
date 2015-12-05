@@ -964,9 +964,6 @@ typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
-//  - renaming:
-//     Evaluate(), ComputeGradient()
-//     fr                   -> t                    // make it more lightweight
 //  - finish the job:
 //     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
