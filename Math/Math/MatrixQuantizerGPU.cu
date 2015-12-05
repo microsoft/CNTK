@@ -89,19 +89,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     cudaStream_t MatrixQuantizerGPU<ElemType>::m_assignStream = NULL;
     
     template<class ElemType>
-    cudaStream_t MatrixQuantizerGPU<ElemType>::GetComputeStream() const
+    cudaStream_t MatrixQuantizerGPU<ElemType>::GetComputeStream()
     {
         return m_computeStream;
     }
     
     template<class ElemType>
-    cudaStream_t MatrixQuantizerGPU<ElemType>::GetFetchStream()  const
+    cudaStream_t MatrixQuantizerGPU<ElemType>::GetFetchStream() 
     {
         return  m_fetchStream; 
     }
     
     template<class ElemType>
-    cudaStream_t MatrixQuantizerGPU<ElemType>::GetAssignStream() const
+    cudaStream_t MatrixQuantizerGPU<ElemType>::GetAssignStream()
     {
         return  m_assignStream;
     }
@@ -343,7 +343,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MatrixQuantizerGPU<float>;
     template class MatrixQuantizerGPU<double>;
 
-    MainComputeStreamEvent::MainComputeStreamEvent()
+    GPUMatrixComputeStreamEvent::GPUMatrixComputeStreamEvent(int deviceId)
+        : MatrixComputeStreamEvent(deviceId)
     {
         // Note: Do NOT use cudaEventBlockingSync (which supposedly yields the process)--it will totally break cudaEventSynchronize(), causing it to take 50 or 100 ms randomly.
         cudaEventCreateWithFlags(&m_mainGPUComputeStreamCUDAEvent, cudaEventDisableTiming) || "cudaEventCreateWithFlags failed";
@@ -352,14 +353,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEventRecord(m_mainGPUComputeStreamCUDAEvent, GetStream()) || "cudaEventRecord failed";
     }
 
-    MainComputeStreamEvent::~MainComputeStreamEvent()
+    GPUMatrixComputeStreamEvent::~GPUMatrixComputeStreamEvent()
     {
         cudaEventDestroy(m_mainGPUComputeStreamCUDAEvent) || "cudaEventDestroy failed";;
     }
 
-    void MainComputeStreamEvent::Synchronize()
+    void GPUMatrixComputeStreamEvent::SynchronizeEvent()
     {
         cudaEventSynchronize(m_mainGPUComputeStreamCUDAEvent) || "cudaEventSynchronize failed";
     }
+
+    template <typename ElemType>
+    void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent()
+    {
+        cudaStreamWaitEvent(MatrixQuantizerGPU<ElemType>::GetComputeStream(), m_mainGPUComputeStreamCUDAEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    }
+
+    // Explicit template instantiations
+    template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>();
+    template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>();
 
 }}}
