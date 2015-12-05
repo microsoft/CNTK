@@ -283,7 +283,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CE)
+CriterionNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -362,7 +362,7 @@ Variable names may be any alphanumeric sequence that starts with a letter
  cannot be used for a variable.
  The special node names 
 \emph on
-FeatureNodes, LabelNodes, CriteriaNodes, EvalNodes, OutputNodes
+FeatureNodes, LabelNodes, CriterionNodes, EvalNodes, OutputNodes
 \emph default
  are also reserved and may not be used as variable names.
 \end_layout
@@ -679,7 +679,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CE)
+CriterionNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1258,7 +1258,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CE)
+CriterionNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout

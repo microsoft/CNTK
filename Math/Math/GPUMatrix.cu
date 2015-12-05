@@ -193,6 +193,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
     }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
+    {
+        assert(deviceId >= 0);
+        CUDA_CALL(cudaSetDevice(deviceId));
+    }
+
     template<class ElemType>
     /*static*/ DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
     {

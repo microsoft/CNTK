@@ -11,7 +11,7 @@
 #include "ComputationNetwork.h"
 #include "SynchronousExecutionEngine.h"
 #include <string>
-#include "commandArgUtil.h"
+#include "Config.h"
 #include <stdexcept>
 
 using namespace std;
@@ -174,7 +174,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // handle the alternate way of specifying nodes, the array of nodes method
             CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
             CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
-            CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
+            CheckOutputNodes(script, "CriterionNodes", m_net->FinalCriterionNodes());
+            CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes()); //legacy
             CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
             CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
         }

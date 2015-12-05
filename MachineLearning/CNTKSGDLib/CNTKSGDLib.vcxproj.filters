@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\ConfigFile.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -28,12 +25,12 @@
     <ClCompile Include="SGD.cpp">
       <Filter>SGD</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
@@ -129,9 +126,6 @@
     <ClInclude Include="SimpleOutputWriter.h">
       <Filter>Eval</Filter>
     </ClInclude>
-    <ClInclude Include="IComputationNetBuilder.h">
-      <Filter>SGD</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -164,6 +158,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataTensor.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Config.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="IComputationNetBuilder.h">
+      <Filter>MultiNetworks</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

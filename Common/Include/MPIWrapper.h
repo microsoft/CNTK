@@ -67,8 +67,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 int argc = 0;
                 char**argv = NULL;
+                int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
                 int provided;
-                return MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided);
+                int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
+                if (provided != requiredThreadLevelSupport)
+                    LogicError("Failed to initialize MPI with the desired level of thread support");
+
+                return ret;
             }
     #ifdef WIN32
             __except(EXCEPTION_EXECUTE_HANDLER)

@@ -10,7 +10,7 @@
 #include "BestGpu.h"
 
 #include "ComputationNetwork.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 
 // TODO: giving up moving stuff for now, running out of time. The following #includes should not be necessary once the hard-working code in here gets moved to .cpp
 #include "InputAndParamNodes.h"

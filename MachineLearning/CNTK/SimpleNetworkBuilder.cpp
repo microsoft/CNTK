@@ -576,10 +576,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
 
                         columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
-                        columnStride->FunctionValues().SetValue(1);
+                        columnStride->Value().SetValue(1);
                         columnStride->SetParameterUpdateRequired(false); 
                         rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
-                        rowStride->FunctionValues().SetValue(0);
+                        rowStride->Value().SetValue(0);
                         rowStride->SetParameterUpdateRequired(false);
                         alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
 
@@ -705,10 +705,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
 
                         columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
-                        columnStride->FunctionValues().SetValue(1);
+                        columnStride->Value().SetValue(1);
                         columnStride->SetParameterUpdateRequired(false); 
                         rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
-                        rowStride->FunctionValues().SetValue(0);
+                        rowStride->Value().SetValue(0);
                         rowStride->SetParameterUpdateRequired(false); 
                         alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
 
@@ -1044,7 +1044,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 directOutput = ApplyNonlinearFunction(builder.Times(directWIO, input),i);
 
                 ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
-                scalar->FunctionValues().SetValue((ElemType)0.01);
+                scalar->Value().SetValue((ElemType)0.01);
                 ComputationNodePtr scaled = builder.Scale(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
 
                 mergedNode = builder.Plus(toNode, scaled);
@@ -1086,11 +1086,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"bi%d", iLayer), outputDim, 1);
         bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"bf%d", iLayer), outputDim, 1);
         //if (m_forgetGateInitVal > 0)
-        bf->FunctionValues().SetValue(m_forgetGateInitVal);
+        bf->Value().SetValue(m_forgetGateInitVal);
         //if (m_inputGateInitVal > 0)
-        bi->FunctionValues().SetValue(m_inputGateInitVal);
+        bi->Value().SetValue(m_inputGateInitVal);
         //if (m_outputGateInitVal > 0)
-        bo->FunctionValues().SetValue(m_outputGateInitVal);
+        bo->Value().SetValue(m_outputGateInitVal);
 
         Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"WHI%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -1124,7 +1124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
             //it->SetParameterUpdateRequired(false);
-            //it->FunctionValues().SetValue(m_constInputGateValue);
+            //it->Value().SetValue(m_constInputGateValue);
             it = nullptr;
         }
         else
@@ -1314,7 +1314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = builder.Times(w, input, L"outputsBeforeSoftmax");
 
             trans = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
-            trans->FunctionValues().SetValue((ElemType)1.0 / m_layerSizes[numHiddenLayers + 1]);
+            trans->Value().SetValue((ElemType)1.0 / m_layerSizes[numHiddenLayers + 1]);
 //          m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
             trans->SetParameterUpdateRequired(true);
             label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
@@ -1446,24 +1446,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t nDim = inputDim + outputDim + 2;
         wInputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
         m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
-        wInputGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_inputGateInitVal);  /// init to input gate bias
+        wInputGate->Value().ColumnSlice(0, 1).SetValue(m_inputGateInitVal);  /// init to input gate bias
         wForgetGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WFORGETGATE%d", iLayer), outputDim, nDim);
         m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale);
-        wForgetGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); /// init to forget gate bias
+        wForgetGate->Value().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); /// init to forget gate bias
         wOutputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WOUTPUTGATE%d", iLayer), outputDim, nDim);
         m_net->InitLearnableParameters(wOutputGate, m_uniformInit, randomSeed++, m_initValueScale);
-        wOutputGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_outputGateInitVal);/// init to output gate bias
+        wOutputGate->Value().ColumnSlice(0, 1).SetValue(m_outputGateInitVal);/// init to output gate bias
         wMemoryCellMatrix = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WMEMORYCELLWEIGHT%d", iLayer), outputDim, inputDim + outputDim + 1);
         m_net->InitLearnableParameters(wMemoryCellMatrix, m_uniformInit, randomSeed++, m_initValueScale);
-        wMemoryCellMatrix->FunctionValues().ColumnSlice(0, 1).SetValue(0);/// init to memory cell bias
+        wMemoryCellMatrix->Value().ColumnSlice(0, 1).SetValue(0);/// init to memory cell bias
 
         output = builder.LSTM(inputObs, wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix, msra::strfun::wstrprintf(L"LSTM%d", iLayer));
 
 #ifdef DEBUG_DECODER
-        wInputGate->FunctionValues().SetValue((ElemType)0.01);
-        wForgetGate->FunctionValues().SetValue((ElemType)0.01);
-        wOutputGate->FunctionValues().SetValue((ElemType)0.01);
-        wMemoryCellMatrix->FunctionValues().SetValue((ElemType)0.01);
+        wInputGate->Value().SetValue((ElemType)0.01);
+        wForgetGate->Value().SetValue((ElemType)0.01);
+        wOutputGate->Value().SetValue((ElemType)0.01);
+        wMemoryCellMatrix->Value().SetValue((ElemType)0.01);
 #endif
 
         if (m_addDropoutNodes)
@@ -1518,7 +1518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
                 output = builder.LookupTable(e, input, L"LookupTable");
 #ifdef DEBUG_DECODER
-                e->FunctionValues().SetValue((ElemType)0.01);
+                e->Value().SetValue((ElemType)0.01);
 #endif
 
                 if (m_addDropoutNodes)
@@ -1573,7 +1573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 #ifdef DEBUG_DECODER
-            w->FunctionValues().SetValue((ElemType)0.01);
+            w->Value().SetValue((ElemType)0.01);
 #endif
             label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
             AddTrainAndEvalCriterionNodes(input, label, w);
@@ -1649,7 +1649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
                 output = builder.LookupTable(e, input, L"EncoderLookupTable");
 #ifdef DEBUG_DECODER
-                e->FunctionValues().SetValue((ElemType)0.01);
+                e->Value().SetValue((ElemType)0.01);
 #endif
 
                 if (m_addDropoutNodes)
@@ -1837,6 +1837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
         {
             input = inputObs[sidx];
+#if 0
             if (inputWeightSparse)
             {
                 Wxo = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
@@ -1845,6 +1846,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Wxc = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
             }
             else
+#endif
             {
                 Wxo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
                 Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
@@ -1868,11 +1870,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
         bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
         //if (m_forgetGateInitVal > 0)
-        bf->FunctionValues().SetValue(m_forgetGateInitVal);
+        bf->Value().SetValue(m_forgetGateInitVal);
         //if (m_inputGateInitVal > 0)
-        bi->FunctionValues().SetValue(m_inputGateInitVal);
+        bi->Value().SetValue(m_inputGateInitVal);
         //if (m_outputGateInitVal > 0)
-        bo->FunctionValues().SetValue(m_outputGateInitVal);
+        bo->Value().SetValue(m_outputGateInitVal);
 
         Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -1906,7 +1908,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
             //it->SetParameterUpdateRequired(false);
-            //it->FunctionValues().SetValue(m_constInputGateValue);
+            //it->Value().SetValue(m_constInputGateValue);
             it = nullptr;
         }
         else
@@ -2269,7 +2271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             label = builder.CreateInputNode(L"labels", 2 * (this->nce_noises + 1), mbSize);
 
             bias = builder.CreateLearnableParameter(L"BiasVector", 1, m_layerSizes[m_layerSizes.size() - 1]);
-            bias->FunctionValues().SetValue((ElemType)-std::log(m_layerSizes[m_layerSizes.size() - 1]));
+            bias->Value().SetValue((ElemType)-std::log(m_layerSizes[m_layerSizes.size() - 1]));
             //m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
             //clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
 
@@ -2383,10 +2385,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
 
             w = builder.Parameter(wts.GetNumRows(), wts.GetNumCols(), nameOfW);
-            w->FunctionValues().SetValue(wts);
+            w->Value().SetValue(wts);
 
             b = builder.Parameter(bias.GetNumRows(), 1, nameOfB);
-            b->FunctionValues().SetValue(bias);
+            b->Value().SetValue(bias);
 
             if (layerType == "perceptron")
             {
@@ -2458,7 +2460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
                 prior = builder.Mean(label, L"Prior");
                 static_pointer_cast<PreComputedNode<ElemType>>(prior)->MarkComputed(false);
-                prior->FunctionValues().SetValue(zeros);
+                prior->Value().SetValue(zeros);
             }
         }
 

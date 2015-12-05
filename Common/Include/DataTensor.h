@@ -13,41 +13,36 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // ImageLayout -- tensor descriptor to describe the inner layout of a data vector that holds a tensor
+    // TensorShape -- tensor descriptor to describe the inner layout of a sample vector that holds a tensor
     //
-    // Minibatches are stored as Matrices. While the column dimension represents multiple data vectors, and may have
+    // Minibatches are stored as Matrix objects. While the column dimension represents multiple sample vectors, and may have
     // an inner structure (time, parallel sequences) described by the MBLayout, the row dimension represents data
     // vectors that hold tensors of data.
     //
-    // The ImageLayout describes the inner tensor structure of these vectors, as a column-major tensor of arbitrary number of dimensions.
+    // The TensorShape describes the inner tensor structure of these vectors, as a column-major tensor of arbitrary number of dimensions.
     //
     // Specifically, when the image is an image, then this is a 3-dimensional tensor with dimensions ( channels, width, height ),
     // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores (R,G,B) as a float3.
-    //
-    // BUGBUG: Tensors with other than 3 dimensions can currently not be used because they cannot be serialized with the current file format.
     // -----------------------------------------------------------------------
 
-    // TODO: really support lengths other than 3, e.g. fix serialization code to handle variable-length descriptors
-    // TODO: rename to DataLayout
-    // TODO: must match ComputationNode::m_numRows; or, rather, the ImageLayout is how m_numRows is stored??
-    // TODO: move this elsewhere, maybe a separate header Tensors.h?
-    struct ImageLayout
+    // TODO: must match ComputationNode::m_numRows; or, rather, the TensorShape is how m_numRows is stored??
+    struct TensorShape
     {
     public:
         // BUGBUG: This initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
         // Idea: We could construct this thing with a ref to the enclosing ComputationNode, and replace 'width' by an expression.
-        ImageLayout() : m_tensorDims(3, 1) { }
+        TensorShape() : m_tensorDims(3, 1) { }
         template<class VEC>
-        ImageLayout(const VEC & dims) { m_tensorDims.reserve(dims.size()); m_tensorDims.assign(dims.begin(), dims.end()); }
-        ImageLayout(std::vector<size_t> && dims) : m_tensorDims(std::move(dims)) { }
+        TensorShape(const VEC & dims) { m_tensorDims.reserve(dims.size()); m_tensorDims.assign(dims.begin(), dims.end()); }
+        TensorShape(std::vector<size_t> && dims) : m_tensorDims(std::move(dims)) { }
 
         void Invalidate() { m_tensorDims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
 
         // TODO: need move constructor/assignment?
 
-        bool operator==(const ImageLayout & other) const { return m_tensorDims == other.m_tensorDims; }
+        bool operator==(const TensorShape & other) const { return m_tensorDims == other.m_tensorDims; }
 
-        void SaveToFile(File& fstream) const
+        void Save(File& fstream) const
         {
 #if 1
             // saving as 32-bit ints. This allows to continue to support the old format (size_t W, H, C)
@@ -55,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto dim : m_tensorDims)
             {
                 if (dim > UINT32_MAX)
-                    LogicError("ImageLayout::SaveToFile(): Tensor dimension out of bounds (> 4G).");
+                    LogicError("TensorShape::Save(): Tensor dimension out of bounds (> 4G).");
                 fstream << (uint32_t)dim;
             }
 #else
@@ -64,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_tensorDims[1] << m_tensorDims[2] << m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
 #endif
         }
-        void LoadFromFile(File& fstream)
+        void Load(File& fstream)
         {
 #if 1
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
@@ -113,15 +108,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // When constructing an image tensor with the usual W, H, C format, use the following function instead.
     // This will sort the three parameters into the correct order.
-    static inline ImageLayout ImageLayoutWHC(size_t width, size_t height, size_t channels)
+    // BUGBUG: at several places, a comment says "after multiplication the structure is lost" and the vector dimension
+    //         is set as the image height. However, the image height is actually the wrong dimension since images are assumed transposed.
+    //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
+    static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
-        return ImageLayout(std::vector<size_t> { channels, width, height });
+        return TensorShape(std::vector<size_t> { channels, width, height });
     }
     // and use this one when the data is a plain vector
-    static inline ImageLayout ImageLayoutVector(size_t n)
+    static inline TensorShape ImageLayoutVector(size_t n)
     {
-        return ImageLayout(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
+        return TensorShape(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
     }
-    // TODO: we need a constructor from config; that will generalize
+    // TODO: we need a constructor from config; that will allow us to generalize
 
 }}}

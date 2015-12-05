@@ -7,7 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "DataWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "RandomOrdering.h"
 #include <string>
 #include <map>

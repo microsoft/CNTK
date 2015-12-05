@@ -1,5 +1,7 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 
+// This is used by NDL and the SimpleNetworkBuilder. It will not be used by BrainScript except for New{Standard}Node().
+
 #pragma once
 
 #include "Basics.h"
@@ -27,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // TODO: can these be changed to ComputationNodeBasePtr?
+        // TODO: move into a separate header/class, to decouple from this class which would then be only used by old NDL and SimpleNetworkBuilder.
         static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
         static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
 
@@ -37,11 +40,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols);
         //sparse matrix size is optionally specified
-        ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
+        //ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
-        ComputationNodePtr CreateInputNode(const std::wstring & inputName, const ImageLayout & imageLayout, const size_t numImages);
-        ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const ImageLayout & imageLayout, const size_t numImages);
+        ComputationNodePtr CreateInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);
+        ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);
         ComputationNodePtr CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
         ComputationNodePtr CreateMaxPoolingNode(const std::wstring & nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
@@ -52,32 +55,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: These next three functions are wrappers around CreateXXXNode(). Remove these.
         ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"") { return CreateLearnableParameter(nodeName, rows, cols); } // TODO: remove
         ComputationNodePtr Input(const size_t rows, const size_t cols, const std::wstring nodeName = L"") { return CreateInputNode(nodeName, rows, cols); } // TODO: remove
-        ComputationNodePtr Input(const ImageLayout & imageLayout, const size_t numImages, const std::wstring nodeName = L"") { return CreateInputNode(nodeName, imageLayout, numImages); } // TODO: remove
+        ComputationNodePtr Input(const TensorShape & imageLayout, const size_t numImages, const std::wstring nodeName = L"") { return CreateInputNode(nodeName, imageLayout, numImages); } // TODO: remove
         // The following functions create nodes and link them to the network and their inputs.
         // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
         ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"");
         ComputationNodePtr Convolution(const ComputationNodePtr weight,
-            const ComputationNodePtr inputValues,
-            const size_t kernelWidth,
-            const size_t kernelHeight,
-            const size_t outputChannels,
-            const size_t horizontalSubsample,
-            const size_t verticalSubsample,
-            const bool zeroPadding = false,
-            const std::wstring nodeName = L"",
-            const size_t maxTempMemSizeInSamples = 0);
+                                       const ComputationNodePtr inputValues,
+                                       const size_t kernelWidth,
+                                       const size_t kernelHeight,
+                                       const size_t outputChannels,
+                                       const size_t horizontalSubsample,
+                                       const size_t verticalSubsample,
+                                       const bool zeroPadding = false,
+                                       const std::wstring nodeName = L"",
+                                       const size_t maxTempMemSizeInSamples = 0);
         ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
-            const size_t windowWidth,
-            const size_t windowHeight,
-            const size_t horizontalSubsample,
-            const size_t verticalSubsample,
-            const std::wstring nodeName = L"");
+                                      const size_t windowWidth,
+                                      const size_t windowHeight,
+                                      const size_t horizontalSubsample,
+                                      const size_t verticalSubsample,
+                                      const std::wstring nodeName = L"");
         ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
-            const size_t windowWidth,
-            const size_t windowHeight,
-            const size_t horizontalSubsample,
-            const size_t verticalSubsample,
-            const std::wstring nodeName = L"");
+                                          const size_t windowWidth,
+                                          const size_t windowHeight,
+                                          const size_t horizontalSubsample,
+                                          const size_t verticalSubsample,
+                                          const std::wstring nodeName = L"");
         ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
         ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
@@ -122,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr Minus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
-        ComputationNodePtr Reshape(const ComputationNodePtr a, const size_t num_rows, const ImageLayout & imageLayout, const std::wstring nodeName = L"");
+        ComputationNodePtr Reshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape & imageLayout, const std::wstring nodeName = L"");
         ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
         ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, size_t timeStep, const std::wstring nodeName = L"");

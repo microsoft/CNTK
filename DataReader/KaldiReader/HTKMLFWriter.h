@@ -25,7 +25,7 @@ private:
     std::map<std::wstring,size_t> outputNameToTypeMap;
     unsigned int sampPeriod;
     size_t outputFileIndex;
-    void SaveToFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
+    void Save(std::wstring& outputFile, Matrix<ElemType>& outputData);
     void SaveToKaldiFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
     ElemType * m_tempArray;
     size_t m_tempArraySize;

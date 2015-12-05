@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MatrixQuantizerGPU : public MatrixQuantizer<ElemType>
     {
     public:
-        MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync = false);
+        MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync = false);
         ~MatrixQuantizerGPU();
 
         // Disallow copy and move construction and assignment
@@ -54,9 +54,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - fetch from GPU            --waits for quantizecomplete; flags fetchcomplete
         //  - CPU-side access of buffer --read: waits for fetchcomplete, write: waits for assigncomplete
         
-        cudaStream_t GetComputeStream() const;         // get the priority compute stream
-        cudaStream_t GetFetchStream()  const;          // and the copy streams
-        cudaStream_t GetAssignStream() const;
+    public:
+        static cudaStream_t GetComputeStream();         // get the compute stream
+        static cudaStream_t GetFetchStream();          // and the copy streams
+        static cudaStream_t GetAssignStream();
 
     private:
         //helper functions for gpus
@@ -65,9 +66,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SyncEvent(cudaEvent_t ev);
         
     private:
+        static cudaStream_t m_computeStream;
         static cudaStream_t m_fetchStream;
         static cudaStream_t m_assignStream;
 
+        mutable cudaEvent_t m_tempMatrixZeroingCompleteEvent;
         mutable cudaEvent_t m_quantizeCompleteEvent;
         mutable cudaEvent_t m_fetchCompleteEvent;
         mutable cudaEvent_t m_assignCompleteEvent;
@@ -80,5 +83,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // A temporary intermediate QuantizedMatrix buffer on the GPU
         QuantizedMatrix<ElemType>* m_tempGPUQuantizedMatrix; 
     };
-    
+
+    // This type records and synchronizes events on the main 
+    // GPU matrix computation work stream
+    class MATH_API GPUMatrixComputeStreamEvent : public MatrixComputeStreamEvent
+    {
+    public:
+        GPUMatrixComputeStreamEvent(int deviceId);
+        ~GPUMatrixComputeStreamEvent();
+
+        void SynchronizeEvent() override;
+
+        template <typename ElemType>
+        void SynchronizeQuantizationComputeStreamWithEvent();
+
+    private:
+#ifndef CPUONLY
+        cudaEvent_t m_mainGPUComputeStreamCUDAEvent;
+#endif
+    };
+
 }}}

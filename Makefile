@@ -163,6 +163,7 @@ ifeq ("$(BUILDTYPE)","release")
   endif
 
   CXXFLAGS += -O4
+  CPPFLAGS += -DNDEBUG
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
@@ -200,7 +201,7 @@ $(BUILDINFO): Scripts/genrate_build_info
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/ConfigFile.cpp \
+	Common/Config.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
 	Common/DebugUtil.cpp \
@@ -431,7 +432,6 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
-	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
 	MachineLearning/CNTKActionsLib/TrainActions.cpp \
