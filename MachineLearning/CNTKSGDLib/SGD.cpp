@@ -120,6 +120,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TrainOrAdaptModel() -- main training end-to-end, given a start model
     // -----------------------------------------------------------------------
 
+    static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
+
     template<class ElemType>
     void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                           ComputationNetworkPtr refNet,
@@ -652,6 +654,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TrainOneEpoch() -- train one epoch
     // -----------------------------------------------------------------------
 
+    static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, double value);
+
     template<class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                         ComputationNetworkPtr refNet,
@@ -986,33 +990,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (g_mpi->NumNodesInUse() > 1)
-            {
-                size_t processedSamples = 0; 
-                float secondsSinceLastSyncFinished = 0; 
-                float secondsSpentOnSync = 0;
-                if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
-                                             secondsSinceLastSyncFinished, secondsSpentOnSync))
                 {
-                    // if a sync happens, do some extra work
-                    nSamplesSinceLastModelSync = 0; 
-                    nSynced++;
-
-                    nSecondsOnMASync += secondsSpentOnSync; 
-                    nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
-                    
-                    if (m_syncStatsTrace > 0)
+                    size_t processedSamples = 0; 
+                    float secondsSinceLastSyncFinished = 0; 
+                    float secondsSpentOnSync = 0;
+                    if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
+                                                 secondsSinceLastSyncFinished, secondsSpentOnSync))
                     {
-                        if (nSynced % m_syncStatsTrace == 0)
+                        // if a sync happens, do some extra work
+                        nSamplesSinceLastModelSync = 0; 
+                        nSynced++;
+
+                        nSecondsOnMASync += secondsSpentOnSync; 
+                        nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
+                    
+                        if (m_syncStatsTrace > 0)
                         {
-                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                    (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
-                            nSecondsOnMASync = 0; 
-                            nSecondsSinceLastMAPerfReport = 0; 
+                            if (nSynced % m_syncStatsTrace == 0)
+                            {
+                                fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
+                                        (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                                nSecondsOnMASync = 0; 
+                                nSecondsSinceLastMAPerfReport = 0; 
+                            }
                         }
                     }
+                    aggregateNumSamplesWithLabel = processedSamples;
                 }
-                aggregateNumSamplesWithLabel = processedSamples;
-            }
             }
 
             timer.Stop();
