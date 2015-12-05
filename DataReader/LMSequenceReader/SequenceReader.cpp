@@ -1837,7 +1837,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     bool moreData = EnsureDataAvailable(m_mbStartSample);
     if (!moreData)
     {
-        m_pMBLayout->Init(mToProcess.size(), 0, true/*sequential*/);
+        m_pMBLayout->Init(mToProcess.size(), 0);
         return false;
     }
     // actual size is the size of the next seqence
@@ -1863,7 +1863,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
         size_t nT = actualmbsize / mToProcess.size();
-        m_pMBLayout->Init(mToProcess.size(), nT, true/*sequential*/);
+        m_pMBLayout->Init(mToProcess.size(), nT);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);

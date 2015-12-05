@@ -56,18 +56,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This is achieved by interleaving storage. If f(s,t) denotes a frame of sequence s at time t,
     // the minibatch matrix would contain this:
     //   f(0,0) f(1,0) ... f(0,1) f(1,1) ...
+    // Much of CNTK's efficiency comes from this.
+    // (Note that some communities, such as language processing, often call sets f(0..s-1,t) a
+    // "minibatch," where in our definition, a minibatch consists of multiple entire sequences.)
+    //
     // In the special case of frame randomization, every frame is stored as a single-frame sequence.
-    // Much of CNTK's superior efficiency comes from this.
+    //
+    // If we describe this in terms of tensors, a data matrix with sample layout (I,J,K) and
+    // MBLayout (S,T) can be interpreted as ImageLayout(I,J,K,T,S) (note that S is last, not T).
     //
     // Sequences can also be concatenated, to fill the space better. For this case,
     // this object stores about every frame whether it is at the start or end of a sequence.
-    // Frames can also be invalid, due to gaps (not enough space to concatenate another sequence at the end)
-    // and due to invalid input data (e.g. a speech utterance for which no alignment could be generated).
+    // Hence, we distinguish between "sequences" (logical units) and "parallel sequences"
+    // (where one "parallel sequence" may consist of multiple concatenated "sequences").
+    //
+    // When not all sequences have the same length, some parallel sequences have invalid frames (gaps).
+    // Gaps are identified by the MBLayouyt as well. Currently, these gaps only occur at the end.
+    //
+    // Gaps may also arise due to invalid input data (e.g. a speech utterance for which no alignment could be generated).
     //
     // An MBLayout object stores:
+    //  - for every sequence in the minibatch the n-tuple (global sequence id, s, first t, last t)
+    //    (where first and last t may sometimes lie outside of the minibatch, e.g. in case of truncated BPTT)
     //  - number of time steps and parallel sequences (their product is equal to the #columns in the minibatch matrix)
-    //  - whether the data is sequential or not
-    //  - information for (every time step, every parallel sequence) MinibatchPackingFlags for every (sequence, time step)
+    //  - MinibatchPackingFlags: information whether a frame (s,t) is
+    //     - SequenceBegin (first frame of a sequence)
+    //     - SequenceEnd (last frame of a sequence--in frame-randomization, each frame is both)
+    //     - NoInput (a gap or missing input frame)
     //  - a column-wise OR of those flags for fast testing entire time steps at once
     // -----------------------------------------------------------------------
 
@@ -77,7 +92,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
     //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
     //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling EvaluateThisNode() on a node
-    // TODO: move this to an appropriate place and name it properly. This class has no relationship with Matrix
     // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
@@ -86,25 +100,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
-        // TODO: ^^ use forwarding constructor to this guy vv, or default args
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
+        MBLayout() : MBLayout(1, 0) { }
 
         // copy the content of another MBLayoutPtr over
         // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
         void CopyFrom(const MBLayoutPtr & other) { *this = *other; }
-        void MoveFrom(MBLayoutPtr other) { *this = move(*other); other->Init(0, 0, false); }    // destructive copy that steals ownership if the content, like std::move()
+        void MoveFrom(MBLayoutPtr other) { *this = move(*other); other->Init(0, 0); }    // destructive copy that steals ownership if the content, like std::move()
     private:
         MBLayout & operator=(const MBLayout &) = default;   // make this private --use CopyFrom() instead, which makes it very clear that it's copying content, not copying the reference
     public:
 
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-        void Init(size_t numParallelSequences, size_t numTimeSteps, bool /*dataIsSequentialDummy*/ = true/*no longer needed*/)
+        void Init(size_t numParallelSequences, size_t numTimeSteps)
         {
             // remember the dimensions..
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            //m_dataIsSequential = dataIsSequential;
             // ...but don't actually allocate anything
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
@@ -152,8 +164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // test boundary flags for a specific condition
         bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (Get(id, t) & f) != 0; }
-        // TODO: swap id and t for all of these functions; t is the more important parameter
+        bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
+        // TODO: swap s and t for all of these functions; t is the more important parameter
 
         // tests if Is() is false for every frame and sequence
         // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
@@ -201,10 +213,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AddSequence(beginTime, endTime, false);
         }
 
-        // TODO: This can go away once frame mode returns multiple sequence sof one frame each; or we can test against cols==1
-        // HAH! This function is only ever used for Decimate(). It can completely go away, as can methods of the same name in the readers!
-        //bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
-
         // compute the number of actual samples in this layout (not counting NoLabel ones)
         // This is used by MeanNode and InvStdDevNode.
         size_t DetermineActualNumSamples() const
@@ -238,31 +246,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
-        //bool m_dataIsSequential;
-        // TODO: ^^ is m_dataIsSequential necessary? Who ues it?
 
         // TODO: rename the following two variables, or even implement it with a very different structure
 
-        /// a matrix of n_stream x n_length
-        /// n_stream is the number of streams
-        /// n_length is the maximum lenght of each stream
-        /// for example, two sentences used in parallel in one minibatch would be
-        /// [2 x 5] if the max length of one of the sentences is 5
-        /// the elements of the matrix is 0, 1, or -1, defined as ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) in cbasetype.h 
-        /// 0 1 1 0 1
-        /// 1 0 1 0 0 
-        /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-        /// the second data stream has two sentences, with 0 indicating begining of sentences
-        /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-        /// frame. 
+        // a matrix of S x T
+        // S is the number of parallel sequences, T is the number of time steps (possibly of multiple concatenated sequences).
+        // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch
+        // would be described by this [2 x 5]  matrix:
+        //   S . . . E
+        //   S . E G G          // (last two time steps have no content)
+        // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
         mutable Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
-        // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
-        // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
-        /// conditionally point to either a pointer to that provided by network, or point to 
-        /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
-        /// a matrix of 1 x n_length
-        /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
-        /// == 0 denotes such case is not in this frame
+        // TODO: we should change to a Matrix<char>.
+
+        // a short-hand vector or-ing the above flags over all parallel sequences
         mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
 
         // A boolean flag indicating whether the MBLayout can be further modified
