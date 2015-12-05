@@ -540,7 +540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InvalidateMissingValuesColumns(const FrameRange &) = 0;
         virtual void InvalidateMissingGradientColumns(const FrameRange &) = 0;
 
-        virtual void ClearGradientOfInputs() = 0;
+        virtual void ZeroGradientsOfInputs() = 0;
 
         virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {
@@ -1225,7 +1225,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void /*ComputationNodeBase::*/ClearGradientOfInputs() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
+        // TODO: why of the inputs, and not the node itself?
+        void /*ComputationNodeBase::*/ZeroGradientsOfInputs() override   // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)
         {
             for (size_t i = 0; i < m_inputs.size(); i++)
                 Input(i)->m_gradientInitialized = false;
@@ -1243,10 +1244,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // TODO: we should move this pattern to class Matrix. We should not be concerned here with the storage format of the gradient.
             GradientValues().Resize(Output().GetNumRows(), Output().GetNumCols());
-            if (GradientValues().GetMatrixType() == DENSE)
+            //if (GradientValues().GetMatrixType() == DENSE)
                 GradientValues().SetValue(0);
-            else
-                GradientValues().Reset();
+            //else          // no longer needed, SetValue() does this right
+            //    GradientValues().Reset();
 
             m_gradientInitialized = true;
         }
@@ -1429,7 +1430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
         virtual void ValidateInferInputDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }
         virtual void SetInput(const size_t,const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr &) override { NOT_IMPLEMENTED; }
-        virtual void ClearGradientOfInputs(void) override { NOT_IMPLEMENTED; }
+        virtual void ZeroGradientsOfInputs(void) override { NOT_IMPLEMENTED; }
         virtual void MaskMissingValuesColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
         virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
         virtual void InvalidateMissingValuesColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
@@ -1496,7 +1497,7 @@ protected: \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
     using Base::CreateUniqId; \
-    using Base::GetNumInputs; using Base::ClearGradientOfInputs; using Base::VerifyDims; \
+    using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \

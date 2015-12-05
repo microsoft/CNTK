@@ -50,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Backprop() for the training criterion
     void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode)    // training criterion to compute the gradients for
     {
-        ClearGradientOfAllNodes(rootNode);     // reset the flags that will trigger lazy resetting of gradients to zero
+        ZeroGradients(rootNode);     // reset the flags that will trigger lazy resetting of gradients to zero
 
         // initialize root gradient with a scalar gradient value of 1.0
         auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);

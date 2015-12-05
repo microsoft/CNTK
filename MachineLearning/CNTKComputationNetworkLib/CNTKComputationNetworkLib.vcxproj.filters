@@ -25,9 +25,6 @@
     <ClCompile Include="ComputationNetwork.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkBuilderFromConfig.cpp">
-      <Filter>Scripting</Filter>
-    </ClCompile>
     <ClCompile Include="ComputationNetworkEvaluation.cpp">
       <Filter>Network</Filter>
     </ClCompile>
@@ -151,9 +148,6 @@
     </Filter>
     <Filter Include="from CNTKMath">
       <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scripting">
-      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

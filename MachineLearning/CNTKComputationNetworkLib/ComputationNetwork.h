@@ -845,11 +845,14 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    void ClearGradientOfAllNodes(const ComputationNodeBasePtr& rootNode)
+    // zeroes out all gradients except the root itself
+    // TODO: why not the root?
+    // (Note that inside the nodes this only really sets a flag to do it later when needed, but that's not our concern.)
+    void ZeroGradients(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
         for (auto &node : allNodes)
-            node->ClearGradientOfInputs();
+            node->ZeroGradientsOfInputs();
     }
 
     // -----------------------------------------------------------------------
