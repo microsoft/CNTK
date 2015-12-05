@@ -144,11 +144,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node->EndBackprop();
         }
     }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::AllocateGradientMatricesForInputs(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeBackprop(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/ { }
 
     // -----------------------------------------------------------------------
     // SEQTraversalFlowControlNode methods -- implements SEQ traversal (loop unrolling)
@@ -246,27 +246,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node2->EndBackprop();
     }
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/
     {
         for (auto & nodeLoopIter : m_nestedNodes)
-            nodeLoopIter->RequestMatricesBeforeEval(matrixPool);
+            nodeLoopIter->RequestMatricesBeforeForwardProp(matrixPool);
     }
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::AllocateGradientMatricesForInputs(MatrixPool& matrixPool) /*override*/
     {
         // TODO: should we deallocate in opposite order?
         for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
         {
-            (*nodeIter)->AllocateGradientMatricesForChildren(matrixPool);
+            (*nodeIter)->AllocateGradientMatricesForInputs(matrixPool);
         }
     }
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeBackprop(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
     {
         for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
         {
             if ((*nodeIter)->NeedGradient())
-                (*nodeIter)->ReleaseMatricesAfterGradientComp(matrixPool);
+                (*nodeIter)->ReleaseMatricesAfterBackprop(matrixPool);
         }
     }
 
@@ -630,11 +630,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (completedEvaluate.insert(recInfo).second)
                 {
 #if 1
-                    recInfo->RequestMatricesBeforeEval(m_matrixPool);
+                    recInfo->RequestMatricesBeforeForwardProp(m_matrixPool);
 #else
                     for (auto &nodeLoopIter : recInfo->m_nestedNodes)
                     {
-                        nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
+                        nodeLoopIter->RequestMatricesBeforeForwardProp(m_matrixPool);
                     }
 #endif
 
@@ -646,7 +646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                nodeIter->RequestMatricesBeforeEval(m_matrixPool);
+                nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
                 //we only release matrices for the children since the root node's informatioin will be used and should not be shared
                 //with others
                 ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
@@ -661,7 +661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodeBasePtr pNode = n->GetInputs()[i];
             parentCount[pNode]--;
             if (parentCount[pNode] == 0)
-                pNode->ReleaseMatricesAfterEval(m_matrixPool);
+                pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
         }
     }
 
@@ -675,7 +675,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         set<ComputationNodeBasePtr> completedGradient;
 
         //we need to call it here since we always compute gradients for children and root node is not children of other node
-        rootNode->RequestMatricesBeforeGradientComp(m_matrixPool);
+        rootNode->RequestMatricesBeforeBackprop(m_matrixPool);
 
         for (auto &n : allNodes)
         {
@@ -686,24 +686,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (completedGradient.insert(recInfo).second)
                 {
                     // SEQ mode: allocate all in loop first, then deallocate again
-#if 1               // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForChildren() and ReleaseMatricesAfterGradientComp()...
+#if 1               // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForInputs() and ReleaseMatricesAfterBackprop()...
                     // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
-                    recInfo->AllocateGradientMatricesForChildren(m_matrixPool);
+                    recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
                     //loops are computed sample by sample so we have to allocate them all 
-                    recInfo->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                    recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
 #else
                     const auto & recurrentNodes = recInfo->m_nestedNodes;
                     //loops are computed sample by sample so we have to allocate them all 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
-                        (*nodeIter)->AllocateGradientMatricesForChildren(m_matrixPool);
+                        (*nodeIter)->AllocateGradientMatricesForInputs(m_matrixPool);
                     }
                     recInfo->m_completedGradient = true;
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
                         if ((*nodeIter)->NeedGradient())
                         {
-                            (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                            (*nodeIter)->ReleaseMatricesAfterBackprop(m_matrixPool);
                         }
                     }
 #endif
@@ -712,9 +712,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 // PAR mode: we can allocate and immediately deallocate one by one
-                n->AllocateGradientMatricesForChildren(m_matrixPool);
+                n->AllocateGradientMatricesForInputs(m_matrixPool);
                 if ((n != rootNode) && n->NeedGradient())  //root node's information will be used and should not be shared with others, also it's small (1x1)
-                    n->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                    n->ReleaseMatricesAfterBackprop(m_matrixPool);
             }
         }
     }

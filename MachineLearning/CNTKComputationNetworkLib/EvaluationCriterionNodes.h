@@ -91,9 +91,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_maxIndexes0, matrixPool);
             RequestMatrixFromPool(m_maxIndexes1, matrixPool);
             RequestMatrixFromPool(m_maxValues, matrixPool);
@@ -101,9 +101,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterEval(matrixPool);
+            Base::ReleaseMatricesAfterForwardProp(matrixPool);
             ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);

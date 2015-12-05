@@ -37,15 +37,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
-#if 1
             auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
-#else
-            if (inputIndex == 0)
-                Input(0)->GradientFor(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
-            else
-                Input(1)->GradientFor(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
-#endif
         }
 
         virtual void UpdateFunctionMBSize() override
@@ -89,16 +82,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_leftMinusRight, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
         }
 
@@ -138,7 +131,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                 auto gradient = Input(0)->GradientFor(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
                 Input(0)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
@@ -217,9 +209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         }
@@ -267,7 +259,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
             const Matrix<ElemType>& gradientValues)  
         {
-            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logOfRight, inputGradientValues);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logOfRight, 1.0f, inputGradientValues);
         }
 
@@ -278,7 +269,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FrameRange frameRange(Input(0)->GetMBLayout());
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
             MaskMissingColumnsToZero(leftDivRight, Input(0)->GetMBLayout(), frameRange);
-            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, leftDivRight, 1.0f, inputGradientValues);
         }
 
@@ -328,23 +318,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_logOfRight, matrixPool);
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_leftDivRight, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_logOfRight, matrixPool);
             ReleaseMatrixToPool(m_leftDivRight, matrixPool);
         }
@@ -386,7 +376,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
-            //inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, gradientValues/*1x1*/, gradientOfL1Norm, 1.0f, inputGradientValues);
         }
 
@@ -428,16 +417,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_gradientOfL1Norm, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_gradientOfL1Norm, matrixPool);
         }
 
@@ -1320,7 +1309,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
 #endif
 
-            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
@@ -1428,9 +1416,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
@@ -1534,7 +1522,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // divide class by p (class 1) or (1-p) (class 0)
             m_temp->AssignElementDivisionOf(*m_temp, *m_result);            // TODO: this is in-place--does this function allow that?
 
-            //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_temp, Input(inputIndex)->GradientValues());
             auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_temp, 1.0f, gradient);
         }
@@ -1614,18 +1601,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_classZeroLabels, matrixPool);
             RequestMatrixFromPool(m_result, matrixPool);
             RequestMatrixFromPool(m_temp, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
             ReleaseMatrixToPool(m_result, matrixPool);
             ReleaseMatrixToPool(m_temp, matrixPool);
