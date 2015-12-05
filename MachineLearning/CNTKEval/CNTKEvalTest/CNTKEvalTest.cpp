@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "Eval.h"
 #include "DataReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 using namespace Microsoft::MSR::CNTK;
 
 // process the command

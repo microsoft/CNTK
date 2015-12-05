@@ -23,7 +23,7 @@
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "ScriptableObjects.h"
 #include "HTKMLFReader.h"
 #include "TimerUtility.h"

@@ -5,7 +5,7 @@
 //
 #include "stdafx.h"
 #include "Matrix.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "DataReader.h"
 #include "boost/filesystem.hpp"
 

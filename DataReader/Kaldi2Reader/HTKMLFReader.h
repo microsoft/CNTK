@@ -8,7 +8,7 @@
 #include "DataReader.h"
 #include "KaldiSequenceTrainingDerivative.h"
 #include "UtteranceDerivativeBuffer.h"
-#include "commandArgUtil.h" // for intargvector
+#include "Config.h" // for intargvector
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

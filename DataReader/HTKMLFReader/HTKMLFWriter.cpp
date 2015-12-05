@@ -17,7 +17,7 @@
 
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "HTKMLFWriter.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection

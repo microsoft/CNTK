@@ -10,7 +10,7 @@
 #define DATAREADER_LOCAL
 #include "Basics.h"
 #include "DataReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "ScriptableObjects.h"
 
 using namespace std;
