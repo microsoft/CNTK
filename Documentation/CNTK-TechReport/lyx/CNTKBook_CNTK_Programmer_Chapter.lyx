@@ -2794,7 +2794,7 @@ CEMATRIX, const std::wstring name = L"")
 
 \begin_layout Plain Layout
 
-    LoadFromFile(fstream, modelVersion, deviceId);         
+    Load(fstream, modelVersion, deviceId);         
 \end_layout
 
 \begin_layout Plain Layout
@@ -2852,10 +2852,10 @@ The first constructor creates the node based on a deviceId and a node name.
 The second constructor creates a node from a file.
  It passes in a file stream to read data from and a modelVersion value to
  control how to load the file, in addition to the deviceId and node name.
- In this example, the actual code to load the node is in the LoadFromFile(fstrea
+ In this example, the actual code to load the node is in the Load(fstrea
 m, modelVersion, deviceId) function implemented in the base class.
  For some complicated nodes with additional node states, you need to implement
- your own LoadFromFile function for your newly added node.
+ your own Load function for your newly added node.
 \end_layout
 
 \begin_layout Standard
@@ -3241,7 +3241,7 @@ Forward Evaluation
 
 \begin_layout Standard
 For each node type you need to implement two forward computation functions
- EvaluateThisNode(), which evaluate the whole minibatch, and EvaluateThisNode(co
+ ForwardProp(), which evaluate the whole minibatch, and ForwardProp(co
 nst size_t timeIdxInSeq), which is used in the recurrent networks to evaluate
  the timeIdxInSeq-th sample for all the sequences in the minibatch.
 \end_layout
@@ -3253,7 +3253,7 @@ status open
 
 \begin_layout Plain Layout
 
-virtual void EvaluateThisNode()           
+virtual void ForwardProp()           
 \end_layout
 
 \begin_layout Plain Layout
@@ -3263,7 +3263,7 @@ virtual void EvaluateThisNode()
 
 \begin_layout Plain Layout
 
-    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->
+    ForwardPropS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->
 FunctionValues());
 \end_layout
 
@@ -3278,7 +3278,7 @@ FunctionValues());
 
 \begin_layout Plain Layout
 
-virtual void EvaluateThisNode(const size_t timeIdxInSeq)           
+virtual void ForwardProp(const size_t timeIdxInSeq)           
 \end_layout
 
 \begin_layout Plain Layout
@@ -3301,7 +3301,7 @@ imeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-    EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1
+    ForwardPropS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1
 Value);         
 \end_layout
 
@@ -3316,7 +3316,7 @@ Value);
 
 \begin_layout Plain Layout
 
-static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const
+static void WINAPI ForwardPropS(Matrix<ElemType>& functionValues, const
  Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
 \end_layout
 
@@ -3351,14 +3351,14 @@ status open
 
 \begin_layout Plain Layout
 
-EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>&
+ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>&
  input0, const Matrix<ElemType>& input1)
 \end_layout
 
 \end_inset
 
 which contains the actual evaluation code.
- In the EvaluateThisNode(const size_t timeIdxInSeq) function you will notice
+ In the ForwardProp(const size_t timeIdxInSeq) function you will notice
  the calls to the ColumnSlice function.
  As the name suggests, this function returns a column slice of a matrix.
 \end_layout
@@ -3379,9 +3379,9 @@ Gradient Computation
 
 \begin_layout Standard
 Similar to the forward computation, for each node type you need to implement
- two gradient computation functions ComputeInputPartial(const size_t inputIndex)
+ two gradient computation functions BackpropTo(const size_t inputIndex)
 , which computes the gradient for the whole minibatch with regard to the
- inputIndex-th input, and ComputeInputPartial(const size_t inputIndex, const
+ inputIndex-th input, and BackpropTo(const size_t inputIndex, const
  size_t timeIdxInSeq), which is used in the recurrent networks to compute
  the gradient of the timeIdxInSeq-th sample for all the sequences in the
  minibatch.
@@ -3394,7 +3394,7 @@ status open
 
 \begin_layout Plain Layout
 
-virtual void ComputeInputPartial(const size_t inputIndex)
+virtual void BackpropTo(const size_t inputIndex)
 \end_layout
 
 \begin_layout Plain Layout
@@ -3435,7 +3435,7 @@ virtual void ComputeInputPartial(const size_t inputIndex)
 
 \begin_layout Plain Layout
 
-        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->Gradient
+        BackpropToLeft(Inputs(1)->FunctionValues(), Inputs(0)->Gradient
 Values(), GradientValues());             
 \end_layout
 
@@ -3456,7 +3456,7 @@ Values(), GradientValues());
 
 \begin_layout Plain Layout
 
-    ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientVal
+    BackpropToRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientVal
 ues(), GradientValues());             
 \end_layout
 
@@ -3477,7 +3477,7 @@ ues(), GradientValues());
 
 \begin_layout Plain Layout
 
-virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxIn
+virtual void BackpropTo(const size_t inputIndex, const size_t timeIdxIn
 Seq)         
 \end_layout
 
@@ -3531,7 +3531,7 @@ e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-        ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(),
+        BackpropToLeft(sliceInput1Value, Inputs(0)->GradientValues(),
  sliceOutputGrad);
 \end_layout
 
@@ -3564,7 +3564,7 @@ Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-        ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad,
+        BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad,
  sliceOutputGrad);
 \end_layout
 
@@ -3585,7 +3585,7 @@ Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& inputFunction
+static void WINAPI BackpropToLeft(const Matrix<ElemType>& inputFunction
 Values, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientV
 alues)
 \end_layout
@@ -3613,7 +3613,7 @@ es, inputFunctionValues);
 
 \begin_layout Plain Layout
 
-static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctio
+static void WINAPI BackpropToRight(const Matrix<ElemType>& inputFunctio
 nValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>&
  gradientValues)           
 \end_layout
@@ -3650,7 +3650,7 @@ status open
 
 \begin_layout Plain Layout
 
-ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<Elem
+BackpropToLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<Elem
 Type>& inputGradientValues, const Matrix<ElemType>& gradientValues)
 \end_layout
 
@@ -3666,7 +3666,7 @@ status open
 
 \begin_layout Plain Layout
 
-ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<Ele
+BackpropToRight(const Matrix<ElemType>& inputFunctionValues, Matrix<Ele
 mType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
 \end_layout
 
@@ -4488,7 +4488,7 @@ if (PreCompute(net,trainSetDataReader, FeatureNodes,labelNodes,inputMatrices)
 
 \begin_layout Plain Layout
 
-    net.SaveToFile(GetModelNameForEpoch(int(startEpoch)-1));            
+    net.Save(GetModelNameForEpoch(int(startEpoch)-1));            
  
 \end_layout
 

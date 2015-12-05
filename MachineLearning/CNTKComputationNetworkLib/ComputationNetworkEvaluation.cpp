@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
-    // This calls EvaluateThisNode() on all nodes in order of data flow through the network.
+    // This calls ForwardProp() on all nodes in order of data flow through the network.
     // By default, the network is applied concurrently on all frames in a minibatch in parallel (PAR mode, a "map" operation)
     // Recurrent loops deviate:
     //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
         // traverse all nodes in the pre-determined evaluation order
-        GetOuterLoopNode(rootNode)->EvaluateThisNode(FrameRange(nullptr));
+        GetOuterLoopNode(rootNode)->ForwardProp(FrameRange(nullptr));
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
@@ -125,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::EvaluateThisNode(const FrameRange & frameRange) /*override*/
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & frameRange) /*override*/
     {
         for (auto & node : m_nestedNodes)
         {
@@ -136,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
 
                 node->OnEvaluateBeginIteration();
-                node->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
+                node->ForwardProp(frameRange.WithLayout(node->GetMBLayout()));
                 node->OnEvaluateEndIteration();
 
                 node->UpdateEvalTimeStamp();
@@ -195,7 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This evaluates all nodes in this FlowControlNode in SEQ mode: process the loop frame by frame in a nested loop.
     // This is where the time axis changes.
     // TODO: Once we do nested loops, then the FrameRange argument to this will refer to the outer loop.
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::EvaluateThisNode(const FrameRange &) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ForwardProp(const FrameRange &) /*override*/
     {
         // get layout associated with this loop
         // All nodes share the same layout.
@@ -209,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (auto & node : m_nestedNodes)
             {
-                node->EvaluateThisNode(t);
+                node->ForwardProp(t);
                 node->UpdateEvalTimeStamp();
             }
         } 

@@ -24,19 +24,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class?
 
-    // MAIN ENTRY POINT for network recurrent-loop analysis. All other functions below are called from this one.
-
-    // forms the recurrent loop that 'rootNode' participates in
-    // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
+    // FormRecurrentLoops() -- MAIN ENTRY POINT for network recurrent-loop analysis. All other functions in this CPP are called only from this one.
+    // This function analysis the networks for recurrent loops present in the computation of 'rootNode.'
     // This sets/updates:
     //  - m_recurrentInfo
     //  - ComputationNode::m_isPartOfLoop and m_loopId
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
-    // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start. This seems brittle.
-    // BUGBUG: m_visited is also used by ValidateSubNetwork(). Hence, it may be in unexpected state when calling into this multiple times.
-    // BUGBUG: This currently does not handle nested loops. To handle that:
-    //  - loops are isolated by a ReconcileMBLayout--loop determination should see right through it, and then include everything inside
-    //  - ...? Need to figure this out.
+    // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
+    // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
         // determine the strongly connected cliques -> m_recurrentInfo[]

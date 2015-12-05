@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Matrix<ElemType> gradientValues = GradientSlice(frameRange);
             Matrix<ElemType> functionValues = ValueSlice(frameRange);
@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
             Matrix<ElemType> functionValues = ValueSliceToDense(frameRange, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange.AllowBroadcast());
@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Matrix<ElemType> gradientValues = GradientSlice(frameRange);
             Matrix<ElemType> functionValues = ValueSlice(frameRange);
@@ -232,7 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             Matrix<ElemType> functionValues = ValueSlice(frameRange);
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange.AllowBroadcast());
@@ -302,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex == 0)        // left derivative
             {
@@ -317,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
             //ValueSlice(frameRange).AssignProductOf(Inputs(0)->FunctionValues().Get00Element(), Inputs(1)->ValueSlice(frameRange));
             ValueSlice(frameRange).Assign1x1ProductOf(Inputs(0)->FunctionValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange));
@@ -361,12 +361,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             Inputs(0)->GradientSlice(frameRange) -= GradientSlice(frameRange);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override 
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override 
         {
             ValueSlice(frameRange).AssignDifferenceOf(0, Inputs(0)->ValueSlice(frameRange));
         }
@@ -398,7 +398,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex == 0)    // left derivative
             {
@@ -421,7 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             VerifyDims(rows0, cols1);
@@ -478,7 +478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
-            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
 
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
@@ -516,7 +516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex == 0)  //left derivative
             {
@@ -524,18 +524,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(frameRange);
                 Matrix<ElemType> sliceInput1Value = Inputs(1)->MaskedValueSlice(frameRange);
 
-                ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                BackpropToLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -554,7 +554,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -568,7 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
@@ -607,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 
@@ -629,7 +629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
@@ -641,13 +641,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            //EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
+            //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
         }
 
@@ -683,24 +683,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
+        void BackpropToMap(const size_t inputIndex)
         {
             if (inputIndex > 1)
                 InvalidArgument("RowElementTimes operation only takes two inputs.");
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
@@ -708,16 +708,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+                BackpropToLeftS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+                BackpropToRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
         }
 
         //left (input 0) is a matrix
-        /*TODO: merge with call site*/void ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
+        /*TODO: merge with call site*/void BackpropToLeftS(Matrix<ElemType>& input1FunctionValues,
             Matrix<ElemType>& input0GradientValues, 
             const Matrix<ElemType>& gradientValues, 
             Matrix<ElemType>& tempMatrix)
@@ -732,7 +732,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //right (input 1) is a row vector
-        /*TODO: merge with call site*/void ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues, 
+        /*TODO: merge with call site*/void BackpropToRightS(Matrix<ElemType>& input0FunctionValues, 
             Matrix<ElemType>& input1GradientValues, 
             const Matrix<ElemType>& gradientValues, 
             Matrix<ElemType>& tempMatrix)
@@ -744,22 +744,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input1GradientValues.HasNan("RowElementTimes");
 #endif
         }
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            ForwardPropS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { ForwardPropMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
+            ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
         {
             functionValues.SetValue(input0);
             functionValues.RowElementMultiplyWith(input1);
@@ -825,41 +825,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
+        void BackpropToMap(const size_t inputIndex)
         {
             if (inputIndex > 1)
                 InvalidArgument("ColumnElementTimes operation only takes two inputs.");
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
             if (inputIndex == 0)
             {
                 Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange);
 
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+                BackpropToLeftS(Inputs(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
                 Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
-                ComputeInputPartialRightS(sliceInput0Value, Inputs(1)->GradientValues(), sliceOutputGrad, *m_tempMatrix);
+                BackpropToRightS(sliceInput0Value, Inputs(1)->GradientValues(), sliceOutputGrad, *m_tempMatrix);
             }
         }
 
         //left (input 0) is a matrix
-        /*TODO: merge with call site*/void ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
+        /*TODO: merge with call site*/void BackpropToLeftS(Matrix<ElemType>& input1FunctionValues,
             Matrix<ElemType>& input0GradientValues,
             const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& tempMatrix)
@@ -874,7 +874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //right (input 1) is a col vector
-        /*TODO: merge with call site*/void ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues,
+        /*TODO: merge with call site*/void BackpropToRightS(Matrix<ElemType>& input0FunctionValues,
             Matrix<ElemType>& input1GradientValues,
             const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& tempMatrix)
@@ -886,21 +886,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input1GradientValues.HasNan("ColumnElementTimes");
 #endif
         }
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            ForwardPropS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { ForwardPropMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
         {
             functionValues.SetValue(input0);
             functionValues.ColumnElementMultiplyWith(input1);
@@ -974,7 +974,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex == 0)    // left derivative
             {
@@ -993,20 +993,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        ///*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        ///*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         //{
         //    temp.AssignInnerProductOf(gradientValues, inputFunctionValues, false);
         //    inputGradientValues += temp;
         //}
         //
-        ///*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        ///*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         //{
         //    temp.SetValue(gradientValues);
         //    temp.ColumnElementMultiplyWith(inputFunctionValues);
         //    inputGradientValues += temp;
         //}
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
@@ -1094,13 +1094,13 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             // BUGBUG: In the future we may want to allow this to operate on a scalar that is one step of an outer time loop.
             Inputs(0)->GradientSlice(frameRange) += GradientValues(); // here the assumption is that gradientValues are 1x1 matrix
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             FunctionValues().AssignSumOfElements(Inputs(0)->MaskedValueSlice(frameRange));  // since we are reducing over frames, we must first mask gaps in input to zero
         }
@@ -1118,7 +1118,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
     };
 
@@ -1141,7 +1141,7 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange);
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
@@ -1149,12 +1149,12 @@ private:
             sliceInputGrad += sliceOutputGrad; // here the assumption is that gradientValues is a row vector
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            //EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+            //ForwardPropS(sliceOutputValue, sliceInputValue);
             Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
         }
 
@@ -1171,7 +1171,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
     };
 
@@ -1194,7 +1194,7 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNodeNonLooping::*/ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        virtual void /*ComputationNodeNonLooping::*/BackpropToNonLooping(size_t /*inputIndex*/) override
         {
             Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
             const Matrix<ElemType>& gradientValues = GradientValues();
@@ -1210,7 +1210,7 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
 #if DUMPOUTPUT
             Inputs(0)->FunctionValues().Print("TransposeNode- Input0");
@@ -1242,7 +1242,7 @@ private:
             InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
 
             // after transposition, the structure is lost
-            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumCols(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, Inputs(0)->GetNumCols(), 1);
         }
     };
 
@@ -1277,7 +1277,7 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_imageLayout = ImageLayoutWHC(1, m_imageLayout.GetHeight(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, m_sampleLayout.GetHeight(), 1);
 
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -1329,7 +1329,7 @@ private:
             InferImageDimsFromInputs();
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             Inputs(0)->FunctionValues().AssignDiagonalValuesTo(FunctionValues());
 #if NANCHECK
@@ -1337,7 +1337,7 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeNonLooping::*/ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        virtual void /*ComputationNodeNonLooping::*/BackpropToNonLooping(size_t /*inputIndex*/) override
         {
             Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
             const Matrix<ElemType>& gradientValues = GradientValues();
@@ -1374,7 +1374,7 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
             // temp, rightTerm, leftTerm - temporary matrices
@@ -1397,7 +1397,7 @@ private:
         }
 
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override 
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override 
         {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
@@ -1433,7 +1433,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1477,7 +1477,7 @@ private:
             ReleaseMatrixToPool(m_temp, matrixPool);
         }
 private:
-        // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
+        // invNorm nodes tranfer data between ForwardProp and BackpropTo
         shared_ptr<Matrix<ElemType>> m_invNorm0;
         shared_ptr<Matrix<ElemType>> m_invNorm1;
         // the rest are temporaries, values don't need to be maintained
@@ -1504,7 +1504,7 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
@@ -1524,7 +1524,7 @@ private:
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
             ValueSlice(frameRange).AssignKhatriRaoProductOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
         }
@@ -1553,12 +1553,12 @@ private:
 
         virtual void InferImageDimsFromInputs()  
         {
-            //since it's symmetrical any one of the input may be the true input. 
-            //since we dont' use the input image size info in the operation, the input part doesn't matter.
+            // since it's symmetrical any one of the input may be the true input. 
+            // since we dont' use the input image size info in the operation, the input part doesn't matter.
             InferImageDimsFromInput(1, false); 
 
-            //after KhatriRaoProduct the structure is lost
-            m_imageLayout = ImageLayoutWHC(1, m_functionValues->GetNumRows(), 1);
+            // after KhatriRaoProduct the structure is lost
+            m_sampleLayout = ImageLayoutWHC(1, m_functionValues->GetNumRows(), 1);
         }
     };
 
@@ -1580,31 +1580,31 @@ private:
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
+        void BackpropToMap(const size_t inputIndex)
         {
             if (inputIndex > 1)
                 InvalidArgument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-            ComputeInputPartialS(inputIndex, *m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
             Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType> sliceThisGrad = GradientSlice(frameRange);
 
-            ComputeInputPartialS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
         }
 
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
         // temp, rightTerm, leftTerm - temporary matrices
         // in0, in1, in2, in3 - input functionValues from other nodes
         // inputGradientValues(x) - gradients to update, where x matches inputIndex
-        /*TODO: merge with call site*/void ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
+        /*TODO: merge with call site*/void BackpropToS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
             Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, Matrix<ElemType>& invNormSquare, // the temporary variables
             const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& in2, const Matrix<ElemType>& in3,
             Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& thisGradientValues)
@@ -1701,22 +1701,22 @@ private:
             }
         }
 
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { ForwardPropMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)
         {
             invNorm0.AssignVectorNorm2Of(in0, true); // seems to modify input (in0)
             invNorm0.AssignElementInverseOf(invNorm0);
@@ -1779,7 +1779,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1826,7 +1826,7 @@ private:
             ReleaseMatrixToPool(m_temp, matrixPool);
         }
 private:
-        // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
+        // invNorm nodes tranfer data between ForwardProp and BackpropTo
         shared_ptr<Matrix<ElemType>> m_invNorm0;
         shared_ptr<Matrix<ElemType>> m_invNorm1;
         shared_ptr<Matrix<ElemType>> m_leftTerm;

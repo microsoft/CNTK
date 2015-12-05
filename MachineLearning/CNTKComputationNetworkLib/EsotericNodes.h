@@ -42,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
           Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (inputIndex == 0)
@@ -57,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FunctionValues().VerifySize(1, 1);
             Inputs(0)->FunctionValues().VerifySize(1, 1);
@@ -97,7 +97,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
     };
 
@@ -160,21 +160,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stp = lastLbl;
         };
 
-        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override  //scaled by 2*number of elements in the Matrix<ElemType>
+        virtual void BackpropToNonLooping(size_t /*inputIndex*/) override  //scaled by 2*number of elements in the Matrix<ElemType>
         {
             LogicError("SequenceDecoder is used for evaluation only.");
         }
 
         /// compute posterior probability of label y at position t
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             DecideStartEndingOutputLab(Inputs(0)->FunctionValues(), mStartLab, mEndLab);
-            EvaluateThisNodeS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
+            ForwardPropS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
                               Inputs(2)->FunctionValues(), mStartLab, mEndLab);
         }
 
         // compute forward backward algorithm
-        void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
+        void ForwardPropS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -283,7 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_imageLayout = ImageLayout();
+            m_sampleLayout = TensorShape();
         }
     };
 
@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_stride
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames()) { NOT_IMPLEMENTED; return; } // TODO: remove these one by one. And why is this not implemented?
             if (inputIndex > 2)
@@ -350,7 +350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
 
-                    //ComputeInputPartialLeft1(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                    //BackpropToLeft1(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
 
                     size_t r = Inputs(0)->GetNumRows();
                     size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         auto mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
                         auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
-                        ComputeInputPartialLeft1(mTmp2, mTmp1, mTmp3);
+                        BackpropToLeft1(mTmp2, mTmp1, mTmp3);
 
                         for (size_t t = 0; t < T1; t++)
                         {
@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
 
-                    //ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                    //BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
 
                     // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
@@ -390,7 +390,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         auto mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
                         auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
-                        ComputeInputPartialRight(mTmp1, mTmp2, mTmp3);
+                        BackpropToRight(mTmp1, mTmp2, mTmp3);
                     }
                 }
             }
@@ -408,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         mTmp1.Resize(d, T1);
                         Matrix<ElemType> mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
                         Matrix<ElemType> mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
-                        ComputeInputPartialLeft(mTmp2, mTmp1, mTmp3);
+                        BackpropToLeft(mTmp2, mTmp1, mTmp3);
 
                         Matrix<ElemType> mTmp4(sliceInput1Value.GetDeviceId());
                         for (size_t t = 0; t < T1; t++)
@@ -442,14 +442,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         Matrix<ElemType> mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
                         Matrix<ElemType> mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
-                        ComputeInputPartialRight(mTmp1, mTmp2, mTmp3);
+                        BackpropToRight(mTmp1, mTmp2, mTmp3);
                     }
                 }
             }
         }
 
         // TODO: the following two functions only differ in the order of argument use in the final MultiplyAndAdd()  --is that intended??
-        static /*TODO: merge with call site*/void ComputeInputPartialLeft1(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        static /*TODO: merge with call site*/void BackpropToLeft1(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -466,7 +466,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        static /*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT   
             gradientValues.Print("Gradient-in");   
@@ -484,7 +484,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        static /*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT   
             gradientValues.Print("Gradient-in");   
@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
@@ -632,7 +632,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_imageLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 

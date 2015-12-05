@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void HTKMLFWriter<ElemType>::SaveToFile(std::wstring& outputFile, Matrix<ElemType>& outputData)
+    void HTKMLFWriter<ElemType>::Save(std::wstring& outputFile, Matrix<ElemType>& outputData)
     {
         msra::dbn::matrix output;
         output.resize(outputData.GetNumRows(),outputData.GetNumCols());

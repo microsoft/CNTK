@@ -286,8 +286,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// PreCompute(net, encoderTrainSetDataReader, encoderFeatureNodes, encoderlabelNodes, encoderInputMatrices) || 
                 startEpoch == 0)
             {
-                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(int(startEpoch) - 1));
-                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(int(startEpoch) - 1));
+                encoderNet->Save(GetEncoderModelNameForEpoch(int(startEpoch) - 1));
+                decoderNet->Save(GetDecoderModelNameForEpoch(int(startEpoch) - 1));
             }
 
             bool learnRateInitialized = false;
@@ -421,8 +421,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             else
                             {
-                                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(i, true));
-                                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(i, true));
+                                decoderNet->Save(GetDecoderModelNameForEpoch(i, true));
+                                encoderNet->Save(GetEncoderModelNameForEpoch(i, true));
                                 fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
                             }
@@ -456,8 +456,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //persist model and check-point info
-                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(i));
-                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(i));
+                decoderNet->Save(GetDecoderModelNameForEpoch(i));
+                encoderNet->Save(GetEncoderModelNameForEpoch(i));
 
                 size_t dummyMinibatchSize = 0;
                 this->LoadCheckPointInfo(i,
@@ -599,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t k = 0; k < iNumNetworks; k++)
                 {
                     wstring tmpstr = msra::strfun::wstrprintf(L".%d", k);
-                    nets[k]->SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1, false, tmpstr));
+                    nets[k]->Save(GetModelNameForEpoch(int(startEpoch) - 1, false, tmpstr));
                 }
             }
 
@@ -749,7 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 //persist model and check-point info
                                 for (size_t k = 0; k < iNumNetworks; k++)
                                 {
-                                    nets[k]->SaveToFile(GetModelNameForEpoch(i, true, msra::strfun::wstrprintf(L".%d", k)));
+                                    nets[k]->Save(GetModelNameForEpoch(i, true, msra::strfun::wstrprintf(L".%d", k)));
                                 }
                                 fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
@@ -786,7 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //persist model and check-point info
                 for (size_t k = 0; k < iNumNetworks; k++)
                 {
-                    nets[k]->SaveToFile(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                    nets[k]->Save(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
                 }
 
                 this->SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, 0);

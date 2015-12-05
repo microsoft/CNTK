@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
@@ -60,20 +60,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> tmpMat(m_deviceId);
             tmpMat.AssignRowSliceValuesOf(GradientValues(), startidx, nrows);
 
-            ComputeInputPartialS(tmpMat, child->GradientValues());
+            BackpropToS(tmpMat, child->GradientValues());
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            ForwardPropS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
         {
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
@@ -142,7 +142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
-            EvaluateThisNode(FrameRange(m_pMBLayout));
+            ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
@@ -167,8 +167,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(3, 1) = 5;
             GradientValues()(3, 2) = 6;
 
-            ComputeInputPartial(0, FrameRange(m_pMBLayout));
-            ComputeInputPartial(1, FrameRange(m_pMBLayout));
+            BackpropTo(0, FrameRange(m_pMBLayout));
+            BackpropTo(1, FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON)
@@ -222,16 +222,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool RequiresPreCompute() const override { return true; }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_hasComputed;
             fstream << FunctionValues();   // TODO: why serialize if not yet computed?
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
             LoadFunctionValues(fstream);
          }
@@ -302,9 +302,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples(SIZE_MAX)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             m_numSamples = SIZE_MAX;
         }
     
@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
         {
             //LogicError("Mean operation should not be involved in the gradient calculation.");
         }
@@ -384,10 +384,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateFunctionValuesSize();
                 FunctionValues().SetValue(0);
             }
-            // no else branch because EvaluateThisNodeNonLooping() already leaves a valid mean in m_functionValues
+            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_functionValues
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
@@ -475,7 +475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
@@ -552,21 +552,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
 #if DUMPOUTPUT
@@ -662,22 +662,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
         }
 
         //(feature-mean).*InvStdDev
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -795,16 +795,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_hasComputed;
             fstream << FunctionValues();
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
             LoadFunctionValues(fstream);
         }
@@ -874,7 +874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             assert(inputIndex == 0); inputIndex;
             VerifyDims(Inputs(0));
@@ -888,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             // BUGBUG: We must flip the layout, too.
             if (GetNumParallelSequences() != 1)
@@ -949,7 +949,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(nOutput, nT);
             UpdateFunctionValuesSize();
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            EvaluateThisNode(FrameRange(m_pMBLayout));
+            ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
@@ -970,7 +970,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(0, 2) = 3;
             GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            ComputeInputPartial(0, FrameRange(m_pMBLayout));
+            BackpropTo(0, FrameRange(m_pMBLayout));
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON) ||

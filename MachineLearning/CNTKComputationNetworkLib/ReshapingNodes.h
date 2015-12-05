@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ReshapeNode (input) -- reinterpret input matrix as having different dimensions
     // where the new row dimension is given, and the column dimension is inferred.
-    // Also optionally associate a different ImageLayout with the data.
+    // Also optionally associate a different TensorShape with the data.
     //
     // If input has no layout, then this reshapes the input matrix
     // from (rows x cols) to (newRows x (cols / newRows * rows)).
@@ -149,13 +149,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //       E.g. ReinterpretRowStackAsSequence and ReinterpretSequenceAsRowStack.
     // BUGBUG: This is not actually implemented yet. Instead, it goes from 1 to K steps or from K to 1 step. This is temporary/experimental, until the plumbing for nesting is there.
     //
-    // Thirdly, ReshapeNode can also be used to update only the ImageLayout. In that case, the MBLayout is kept as is.
+    // Thirdly, ReshapeNode can also be used to update only the TensorShape. In that case, the MBLayout is kept as is.
     //
     // Note: The new row dimension must be a straight multiple or divisor of the current row dimension.
     // To reshape to a non-multiple go to row dim 1 first.
     //
     // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
-    // TODO: Changing the ImageLayout does not seem to belong here.
+    // TODO: Changing the TensorShape does not seem to belong here.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -164,7 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ReinterpretNodeBase<ElemType> Base; UsingReinterpretNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
-        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayoutWHC(0,0,0)) :
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const TensorShape & imageLayout = ImageLayoutWHC(0,0,0)) :
             Base(deviceId, name),
             m_numTargetRows(numRows),
             m_targetImageLayout(imageLayout)
@@ -186,18 +186,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_numTargetRows;
-            m_targetImageLayout.SaveToFile(fstream);
+            m_targetImageLayout.Save(fstream);
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_numTargetRows;
-            m_targetImageLayout.LoadFromFile(fstream);
+            m_targetImageLayout.Load(fstream);
         }
 
         virtual void InferImageDimsFromInputs()
@@ -207,13 +207,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_targetImageLayout.GetWidth() == 0 || m_targetImageLayout.GetHeight() == 0 || m_targetImageLayout.GetNumChannels() == 0)
             {
-                m_imageLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
+                m_sampleLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
                 if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             }
             else
             {
-                m_imageLayout = m_targetImageLayout;
+                m_sampleLayout = m_targetImageLayout;
             }
         }
 
@@ -251,7 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(m_numTargetRows, newCols);
-            if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the ImageLayout)
+            if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the TensorShape)
                 m_pMBLayout = Inputs(0)->GetMBLayout();
             else if (Inputs(0)->HasMBLayout())
             {
@@ -308,7 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // notes:
         //  - input and output have different time base and different layouts (unless the canonical case of factor() == 1)
         //  - frameRange refers to *functionValues*, not the inputs
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
@@ -335,7 +335,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
@@ -359,7 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numTargetRows;
         bool weStack() const { return m_numTargetRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
         size_t factor() const { return m_numTargetRows > Inputs(0)->GetNumRows() ? m_numTargetRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
-        ImageLayout m_targetImageLayout;
+        TensorShape m_targetImageLayout;
 
         void InferImageDimensions()
         {
@@ -437,13 +437,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             Inputs(0)->GradientSlice(frameRange.WithLayout(Inputs(0)->GetMBLayout())) += GradientSlice(frameRange);
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             // enforce compatibility of 'dataInput' with 'layoutInput'
             // TODO: how to deal with boundary flags?
@@ -507,24 +507,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node->m_sliceHeight = m_sliceHeight;
         }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_startIndex << m_sliceHeight;
         }
         
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_startIndex >> m_sliceHeight;
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_sliceHeight);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_sliceHeight);
         }
@@ -544,7 +544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_sliceHeight, m_imageLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_sliceHeight, m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
@@ -584,12 +584,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Inputs(inputIndex)->GradientSlice(frameRange).AddWithRowSliceValuesOf(GradientSlice(frameRange), m_startRowIndices[inputIndex], Inputs(inputIndex)->GetNumRows());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             for (size_t inputIndex = 0; inputIndex < ChildrenSize(); inputIndex++)
                 ValueSlice(frameRange).AssignToRowSliceValuesOf(Inputs(inputIndex)->ValueSlice(frameRange), m_startRowIndices[inputIndex], Inputs(inputIndex)->GetNumRows());
@@ -622,7 +622,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), GetNumRows(), m_imageLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), GetNumRows(), m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
@@ -666,22 +666,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_numRepeat;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_numRepeat;
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_imageLayout = ImageLayoutWHC(m_imageLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_imageLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_sampleLayout.GetNumChannels());
 
             // watn that this node will destroy the image size information from the child
             if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
@@ -727,13 +727,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //if (!isNoop())    // if m_numRepeat == 1 then virtual FunctionValues() will return the child   --TODO: do this as an in-place optimization instead
             ValueSlice(frameRange).AssignRepeatOf(Inputs(0)->ValueSlice(frameRange), m_numRepeat, 1);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             Inputs(0)->GradientSlice(frameRange).AddToRowRepeatValuesOf(GradientSlice(frameRange), m_numRepeat);
         }
