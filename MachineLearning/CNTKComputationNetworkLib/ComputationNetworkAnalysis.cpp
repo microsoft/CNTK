@@ -22,37 +22,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
+    // TODO: Can this be moved to a separate class?
 
-    // MAIN ENTRY POINT for network recurrent-loop analysis. All other functions below are called from this one.
-
-    // forms the recurrent loop that 'rootNode' participates in
-    // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
+    // FormRecurrentLoops() -- MAIN ENTRY POINT for network recurrent-loop analysis. All other functions in this CPP are called only from this one.
+    // This function analysis the networks for recurrent loops present in the computation of 'rootNode.'
     // This sets/updates:
     //  - m_recurrentInfo
     //  - ComputationNode::m_isPartOfLoop and m_loopId
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
-    // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start. This seems brittle.
-    // BUGBUG: m_visited is also used by ValidateSubNetwork(). Hence, it may be in unexpected state when calling into this multiple times.
-    // BUGBUG: This currently does not handle nested loops. To handle that:
-    //  - loops are isolated by a ReconcileMBLayout--loop determination should see right through it, and then include everything inside
-    //  - ...? Need to figure this out.
+    // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
+    // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
         // determine the strongly connected cliques -> m_recurrentInfo[]
         DetermineSCCs(rootNode);
+        // now we have formed all loops, with all nodes assigned to a loop or none
 
         list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
         // recover m_visitedOrder
         size_t i = 1;       // BUGBUG: why not 0? (left-over of refactoring)
         for (auto & node : nodes)
             node->m_visitedOrder = i++;
-
-        // purge identical loops (i.e. loops that have the same source node)
-        // TODO: Is this for the case that we call this function multiple times, or do the nodes of a loop generate multiple entries? Comment this.
-        UniqRecurrentLoops();
-
-        // now we have formed all loops, with all nodes assigned to a loop or none
 
         // update m_visitedOrder of all nodes
         // This was originally set by EnumerateNodes(), which gets called from GetEvalOrder().
@@ -71,19 +61,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // implant m_loopId in all nodes in all loops
         for (auto & iter : m_recurrentInfo)
         {
-#if 1       // instead of the redundant sort() below, we just verify
-            for (auto & node : iter->m_nestedNodes)
-                if (node->m_visitedOrder != iter->m_nestedNodes.front()->m_visitedOrder)
-                    LogicError("FormRecurrentLoops: m_visitedOrder was set to a constant, but actually... wasn't?");
-#else
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
-            // BUGBUG: This sort() seems to do nothing, since the above loop sets all m_visitedOrder to the same value??
-            sort(iter->m_nestedNodes.begin(),
-                 iter->m_nestedNodes.end(),
-                 iter->m_nestedNodes[0]->ByVisitedOrder);
-#endif
-
             for (auto & node : iter->m_nestedNodes)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
@@ -105,14 +82,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t j = 0; j < iter->m_nestedNodes.size(); j++)
             {
                 ComputationNodeBasePtr node = iter->m_nestedNodes[j];
-                for (size_t i = 0; i < node->ChildrenSize(); i++)
+                for (size_t i = 0; i < node->GetNumInputs(); i++)
                 {
-                    if (node->Inputs(i)->m_loopId == node->m_loopId && 
+                    if (node->Input(i)->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
                         node->OperationName() != OperationNameOf(FutureValueNode))      // TODO: test for type RecurrentNode instead?
                     {
-                        //assert(node->Inputs(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
-                        node->Inputs(i)->m_indexInLoop++;               // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
+                        //assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
+                        node->Input(i)->m_indexInLoop++;               // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
                     }
                 }
             }
@@ -211,16 +188,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
         {
             // set m_lowLink to min over m_lowLinks of children
-            for (int i = 0; i < cur->ChildrenSize(); i++)
+            for (int i = 0; i < cur->GetNumInputs(); i++)
             {
-                if (!cur->Inputs(i)->m_visited)
+                if (!cur->Input(i)->m_visited)
                 {
-                    DetermineSCCsR(cur->Inputs(i), sccStack, index, loopId);
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
+                    DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
                 }
-                else if (cur->Inputs(i)->m_inStack)
+                else if (cur->Input(i)->m_inStack)
                 {
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
                 }
             }
         }
@@ -262,33 +239,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // purge identical loops (i.e. loops that have the same source node)
-    // TODO: Delete this function once we find it never triggers.
-    void ComputationNetwork::UniqRecurrentLoops()
-    {
-        if (m_recurrentInfo.size() <= 1)
-            return;
-
-        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        vector<shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfoTmp;
-        for (const auto & iter : m_recurrentInfo)    // enumerate all loops
-        {
-            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (const auto & iter2 : m_recurrentInfoTmp)
-            {
-                if ((*iter2).m_sourceNode == iter->m_sourceNode)
-                {
-                    bFound = true;
-                    LogicError("UniqRecurrentLoops: Duplicate loops should no longer occur.");  // ...since tested when creating in the first place.
-                    //break;
-                }
-            }
-            if (!bFound)
-                m_recurrentInfoTmp.push_back(iter);
-        }
-        m_recurrentInfo = move(m_recurrentInfoTmp);
-    }
-
     // recovers the processing order within a recurrent loop
     void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
                                                        unordered_set<ComputationNodeBasePtr>& recStack,
@@ -303,9 +253,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (cur->OperationName() != OperationNameOf(PastValueNode) &&   // recurrence stops at delays
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
-                for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->Inputs(i)->m_loopId == cur->m_loopId)
-                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Inputs(i));
+                for (size_t i = 0; i < cur->GetNumInputs(); i++)
+                    if (cur->Input(i)->m_loopId == cur->m_loopId)
+                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Input(i));
             }
             recStack.erase(cur);
             nodesStack.push_back(cur);
@@ -327,15 +277,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;                                 // do each node only once
         visited.insert(node);
 
-        for (int i = 0; i < node->ChildrenSize(); i++)
-            GatherLoopNodesR(node->Inputs(i), visited, recurrentResult, noRecurrentResult);
-
-#if 0
-        //children first for function evaluation
-        // TODO: This seems not necessary here. Why does this get set here?
-        if (!IsLeaf())
-            m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-#endif
+        for (int i = 0; i < node->GetNumInputs(); i++)
+            GatherLoopNodesR(node->Input(i), visited, recurrentResult, noRecurrentResult);
 
         if (node->m_loopId >= 0)
             recurrentResult[node->m_loopId].push_back(node);
@@ -348,7 +291,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - that order is preserved for all nodes outside loops
     //  - each node that belongs to a loop is replaced by all nodes of that loop in loop order
     // Called only from FormRecurrentLoops().
-    // TODO: This could be a good place to insert sentinel nodes for nesting?
     void ComputationNetwork::ReorderLoops(list<ComputationNodeBasePtr>& nodes,
                                           const map<int, list<ComputationNodeBasePtr>>& /*recurrentNodes*/,
                                           const list<ComputationNodeBasePtr> & /*noRecurrentNodes*/)

@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
-    void ComputationNetwork::SaveToFile(const wstring& fileName, const FileOptions fileFormat) const
+    void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
     {
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
@@ -106,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = nodeIter->second;
-            nodePtr->SaveToFile(fstream);
+            nodePtr->Save(fstream);
         }
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -116,13 +116,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = nodeIter->second;
-            fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
-            for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
+            fstream << nodePtr->NodeName() << nodePtr->GetNumInputs();
+            for (size_t i = 0; i < nodePtr->GetNumInputs(); i++)
             {
-                if (!nodePtr->Inputs(i))
+                if (!nodePtr->Input(i))
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
-                    fstream << nodePtr->Inputs(i)->NodeName();
+                    fstream << nodePtr->Input(i)->NodeName();
             }
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
@@ -204,7 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> opName >> nodeName;
             ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
             // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
-            nodePtr->LoadFromFile(fstream, modelVersion);
+            nodePtr->Load(fstream, modelVersion);
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType> void ComputationNetwork::LoadFromFile(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    template<class ElemType> void ComputationNetwork::Load(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
     {
         ClearNet();
 
@@ -250,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
                 InvalidArgument("Invalid node type.");
             }
-            newNode->LoadFromFile(fstream, modelVersion);
+            newNode->Load(fstream, modelVersion);
             AddNodeToNet(newNode);
         }
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -425,21 +425,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
         if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->FunctionValues().SetValue((float)value);
+            AsNodePtr<LearnableParameter<float>>(pNode)->Output().SetValue((float)value);
         else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->FunctionValues().SetValue((double)value);
+            AsNodePtr<LearnableParameter<double>>(pNode)->Output().SetValue((double)value);
         else if (pNode->RequiresPreCompute())
         {
             if (IsNodePtr<PreComputedNode<float>>(pNode))
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
-                preComputedNode->FunctionValues().SetValue((float)value);
+                preComputedNode->Output().SetValue((float)value);
                 preComputedNode->MarkComputed(true);
             }
             else
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
-                preComputedNode->FunctionValues().SetValue((double)value);
+                preComputedNode->Output().SetValue((double)value);
                 preComputedNode->MarkComputed(true);
             }
         }
@@ -550,6 +550,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
     // Basically, it invalidates all post-processing, reducing the network to the graph.
+    // TODO: This will go away once we validate/build/process the network in a non-lazy fashion.
     void ComputationNetwork::ClearCalcOrderCaches()
     {
         for (auto & it : m_cacheEvalOrders)
@@ -997,7 +998,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!ptr)
                     continue;
 
-                Matrix<ElemType> W = ptr->FunctionValues();
+                Matrix<ElemType> W = ptr->Output();
                 if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
                     continue;
 
@@ -1031,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //========================================
                 // Step 1. do SVD decomposition
                 //========================================
-                Matrix<ElemType> A = pNode->FunctionValues();
+                Matrix<ElemType> A = pNode->Output();
 
                 // it is a vector, no need to do it
                 if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
@@ -1111,8 +1112,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<ComputationNode<ElemType>> pLeft =  AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName,  m, r));
                 shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-                pLeft->FunctionValues() = redU;
-                pRight->FunctionValues() = redVT;
+                pLeft->Output() = redU;
+                pRight->Output() = redVT;
 
                 shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
@@ -1126,13 +1127,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::Load<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::LoadFromFile<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::Load<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
