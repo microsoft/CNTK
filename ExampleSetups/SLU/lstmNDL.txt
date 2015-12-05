@@ -206,13 +206,13 @@ ndlCreateNetwork=[
 
 #else if you don't want to include a bias uncommment following and comment the above block
 
-    outvalue = Times(W, LSTMoutput3);
+    outputs = Times(W, LSTMoutput3);
     
 #end if
 	
-    cr = CrossEntropyWithSoftmax(labels, outvalue);
+    cr = CrossEntropyWithSoftmax(labels, outputs);
     
     CriterionNodes = (cr)
     EvalNodes = (cr)
-    OutputNodes = (outvalue)
+    OutputNodes = (outputs)
 ]

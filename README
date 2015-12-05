@@ -1,169 +1,108 @@
-== To-do ==
-Add descriptions to LSTMnode
-Add descriptions to 0/1 mask segmentation in feature reader, delay node, and crossentropywithsoftmax node
-Change criterion node to use the 0/1 mask, following example in crossentropywithsoftmax node
-Add description of encoder-decoder simple network builder
-Add description of time-reverse node, simple network builder and NDL builder for bi-directional models
+######################
+1. User Manual
+######################
 
-== Authors of the README ==
-   	Kaisheng Yao
-        Microsoft Research
-        email: kaisheny@microsoft.com
+The detailed introduction of the computational network and its implementation as well as the user manual of the computational network toolkit (CNTK) can be found at
 
-	Wengong Jin,
-	Shanghai Jiao Tong University
-	email: acmgokun@gmail.com
+Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott Cyphers, Jasha Droppo, Adam Eversole, Brian Guenter, Mark Hillebrand, Xuedong Huang, Zhiheng Huang, Vladimir Ivanov, Alexey Kamenev, Philipp Kranen, Oleksii Kuchaiev, Wolfgang Manousek, Avner May, Bhaskar Mitra, Olivier Nano, Gaizka Navarro, Alexey Orlov, Marko Padmilac, Hari Parthasarathi, Baolin Peng, Alexey Reznichenko, Frank Seide, Michael L. Seltzer, Malcolm Slaney, Andreas Stolcke, Huaming Wang, Kaisheng Yao, Dong Yu, Yu Zhang, Geoffrey Zweig (in alphabetical order), "An Introduction to Computational Networks and the Computational Network Toolkit", Microsoft Technical Report MSR-TR-2014-112, 2014.
 
-    Yu Zhang, Leo Liu, Scott Cyphers
-    CSAIL, Massachusetts Institute of Technology
-    email: yzhang87@csail.mit.edu
-    email: leoliu_cu@sbcglobal.net
-    email: cyphers@mit.edu
+YOu can also check Examples and Demos under the ExampleSetups folder.
 
-    Guoguo Chen
-    CLSP, Johns Hopkins University
-    email: guoguo@jhu.edu
+Note: For builds before May 18, 2015 the executable is called cn which is now changed to cntk.
 
-== Preeliminaries == 
+There are also four files in the documentation directory of the source that contain additional details.
 
-To build the cpu version, you have to install intel MKL blas library
-or ACML library first. Note that ACML is free, whereas MKL may not be.
+######################
+2. Clone Source Code (Windows)
+######################
 
-for MKL:
-1. Download from https://software.intel.com/en-us/intel-mkl
+The CNTK project uses Git as the source version control system.
 
-for ACML:
-1. Download from
-http://developer.amd.com/tools-and-sdks/archive/amd-core-math-library-acml/acml-downloads-resources/
-We have seen some problems with some versions of the library on Intel
-processors, but have had success with acml-5-3-1-ifort-64bit.tgz
+If you have Visual Studio 2013 installed Git is already available. You can follow the "Clone a remote Git repository from a third-party service" section in Set up Git on your dev machine (configure, create, clone, add) and connect to https://git01.codeplex.com/cntk to clone the source code. We found that installing Git Extension for VS is still helpful esp. for new users.
 
-for Kaldi:
-1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
-   re-install OpenFst using the makefile.
-2. In kaldi-trunk/src/, do ./configure --shared; make depend -j 8; make -j 8;
-   and re-compile Kaldi (the -j option is for parallelization).
+Otherwise you can install Git for your OS from the  Using Git with CodePlex page and clone the CNTK source code with the command "git clone https://git01.codeplex.com/cntk".
 
-To build the gpu version, you have to install NIVIDIA CUDA first
+######################
+3. Clone Source Code (Linux/mac)
+######################
 
-== Build Preparation ==
+For the linux user please replace "git01" to "git" (otherwise you will get an RPC error):
 
-You can do an out of source build in any directory, as well as an in
-source build.  Let $CNTK be the CNTK directory.  For an out of source
-build in the directory "build" type
+git clone https://git.codeplex.com/cntk 
 
-  >mkdir build
-  >cd build
-  >$CNTK/configure -h
+More detail you can follow this thread: http://codeplex.codeplex.com/workitem/26133
 
-(For an in source build, just run configure in the $CNTK directory).
+######################
+4. Windows Visual Studio Setup (CNTK only runs on 64-bit OS)
+######################
 
-You will see various options for configure, as well as their default
-values.  CNTK needs a CPU math directory, either acml or mkl.  If you
-do not specify one and both are available, acml will be used.  For GPU
-use, a cuda and gdk directory are also required.  Similary, to build
-the kaldi plugin a kaldi directory is required.  You may also specify
-whether you want a debug or release build, as well as add additional
-path roots to use in searching for libraries.
+# 4.1 Install Visual Studio 2013. After installation make sure to install Update 5 or higher: Go to menu Tools -> Extensions and Updates -> Updates -> Product Updates -> Visual Studio 2013 Update 5 (or higher if applicable) 
 
-Rerun configure with the desired options:
+# 4.2 Install CUDA 7.0 from  https://developer.nvidia.com/cuda-toolkit-70. 
+# 4.3 Install NVIDIA CUB from https://github.com/NVlabs/cub/archive/1.4.1.zip Unzip the archive. 
+      Set environment variable CUB_PATH to CUB folder, e.g.:
+          CUB_PATH=c:\src\cub-1.4.1 
 
-  >$CNTK/configure ...
+# 4.4 Install ACML 5.3.1 or above (specifically the ifort64 variant, e.g., acml5.3.1-ifort64.exe) from  http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/. Before launching Visual Studio set the system environment variable e.g.:
+      ACML_PATH=C:\AMD\acml5.3.1\ifort64_mp
+or the folder you installed acml. (The easiest way to do this on Windows 8 is to press the windows key, and then in the metro interface start typing: edit environment variables.) 
+If you are running on an Intel processor with FMA3 support, we also advise to set ACML_FMA=0 in your environment to work around issue in the ACML library. 
 
-This will create a Config.make and a Makefile (if you are doing an in
-source build, a Makefile will not be created).  The Config.make file
-records the configuration parameters and the Makefile reinvokes the
-$CNTK/Makefile, passing it the build directory where it can find the
-Config.make.
+#  4.5 Alternatively if you have an MKL license, you can install Intel MKL library instead of ACML from https://software.intel.com/en-us/intel-math-kernel-library-evaluation-options and define USE_MKL in the CNTKMath project. MKL is faster and more reliable on Intel chips if you have the license. 
 
-After make completes, you will have the following directories:
+#  4.6 Install the latest Microsoft MS-MPI SDK and runtime from  https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx 
 
-  .build will contain object files, and can be deleted
-  bin contains the cntk program
-  lib contains libraries and plugins
+#  4.7 If you want to use ImageReader, install OpenCV v3.0.0: Download and install OpenCV v3.0.0 for Windows from http://opencv.org/downloads.html 
+Set OPENCV_PATH environment variable to OpenCV build folder (e.g. C:\src\opencv\build) 
 
-  The bin and lib directories can safely be moved as long as they
-  remain siblings.
+#  4.8 Load the CNTKSolution and build the cntk project. 
 
-To clean
+######################
+5. Linux GCC Setup
+######################
 
->make clean
+# 5.1 install needed libraries as indicated in section 4 on your Linux box.
 
-== Run ==
-All executables are in bin directory:
-	cntk: The main executable for CNTK
-	*.so: shared library for corresponding reader, these readers will be linked and loaded dynamically at runtime.
-
-	./cntk configFile=${your cntk config file}
-
-== Kaldi Reader ==
-This is a HTKMLF reader and kaldi writer (for decode)
-
-To build, set --with-kaldi when you configure.
-
-The feature section is like:
-
-writer=[
-    writerType=KaldiReader
-    readMethod=blockRandomize
-    frameMode=false
-    miniBatchMode=Partial
-    randomize=Auto
-    verbosity=1
-    ScaledLogLikelihood=[
-        dim=$labelDim$
-        Kaldicmd="ark:-" # will pipe to the Kaldi decoder latgen-faster-mapped
-        scpFile=$outputSCP$ # the file key of the features
-    ]
-]
-
-== Kaldi2 Reader ==
-This is a kaldi reader and kaldi writer (for decode)
-
-To build, set --with-kaldi in your Config.make
-
-The features section is different:
-
-features=[
-    dim=
-    rx=
-    scpFile=
-    featureTransform=
-]
-
-rx is a text file which contains:
-
-    one Kaldi feature rxspecifier readable by RandomAccessBaseFloatMatrixReader.
-    'ark:' specifiers don't work; only 'scp:' specifiers work.
-
-scpFile is a text file generated by running:
-
-    feat-to-len FEATURE_RXSPECIFIER_FROM_ABOVE ark,t:- > TEXT_FILE_NAME
-
-    scpFile should contain one line per utterance.
-
-    If you want to run with fewer utterances, just shorten this file.
-    (It will load the feature rxspecifier but ignore utterances not present in scpFile).
-
-featureTransform is the name of a Kaldi feature transform file:
-    
-    Kaldi feature transform files are used for stacking / applying transforms to features.
-
-    An empty string (if permitted by the config file reader?) or the special string: NO_FEATURE_TRANSFORM
-    says to ignore this option.
-
-********** Labels **********
-
-The labels section is also different.
-
-labels=[
-    mlfFile=
-    labelDim=
-    labelMappingFile=
-]
-
-Only difference is mlfFile. mlfFile is a different format now. It is a text file which contains:
-
-    one Kaldi label rxspecifier readable by Kaldi's copy-post binary.
+# 5.2 create a directory to build in and make a Config.make in the directory
+      that provides
+      ACML_PATH= path to ACML library installation
+        only needed if MATHLIB=acml
+      MKL_PATH= path to MKL library installation
+        only needed if MATHLIB=mkl
+      GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+        defaults to /usr
+      BUILDTYPE= One of release or debug
+        defaults to release
+      MATHLIB= One of acml or mkl
+        defaults to acml
+      CUDA_PATH= Path to CUDA
+        If not specified, GPU will not be enabled
+      CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
+        defaults to /usr/local/cub-1.4.1
+      KALDI_PATH= Path to Kaldi
+        If not specified, Kaldi plugins will not be built
+      OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
+        defaults to /usr/local/opencv-3.0.0
+ 
+# 5.3 Build the clean version with command 
+      make -j all
 
 
+######################
+6. Coding Standard
+######################
+
+No TABs. Each TAB should be replaced with 4 spaces in the source code. If you use Visual Studio as your editor, goto Tools|Options|Text Editor|C/C++|Tabs and make sure it is set to Smart Indenting Tab and Indent Size set to 4, and "Insert Spaces" option selected. 
+Follow the same naming conventions as shown in the ComputationNetwork.h file. 
+Open/close braces should be on lines by themselves aligned with previous code indent level, e.g., 
+
+           if (true) 
+            { 
+                Function(); 
+            }
+
+If you are using Visual Studio 2013 as your main development environment, you can load the CppCntk.vssettings file (in the CNTK home directory) which contains settings for C++ editor with defaults like using spaces for tabs, curly brace positioning and other preferences that meet CNTK style guidelines. Note that this file will not change any other settings, like your windows layout etc but it's still a good idea to backup your current settings just in case.
+
+To import/export the settings, use Tools -> Import and Export Settings... Visual Studio menu option.
+
+Once the settings are loaded, you can use Edit -> Advanced -> Format Document (or Ctrl+E,D shortcut) or, which is recommended, Edit -> Advanced -> Format Selection (or Ctrl+E,F shortcut) to format only selected fragment.
