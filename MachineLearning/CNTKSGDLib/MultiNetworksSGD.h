@@ -1209,13 +1209,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < pairNodes.size(); i++)
             {
                 for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientForAllNodes(*ptr);
+                    networks[i]->ClearGradientOfAllNodes(*ptr);
             }
 
             for (size_t i = 0; i < criterionNodes.size(); i++)
             {
                 for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientForAllNodes(*ptr);
+                    networks[i]->ClearGradientOfAllNodes(*ptr);
             }
 
             for (auto ptr = criterionNodes[inetworks - 1]->begin(); ptr != criterionNodes[inetworks - 1]->end(); ptr++)

@@ -38,13 +38,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
 #if 1
-            auto gradient = Input(inputIndex)->GradientSlice(frameRange);
+            auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
 #else
             if (inputIndex == 0)
-                Input(0)->GradientSlice(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
+                Input(0)->GradientFor(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
             else
-                Input(1)->GradientSlice(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
+                Input(1)->GradientFor(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
 #endif
         }
 
@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
-            m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueSlice(frameRange), Input(1)->ValueSlice(frameRange));
+            m_leftMinusRight->AssignDifferenceOf(Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange));
             MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
             VerifyDims(1,1);
@@ -134,14 +134,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                 *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Input(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+                Input(0)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
 
-                auto gradient = Input(0)->GradientSlice(frameRange);
+                auto gradient = Input(0)->GradientFor(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
-                Input(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+                Input(0)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
 
         }
@@ -150,15 +150,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #if DUMPOUTPUT
                 *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
-                Input(0)->ValueSlice(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+                Input(0)->OutputFor(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Input(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+                Input(1)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
 
-                auto gradient = Input(1)->GradientSlice(frameRange);
-                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Input(0)->ValueSlice(frameRange), gradient);
+                auto gradient = Input(1)->GradientFor(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Input(0)->OutputFor(frameRange), gradient);
 #if DUMPOUTPUT
-                Input(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right");
+                Input(1)->GradientFor(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
 #ifdef _DEBUG
                 Input(1)->InvalidateMissingGradientColumns(frameRange);  // TODO: This should not be necessary.
@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FrameRange frameRange(Input(0)->GetMBLayout());
             // first compute the softmax (column-wise)
             // Note that we need both log and non-log for gradient computation.
-            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->ValueSlice(frameRange), true);
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->OutputFor(frameRange), true);
             m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             m_softmaxOfRight->InplaceExp();
             // flatten all gaps to zero, such that gaps will contribute zero to the sum
@@ -256,11 +256,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                BackpropToLeft(*m_logOfRight, Input(0)->GradientSlice(frameRange), GradientValues());
+                BackpropToLeft(*m_logOfRight, Input(0)->GradientFor(frameRange), GradientValues());
             }
             else
             {
-                BackpropToRight(*m_leftDivRight, Input(0)->ValueSlice(frameRange), Input(1)->ValueSlice(frameRange), Input(1)->GradientSlice(frameRange), GradientValues());
+                BackpropToRight(*m_leftDivRight, Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange), Input(1)->GradientFor(frameRange), GradientValues());
             }
         }
 
@@ -292,7 +292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
-            m_logOfRight->SetValue(Input(1)->ValueSlice(frameRange));
+            m_logOfRight->SetValue(Input(1)->OutputFor(frameRange));
             m_logOfRight->InplaceLog();
             MaskMissingColumnsToZero(*m_logOfRight, Input(1)->GetMBLayout(), frameRange);
             Output().AssignInnerProductOfMatrices(Input(0)->MaskedValueSlice(frameRange), *m_logOfRight);
@@ -379,7 +379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientOfL1Norm, Input(0)->GradientSlice(frameRange), GradientValues(), Input(0)->ValueSlice(frameRange));
+            BackpropToS(*m_gradientOfL1Norm, Input(0)->GradientFor(frameRange), GradientValues(), Input(0)->OutputFor(frameRange));
         }
 
         /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientOfL1Norm, 
@@ -468,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(Input(0)->GradientSlice(frameRange), GradientValues(), Input(0)->ValueSlice(frameRange), Output());
+            BackpropToS(Input(0)->GradientFor(frameRange), GradientValues(), Input(0)->OutputFor(frameRange), Output());
         }
 
         /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
@@ -569,7 +569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)
                 InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
-            Input(inputIndex)->GradientSlice(frameRange).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueSlice(frameRange), Input(1)->ValueSlice(frameRange), Input(2)->Output(), inputIndex);
+            Input(inputIndex)->GradientFor(frameRange).AssignNCEDerivative(m_ncePrediction, Input(0)->OutputFor(frameRange), Input(1)->OutputFor(frameRange), Input(2)->Output(), inputIndex);
         }
 
 #if 0   // TODO: delete this. Seems copy-paste leftover?
@@ -740,7 +740,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
                 FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                Matrix<ElemType> lbl_t = Input(0)->ValueSlice(frameRange);
+                Matrix<ElemType> lbl_t = Input(0)->OutputFor(frameRange);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
                 size_t rgt_bnd = (size_t)lbl_t(3, 0); // and end of that range
@@ -748,15 +748,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // compute prb - 1 and prb
                 Matrix<ElemType> weightForClass = Input(2)->Output().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Input(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
+                Matrix<ElemType> obs = Input(1)->OutputFor(frameRange);   // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataSliceWithMBLayout(m_clsLogSoftmax, frameRange, Input(3)->GetMBLayout());
+                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, frameRange, Input(3)->GetMBLayout());
 
                 switch (inputIndex)
                 {
                 case 1:
                     // gradient to input
-                    grd_t = Input(1)->GradientSlice(frameRange);
+                    grd_t = Input(1)->GradientFor(frameRange);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 case 2:
@@ -765,8 +765,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 case 3:
-                    grd_t = Input(3)->GradientSlice(frameRange);
-                    grd_t.SetValue(DataSliceWithMBLayout(m_clsSoftmax, frameRange, Input(3)->GetMBLayout()));
+                    grd_t = Input(3)->GradientFor(frameRange);
+                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, frameRange, Input(3)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 }
@@ -797,7 +797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         continue;
                     FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                    Matrix<ElemType> lbl_t = Input(0)->ValueSlice(frameRange);
+                    Matrix<ElemType> lbl_t = Input(0)->OutputFor(frameRange);
                     size_t y_t = (size_t)lbl_t(0, 0);       // word index
                     size_t lft_bnd = (size_t)lbl_t(2, 0);   // index of first word belonging to current word token's class
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);   // and end of that range
@@ -852,7 +852,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
                 FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                const Matrix<ElemType> & lbl_t = Input(0)->ValueSlice(frameRange);
+                const Matrix<ElemType> & lbl_t = Input(0)->OutputFor(frameRange);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = (rgt_bnd - lft_bnd);   // number of words in the class
@@ -876,7 +876,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
                 FrameRange frameRange = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
 
-                const Matrix<ElemType> & lbl_t = Input(0)->ValueSlice(frameRange);
+                const Matrix<ElemType> & lbl_t = Input(0)->OutputFor(frameRange);
                 size_t y_t = (size_t)lbl_t(0, 0);     // current word token index
                 size_t c_t = (size_t)lbl_t(1, 0);     // current word token's class index
                 size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
@@ -892,7 +892,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> softMax_t    =    m_softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                Matrix<ElemType> obs = Input(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
+                Matrix<ElemType> obs = Input(1)->OutputFor(frameRange);   // hidden activation vector for current word token
 
                 // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
                 // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
@@ -1037,12 +1037,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
                 // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
                 ForwardPropS(
-                    DataSliceWithMBLayout(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
-                    DataSliceWithMBLayout(mAlpha,    sequenceRange, Input(0)->GetMBLayout()),
-                    DataSliceWithMBLayout(mBeta,     sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mAlpha,    sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mBeta,     sequenceRange, Input(0)->GetMBLayout()),
                     funcVal,
-                    Input(0)->ValueSlice(sequenceRange),
-                    Input(1)->ValueSlice(sequenceRange),
+                    Input(0)->OutputFor(sequenceRange),
+                    Input(1)->OutputFor(sequenceRange),
                     Input(2)->Output(), mStartLbl,
                     mEndLbl);
 
@@ -1059,21 +1059,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 1)
             {
-                auto gradient = Input(1)->GradientSlice(frameRange);
-                Matrix<ElemType>::AddScaledDifference(GradientValues(), mPostProb, Input(0)->ValueSlice(frameRange), gradient);
+                auto gradient = Input(1)->GradientFor(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), mPostProb, Input(0)->OutputFor(frameRange), gradient);
             }
             else if (inputIndex == 2)
             {
-                assert(Input(inputIndex)->GradientSlice(frameRange).GetNumElements() > 0);
+                assert(Input(inputIndex)->GradientFor(frameRange).GetNumElements() > 0);
                 size_t nS = Input(0)->GetNumParallelSequences();
                 for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
                     FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
-                    auto gradient = Input(2)->GradientSlice(frameRange);
-                    TransGrdCompute(Input(0)->ValueSlice(sequenceRange),
-                                    DataSliceWithMBLayout(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
-                                    DataSliceWithMBLayout(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
-                                    Input(2)->ValueSlice(frameRange),
+                    auto gradient = Input(2)->GradientFor(frameRange);
+                    TransGrdCompute(Input(0)->OutputFor(sequenceRange),
+                                    DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
+                                    DataWithMBLayoutFor(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
+                                    Input(2)->OutputFor(frameRange),
                                     gradient,
                         mStartLbl, 1);
                 }
@@ -1525,17 +1525,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //BackpropToRight(m_temp, Input(0)->Output(), Input(2)->Output(), Input(inputIndex)->GradientValues(), GradientValues(), m_classZeroLabels, m_result);
             // Create vector with 1 for class 1, and -1 for class 0
-            m_temp->AssignDifferenceOf(Input(0)->ValueSlice(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
+            m_temp->AssignDifferenceOf(Input(0)->OutputFor(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
 
             // Multiply the vector by the Input(2)->Output()
             if (m_inputs.size() == 3) // without weight
-                m_temp->AssignElementProductOf(*m_temp, Input(2)->ValueSlice(frameRange));     // TODO: is Input(2) minibatch data? Confirm
+                m_temp->AssignElementProductOf(*m_temp, Input(2)->OutputFor(frameRange));     // TODO: is Input(2) minibatch data? Confirm
 
             // divide class by p (class 1) or (1-p) (class 0)
             m_temp->AssignElementDivisionOf(*m_temp, *m_result);            // TODO: this is in-place--does this function allow that?
 
             //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_temp, Input(inputIndex)->GradientValues());
-            auto gradient = Input(inputIndex)->GradientSlice(frameRange);
+            auto gradient = Input(inputIndex)->GradientFor(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_temp, 1.0f, gradient);
         }
 
@@ -1551,8 +1551,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
             
-            const Matrix<ElemType>& classOneLabels        = Input(0)->ValueSlice(frameRange);
-            const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueSlice(frameRange);
+            const Matrix<ElemType>& classOneLabels        = Input(0)->OutputFor(frameRange);
+            const Matrix<ElemType>& classOneProbabilities = Input(1)->OutputFor(frameRange);
             Matrix<ElemType>&       classZeroLabels       = *m_classZeroLabels;
 
             Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
@@ -1582,7 +1582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_inputs.size() == 2)
                 Output().AssignSumOfElements(*m_temp);
             else
-                Output().AssignInnerProductOf(Input(2)->ValueSlice(frameRange), *m_temp, false);
+                Output().AssignInnerProductOf(Input(2)->OutputFor(frameRange), *m_temp, false);
             Output() *= (-1);
         }
 

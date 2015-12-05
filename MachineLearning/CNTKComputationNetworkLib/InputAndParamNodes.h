@@ -426,8 +426,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 1)   // right derivative (input)
             {
-                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(t);
-                Matrix<ElemType> sliceOutputGrad = GradientSlice(t);
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+                Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
                 BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
             }
@@ -466,9 +466,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & t) override
         {
             // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-            Matrix<ElemType> functionValues = ValueSlice(t);
+            Matrix<ElemType> functionValues = OutputFor(t);
             const Matrix<ElemType>&  input0 = Input(0)->Output();
-            Matrix<ElemType>         input1 = Input(1)->ValueSlice(t);
+            Matrix<ElemType>         input1 = Input(1)->OutputFor(t);
 
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
@@ -620,14 +620,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_output->GetNumRows() == GradientValues().GetNumRows()); // original used m_output->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Input(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)), mTmp);
+            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)), mTmp);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> mTmp = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            mTmp.SetValue(Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
+            Matrix<ElemType> mTmp = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            mTmp.SetValue(Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

@@ -366,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // However, we still process multiple parallel sequences concurrently. In this case, the
     // FrameRange would identify frames of the same time step across all sequences.
     //
-    // To access the subset of a minibatch matrix selected by FrameFange, use DataSliceWithMBLayout().
+    // To access the subset of a minibatch matrix selected by FrameFange, use DataWithMBLayoutFor().
     //
     // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
     // -----------------------------------------------------------------------
@@ -379,7 +379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - CRFNode does not support > 1 parallel sequence
     class FrameRange
     {
-    public: // TODO: fix this (currently used from masking and DataSlice)
+    public: // TODO: fix this (currently used from masking and DataFor)
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
         size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
         MBLayoutPtr m_pMBLayout;            // layout associated with this
@@ -530,7 +530,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t startColumn = (frameRange.t() * GetNumParallelSequences()) + ((frameRange.seqIndex == SIZE_MAX) ? 0 : frameRange.seqIndex);
         size_t numColumns = (frameRange.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
 
-        // TODO: why use ColumnSlice() and not DataSlice()?
+        // TODO: why use ColumnSlice() and not DataFor()?
         return make_shared<Matrix<char>>(m_columnsValidityMask->ColumnSlice(startColumn, numColumns));
     }
 
@@ -588,13 +588,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // -----------------------------------------------------------------------
-    // DataSliceWithMBLayout() -- create view for a FrameRange of a Matrix with a given MBLayout
+    // DataWithMBLayoutFor() -- create view for a FrameRange of a Matrix with a given MBLayout
     // This function binds the above together.
     // Any access by FrameRange should only be done through this function.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    static inline Matrix<ElemType> DataSliceWithMBLayout(Matrix<ElemType> & data,
+    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
                                                          const FrameRange & frameRange/*select frame or entire batch*/,
                                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
@@ -609,9 +609,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
                 return data.AsReference();
             if (frameRange.m_pMBLayout && pMBLayout && *frameRange.m_pMBLayout == *pMBLayout)
-                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+                LogicError("DataFor: frameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
             else
-                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
+                LogicError("DataFor: frameRange's MBLayout inconsistent with matrix");
         }
         // if FrameRange refers to whole minibatch (map mode)
         // or if we don't even have a layout
@@ -624,10 +624,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 if (!pMBLayout)
-                    LogicError("DataSlice: Attempting to retrieve a parallel sequence from data without layout.");
+                    LogicError("DataFor: Attempting to retrieve a parallel sequence from data without layout.");
 #if 1
                 else
-                    LogicError("DataSlice: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
+                    LogicError("DataFor: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
 #else
                 // get a reshaped view that stacks all sequences into T long vectors
                 auto mat = data.ColumnSlice(0, data.GetNumCols());
@@ -678,7 +678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(frameRange, matrixToBeMasked.GetDeviceId());
             if (columnsValidityMask != nullptr)
             {
-                auto matrixSliceToMask = DataSliceWithMBLayout(matrixToBeMasked, frameRange, pMBLayout);
+                auto matrixSliceToMask = DataWithMBLayoutFor(matrixToBeMasked, frameRange, pMBLayout);
                 foundLabelOrFeatureMissing = true;
                 matrixSliceToMask.MaskColumnsValue(*columnsValidityMask, val);
             }
