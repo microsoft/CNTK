@@ -115,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & frameRange) /*override*/
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr) /*override*/
     {
         for (auto & node : m_nestedNodes)
         {
@@ -126,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
 
                 node->BeginForwardProp();
-                node->ForwardProp(frameRange.WithLayout(node->GetMBLayout()));
+                node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
                 node->EndForwardProp();
 
                 node->UpdateEvalTimeStamp();
@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         // process nodes in pre-determined order
@@ -147,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & node = *pnode;
 
             node->BeginBackprop();
-            node->Backprop(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node->Backprop(fr.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
             node->EndBackprop();
         }
     }

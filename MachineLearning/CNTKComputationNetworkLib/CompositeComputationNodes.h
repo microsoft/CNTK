@@ -389,7 +389,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
+            FrameRange fr(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -397,7 +397,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(fr);
 
             auto & samples = Input(0)->Output();
             auto & avg = Output();
@@ -477,7 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
+            FrameRange fr(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -485,7 +485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(fr);
 
             auto & samples = Input(0)->Output();
 #if NANCHECK
@@ -557,11 +557,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
@@ -668,11 +668,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }

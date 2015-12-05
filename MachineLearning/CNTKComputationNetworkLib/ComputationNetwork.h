@@ -850,7 +850,7 @@ protected:
         virtual void BeginBackprop() override;
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override;
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
@@ -893,7 +893,7 @@ protected:
         virtual void BeginBackprop() override { }
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override { }
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
@@ -966,7 +966,7 @@ typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
 //     Evaluate(), ComputeGradient()
-//     frameRange                   -> t                    // make it more lightweight
+//     fr                   -> t                    // make it more lightweight
 //  - finish the job:
 //     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters

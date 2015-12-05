@@ -347,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
         }
 
-        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& frameRange, DEVICEID_TYPE deviceId) const;
+        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const;
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
@@ -449,7 +449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& frameRange, DEVICEID_TYPE deviceId) const
+    inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const
     {
         // lazily compute the validity mask
         if (m_columnsValidityMask == nullptr)
@@ -457,7 +457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Lock();
             m_columnsValidityMask.reset(new Matrix<char>(deviceId));
 
-            // Determine indices of all invalid columns in the specified frameRange
+            // Determine indices of all invalid columns in the specified fr
             if (!IsAllNone())       // TODO: use HasGaps() (but currently that would mean a second linear scan, which is not efficient)
             {
                 size_t nT = GetNumTimeSteps();
@@ -488,26 +488,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return nullptr;
 
         // we have a validity mask: decide what to return
-        if (frameRange.IsAllFrames())
+        if (fr.IsAllFrames())
             return m_columnsValidityMask;
 
-        // Check if there are any invalid frames in the specified frameRange
+        // Check if there are any invalid frames in the specified fr
         bool foundInvalidColumnsInRange = false;
-        if (frameRange.seqIndex == SIZE_MAX)
+        if (fr.seqIndex == SIZE_MAX)
         {
-            foundInvalidColumnsInRange = Is(frameRange.t(), MinibatchPackingFlags::NoInput);
+            foundInvalidColumnsInRange = Is(fr.t(), MinibatchPackingFlags::NoInput);
         }
         else
         {
-            foundInvalidColumnsInRange = Is(frameRange.seqIndex, frameRange.t(), MinibatchPackingFlags::NoInput);
+            foundInvalidColumnsInRange = Is(fr.seqIndex, fr.t(), MinibatchPackingFlags::NoInput);
         }
 
         if (!foundInvalidColumnsInRange)
             return nullptr;
 
         // we get here if there is an actual validity mask and there are invalid frames in its range
-        size_t startColumn = (frameRange.t() * GetNumParallelSequences()) + ((frameRange.seqIndex == SIZE_MAX) ? 0 : frameRange.seqIndex);
-        size_t numColumns = (frameRange.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
+        size_t startColumn = (fr.t() * GetNumParallelSequences()) + ((fr.seqIndex == SIZE_MAX) ? 0 : fr.seqIndex);
+        size_t numColumns = (fr.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
 
         // TODO: why use ColumnSlice() and not DataFor()?
         return make_shared<Matrix<char>>(m_columnsValidityMask->ColumnSlice(startColumn, numColumns));
@@ -574,31 +574,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
-                                                         const FrameRange & frameRange/*select frame or entire batch*/,
+                                                         const FrameRange & fr/*select frame or entire batch*/,
                                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
         // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
         // For those cases, use a ReconcileMBLayout node.
-        if (frameRange.m_pMBLayout != pMBLayout)
+        if (fr.m_pMBLayout != pMBLayout)
         {
             // if broadcast allowed then it is allowed to broadcast from an outer-loop value
             // Currently, the only 'outer' loop we have is to have no layout.
-            if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
+            if (fr.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
                 return data.AsReference();
-            if (frameRange.m_pMBLayout && pMBLayout && *frameRange.m_pMBLayout == *pMBLayout)
-                LogicError("DataFor: frameRange's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
             else
-                LogicError("DataFor: frameRange's MBLayout inconsistent with matrix");
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix");
         }
         // if FrameRange refers to whole minibatch (map mode)
         // or if we don't even have a layout
         // then return the whole matrix
         // but as a reference (e.g. it cannot be resized)
-        if (!pMBLayout || frameRange.IsAllFrames())
+        if (!pMBLayout || fr.IsAllFrames())
         {
-            if (frameRange.seqIndex == SIZE_MAX)
+            if (fr.seqIndex == SIZE_MAX)
                 return data.AsReference();
             else
             {
@@ -611,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // get a reshaped view that stacks all sequences into T long vectors
                 auto mat = data.ColumnSlice(0, data.GetNumCols());
                 mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
-                return mat;   // .RowSlice(frameRange.seqIndex * data.GetNumRows());
+                return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
                 // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
 #endif
             }
@@ -620,11 +620,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-            size_t startColumn = frameRange.t() * numParallelSequences;
-            if (frameRange.seqIndex == SIZE_MAX)
+            size_t startColumn = fr.t() * numParallelSequences;
+            if (fr.seqIndex == SIZE_MAX)
                 return data.ColumnSlice(startColumn, numParallelSequences);
             else
-                return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
+                return data.ColumnSlice(startColumn + fr.seqIndex, 1);
         }
     }
 
@@ -642,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
     // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Input(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
     template<class ElemType>
-    static inline bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange, ElemType val)
+    static inline bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr, ElemType val)
     {
         bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
@@ -654,10 +654,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (matrixToBeMasked.GetNumCols() != nT * nS)
                 LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-            shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(frameRange, matrixToBeMasked.GetDeviceId());
+            shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(fr, matrixToBeMasked.GetDeviceId());
             if (columnsValidityMask != nullptr)
             {
-                auto matrixSliceToMask = DataWithMBLayoutFor(matrixToBeMasked, frameRange, pMBLayout);
+                auto matrixSliceToMask = DataWithMBLayoutFor(matrixToBeMasked, fr, pMBLayout);
                 foundLabelOrFeatureMissing = true;
                 matrixSliceToMask.MaskColumnsValue(*columnsValidityMask, val);
             }

@@ -207,14 +207,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             assert(inputIndex == 0); inputIndex;
 
             // special case: DelayedValueNodes may be used outside of loops
             // TODO: this should be a bulk operation; this implementation is a quick hack
             int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
             {
                 // recursive call to ourselves
                 FrameRangeIteration range(m_pMBLayout, -dir);
@@ -223,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            size_t t = frameRange.t();
+            size_t t = fr.t();
 
             // if delayed input is within valid time range then add its gradient
             int t_delayed = (int)t + direction * m_timeStep;
@@ -237,7 +237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
-                            Matrix<ElemType> frm = GradientFor(frameRange.Sequence(id));
+                            Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
                             Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
                             to += frm;
                         }
@@ -245,8 +245,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else    // operate on entire time step in one go (over all parallel sequences)
                 {
-                    Matrix<ElemType> frm = GradientFor(frameRange);
-                    Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed)); // TODO: we need to be able to create a FrameRange with a delta, not like this
+                    Matrix<ElemType> frm = GradientFor(fr);
+                    // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
+                    Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
                     to += frm;
                 }
             }
@@ -281,14 +282,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.
         // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
-        virtual void ForwardProp(const FrameRange & frameRange) override
+        virtual void ForwardProp(const FrameRange & fr) override
         {
             assert(m_pMBLayout);
 
             // special case: DelayedValueNodes may be used outside of loops
             // TODO: this should be a bulk operation; this implementation is a quick hack
             int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
             {
                 // recursive call to ourselves
                 FrameRangeIteration range(m_pMBLayout, -dir);
@@ -297,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            size_t t = frameRange.t();
+            size_t t = fr.t();
 
             VerifyDims(Input(0));
 
@@ -317,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
-                    Matrix<ElemType> out = OutputFor(frameRange.Sequence(id));
+                    Matrix<ElemType> out = OutputFor(fr.Sequence(id));
 
                     if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
                         out.SetValue(m_initialActivationValue);     // crossed a boundary
@@ -337,7 +338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else        // frame has no boundary flags: use OutputFor directly (still may have a gap here)
             {
-                Matrix<ElemType> out = OutputFor(frameRange);
+                Matrix<ElemType> out = OutputFor(fr);
 
                 if (t_delayed < 0)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
