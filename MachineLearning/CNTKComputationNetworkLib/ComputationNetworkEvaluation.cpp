@@ -75,6 +75,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GetOuterLoopNode(rootNode)->Backprop(FrameRange(nullptr), true, true);
     }
 
+    ComputationNodeBasePtr ComputationNetwork::GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
+    {
+        if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
+            m_cachedOuterLoopNodes[rootNode] = make_shared<PARTraversalFlowControlNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
+        return m_cachedOuterLoopNodes[rootNode];
+    }
+
     // -----------------------------------------------------------------------
     // PARTraversalFlowControlNode methods -- implements PAR traversal
     //

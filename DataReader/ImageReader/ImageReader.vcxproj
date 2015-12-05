@@ -108,14 +108,12 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\ConfigFile.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -125,6 +123,10 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exports.cpp">
@@ -141,7 +143,6 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasOpenCV)"
-      Text="ImageReader requires OpenCV library v3.0 or higher to build. Please install the library from http://opencv.org/downloads.html and set OPENCV_PATH environment variable to OpenCV build folder (e.g. C:\src\opencv\build)." />
+    <Warning Condition="!$(HasOpenCV)" Text="ImageReader requires OpenCV library v3.0 or higher to build. Please install the library from http://opencv.org/downloads.html and set OPENCV_PATH environment variable to OpenCV build folder (e.g. C:\src\opencv\build)." />
   </Target>
 </Project>

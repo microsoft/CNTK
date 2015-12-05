@@ -24,7 +24,7 @@
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
 #include "HTKMLFReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

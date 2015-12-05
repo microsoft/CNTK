@@ -6,27 +6,10 @@
 //
 #pragma once
 
-// TODOs:
-//  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
-//  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
-//  - code prettification:
-//     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
-//     - sort important nodes first; move unused/experimental nodes into source files named accordingly
-//  - renaming:
-//     Evaluate(), ComputeGradient()
-//     frameRange                   -> t                    // make it more lightweight
-//  - finish the job:
-//     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
-//     - revise node constructors, merge by means of default parameters
-//  - known issues that need actual test cases to be fixed:
-//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
-//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
-
-// The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
-
+#include "Basics.h"
 #include "File.h"
 #include "Matrix.h"
-#include "commandArgUtil.h" // for nocase_compare
+#include "Config.h"
 
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
@@ -51,93 +34,6 @@ class ComputationNetwork : public ScriptableObjects::Object, public ScriptableOb
 {
 public:
     typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
-protected:
-
-    // FlowControlNodes for internal use by this class:
-
-    // -----------------------------------------------------------------------
-    // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
-    //
-    // This is to implement recurrent loops. All nodes inside a loop are listed
-    // inside this node. This node's ForwardProp() function will execute
-    // them inside a loop over all time steps of the recurrence.
-    // For every time step, the entire chain of nodes is called, with the time index
-    // passed as a FrameRange object.
-    // -----------------------------------------------------------------------
-
-    class SEQTraversalFlowControlNode : public FlowControlNode
-    {
-    public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
-        typedef FlowControlNode Base; using Base::m_nestedNodes;
-    public:
-        // next steps:
-        //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
-        virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
-        virtual void BeginForwardProp() override;
-        virtual void ForwardProp(const FrameRange &) override;
-        virtual void EndForwardProp() override;
-        virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
-        virtual void EndBackprop() override;
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-        virtual bool IsOutputOlderThanInputs() const override;
-    public:
-        //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
-        ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
-        int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
-        int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
-
-        SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
-            m_loopId(loopId),
-            m_sourceNode(cur)
-        {
-            SetNodeName(L"Loop_" + m_sourceNode->NodeName());
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
-    //
-    // This node contains a list of nodes in a (sub-)network. This node's
-    // ForwardProp() method will execute all those nodes once in PAR mode,
-    // that is, by passing a FrameRange object that represents to operate
-    // on all frames in the node simultaneously.
-    //
-    // The outermost network level is also represented by this node for execution.
-    // -----------------------------------------------------------------------
-
-    class PARTraversalFlowControlNode : public FlowControlNode
-    {
-        typedef FlowControlNode Base; using Base::m_nestedNodes;
-    public:
-        virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
-        virtual void BeginForwardProp() override { }
-        virtual void ForwardProp(const FrameRange &) override;
-        virtual void EndForwardProp() override { }
-        virtual void BeginBackprop() override { }
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
-        virtual void EndBackprop() override { }
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-    public:
-        // this special constructor constructs the top-level network node
-        // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
-        PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        // Base::m_nestedNodes contains all top-level nodes, in evaluation order
-    };
-
-public:
-
-    // TODO: sort methods into functional groups; some methods are at random places
 
     // -----------------------------------------------------------------------
     // construction
@@ -516,6 +412,8 @@ public:
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
     void ResetEvalTimeStamp();
 
+protected:
+    class SEQTraversalFlowControlNode;
 private:
     static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
@@ -874,12 +772,7 @@ public:
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*skipPairNetwork*/);
     }
 
-    ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
-    {
-        if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
-            m_cachedOuterLoopNodes[rootNode] = make_shared<PARTraversalFlowControlNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
-        return m_cachedOuterLoopNodes[rootNode];
-    }
+    ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode);
 
 private:
 
@@ -931,6 +824,92 @@ public:
 
 protected:
 
+    // FlowControlNodes for internal use by this class:
+
+    // -----------------------------------------------------------------------
+    // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
+    //
+    // This is to implement recurrent loops. All nodes inside a loop are listed
+    // inside this node. This node's ForwardProp() function will execute
+    // them inside a loop over all time steps of the recurrence.
+    // For every time step, the entire chain of nodes is called, with the time index
+    // passed as a FrameRange object.
+    // -----------------------------------------------------------------------
+
+    class SEQTraversalFlowControlNode : public FlowControlNode
+    {
+    public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
+        typedef FlowControlNode Base; using Base::m_nestedNodes;
+    public:
+        // next steps:
+        //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
+        virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
+        virtual void BeginForwardProp() override;
+        virtual void ForwardProp(const FrameRange &) override;
+        virtual void EndForwardProp() override;
+        virtual void BeginBackprop() override;
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
+        virtual void EndBackprop() override;
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
+        virtual bool IsOutputOlderThanInputs() const override;
+    public:
+        //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
+        ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
+        int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
+        int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
+
+        SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
+            m_loopId(loopId),
+            m_sourceNode(cur)
+        {
+            SetNodeName(L"Loop_" + m_sourceNode->NodeName());
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
+    //
+    // This node contains a list of nodes in a (sub-)network. This node's
+    // ForwardProp() method will execute all those nodes once in PAR mode,
+    // that is, by passing a FrameRange object that represents to operate
+    // on all frames in the node simultaneously.
+    //
+    // The outermost network level is also represented by this node for execution.
+    // -----------------------------------------------------------------------
+
+    class PARTraversalFlowControlNode : public FlowControlNode
+    {
+        typedef FlowControlNode Base; using Base::m_nestedNodes;
+    public:
+        virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
+        virtual void BeginForwardProp() override { }
+        virtual void ForwardProp(const FrameRange &) override;
+        virtual void EndForwardProp() override { }
+        virtual void BeginBackprop() override { }
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
+        virtual void EndBackprop() override { }
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
+    public:
+        // this special constructor constructs the top-level network node
+        // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
+        PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
+        // Base::m_nestedNodes contains all top-level nodes, in evaluation order
+    };
+
+public:
+
+protected:
+
     // -----------------------------------------------------------------------
     // data members
     // -----------------------------------------------------------------------
@@ -978,5 +957,21 @@ private:    // TODO: make all private that can be made private
     MatrixPool m_matrixPool;
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
+
+// TODOs:
+//  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
+//  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
+//  - code prettification:
+//     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
+//     - sort important nodes first; move unused/experimental nodes into source files named accordingly
+//  - renaming:
+//     Evaluate(), ComputeGradient()
+//     frameRange                   -> t                    // make it more lightweight
+//  - finish the job:
+//     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
+//     - revise node constructors, merge by means of default parameters
+//  - known issues that need actual test cases to be fixed:
+//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
+//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
 
 }}}

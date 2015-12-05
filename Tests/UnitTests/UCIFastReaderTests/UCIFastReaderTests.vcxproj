@@ -117,7 +117,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Common\ConfigFile.cpp" />
+    <ClCompile Include="..\..\..\Common\Config.cpp" />
     <ClCompile Include="..\..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\..\Common\Eval.cpp" />
     <ClCompile Include="..\..\..\Common\File.cpp" />

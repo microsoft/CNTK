@@ -6,7 +6,7 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataReader.h"
-#include "commandArgUtil.h" // for intargvector
+#include "Config.h" // for intargvector
 #include "CUDAPageLockedMemAllocator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

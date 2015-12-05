@@ -8,7 +8,7 @@
 #include "stdafx.h"
 #include "DataReader.h"
 #include "DataWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "RandomOrdering.h"
 #include "UCIParser.h"
 #include <string>

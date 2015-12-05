@@ -25,7 +25,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
-#include "commandArgUtil.h" // for ConfigParameters
+#include "Config.h" // for ConfigParameters
 #include "ScriptableObjects.h"
 #include <map>
 #include <string>

@@ -1840,7 +1840,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // We optionally break the minibatch into sub-minibatches.
                 // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
-                size_t actualNumSubminibatches = numSubminibatchesNeeded == 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
                 for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
                 {
                     if (actualNumSubminibatches > 1)

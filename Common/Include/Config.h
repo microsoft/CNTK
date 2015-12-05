@@ -1,5 +1,5 @@
 //
-// <copyright file="commandArgUtil.h" company="Microsoft">
+// <copyright file="Config.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

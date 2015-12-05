@@ -201,7 +201,7 @@ $(BUILDINFO): Scripts/genrate_build_info
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/ConfigFile.cpp \
+	Common/Config.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
 	Common/DebugUtil.cpp \

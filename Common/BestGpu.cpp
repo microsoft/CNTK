@@ -16,7 +16,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #include "Platform.h"
 #include "BestGpu.h"
-#include "commandArgUtil.h" // for ConfigParameters
+#include "Config.h" // for ConfigParameters
 #include "ScriptableObjects.h"
 #include "DebugUtil.h"
 #ifndef CPUONLY
