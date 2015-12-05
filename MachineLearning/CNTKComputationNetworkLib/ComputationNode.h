@@ -300,22 +300,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
-        virtual // for now virtual as this still updates m_output
         void SetDims(size_t rows, size_t cols)
         {
             m_numRows = rows;
             m_numCols = cols;
             // actual memory allocation happens elsewhere
-            // NOTE: current ComputationNode<> overrides this in order to still do actual memory allocation like before
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_output--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
+            {
                 LogicError("VerifyDims: %ls %ls operation expected size %d x %d, but it is %d x %d",
                            NodeName().c_str(), OperationName().c_str(),
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+            }
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void VerifyDimsMatch() const = 0;     // verify that m_output dimensions match ours
@@ -1077,11 +1077,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const Matrix<ElemType>& Output() const    { return *m_output; }
         Matrix<ElemType>& Output()                { return *m_output; }
-        //shared_ptr<Matrix<ElemType>>& OutputPtr() { return m_output; }
 
         const Matrix<ElemType>& GradientValues() const    { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues()                { return *m_gradientValues; }
-        shared_ptr<Matrix<ElemType>>& GradientValuesPtr() { return m_gradientValues; }
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
@@ -1272,7 +1270,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *m;
         }
 
+        void CreateGradientMatrixIfNull()
+        {
+            CreateMatrixIfNull(m_gradientValues);
+        }
+
     protected:
+
+        // this function is used to create matrices for those needed before matrix pool is available
+        // e.g., for model parameters and input nodes you will need to resize the functions based on NDL
+        // and before matrix pool is available
+        void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
+        {
+            if (!matrixPtr)
+                matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
+        }
 
         void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
         {
@@ -1286,17 +1298,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(matrixPtr != nullptr);
             matrixPool.Release<ElemType>(matrixPtr);
-        }
-
-        //this function is used to create matrices for those needed before matrix pool is available
-        //e.g., for model parameters and input nodes you will need to resize the functions based on NDL
-        //and before matrix pool is available
-        void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
-        {
-            if (matrixPtr == nullptr)
-            {
-                matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
-            }
         }
 
         //to be called by derived classed if that class needs to print node values
@@ -1421,7 +1422,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
-        //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override     { NOT_IMPLEMENTED; }
         virtual void UpdateFunctionMBSize() override     { NOT_IMPLEMENTED; }
         virtual void VerifyDimsMatch() const override    { NOT_IMPLEMENTED; }
@@ -1489,7 +1489,7 @@ protected: \
     using Base::SetDims; /*using Base::NotifyFunctionValuesMBSizeModified;*/ using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadFunctionValues; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::OutputFor; using Base::GradientValues; using Base::GradientValuesPtr; using Base::GradientFor; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::DataFor; using Base::OutputFor; using Base::GradientValues; using Base::GradientFor; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_deviceId; using Base::m_output; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_sampleLayout; \
@@ -1512,7 +1512,7 @@ protected: \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryInputDims; using Base::ValidateInferInputDims; \
 public: \
     using Base::RequiresPreCompute; \
-    using Base::AttachInputs; using Base::NodeName; \
+    using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
     using Base::Output;
 
 #define ComputationNodeBoilerplate \

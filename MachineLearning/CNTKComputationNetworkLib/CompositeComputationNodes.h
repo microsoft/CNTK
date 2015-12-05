@@ -402,7 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & samples = Input(0)->Output();
             auto & avg = Output();
 
-#if 1//NANCHECK
+#if NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
             size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
                                                      ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
                                                      false, (ElemType)m_numSamples / totalNumSamples, avg);
-#if 1//NANCHECK
+#if NANCHECK
             avg.HasNan("Mean-avg");
 #endif
 
@@ -458,12 +458,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ElemType sqrtFloor = 1e-10f;
                 m_var.InplaceTruncateBottom(sqrtFloor);     // prevent too small variance (and negative square roots due to numeric inaccuracy)
-#if 1//NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
                 m_var.InplaceSqrt();
 
-#if 1//NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceSqrt");
 #endif
                 m_var.ElementInverse();
@@ -488,7 +488,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(0)->MaskMissingValuesColumnsToZero(frameRange);
 
             auto & samples = Input(0)->Output();
-#if 1//NANCHECK
+#if NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
@@ -510,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                      ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
                                                      false, (ElemType)m_numSamples / totalNumSamples, m_var);
 
-#if 1//NANCHECK
+#if NANCHECK
             m_var.HasNan("InvStdDev-m_var");
 #endif
 
