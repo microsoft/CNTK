@@ -104,14 +104,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(Input(1)->GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange);
+            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
                 BackpropToOverWeight(sliceOutputGrad, Input(0)->GradientValues(), Input(0)->Output(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
             else if (inputIndex == 1)  // derivative with regard to the input feature
             {
-                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange);
                 BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Input(0)->Output(), sliceInput1Value, *m_tempMatrix);
             }
         }
@@ -209,8 +209,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
             ForwardPropS(sliceOutputValue, Input(0)->Output(), sliceInput1Value, *m_tempMatrix);
         }
 
@@ -460,11 +460,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(frameRange);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange);
 
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
 
             BackpropToV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
         }
@@ -474,8 +474,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
             ForwardPropV(sliceOutputValue, sliceInput0Value);
         }
 

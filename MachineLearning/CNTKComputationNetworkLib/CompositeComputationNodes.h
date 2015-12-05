@@ -560,8 +560,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
@@ -671,8 +671,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }

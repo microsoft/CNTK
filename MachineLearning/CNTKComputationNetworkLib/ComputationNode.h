@@ -425,8 +425,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
     public: // the following should be protected, but nodes inquire about their children, requiring public access
-        // This is used at 284 places inside nodes, most of the time as
-        // ...Slice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences()), m_pMBLayout)
+
         size_t GetNumParallelSequences() const
         {
 #if 1
