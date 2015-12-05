@@ -614,20 +614,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Input(inputIndex)->GradientValues());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(m_output->GetNumRows() == GradientValues().GetNumRows()); // original used m_output->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(frameRange);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(frameRange), mTmp);
+            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(fr);
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(fr), mTmp);
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            Matrix<ElemType> mTmp = OutputFor(frameRange);
-            mTmp.SetValue(Input(0)->OutputFor(frameRange));
+            Matrix<ElemType> mTmp = OutputFor(fr);
+            mTmp.SetValue(Input(0)->OutputFor(fr));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

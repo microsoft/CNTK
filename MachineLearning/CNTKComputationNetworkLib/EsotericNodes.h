@@ -45,16 +45,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
+            FrameRange fr(Input(0)->GetMBLayout());
             if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
             {
-                auto gradient = Input(2)->GradientFor(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Input(1)->OutputFor(frameRange), gradient);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Input(1)->OutputFor(frameRange), 1.0f, gradient);
+                auto gradient = Input(2)->GradientFor(fr);
+                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Input(1)->OutputFor(fr), gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Input(1)->OutputFor(fr), 1.0f, gradient);
             }
         }
 
@@ -332,21 +332,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_stride
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { NOT_IMPLEMENTED; return; } // TODO: remove these one by one. And why is this not implemented?
+            if (fr.IsAllFrames()) { NOT_IMPLEMENTED; return; } // TODO: remove these one by one. And why is this not implemented?
             if (inputIndex > 2)
                 InvalidArgument("StrideTimes operation only takes three inputs.");
             else if (inputIndex == 2)
                 return;     // that's a constant
 
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
             if (m_strideDim == 1) // column stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
 
                     //BackpropToLeft1(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
 
@@ -371,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
 
                     //BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
 
@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
@@ -419,7 +419,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
@@ -495,10 +495,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             size_t rows0 = Input(0)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
+            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
@@ -506,7 +506,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_strideDim == 1)       // TODO: no else??
                 SetDims(rows0, cols1);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             // (TODO: these following assignments are leftovers of refactoring and can be short-circuited)
             Matrix<ElemType>& functionValues = sliceOutputValue;
@@ -761,19 +761,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
-                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
-                    Matrix<ElemType> sliceObs = Input(0)->OutputFor(frameRange);
-                    Matrix<ElemType> sliceOutput = OutputFor(frameRange);
-                    Matrix<ElemType> sliceState = DataFor(m_State, frameRange);
+                    FrameRange fr(m_pMBLayout, timeIdxInSeq);
+                    Matrix<ElemType> sliceObs = Input(0)->OutputFor(fr);
+                    Matrix<ElemType> sliceOutput = OutputFor(fr);
+                    Matrix<ElemType> sliceState = DataFor(m_State, fr);
 
-                    Matrix<ElemType> sliceGi = DataFor(m_Gi, frameRange);
-                    Matrix<ElemType> sliceGf = DataFor(m_Gf, frameRange);
-                    Matrix<ElemType> sliceGo = DataFor(m_Go, frameRange);
+                    Matrix<ElemType> sliceGi = DataFor(m_Gi, fr);
+                    Matrix<ElemType> sliceGf = DataFor(m_Gf, fr);
+                    Matrix<ElemType> sliceGo = DataFor(m_Go, fr);
 
-                    Matrix<ElemType> sliceTanhState = DataFor(tanhState, frameRange);
-                    Matrix<ElemType> sliceTanhObs = DataFor(tanhObs, frameRange);
+                    Matrix<ElemType> sliceTanhState = DataFor(tanhState, fr);
+                    Matrix<ElemType> sliceTanhObs = DataFor(tanhObs, fr);
 
-                    Matrix<ElemType> error = GradientFor(frameRange);
+                    Matrix<ElemType> error = GradientFor(fr);
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
@@ -822,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         grdToPrevState,
                         m_tempMatrix
                     );
-                    DataFor(grdToObs, frameRange).SetValue(grdToObsSlice);
+                    DataFor(grdToObs, fr).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), &m_pMBLayout->GetM());
                 }
@@ -1152,17 +1152,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
-                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
-                    Matrix<ElemType> sliceObs = Input(0)->OutputFor(frameRange);
-                    Matrix<ElemType> sliceOutput = OutputFor(frameRange);
-                    Matrix<ElemType> sliceState = DataFor(m_State, frameRange);
+                    FrameRange fr(m_pMBLayout, timeIdxInSeq);
+                    Matrix<ElemType> sliceObs = Input(0)->OutputFor(fr);
+                    Matrix<ElemType> sliceOutput = OutputFor(fr);
+                    Matrix<ElemType> sliceState = DataFor(m_State, fr);
 
-                    Matrix<ElemType> sliceGi = DataFor(m_Gi, frameRange);
-                    Matrix<ElemType> sliceGf = DataFor(m_Gf, frameRange);
-                    Matrix<ElemType> sliceGo = DataFor(m_Go, frameRange);
+                    Matrix<ElemType> sliceGi = DataFor(m_Gi, fr);
+                    Matrix<ElemType> sliceGf = DataFor(m_Gf, fr);
+                    Matrix<ElemType> sliceGo = DataFor(m_Go, fr);
 
-                    Matrix<ElemType> sliceTanhState = DataFor(tanhState, frameRange);
-                    Matrix<ElemType> sliceTanhInput = DataFor(tanhObs, frameRange);
+                    Matrix<ElemType> sliceTanhState = DataFor(tanhState, fr);
+                    Matrix<ElemType> sliceTanhInput = DataFor(tanhObs, fr);
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, Output(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
@@ -1256,9 +1256,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 // this is in the minibatch
-                FrameRange frameRange(timeIdxInSeq, nsamples);
-                Matrix<ElemType>::Multiply(DataFor(output, frameRange/*TODO: delete the next two parameters*/, frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
-                Matrix<ElemType>::Multiply(DataFor(state, frameRange/*TODO: delete the next two parameters*/, frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
+                FrameRange fr(timeIdxInSeq, nsamples);
+                Matrix<ElemType>::Multiply(DataFor(output, fr/*TODO: delete the next two parameters*/, fr.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
+                Matrix<ElemType>::Multiply(DataFor(state, fr/*TODO: delete the next two parameters*/, fr.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
 
             Base::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);

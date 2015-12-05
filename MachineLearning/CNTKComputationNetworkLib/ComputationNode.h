@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- these are meant to be overridden by ControlFlowNodes
 
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
+        virtual void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
 
@@ -976,33 +976,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateInferInputDims(size_t i, size_t rows, size_t cols) override final;
 
     public:
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
+        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
         {
-            //fprintf(stderr, "masking column range %d\n", (int)frameRange.timeIdxInSeq);
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, (ElemType)0);
+            //fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
+            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
         }
 
-        void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final
+        void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & fr) override final
         {
             //fprintf(stderr, "%ls %ls m_output ", NodeName().c_str(), OperationName().c_str());
-            MaskMissingColumnsToZero(*m_output, m_pMBLayout, frameRange);
+            MaskMissingColumnsToZero(*m_output, m_pMBLayout, fr);
         }
-        void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final
+        void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & fr) override final
         {
             //fprintf(stderr, "%ls %ls m_gradientValues ", NodeName().c_str(), OperationName().c_str());
-            MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, frameRange);
+            MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, fr);
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
-        void InvalidateMissingValuesColumns(const FrameRange & frameRange) override final
+        void InvalidateMissingValuesColumns(const FrameRange & fr) override final
         {
-            //fprintf(stderr, "invalidating %ls %ls m_output column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
-            MaskMissingColumnsTo(*m_output, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
+            //fprintf(stderr, "invalidating %ls %ls m_output column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+            MaskMissingColumnsTo(*m_output, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
         }
-        void InvalidateMissingGradientColumns(const FrameRange & frameRange) override final
+        void InvalidateMissingGradientColumns(const FrameRange & fr) override final
         {
-            //fprintf(stderr, "invalidating %ls %ls m_gradientValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
-            MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
+            //fprintf(stderr, "invalidating %ls %ls m_gradientValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+            MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
         // for debugging purposes
@@ -1074,40 +1074,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
-        Matrix<ElemType> DataFor(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> DataFor(Matrix<ElemType> & data, const FrameRange & fr/*select frame or entire batch*/)
         {
             try
             {
-                return DataWithMBLayoutFor(data, frameRange, m_pMBLayout);
+                return DataWithMBLayoutFor(data, fr, m_pMBLayout);
             }
             catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
             {
                 LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
             }
         }
-        Matrix<ElemType> ValueSliceToDense(const FrameRange & frameRange/*select frame or entire batch*/, bool keepValuesOnSwitch)
+        Matrix<ElemType> ValueSliceToDense(const FrameRange & fr/*select frame or entire batch*/, bool keepValuesOnSwitch)
         {
             Output().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
-            return OutputFor(frameRange);
+            return OutputFor(fr);
         }
-        Matrix<ElemType> OutputFor(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> OutputFor(const FrameRange & fr/*select frame or entire batch*/)
         {
-            return DataFor(Output(), frameRange);
+            return DataFor(Output(), fr);
         }
-        Matrix<ElemType> GradientFor(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> GradientFor(const FrameRange & fr/*select frame or entire batch*/)
         {
-            return DataFor(GradientValues(), frameRange);
+            return DataFor(GradientValues(), fr);
         }
         // use the following two versions if you assume the inputs may contain gaps that must be set to zero because you want to reduce over frames with a BLAS operation
-        Matrix<ElemType> MaskedValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> MaskedValueSlice(const FrameRange & fr/*select frame or entire batch*/)
         {
-            MaskMissingValuesColumnsToZero(frameRange);
-            return OutputFor(frameRange);
+            MaskMissingValuesColumnsToZero(fr);
+            return OutputFor(fr);
         }
-        Matrix<ElemType> MaskedGradientSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> MaskedGradientSlice(const FrameRange & fr/*select frame or entire batch*/)
         {
-            MaskMissingGradientColumnsToZero(frameRange);
-            return GradientFor(frameRange);
+            MaskMissingGradientColumnsToZero(fr);
+            return GradientFor(fr);
         }
 
         void UpdateFunctionValuesSize()
@@ -1174,9 +1174,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
         // TODO: move to -Base (or -Network?)
-        void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override
+        void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
         {
-            if (frameRange.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
+            if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
                 LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
 
             for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1201,14 +1201,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // If we propagate from a loop to a node that is outside the loop, we are not efficient.
                     // This case is handled by SEQTraversalFlowControlNode::Backprop().
                     // The check below is to verify that.
-                    if (IsPartOfLoop() && !child->IsPartOfLoop() && !frameRange.IsAllFrames())
+                    if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
                     {
                         LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                                    NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
                     }
 
-                    //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
-                    BackpropTo(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
+                    //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+                    BackpropTo(i, fr);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
@@ -1374,16 +1374,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // these two implement the ComputationNode<> interface
-        void ForwardProp(const FrameRange & frameRange) override final
+        void ForwardProp(const FrameRange & fr) override final
         {
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
                 ForwardPropNonLooping();
             else
                 LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        void BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override final
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override final
         {
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
                 BackpropToNonLooping(inputIndex);
             else
                 LogicError("%s node should never be in a loop.", typeid(*this).name());

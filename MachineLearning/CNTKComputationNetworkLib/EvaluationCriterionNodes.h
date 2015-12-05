@@ -38,11 +38,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
-            Input(0)->OutputFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-            Input(1)->OutputFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
-            MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
-            MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+            FrameRange fr(Input(0)->GetMBLayout());
+            Input(0)->OutputFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+            Input(1)->OutputFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+            MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), fr);
+            MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
             Output().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
         #if NANCHECK
             Output().HasNan("ErrorPrediction");
