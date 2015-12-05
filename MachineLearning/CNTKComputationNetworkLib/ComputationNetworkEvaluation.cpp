@@ -135,15 +135,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (recInfo)
                     assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
 
-                node->OnEvaluateBeginIteration();
+                node->BeginForwardProp();
                 node->ForwardProp(frameRange.WithLayout(node->GetMBLayout()));
-                node->OnEvaluateEndIteration();
+                node->EndForwardProp();
 
                 node->UpdateEvalTimeStamp();
             }
 #ifdef _DEBUG
             else if (node)
-                node->OnEvaluateEndIteration();  // HACK: performs NaN check, but does nothing else
+                node->EndForwardProp();  // HACK: performs NaN check, but does nothing else
 #endif
         }
     }
@@ -156,9 +156,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             auto & node = *pnode;
 
-            node->OnComputeGradientBeginIteration();
+            node->BeginBackprop();
             node->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
-            node->OnComputeGradientEndIteration();
+            node->EndBackprop();
         }
     }
     /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/ { }
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // unrolls the loop over time steps and runs the network once per time step.
     // -----------------------------------------------------------------------
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateBeginIteration() /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::BeginForwardProp() /*override*/
     {
         // take the opportunity to check that layout is shared by all nodes in the loop
         // TODO: we should do this in a constructor.
@@ -188,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // tell all that loop is about to commence
         for (auto & node : m_nestedNodes)
-            node->OnEvaluateBeginIteration();
+            node->BeginForwardProp();
     }
 
     // evaluation of a SEQTraversalFlowControlNode FlowControlNode
@@ -215,18 +215,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
     }
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnEvaluateEndIteration() /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::EndForwardProp() /*override*/
     {
         // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
         for (auto & node : m_nestedNodes)
-            node->OnEvaluateEndIteration();
+            node->EndForwardProp();
     }
 
     // called before first iteration step of ComputeGradient()
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnComputeGradientBeginIteration() /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::BeginBackprop() /*override*/
     {
         for (auto & node2 : m_nestedNodes)
-            node2->OnComputeGradientBeginIteration();
+            node2->BeginBackprop();
     }
 
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
@@ -242,13 +242,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto & node2 = *nodeIter2;
                 node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
                 // The above flags tell ComputeGradientForChildren() to skip back-propagation from inside a node into
-                // a node that is outside the loop, which is done later in OnComputeGradientEndIteration() in PAR mode.
+                // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
             }
         }
     }
 
     // called after last iteration step of ComputeGradient()
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::OnComputeGradientEndIteration() /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::EndBackprop() /*override*/
     {
         // The following loop handles the case that a node inside the loop back-propagates a gradient into a node outside of the loop.
         // For efficiency, we perform this outside the loop in PAR mode. E.g., in one LSTM speech setup, we measured 12..14% overall speed-up.
@@ -260,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // tell all nodes we are done for this iteraTion
         for (auto & node2 : m_nestedNodes)
-            node2->OnComputeGradientEndIteration();
+            node2->EndBackprop();
     }
 
     /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/

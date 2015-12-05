@@ -78,13 +78,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
-        virtual void OnEvaluateBeginIteration() = 0;
+        virtual void BeginForwardProp() = 0;
         virtual void ForwardProp(const FrameRange &) = 0;  // forward prop for one minibatch
-        virtual void OnEvaluateEndIteration() = 0;              // called after last iteration step of ForwardProp()
+        virtual void EndForwardProp() = 0;              // called after last iteration step of ForwardProp()
 
-        virtual void OnComputeGradientBeginIteration() = 0;     // called before first iteration step of ComputeGradient()
+        virtual void BeginBackprop() = 0;     // called before first iteration step of ComputeGradient()
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) = 0;
-        virtual void OnComputeGradientEndIteration() = 0;       // called after last iteration step of ComputeGradient()
+        virtual void EndBackprop() = 0;       // called after last iteration step of ComputeGradient()
 
         // --- these are meant to be overridden by ControlFlowNodes
 
@@ -542,29 +542,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ClearGradientForChildren() = 0;
 
-        virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of ForwardProp()
+        virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {
 #ifdef TRACK_GAP_NANS
-            fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "BeginForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
-        virtual void /*IComputationNode::*/OnEvaluateEndIteration() override               // called after last iteration step of ForwardProp()
+        virtual void /*IComputationNode::*/EndForwardProp() override               // called after last iteration step of ForwardProp()
         {
 #ifdef TRACK_GAP_NANS
-            fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "EndForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
         // TODO: the following two are not really utilized yet other than printing trace information
-        virtual void /*IComputationNode::*/OnComputeGradientBeginIteration() override             // called before first iteration step of ComputeGradient()
+        virtual void /*IComputationNode::*/BeginBackprop() override             // called before first iteration step of ComputeGradient()
         {
 #ifdef TRACK_GAP_NANS
-            fprintf(stderr, "OnComputeGradientBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "BeginBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
-        virtual void /*IComputationNode::*/OnComputeGradientEndIteration() override               // called after last iteration step of ComputeGradient()
+        virtual void /*IComputationNode::*/EndBackprop() override               // called after last iteration step of ComputeGradient()
         {
 #ifdef TRACK_GAP_NANS
-            fprintf(stderr, "OnComputeGradientEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "EndBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
 
@@ -956,8 +956,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         // Note: This only updates the dimensions but does not actually allocate anything.
-        // The actual allocation happens later, in OnEvaluateBeginIteration().
-        // TODO: How is this function different from OnEvaluateBeginIteration()?  --> answer: it will be called from there some day
+        // The actual allocation happens later, in BeginForwardProp().
+        // TODO: How is this function different from BeginForwardProp()?  --> answer: it will be called from there some day
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
@@ -1130,9 +1130,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is where we
         //  - update the node dimension based on actual MB size
         //  - (re-)allocate the m_functionValues matrix, which may be shared across nodes and thus have changed dimensions
-        virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of ForwardProp()
+        virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {
-            Base::OnEvaluateBeginIteration();
+            Base::BeginForwardProp();
 
             // update dimensions based on MB size
             UpdateFunctionMBSize();
@@ -1147,27 +1147,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef _DEBUG
         // NaN checks
-        virtual void /*IComputationNode::*/OnEvaluateEndIteration() override
+        virtual void /*IComputationNode::*/EndForwardProp() override
         {
-            Base::OnEvaluateEndIteration();
+            Base::EndForwardProp();
 #ifdef TRACK_GAP_NANS
             MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-            if (FunctionValues().HasNan("OnEvaluateEndIteration"))
+            if (FunctionValues().HasNan("EndForwardProp"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
 #endif
             InvalidateMissingValuesColumns(FrameRange(m_pMBLayout));        // blast NaNs into columns that are gaps in a packed layout
         }
 #endif
 
-        virtual void /*IComputationNode::*/OnComputeGradientBeginIteration() override
+        virtual void /*IComputationNode::*/BeginBackprop() override
         {
-            Base::OnComputeGradientBeginIteration();
+            Base::BeginBackprop();
         }
 
 #ifdef _DEBUG
-        virtual void /*IComputationNode::*/OnComputeGradientEndIteration() override
+        virtual void /*IComputationNode::*/EndBackprop() override
         {
-            Base::OnComputeGradientEndIteration();
+            Base::EndBackprop();
 #ifdef TRACK_GAP_NANS
             for (size_t i = 0; i < m_inputs.size(); i++)
             {
@@ -1175,7 +1175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (child->m_needsGradient)
                 {
                     child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout()));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                    if (child->GradientValues().HasNan("OnComputeGradientEndIteration"))
+                    if (child->GradientValues().HasNan("EndBackprop"))
                         LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
                 }
             }
