@@ -84,6 +84,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux build files", "Linux 
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{065AF55D-AF02-448B-BFCD-52619FDA4BD0}"
+	ProjectSection(SolutionItems) = preProject
+		README = README
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorial", "Tutorial", "{98D2C32B-0C1F-4E19-A626-65F7BA4600CF}"
 	ProjectSection(SolutionItems) = preProject
