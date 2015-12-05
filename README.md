@@ -1,16 +1,13 @@
 ##############################################################################
-#                                                                            #
 #                                    CNTK                                    #
-#                                                                            #
 ##############################################################################
 
 -------------------------------
 1. Documentation and Demos
 -------------------------------
 
-The detailed introduction of the Computational Network and its
-implementation as well as the user manual of the Computational Network
-Toolkit (CNTK) can be found at
+A detailed introduction to the Computational Network Toolkit (CNTK) and its
+implementation as well as the user manual for CNTK can be found at
 
     "An Introduction to Computational Networks and the Computational
     Network Toolkit"
@@ -29,7 +26,7 @@ Toolkit (CNTK) can be found at
 
     Available through Codeplex and inside the repository.
 
-For examples, check out the Demos/ folder.
+To get started with examples see the Demos/ folder and the Readme therein.
 
 There are also four files in the Documentation/ directory of the source
 that contain additional details.
@@ -127,6 +124,11 @@ Set environment variable OPENCV_PATH to the OpenCV build folder, e.g.
 
     C:\src\opencv\build
 
+Make sure the following CUDA environment variables are set to the correct path
+
+    CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+    CUDA_PATH_V7_0=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0 
+    
 Open the CNTKSolution and build the CNTK project.
 
 Note: If you make modifications to the code, please first disable the
@@ -144,7 +146,7 @@ Document/Ctrl+E,D).
 
 -------------------------------
 5. Linux GCC Setup
- -------------------------------
+-------------------------------
 
 Install needed libraries as indicated in the Windows section above on
 your Linux box. You need GCC 4.8.4 or above.
@@ -175,8 +177,12 @@ not be built)
   * OPENCV_PATH= path to OpenCV 3.0.0 installation, such that the
 directory $(OPENCV_PATH) exists (defaults to /usr/local/opencv-3.0.0)
  
-Build the clean version with command
+Build the clean version using the following commands from the cntk folder
 
+    mkdir -p build/release && cd build/release && ../../configure --with-buildtype=release
+
+then 
+    
     make -j all
 
 Note: If you make modifications to the code, please first disable the
