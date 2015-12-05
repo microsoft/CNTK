@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::unique_ptr<MemAllocator> allocator(deviceId == CPUDEVICE ? nullptr : new CUDAPageLockedMemAllocator(deviceId));
     
         Matrix<ElemType> inMatrix(numRows, numCols, deviceId);
-        std::unique_ptr<MatrixQuantizer<ElemType>> quantizer(MatrixQuantizer<ElemType>::CreateMatrixQuantizer(numRows, numCols, deviceId));
+        std::unique_ptr<MatrixQuantizer<ElemType>> quantizer(MatrixQuantizer<ElemType>::CreateMatrixQuantizer(numRows, numCols, deviceId, false /*useAsync*/));
 
         // Verify that the initial residue is comprised of all zeros
         verifyAllZerosFunc(quantizer->GetResidualMatrix());

@@ -290,6 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
             m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1;  // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
+            m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
 
             if (configParallelTrain.Exists(L"DataParallelSGD"))
             {
@@ -308,7 +309,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
                 m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
-                m_iMASyncStatsTrace = configMASGD(L"maPerfStats", (int)0);
             }
         }
     }
@@ -2021,9 +2021,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     nSecondsOnMASync += secondsSpentOnSync; 
                     nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
                     
-                    if (m_iMASyncStatsTrace > 0)
+                    if (m_syncStatsTrace > 0)
                     {
-                        if (nSynced % m_iMASyncStatsTrace == 0)
+                        if (nSynced % m_syncStatsTrace == 0)
                         {
                             fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
                                     (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
@@ -2222,7 +2222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_distGradAgg == nullptr)
             {
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
             }
 
             if (m_gradHeader == nullptr)
