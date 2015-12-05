@@ -1,5 +1,7 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 
+// This is used by NDL and the SimpleNetworkBuilder. It will not be used by BrainScript.
+
 #pragma once
 
 #include "Basics.h"
