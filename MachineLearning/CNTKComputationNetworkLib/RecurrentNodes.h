@@ -25,8 +25,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // The following defines a state of a delay node which is going to be exported to others (saving for the next minibatch)
+    // DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.
+    // This is used for sub-minibatching in case of truncated BPTT.
     // -----------------------------------------------------------------------
+
     template<class ElemType>
     class DelayedValueNodeState: public INodeState
     {
@@ -35,9 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_cachedActivity((size_t)0, (size_t)0, deviceID), 
                 m_delayedActivationMBLayout(nullptr), 
                 m_isEmpty(true)
-            {
-
-            }
+            { }
             void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
             {
                 m_delayedActivationMBLayout = make_shared<MBLayout>();
@@ -71,7 +71,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool                m_isEmpty;      // in some case 
             // (e.g., at the boundary of sentence end or begin/full utterance mode), we don't need to store state (but we do need to need know m_delayedActivationMBLayout)
     };
-    
 
     // -----------------------------------------------------------------------
     // DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code

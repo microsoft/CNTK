@@ -20,7 +20,7 @@ enum class MinibatchPackingFlags : char     // (note: not using unsigned char be
     NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
     NoLabel = 1 << 3,               // binary 1000  frame has no label
 
-    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
+    NoInput = NoFeature | NoLabel,  // Note: Once we refactorized the reader, NoInput will no longer needed.
     SequenceStartOrNoFeature = SequenceStart | NoFeature,
     SequenceEndOrNoFeature = SequenceEnd | NoFeature,
     SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
@@ -92,9 +92,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
     //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
     //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling ForwardProp() on a node
-    // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
+    // NOTE: Parts of this class represents the result of refactoring code, including a few irregular edge cases.
     //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
-    //       Some wackiness below is explained by this.
 
     struct MBLayout
     {
@@ -375,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Where this design currently breaks:  // <- BUGBUG: I think these are outdated
     //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
     //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-    // BUGBUG: These are currently broken and will need to be fixed:
+    // BUGBUG: These nodes are currently broken and will need to be fixed:
     //  - CRFNode does not support > 1 parallel sequence
     class FrameRange
     {
@@ -437,31 +436,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
+        // Really only used in RecurrentNodes(), where it will be replaced by FrameRange::WithDelay() which allows to access delayed frames through the FrameRange object.
         size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
-        // multi-frame slice case: these two get startFrame and numFrames
-        //size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        //size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
-        // TODO: remove these ^^ two in favor of these vv
-        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
-        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return pMBLayout->GetNumParallelSequences(); }
+
         bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead (PAR mode)
 
-        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
-        {
-            if (!IsAllFrames() && (expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
-                LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
-            return *this;
-        }
-        const FrameRange & Check_t(size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
-        {
-#if 1       // temporary workaround
-            if (expectedNumCols == SIZE_MAX || !pMBLayout)
-                return *this;
-#endif
-            if (!IsAllFrames())
-                Check(t() * expectedNumCols, expectedNumCols, pMBLayout);
-            return *this;
-        }
     private:
         void EnsureNotAllFrames() const
         {

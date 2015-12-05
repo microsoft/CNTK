@@ -620,14 +620,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_output->GetNumRows() == GradientValues().GetNumRows()); // original used m_output->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)), mTmp);
+            Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(frameRange);
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(frameRange), mTmp);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> mTmp = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            mTmp.SetValue(Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
+            Matrix<ElemType> mTmp = OutputFor(frameRange);
+            mTmp.SetValue(Input(0)->OutputFor(frameRange));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
