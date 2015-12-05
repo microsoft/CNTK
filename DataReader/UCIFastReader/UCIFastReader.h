@@ -10,10 +10,12 @@
 #include "DataWriter.h"
 #include "Config.h"
 #include "RandomOrdering.h"
+#include <future>
 #include "UCIParser.h"
 #include <string>
 #include <map>
 #include <vector>
+#include "CUDAPageLockedMemAllocator.h"
 
 static inline size_t RoundUp(size_t m, size_t n)
 {
@@ -62,10 +64,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_featuresName;
         std::wstring m_labelsCategoryName;
         std::wstring m_labelsMapName;
-        ElemType* m_featuresBuffer;
-        ElemType* m_labelsBuffer;
-        LabelIdType* m_labelsIdBuffer;
+        std::shared_ptr<ElemType> m_featuresBuffer;
+        std::shared_ptr<ElemType> m_labelsBuffer;
+        std::shared_ptr<LabelIdType> m_labelsIdBuffer;
         std::wstring m_labelFileToWrite;  // set to the path if we need to write out the label file
+
+        // Prefetching related fields
+        bool m_prefetchEnabled;
+        std::future<bool> m_pendingAsyncGetMinibatch;
+        std::map<std::wstring, std::unique_ptr<Matrix<ElemType>>> m_prefetchMatrices;
+
+        // Distributed reading related fields
+        size_t m_subsetNum;
+        size_t m_numSubsets;
 
         bool m_endReached;
         int m_traceLevel;
@@ -86,6 +97,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         bool mOneLinePerFile;
     
+        unique_ptr<CUDAPageLockedMemAllocator> m_cudaAllocator;
+
         // caching support
         DataReader<ElemType>* m_cachingReader;
         DataWriter<ElemType>* m_cachingWriter;
@@ -104,15 +117,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool EnsureDataAvailable(size_t mbStartSample, bool endOfDataCheck=false);
         virtual bool ReadRecord(size_t readSample);
+
+        // Helper functions
+        unique_ptr<CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID);
+        std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements);
+
     public:
         template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
         virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
         virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
         virtual void Destroy();
-        UCIFastReader() { m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_labelsIdBuffer=NULL; m_pMBLayout=make_shared<MBLayout>(); }
+        UCIFastReader() { m_pMBLayout=make_shared<MBLayout>(); }
         virtual ~UCIFastReader();
-        virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+
+        virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+        {
+            return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+        }
+
+        virtual bool SupportsDistributedMBRead() const override
+        {
+            return ((m_cachingReader == nullptr) || m_cachingReader->SupportsDistributedMBRead());
+        }
+
+        virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
+
         virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
+        bool GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
         size_t GetNumParallelSequences() { return m_pMBLayout->GetNumParallelSequences(); }
         void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); };
