@@ -78,13 +78,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
-        virtual void BeginForwardProp() = 0;
-        virtual void ForwardProp(const FrameRange &) = 0;  // forward prop for one minibatch
-        virtual void EndForwardProp() = 0;              // called after last iteration step of ForwardProp()
+        virtual void BeginForwardProp() = 0;                    // called beforefirst iteration step of ForwardProp()
+        virtual void ForwardProp(const FrameRange &) = 0;       // forward prop for one minibatch
+        virtual void EndForwardProp() = 0;                      // called after last iteration step of ForwardProp()
 
-        virtual void BeginBackprop() = 0;     // called before first iteration step of ComputeGradient()
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) = 0;
-        virtual void EndBackprop() = 0;       // called after last iteration step of ComputeGradient()
+        virtual void BeginBackprop() = 0;                       // called before first iteration step of ComputeGradient()
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) = 0;   // backprop gradient into one of the inputs
+        virtual void EndBackprop() = 0;                         // called after last iteration step of ComputeGradient()
 
         // --- these are meant to be overridden by ControlFlowNodes
 
@@ -95,17 +95,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Any override must call Base version as well.
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
 
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;         //request matrices needed to do node function value evaluation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;          //release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) = 0;
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0; //request matrices that are needed for gradient computation
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;  //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
         virtual void InferImageDimsFromInputs() = 0;
         virtual void Save(File& fstream) const = 0;
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) = 0;
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) = 0;  // request matrices needed to do node function value evaluation
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) = 0;   // release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) = 0;
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) = 0;     // request matrices that are needed for gradient computation
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) = 0;      // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
 
         // --- optional overrides that describe a feature or property of the node
 
@@ -884,34 +884,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
             RequestMatrixFromPool(m_output, matrixPool);
         }
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& /*matrixPool*/)
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& /*matrixPool*/)
         {
         }
 
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
         {
             for (int i = 0; i < m_inputs.size(); i++)
             {
                 if (m_inputs[i]->NeedGradient())
-                    m_inputs[i]->RequestMatricesBeforeGradientComp(matrixPool);
+                    m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
             }
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
             RequestMatrixFromPool(m_gradientValues, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
             if (!IsLeaf() && !RequiresPreCompute())
             {
@@ -1507,8 +1507,8 @@ protected: \
     using Base::Load; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::Save; using Base::UpdateFunctionMBSize; \
-    using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
-    using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
+    using Base::RequestMatricesBeforeForwardProp; using Base::ReleaseMatricesAfterForwardProp; \
+    using Base::RequestMatricesBeforeBackprop; using Base::ReleaseMatricesAfterBackprop; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryInputDims; using Base::ValidateInferInputDims; \
 public: \
     using Base::RequiresPreCompute; \

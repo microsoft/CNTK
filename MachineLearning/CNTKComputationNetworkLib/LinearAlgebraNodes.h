@@ -481,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
         }
 
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
         {
             // this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
             if (m_inputs[0]->NeedGradient() && Input(1)->Output().GetMatrixType() == SPARSE)
@@ -492,7 +492,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
            
             // we need to call base allocation at end since we will need to allocate special ones first 
             // so that the default allocator will not allocate it again.
-            Base::AllocateGradientMatricesForChildren(matrixPool);
+            Base::AllocateGradientMatricesForInputs(matrixPool);
         }
     };
 
@@ -790,16 +790,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_tempMatrix, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         }
 
@@ -939,16 +939,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_tempMatrix, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         }
 
@@ -1056,17 +1056,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_innerproduct, matrixPool);
             RequestMatrixFromPool(m_rightGradient, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_innerproduct, matrixPool);
             ReleaseMatrixToPool(m_rightGradient, matrixPool);
         }
@@ -1450,26 +1450,26 @@ private:
             }
         }
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_invNorm0, matrixPool);
             RequestMatrixFromPool(m_invNorm1, matrixPool);
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_leftTerm, matrixPool);
             RequestMatrixFromPool(m_rightTerm, matrixPool);
             RequestMatrixFromPool(m_temp, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_invNorm0, matrixPool);
             ReleaseMatrixToPool(m_invNorm1, matrixPool);
             ReleaseMatrixToPool(m_leftTerm, matrixPool);
@@ -1797,9 +1797,9 @@ private:
             }
         }
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_invNorm0, matrixPool);
             RequestMatrixFromPool(m_invNorm1, matrixPool);
             RequestMatrixFromPool(m_leftTerm, matrixPool);
@@ -1807,17 +1807,17 @@ private:
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_invNormSquare, matrixPool);
             RequestMatrixFromPool(m_temp, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_invNorm0, matrixPool);
             ReleaseMatrixToPool(m_invNorm1, matrixPool);
             ReleaseMatrixToPool(m_leftTerm, matrixPool);

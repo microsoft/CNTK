@@ -80,11 +80,11 @@ protected:
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override;
         virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
         virtual bool IsOutputOlderThanInputs() const override;
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
@@ -123,11 +123,11 @@ protected:
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override { }
         virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
     public:
         // this special constructor constructs the top-level network node
         // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
@@ -710,7 +710,7 @@ private:
     void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, std::vector<ComputationNodeBasePtr>& outValueRootNodes, std::vector<ComputationNodeBasePtr>& trainRootNodes);
     void AllocateEvalMatrices(ComputationNodeBasePtr rootNode);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount);
-    void AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode);
+    void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 public:
 
     // -----------------------------------------------------------------------
