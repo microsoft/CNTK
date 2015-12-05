@@ -117,9 +117,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     featureNodes[npos]->UpdateEvalTimeStamp();
                     labelNodes[npos]->UpdateEvalTimeStamp();
 
-                    m_net->Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
+                    m_net->ForwardProp(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
 
-                    m_net->Evaluate(evaluationNodes[npos]);
+                    m_net->ForwardProp(evaluationNodes[npos]);
 
                     double mbCrossEntropy = (double)criterionNodes[npos]->Get00Element(); // criterionNode should be a scalar
                     epochCrossEntropy += mbCrossEntropy;
@@ -282,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
-                        (*ptr)->Evaluate(*ptr2);
+                        (*ptr)->ForwardProp(*ptr2);
                 }
 
                 decoderNet = nets[iNumNets - 1];
@@ -302,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (auto ptr = decoderEvaluationNodes.begin(); ptr != decoderEvaluationNodes.end(); ptr++, i++)
                 {
-                    decoderNet->Evaluate(*ptr);
+                    decoderNet->ForwardProp(*ptr);
                     if ((*ptr)->GetNumRows() != 1 || (*ptr)->GetNumCols() != 1)
                         LogicError("EvaluateEncoderDecoderWithHiddenStates: decoder evaluation should return a scalar value");
 
@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
-                        (*ptr)->Evaluate(*ptr2);
+                        (*ptr)->ForwardProp(*ptr2);
                 }
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
@@ -606,7 +606,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
-                net.Evaluate(*nodeIter);
+                net.ForwardProp(*nodeIter);
 
             //mark done
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
@@ -800,7 +800,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
-                        evalnet->Evaluate(evalNodes[i]);
+                        evalnet->ForwardProp(evalNodes[i]);
                         vector<pair<int, double>> retPair;
                         if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->Output(), from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
                             == false)
@@ -970,7 +970,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
-                        evalnet->Evaluate(evalNodes[i]);
+                        evalnet->ForwardProp(evalNodes[i]);
                         vector<pair<int, double>> retPair;
                         if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->Output(),
                                                            from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)

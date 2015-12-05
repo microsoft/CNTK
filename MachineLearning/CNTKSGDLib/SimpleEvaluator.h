@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
                 for (int i = 0; i < evalNodes.size(); i++)
                 {
-                    m_net->Evaluate(evalNodes[i]);
+                    m_net->ForwardProp(evalNodes[i]);
                     evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
                 }
 

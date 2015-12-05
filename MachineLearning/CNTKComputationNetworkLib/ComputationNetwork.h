@@ -501,7 +501,7 @@ public:
     // -----------------------------------------------------------------------
 
     // main entry point for forward prop
-    void Evaluate(const ComputationNodeBasePtr & rootNode);
+    void ForwardProp(const ComputationNodeBasePtr & rootNode);
 
     // main entry point for backprop
     template<class ElemType>
@@ -512,10 +512,10 @@ public:
                          bool resetTimeStampAfterComputation = false);
 
     template<class NODESET>     // version that takes multiple nodes
-    void Evaluate(const NODESET & nodes)
+    void ForwardProp(const NODESET & nodes)
     {
         for (auto & node : nodes)
-            Evaluate(node);
+            ForwardProp(node);
     }
 
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
