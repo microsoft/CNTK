@@ -1,6 +1,6 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 
-// This is used by NDL and the SimpleNetworkBuilder. It will not be used by BrainScript.
+// This is used by NDL and the SimpleNetworkBuilder. It will not be used by BrainScript except for New{Standard}Node().
 
 #pragma once
 
@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // TODO: can these be changed to ComputationNodeBasePtr?
+        // TODO: move into a separate header/class, to decouple from this class which would then be only used by old NDL and SimpleNetworkBuilder.
         static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
         static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
 
