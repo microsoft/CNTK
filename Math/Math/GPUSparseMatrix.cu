@@ -2706,6 +2706,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char> &)const;
     template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
     template void GPUSparseMatrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+    template void GPUSparseMatrix<char>::Reset();
     template GPUSparseMatrix<char>::~GPUSparseMatrix();
     template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
     template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;

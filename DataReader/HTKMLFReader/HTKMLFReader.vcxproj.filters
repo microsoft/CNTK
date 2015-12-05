@@ -50,6 +50,9 @@
     <ClInclude Include="..\..\Common\Include\ssematrix.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

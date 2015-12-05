@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
-        // Returns false if end of epoch has been reached.
+        // Returns false if no data is read
         // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
         // -------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: The reader does not always resize the input matrices to zero when 
             //       no data is read. When it does, 'wasDataRead' can be removed. Will go away with reader redesig.
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
-            // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
+            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
             net->NotifyInputNodesFunctionValuesMBSizeModified();
             size_t readMBSize = net->DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
@@ -67,30 +67,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
             }
 
-            // did we reach end of epoch?
-            if (useDistributedMBReading)
-            {
-                // In case of distributed reading, the current node needs to continue even with a minibatch size of 0 if any
-                // other node in the group has a non-zero size minibatch to process. This is needed to ensure that
-                // the gradient aggregation barriers do not get stuck and also to ensure that all nodes update their weights
-                // properly using the aggregate gradients from other nodes before moving on to the next epoch even though the current
-                // node itself may not have any gradient contribution.
-                // TODO: wasDataRead == false means end of epoch, right? Is this state idempotent?
-                std::array<int, 1> numNodesWithDataToProcess;
-                numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
-                g_mpi->AllReduce(numNodesWithDataToProcess);
-
-                if (numNodesWithDataToProcess[0] == 0)
-                    return false;   // end of epoch
-            }
-            else if (!wasDataRead)
-                return false;       // end of epoch
-
-            // We are not at the end of epoch.
-            // Note, however, that in case of parallelization, this MPI rank may have received a share of 0 samples. Calling code, beware.
+            if (!wasDataRead)
+                return false;
 
             // decimate if needed. Decimation happens in-place.
-            if (wasDataRead && !useDistributedMBReading && useParallelTrain)
+            if (!useDistributedMBReading && useParallelTrain)
             {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
                 net->NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
@@ -99,7 +80,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames, in which case we must return 'true'.
             actualMBSize = 0;
-            if (wasDataRead)    // TODO: what if we call it always?
                 actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
 
             return true;
@@ -163,7 +143,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
             }
             // decimate MBLayout as well 
-            pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, true);
+            pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
             for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
                 pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
 
@@ -393,7 +373,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         wstring nodeName = node->GetName();
                         shared_ptr<ComputationNode<ElemType>>  pLearnableNode = node;
-                        auto funvalue = pLearnableNode->FunctionValues();   // gradient may not be allocated when this function is first called 
+                        auto funvalue = pLearnableNode->Value();   // gradient may not be allocated when this function is first called 
                         size_t nrow = funvalue.GetNumRows();
                         size_t ncol = funvalue.GetNumCols();
                         if (m_CachedGraident.find(nodeName) == m_CachedGraident.end())
@@ -444,7 +424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         pNode->ImportState(m_NetStates[name][iSubminibatch]);
                 }
             }
-            // TODO: encapsulate it into a destructor !!!   Note: Cannot throw exceptions in destructor.
+            // TODO: encapsulate it into a destructor? Note: Cannot throw exceptions in destructor.
             void DoneWithCurrentSubMinibatch(size_t iSubminibatch)
             {
                 // accumulate gradient here 
@@ -456,23 +436,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LeanrableNode", nodename.c_str());
                     }
                     shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
-                    m_CachedGraident[nodename]->operator+=(pNode->GradientValues());
-                    pNode->GradientValues().SetValue((ElemType)0);
+                    m_CachedGraident[nodename]->operator+=(pNode->Gradient());
+                    pNode->Gradient().SetValue((ElemType)0);
                 }
                 // accumulate criterion value 
                 Matrix<ElemType>::AddElementToElement(
-                    m_NetCriterionNodes[0]->FunctionValues(), 0, 0,
+                    m_NetCriterionNodes[0]->Value(), 0, 0,
                     *m_NetCriterionAccumulator, 0, 0
                     );
-                m_NetCriterionNodes[0]->FunctionValues().SetValue((ElemType)0);
+                m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
                 // accumulate evaluation value 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
                     Matrix<ElemType>::AddElementToElement(
-                        m_NetEvaluationNodes[i]->FunctionValues(), 0, 0,
+                        m_NetEvaluationNodes[i]->Value(), 0, 0,
                         *m_NetEvaluationAccumulator, 0, i
                         );
-                    m_NetEvaluationNodes[i]->FunctionValues().SetValue((ElemType)0);
+                    m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
                 }
 
                 // Export node state 
@@ -494,25 +474,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // should never happen, remove this code later
                         RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LearnableNode", name.c_str());
                     }
-                    m_LearnableNodePtr[name]->GradientValues().SetValue(*accumulategrad);
+                    m_LearnableNodePtr[name]->Gradient().SetValue(*accumulategrad);
                     x.second->SetValue((ElemType)0);
                 }
                 // also revert net.m_MBLayoutPtr
                 m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-                //m_NetCriterionNodes[0]->FunctionValues().SetValue((ElemType)0);
+                //m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
                 Matrix<ElemType>::AddElementToElement(
                     *m_NetCriterionAccumulator, 0, 0,
-                    m_NetCriterionNodes[0]->FunctionValues(), 0, 0
+                    m_NetCriterionNodes[0]->Value(), 0, 0
                     );
                 m_NetCriterionAccumulator->SetValue((ElemType)0);
 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
-                    //m_NetEvaluationNodes[i]->FunctionValues().SetValue((ElemType)0);
+                    //m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
                     Matrix<ElemType>::AddElementToElement(
                         *m_NetEvaluationAccumulator, 0, i,
-                        m_NetEvaluationNodes[i]->FunctionValues(), 0, 0
+                        m_NetEvaluationNodes[i]->Value(), 0, 0
                         );
                 }
                 m_NetEvaluationAccumulator->SetValue((ElemType)0);

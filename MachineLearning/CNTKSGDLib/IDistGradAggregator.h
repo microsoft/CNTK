@@ -18,7 +18,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
         
-        virtual void AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader *headerCPU, int nBits, int epochNumber) = 0;
+        // Returns a boolean indicating if any samples were processed
+        virtual bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader *headerCPU, int nBits, int epochNumber) = 0;
 
         size_t NumProc()
         {

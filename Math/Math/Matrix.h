@@ -110,6 +110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
 
+        static void SetDevice(DEVICEID_TYPE deviceId);
+
         void Clear();
         ~Matrix();
 
@@ -196,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // similarl to the repmat operation in matlab or octave
         static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
         size_t GetAllocatedSize() const;
-        void Reset(); //reset for sparse matrix
+        void Reset(); // reset for sparse matrix
 
         const ElemType operator() (const size_t row, const size_t col) const;
         ElemType& operator() (const size_t row, const size_t col);

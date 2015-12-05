@@ -17,7 +17,7 @@
 #include <string>
 #include <stdexcept>
 #include "fileutil.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include <chrono> 
 #include <random>
 #include "Profiler.h"
@@ -220,24 +220,28 @@ protected:
 
     // Parallel training
     ParallelizationMethod m_parallelizationMethod;
-    int m_numGradientBits;
-    bool m_zeroThresholdFor1Bit;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
 
+    // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // 0: No sync perfomance stats
+    // 1: Show stats on every sync 
+    // n > 1: Show stats after every n sync
+    int  m_syncStatsTrace;
+
+    // Data parallel SGD training parameters
+    int m_numGradientBits;
+    bool m_bufferedAsyncGradientAggregation;
+    bool m_zeroThresholdFor1Bit;
+
     // Parallel training related with MA 
-    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
-    // 0: means no perfomance stats show
-    // 1: means show stats every sync 
-    // n>1: means show stats after every n sync
-    int    m_iMASyncStatsTrace;
     size_t m_nFramesBetweenMASync;
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
     double m_L1RegWeight;
 
-    //sequence trainning
+    //sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
@@ -270,7 +274,7 @@ public:
         m_trainCriterionNodeName((const wstring &)configSGD(L"trainCriterionNodeName", L"")),
         m_evalCriterionNodeName((const wstring &)configSGD(L"evalCriterionNodeName", L"")),
         m_prevChosenMinibatchSize(0),
-        m_lastFinishedEpochEvalErr(0.0),
+        m_lastFinishedEpochTrainLoss(0.0),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr)
     {
@@ -480,20 +484,19 @@ public:
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    bool m_validateAfterModelReloading;
+    bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;
 
     size_t m_prevChosenMinibatchSize;
-    double m_lastFinishedEpochEvalErr;
+    double m_lastFinishedEpochTrainLoss;
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
 
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
-    void ForwardBackward(ComputationNetwork& net,const std::vector<ComputationNodeBasePtr>& evalNodes,shared_ptr<ComputationNodeBase> criterionNode,bool dobackpropogate);
 };
 
 }}}

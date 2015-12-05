@@ -8,7 +8,7 @@
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "ImageReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "ScriptableObjects.h"
 #include "ConcStack.h"
 #include <algorithm>
@@ -450,7 +450,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     size_t mbSize = mbLim - m_mbStart;
     features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf.data(), matrixFlagNormal);
     labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf.data(), matrixFlagNormal);
-    m_pMBLayout->Init(mbSize, 1, false);
+    m_pMBLayout->Init(mbSize, 1);
 
     m_mbStart = mbLim;
     return true;

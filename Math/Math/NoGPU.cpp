@@ -414,6 +414,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helper functions
 
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId) { };
+
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
     //  TODO: should be replaced by BestGpu class instead, it's much better
     template<class ElemType> int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
@@ -1137,7 +1140,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
 #pragma region MatrixQuantizerGPU functions
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync)
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync)
     {
     }
 
@@ -1165,7 +1168,22 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     void MatrixQuantizerGPU<ElemType>::WaitUnquantizeAsyncDone()
     {
     }
+
 #pragma endregion MatrixQuantizerGPU functions
+
+#pragma region GPUMatrixComputeStreamEvent functions
+
+    GPUMatrixComputeStreamEvent::GPUMatrixComputeStreamEvent(int deviceId)
+        : MatrixComputeStreamEvent(deviceId)
+    {
+    }
+
+    GPUMatrixComputeStreamEvent::~GPUMatrixComputeStreamEvent() { };
+    void GPUMatrixComputeStreamEvent::SynchronizeEvent() { };
+    template <typename ElemType>
+    void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent() { };
+
+#pragma endregion GPUMatrixComputeStreamEvent functions
 
     template class GPUMatrix<char>;
     template class GPUMatrix<float>;

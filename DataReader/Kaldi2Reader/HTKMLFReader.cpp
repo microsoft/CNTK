@@ -21,7 +21,7 @@
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "HTKMLFReader.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif

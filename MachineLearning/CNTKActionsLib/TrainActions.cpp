@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+// This file represents the beginning of moving actions out from CNTK.cpp to make them accessible as a library. To be continued...
+
 #include "Actions.h"
 #include "ScriptableObjects.h"
 #include "File.h"
@@ -16,8 +18,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // TODO: MakeRuntimeObject will just call procedures, and return a dummy 'bool = true'
-    class TrainAction : public ActionsBase
+    class TrainAction : public ActionsBase  // TODO: to be continued...
     {
         void Do()
         {

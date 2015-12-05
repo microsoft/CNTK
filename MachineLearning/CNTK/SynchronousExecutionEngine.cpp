@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1"/*disabled*/);
 
                 if (!_wcsicmp(initString.c_str(), L"fixedValue"))
-                    nodePtr->FunctionValues().SetValue(value);
+                    nodePtr->Value().SetValue(value);
                 else if (!_wcsicmp(initString.c_str(), L"uniform"))
                     m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
                 else if (!_wcsicmp(initString.c_str(), L"gaussian"))
@@ -179,6 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
+#if 0   // not functional at present
         else if (OperationNameOf(SparseLearnableParameter) == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
@@ -205,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType value = node->GetOptionalParameter("value", "0");
                 
                 if (!_wcsicmp(initString.c_str(), L"fixedValue"))
-                    nodePtr->FunctionValues().SetValue(value);
+                    nodePtr->Value().SetValue(value);
                 else if (!_wcsicmp(initString.c_str(), L"uniform"))
                     m_net->InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
                 else if (!_wcsicmp(initString.c_str(), L"gaussian"))
@@ -226,6 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
+#endif
         else if (cnNodeType == L"Constant")
         {
             if (parameter.size() != 1)
@@ -239,10 +241,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodePtr = builder.CreateLearnableParameter(name, rows, cols);
                 nodePtr->SetParameterUpdateRequired(false);
             }
-            else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
+            else if (pass == ndlPassFinal || nodePtr->Value().GetNumElements() != 0)
             {
                 ElemType val = parameter[0]->GetScalar();
-                nodePtr->FunctionValues().SetValue(val);
+                nodePtr->Value().SetValue(val);
             }
         }
         else if (cnNodeType == OperationNameOf(RowSliceNode))

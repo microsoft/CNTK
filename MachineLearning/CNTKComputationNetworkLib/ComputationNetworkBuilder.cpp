@@ -17,10 +17,10 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "EsotericNodes.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
+#include "EsotericNodes.h"
 
 #include <string>
 
@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(InputValue))	        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
+        //else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
         else return nullptr;
     }
 
@@ -166,11 +166,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols));
     }
 
+#if 0   // not functional at present
     //sparse matrix size is optionally specified
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size)
     {
         return net.AddNodeToNetWithElemType(New<SparseLearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols, size));
     }
+#endif
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
@@ -183,14 +185,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName,
-                                                                                                                        const ImageLayout & imageLayout,
+                                                                                                                        const TensorShape & imageLayout,
                                                                                                                         const size_t numImages)
     {
         return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName,
-                                                                                                                              const ImageLayout & imageLayout,
+                                                                                                                              const TensorShape & imageLayout,
                                                                                                                               const size_t numImages)
     {
         return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
@@ -547,7 +549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reshape(const ComputationNodePtr a,
                                                                                                                 const size_t numRows,
-                                                                                                                const ImageLayout & imageLayout,
+                                                                                                                const TensorShape & imageLayout,
                                                                                                                 const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), a);

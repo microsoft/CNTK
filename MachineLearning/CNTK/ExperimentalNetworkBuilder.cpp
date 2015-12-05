@@ -7,7 +7,7 @@
 
 using namespace std;
 
-// TODO: decide where these should go.
+// TODO: move to actual text files to be included
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"

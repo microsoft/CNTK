@@ -15,7 +15,7 @@
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
 #include "LUSequenceWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
@@ -102,14 +102,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
             wstring outFile = outputFiles[outputName];
             
-            SaveToFile(outFile,outputData, idx4word[outputName], nBests[outputName]);
+            Save(outFile,outputData, idx4word[outputName], nBests[outputName]);
         }
 
         return true;
     }
 
     template<class ElemType>
-    void LUSequenceWriter<ElemType>::SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
+    void LUSequenceWriter<ElemType>::Save(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
     {
         size_t nT = outputData.GetNumCols();
         size_t nD = min(idx2wrd.size(), outputData.GetNumRows());

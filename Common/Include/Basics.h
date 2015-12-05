@@ -23,6 +23,8 @@
 
 #define UNUSED(x) (void)(x) // for variables that are, e.g., only used in _DEBUG builds
 
+#pragma warning (disable: 4702)     // disable some incorrect unreachable-code warnings
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
@@ -83,6 +85,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 #pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+
+#ifndef NOT_IMPLEMENTED
+#define NOT_IMPLEMENTED \
+{   \
+    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+}
+#endif
+
 }}}
 
 #ifndef _MSC_VER
