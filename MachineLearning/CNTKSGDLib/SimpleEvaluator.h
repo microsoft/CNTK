@@ -76,9 +76,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
-                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Output();
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
             for (size_t i = 0; i < labelNodes.size(); i++)
-                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Output();
+                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
 
             // evaluate through minibatches
             size_t totalEpochSamples = 0;

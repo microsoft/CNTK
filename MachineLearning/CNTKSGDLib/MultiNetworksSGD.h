@@ -236,11 +236,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices, decoderInputMatrices;
             for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
-                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(encoderFeatureNodes[i])->Output();
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(encoderFeatureNodes[i])->Value();
             for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
-                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderFeatureNodes[i])->Output();
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderFeatureNodes[i])->Value();
             for (size_t i = 0; i<decoderLabelNodes.size(); i++)
-                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->Output();
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->Value();
 
             //initializing weights and gradient holder
             std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Output().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Value().GetDeviceId()));
             }
 
             vector<double> epochCriterion;
@@ -506,13 +506,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t j = 0; j < featPtr->size(); j++)
                 {
                     (*matrices)[(*featPtr)[j]->NodeName()] =
-                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*featPtr)[j])->Output());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*featPtr)[j])->Value());
                 }
                         
                 for (size_t j = 0; j<lablPtr->size(); j++)
                 {
                     (*matrices)[(*lablPtr)[j]->NodeName()] = 
-                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*lablPtr)[j])->Output());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*lablPtr)[j])->Value());
                 }
                 inputMatrices.push_back(matrices);
             }
@@ -559,7 +559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Output().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Value().GetDeviceId()));
             }
 
             double epochCriterion, avgCriterion, prevCriterion;
@@ -1032,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 
-                    for (size_t itry = 0; itry < min((size_t)10, node->Output().GetNumElements()); itry++)
+                    for (size_t itry = 0; itry < min((size_t)10, node->Value().GetNumElements()); itry++)
                     {
 
                         int irow = (int)fmod(rand(), node->GetNumRows() - 1);
@@ -1041,17 +1041,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         icol = max(0, icol);
 
                         fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
-                        deviceId = node->Output().GetDeviceId();  // original device id
+                        deviceId = node->Value().GetDeviceId();  // original device id
 
-                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        double eOrg = node->Output()(irow, icol);  /// warning :: this function will put matrix into CPU
-                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        double eOrg = node->Value()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        node->Value().TransferToDeviceIfNotThere(deviceId, true);
 
                         /// perturb parameter
                         double ePos = eOrg + EPSILON;
-                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->Output().SetValue(irow, icol, (ElemType)ePos);
-                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Value().SetValue(irow, icol, (ElemType)ePos);
+                        node->Value().TransferToDeviceIfNotThere(deviceId, true);
 
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
@@ -1065,9 +1065,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         double score1 = localEpochCriterion.Get00Element();
 
                         double eNeg = eOrg - EPSILON;
-                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->Output().SetValue(irow, icol, (ElemType)eNeg);
-                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Value().SetValue(irow, icol, (ElemType)eNeg);
+                        node->Value().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
@@ -1081,9 +1081,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         double grdNum = (score1r - score1) / (eNeg - ePos);
 
-                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->Output().SetValue(irow, icol, (ElemType)eOrg);
-                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Value().SetValue(irow, icol, (ElemType)eOrg);
+                        node->Value().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
@@ -1095,9 +1095,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         EncoderDecoderWithHiddenStatesErrorProp(nets, pairNodes, criterionNodes);
 
-                        node->GradientValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        double grdErr = node->GradientValues()(irow, icol);
-                        node->GradientValues().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Gradient().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        double grdErr = node->Gradient()(irow, icol);
+                        node->Gradient().TransferToDeviceIfNotThere(deviceId, true);
 
                         // check if they are consistent
                         double threshold = pow(10.0, max(0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
@@ -1178,7 +1178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 decoderNet->ForwardProp(decoderCriterionNodes[0]);
 
-                Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->Output(), 0, 0, localEpochCriterion, 0, 0);
+                Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->Value(), 0, 0, localEpochCriterion, 0, 0);
 
                 size_t numEvalNodes = decoderEvaluationNodes.size();
                 std::vector<double>mbEvalErrors(numEvalNodes, 0);
@@ -1186,7 +1186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
                     decoderNet->ForwardProp(decoderEvaluationNodes[i]);
-                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->Output(), 0, 0, localEpochEvalErrors, 0, i);
+                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->Value(), 0, 0, localEpochEvalErrors, 0, i);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());

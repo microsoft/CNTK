@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // shared base for all elemen-twise non-linearities
-    // What this adds over a ComputationNode<ElemType> is a member m_gradient for temp use by derived classes.
+    // What this adds over a ComputationNode<ElemType> is a member m_gradientTemp for temp use by derived classes.
     // TODO: Remove the Evaluate and Partial overrides from here entirely, as they don't really add value after all the code simplifications.
     template<class ElemType>
     class NonlinearityNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(inputIndex == 0); inputIndex;
             auto gradient = Input(0)->GradientFor(fr);
-            BackpropToV(*m_gradient, Input(0)->OutputFor(fr), gradient, GradientFor(fr));
+            BackpropToV(*m_gradientTemp, Input(0)->ValueFor(fr), gradient, GradientFor(fr));
         }
 
         // derived class implement the actual non-linear operation
@@ -55,8 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            auto values = OutputFor(fr);
-            ForwardPropV(values, Input(0)->OutputFor(fr));
+            auto values = ValueFor(fr);
+            ForwardPropV(values, Input(0)->ValueFor(fr));
         }
 
         // derived class implement the actual non-linear operation
@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<NonlinearityNodeBase<ElemType>>(nodeP);
-                *node->m_gradient = *m_gradient;
+                *node->m_gradientTemp = *m_gradientTemp;
             }
         }
 
@@ -81,20 +81,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
             Base::RequestMatricesBeforeBackprop(matrixPool);
-            RequestMatrixFromPool(m_gradient, matrixPool);
+            RequestMatrixFromPool(m_gradientTemp, matrixPool);
         }
 
         // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
             Base::ReleaseMatricesAfterBackprop(matrixPool);
-            ReleaseMatrixToPool(m_gradient, matrixPool);
+            ReleaseMatrixToPool(m_gradientTemp, matrixPool);
         }
     protected:
-        shared_ptr<Matrix<ElemType>> m_gradient;
+        shared_ptr<Matrix<ElemType>> m_gradientTemp;
     };
 
-#define UsingNonlinearityNodeBaseMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradient
+#define UsingNonlinearityNodeBaseMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradientTemp
 
     // -----------------------------------------------------------------------
     // RectifiedLinearNode (input) -- ReLU non-linearity
@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
+            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Gradient(), Value());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -168,9 +168,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         // should be:
@@ -213,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
+            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Gradient(), Value());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -224,9 +224,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         // should be:
@@ -271,7 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
+            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Input(0)->Value(), Gradient());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -282,9 +282,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            BackpropToS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
         // should be:
@@ -330,10 +330,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            m_gradient->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
-            sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradient);
+            m_gradientTemp->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
+            sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradientTemp);
         }
         virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { NOT_IMPLEMENTED; }   // not needed
 
@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
+            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Input(0)->Value(), Gradient());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -379,9 +379,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            BackpropToS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
         // should be:
@@ -426,7 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, *m_diff, Input(0)->GradientValues(), GradientValues(), Output());
+            BackpropToS(*m_gradientTemp, *m_diff, Input(0)->Gradient(), Gradient(), Value());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -437,9 +437,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradient, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         // should be:
@@ -516,7 +516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, *m_softmax, Input(0)->GradientValues(), GradientValues(), Output());
+            BackpropToS(*m_gradientTemp, *m_softmax, Input(0)->Gradient(), Gradient(), Value());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -527,9 +527,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradient, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         // should be:
@@ -607,16 +607,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             switch (inputIndex)
             {
             case 0:
-                BackpropToUnnormedPrior(Input(0)->GradientValues(), GradientValues(), *m_prior, *m_posterior, *m_temp);
+                BackpropToUnnormedPrior(Input(0)->Gradient(), Gradient(), *m_prior, *m_posterior, *m_temp);
                 break;
             case 1:
-                BackpropToMean(Input(1)->GradientValues(), GradientValues(), *m_normedDeviationVectors, *m_posterior, *m_temp);
+                BackpropToMean(Input(1)->Gradient(), Gradient(), *m_normedDeviationVectors, *m_posterior, *m_temp);
                 break;
             case 2:
-                BackpropToLogStddev(Input(2)->GradientValues(), GradientValues(), *m_normedDeviation, *m_posterior, *m_temp);
+                BackpropToLogStddev(Input(2)->Gradient(), Gradient(), *m_normedDeviation, *m_posterior, *m_temp);
                 break;
             case 3:
-                BackpropToFeature(Input(3)->GradientValues(), GradientValues(), *m_normedDeviationVectors, *m_posterior, *m_temp);
+                BackpropToFeature(Input(3)->Gradient(), Gradient(), *m_normedDeviationVectors, *m_posterior, *m_temp);
                 break;
             default:
                 InvalidArgument("GMMLogLikelihoodNode only takes four inputs.");
@@ -629,7 +629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //get the right slice 
             const size_t colsPrior = Input(0)->GetNumCols();
 
-            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradientValues, fr);
+            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradient, fr);   // TODO: GradientFor(fr)?
             Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
 
             switch (inputIndex)
@@ -637,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             case 0:
             {
                 if (colsPrior == 1)
-                        BackpropToUnnormedPrior(Input(0)->GradientValues(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
+                        BackpropToUnnormedPrior(Input(0)->Gradient(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
@@ -650,7 +650,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                       Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
                 if (colsPrior == 1)
-                        BackpropToMean(Input(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+                        BackpropToMean(Input(1)->Gradient(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceMeanGradient = Input(1)->GradientFor(fr);
@@ -662,7 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                     Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
                 if (colsPrior == 1)
-                        BackpropToLogStddev(Input(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
+                        BackpropToLogStddev(Input(2)->Gradient(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceLotStddevGradient = Input(2)->GradientFor(fr);
@@ -779,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
-            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(),
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value(),
                 *m_prior, *m_stddev, *m_normedDeviationVectors, *m_normedDeviation, *m_posterior, *m_temp);
         }
 
@@ -791,22 +791,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSamples = Input(3)->GetNumCols();
 
             //get the right slice 
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
-            Matrix<ElemType> sliceFeature = Input(3)->OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            Matrix<ElemType> sliceFeature = Input(3)->ValueFor(fr);
             Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
             Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
             Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
 
             if (colsPrior == 1)
             {
-                ForwardPropS(sliceOutputValue, Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), sliceFeature,
+                ForwardPropS(sliceOutputValue, Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), sliceFeature,
                     *m_prior, *m_stddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
             }
             else if (colsPrior == numSamples)
             {
-                Matrix<ElemType> sliceUnnormedPrior = Input(0)->OutputFor(fr);
-                Matrix<ElemType> sliceMean = Input(1)->OutputFor(fr);
-                Matrix<ElemType> sliceLogstddev = Input(2)->OutputFor(fr);
+                Matrix<ElemType> sliceUnnormedPrior = Input(0)->ValueFor(fr);
+                Matrix<ElemType> sliceMean = Input(1)->ValueFor(fr);
+                Matrix<ElemType> sliceLogstddev = Input(2)->ValueFor(fr);
 
                 Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
                 Matrix<ElemType> sliceStddev = DataFor(*m_stddev, fr);
@@ -1008,7 +1008,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex > 0)
                 InvalidArgument("Dropout operation only takes one input.");
-            BackpropToS(m_dropoutRate, Input(0)->GradientValues(), *m_maskOfDropout, GradientValues());
+            BackpropToS(m_dropoutRate, Input(0)->Gradient(), *m_maskOfDropout, Gradient());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -1040,12 +1040,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(m_dropoutRate, m_randomSeed, Output(), *m_maskOfDropout, Input(0)->Output());
+            ForwardPropS(m_dropoutRate, m_randomSeed, Value(), *m_maskOfDropout, Input(0)->Value());
         }
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
@@ -1056,7 +1056,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 sliceMask = DataFor(*m_maskOfDropout, fr);
             }
 
-            sliceOutputValue = OutputFor(fr);
+            sliceOutputValue = ValueFor(fr);
 
             ForwardPropS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
@@ -1077,25 +1077,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override Output() to return the input; which now breaks stuff.
+                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override Value() to return the input; which now breaks stuff.
                 functionValues.SetValue(inputFunctionValues);
             }
         }
 
-        //virtual const Matrix<ElemType>& Output() const override
+        //virtual const Matrix<ElemType>& Value() const override
         //{
         //    if (m_dropoutRate > 0)
-        //        return *m_output;
+        //        return *m_value;
         //    else
-        //        return Input(0)->Output();
+        //        return Input(0)->Value();
         //}
         //
-        //virtual Matrix<ElemType>& Output() override
+        //virtual Matrix<ElemType>& Value() override
         //{
         //    if (m_dropoutRate > 0)
-        //        return *m_output;
+        //        return *m_value;
         //    else
-        //        return Input(0)->Output();
+        //        return Input(0)->Value();
         //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

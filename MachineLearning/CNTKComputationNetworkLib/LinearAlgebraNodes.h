@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        using Base::ValueSliceToDense;
+        using Base::ValueForToDense;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(PlusNode);
@@ -43,9 +43,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Matrix<ElemType> gradientValues = GradientFor(fr);
-            Matrix<ElemType> functionValues = OutputFor(fr);
+            Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
-            Matrix<ElemType> inputFunctionValues = Input(inputIndex)->OutputFor(fr.AllowBroadcast());
+            Matrix<ElemType> inputFunctionValues = Input(inputIndex)->ValueFor(fr.AllowBroadcast());
 
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
@@ -102,9 +102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            Matrix<ElemType> functionValues = ValueSliceToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
-            Matrix<ElemType> inputFunctionValues0 = Input(0)->OutputFor(fr.AllowBroadcast());
-            Matrix<ElemType> inputFunctionValues1 = Input(1)->OutputFor(fr.AllowBroadcast());
+            Matrix<ElemType> functionValues = ValueForToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
+            Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
 
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
@@ -193,10 +193,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Matrix<ElemType> gradientValues = GradientFor(fr);
-            Matrix<ElemType> functionValues = OutputFor(fr);
+            Matrix<ElemType> functionValues = ValueFor(fr);
 
             Matrix<ElemType> childGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
-            Matrix<ElemType> childFunctionValues = Input(inputIndex)->OutputFor(fr.AllowBroadcast());
+            Matrix<ElemType> childFunctionValues = Input(inputIndex)->ValueFor(fr.AllowBroadcast());
 
             size_t rowsc = childFunctionValues.GetNumRows(), colsc = childFunctionValues.GetNumCols();
             size_t rowsp = functionValues.GetNumRows(),      colsp = functionValues.GetNumCols();
@@ -222,11 +222,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t colspExpand = rowsp * colsp / rowsc;
                 MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
-                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, Output().GetDeviceId()), false, 1, childGradientValues);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, Value().GetDeviceId()), false, 1, childGradientValues);
             }
             else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
             {
-                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, ConstOnes(1, rowsp, Output().GetDeviceId()), false, gradientValues, false, 1, childGradientValues);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, ConstOnes(1, rowsp, Value().GetDeviceId()), false, gradientValues, false, 1, childGradientValues);
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
@@ -234,9 +234,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            Matrix<ElemType> functionValues = OutputFor(fr);
-            Matrix<ElemType> inputFunctionValues0 = Input(0)->OutputFor(fr.AllowBroadcast());
-            Matrix<ElemType> inputFunctionValues1 = Input(1)->OutputFor(fr.AllowBroadcast());
+            Matrix<ElemType> functionValues = ValueFor(fr);
+            Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
+            Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
 
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
@@ -307,18 +307,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)        // left derivative
             {
                 // this is a reduction over frames, so we must mask gaps to zero
-                Input(0)->GradientValues() += Matrix<ElemType>::InnerProductOfMatrices(MaskedGradientSlice(fr), Input(1)->MaskedValueSlice(fr)); // element-wise product summed up over all
+                Input(0)->Gradient() += Matrix<ElemType>::InnerProductOfMatrices(MaskedGradientFor(fr), Input(1)->MaskedValueFor(fr)); // element-wise product summed up over all
             }
             else if (inputIndex == 1)   // right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Output()/*1x1*/, GradientFor(fr), 1.0f, sliceInput1Grad);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Value()/*1x1*/, GradientFor(fr), 1.0f, sliceInput1Grad);
             }
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            OutputFor(fr).Assign1x1ProductOf(Input(0)->Output()/*1x1*/, Input(1)->OutputFor(fr));
+            ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -366,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override 
         {
-            OutputFor(fr).AssignDifferenceOf(0, Input(0)->OutputFor(fr));
+            ValueFor(fr).AssignDifferenceOf(0, Input(0)->ValueFor(fr));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -401,21 +401,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)    // left derivative
             {
                 // this potentially computes inner products over time, so we use the Masked- variants
-                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(fr);
-                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueSlice(fr);
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(fr);
+                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
 
                 // currently we only support one combination when the input is sparse.
-                if (sliceInput1Value.GetMatrixType() == SPARSE && Input(0)->GradientValues().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
-                    Input(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+                if (sliceInput1Value.GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
+                    Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
-                Matrix<ElemType>::MultiplyAndAdd(sliceOutputGrad, false, sliceInput1Value, true, Input(0)->GradientValues());
+                Matrix<ElemType>::MultiplyAndAdd(sliceOutputGrad, false, sliceInput1Value, true, Input(0)->Gradient());
             }
             else                    // right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-                Matrix<ElemType>::MultiplyAndAdd(Input(0)->Output(), true, sliceOutputGrad, false, sliceInput1Grad);
+                Matrix<ElemType>::MultiplyAndAdd(Input(0)->Value(), true, sliceOutputGrad, false, sliceInput1Grad);
             }
         }
 
@@ -425,12 +425,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             VerifyDims(rows0, cols1);
 
             // right operand and output can have MB layout, while left operand cannot
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 #if DUMPOUTPUT
-            Input(0)->Output().Print("TimesNode - Input0");
+            Input(0)->Value().Print("TimesNode - Input0");
 #endif
-            sliceOutputValue.AssignProductOf(Input(0)->Output(), false, sliceInput1Value, false);
+            sliceOutputValue.AssignProductOf(Input(0)->Value(), false, sliceInput1Value, false);
 #if NANCHECK
             sliceOutputValue.HasNan("Times");
 #endif
@@ -482,10 +482,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
         {
             // this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
-            if (m_inputs[0]->NeedGradient() && Input(1)->Output().GetMatrixType() == SPARSE)
+            if (m_inputs[0]->NeedGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
             {
                 Input(0)->CreateGradientMatrixIfNull();
-                Input(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+                Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
             }
            
             // we need to call base allocation at end since we will need to allocate special ones first 
@@ -519,17 +519,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)  //left derivative
             {
                 // this potentially computes inner products over time, so we use the Masked- variants
-                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(fr);
-                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueSlice(fr);
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(fr);
+                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
 
-                BackpropToLeft(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
+                BackpropToLeft(sliceInput1Value, Input(0)->Gradient(), sliceOutputGrad);
             }
             else  //right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-                BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
+                BackpropToRight(Input(0)->Value(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
@@ -568,10 +568,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            sliceOutputValue.AssignProductOf(Input(0)->Output(), true, sliceInput1Value, false);
+            sliceOutputValue.AssignProductOf(Input(0)->Value(), true, sliceInput1Value, false);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -631,7 +631,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1-inputIndex)->OutputFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1-inputIndex)->ValueFor(fr);
 
             // depending on inputIndex, all the input variables change meaning
             // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
@@ -641,9 +641,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
@@ -688,11 +688,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                BackpropToLeftS(Input(1)->Output(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Value(), Input(0)->Gradient(), Gradient(), *m_tempMatrix);
             }
             else
             {
-                BackpropToRightS(Input(0)->Output(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Input(0)->Value(), Input(1)->Gradient(), Gradient(), *m_tempMatrix);
             }
         }
 
@@ -702,7 +702,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceInput1Value = Input(1 - inputIndex)->OutputFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1 - inputIndex)->ValueFor(fr);
 
             if (inputIndex == 0)
             {
@@ -744,15 +744,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
         }
@@ -830,11 +830,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                BackpropToLeftS(Input(1)->Output(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Value(), Input(0)->Gradient(), Gradient(), *m_tempMatrix);
             }
             else
             {
-                BackpropToRightS(Input(0)->Output(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Input(0)->Value(), Input(1)->Gradient(), Gradient(), *m_tempMatrix);
             }
         }
 
@@ -847,12 +847,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
 
-                BackpropToLeftS(Input(1)->Output(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Value(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
-                Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-                BackpropToRightS(sliceInput0Value, Input(1)->GradientValues(), sliceOutputGrad, *m_tempMatrix);
+                Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+                BackpropToRightS(sliceInput0Value, Input(1)->Gradient(), sliceOutputGrad, *m_tempMatrix);
             }
         }
 
@@ -886,16 +886,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
@@ -976,17 +976,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex == 0)    // left derivative
             {
-                Matrix<ElemType> sliceOutputGrad  = MaskedGradientSlice(fr);            // use Masked- version since this is reducing over frames
-                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueSlice(fr);
+                Matrix<ElemType> sliceOutputGrad  = MaskedGradientFor(fr);            // use Masked- version since this is reducing over frames
+                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
                 m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
-                Input(0)->GradientValues() += *m_innerproduct;
+                Input(0)->Gradient() += *m_innerproduct;
             }
             else                    // right derivative
             {
                 Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 m_rightGradient->SetValue(sliceOutputGrad);
-                m_rightGradient->ColumnElementMultiplyWith(Input(0)->Output());
+                m_rightGradient->ColumnElementMultiplyWith(Input(0)->Value());
                 sliceInput1Grad += *m_rightGradient;
             }
         }
@@ -1006,11 +1006,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             sliceOutputValue.SetValue(sliceInput1Value);
-            sliceOutputValue.ColumnElementMultiplyWith(Input(0)->Output());
+            sliceOutputValue.ColumnElementMultiplyWith(Input(0)->Value());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1094,12 +1094,12 @@ private:
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
-            Input(0)->GradientFor(fr) += GradientValues(); // here the assumption is that gradientValues are 1x1 matrix
+            Input(0)->GradientFor(fr) += Gradient(); // here the assumption is that gradientValues are 1x1 matrix
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            Output().AssignSumOfElements(Input(0)->MaskedValueSlice(fr));  // since we are reducing over frames, we must first mask gaps in input to zero
+            Value().AssignSumOfElements(Input(0)->MaskedValueFor(fr));  // since we are reducing over frames, we must first mask gaps in input to zero
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1148,8 +1148,8 @@ private:
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             //ForwardPropS(sliceOutputValue, sliceInputValue);
             Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
@@ -1193,8 +1193,8 @@ private:
 
         virtual void /*ComputationNodeNonLooping::*/BackpropToNonLooping(size_t /*inputIndex*/) override
         {
-            Matrix<ElemType>& inputGradientValues = Input(0)->GradientValues();
-            const Matrix<ElemType>& gradientValues = GradientValues();
+            Matrix<ElemType>& inputGradientValues = Input(0)->Gradient();
+            const Matrix<ElemType>& gradientValues = Gradient();
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
             inputGradientValues.Print("child Gradient-in/out");
@@ -1210,14 +1210,14 @@ private:
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
 #if DUMPOUTPUT
-            Input(0)->Output().Print("TransposeNode- Input0");
+            Input(0)->Value().Print("TransposeNode- Input0");
 #endif
-            Output().AssignTransposeOf(Input(0)->Output());
+            Value().AssignTransposeOf(Input(0)->Value());
 #if NANCHECK
-            Output().HasNan("Transpose");
+            Value().HasNan("Transpose");
 #endif
 #if DUMPOUTPUT
-            Output().Print("TransposeNode");
+            Value().Print("TransposeNode");
 #endif
         }
 
@@ -1276,7 +1276,7 @@ private:
 
             m_sampleLayout = ImageLayoutWHC(1, m_sampleLayout.GetHeight(), 1);
 
-            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
+            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -1303,7 +1303,7 @@ private:
                         RuntimeError("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->Output().GetNumRows(), child->Output().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->Value().GetNumRows(), child->Value().GetNumCols());
                 }
 
                 fprintf(stderr, ")");
@@ -1328,16 +1328,16 @@ private:
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            Input(0)->Output().AssignDiagonalValuesTo(Output());
+            Input(0)->Value().AssignDiagonalValuesTo(Value());
 #if NANCHECK
-            Output().HasNan("Diagonal");
+            Value().HasNan("Diagonal");
 #endif
         }
 
         virtual void /*ComputationNodeNonLooping::*/BackpropToNonLooping(size_t /*inputIndex*/) override
         {
-            Matrix<ElemType>& inputGradientValues = Input(0)->GradientValues();
-            const Matrix<ElemType>& gradientValues = GradientValues();
+            Matrix<ElemType>& inputGradientValues = Input(0)->Gradient();
+            const Matrix<ElemType>& gradientValues = Gradient();
 
             // BUGBUG: This should use the memshare mechanism
             Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
@@ -1380,12 +1380,12 @@ private:
             else  //right derivative
                 m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
 
-            m_temp->ElementMultiplyWith(OutputFor(fr));
-            m_rightTerm->SetValue(Input(inputIndex)->OutputFor(fr));
+            m_temp->ElementMultiplyWith(ValueFor(fr));
+            m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
             m_rightTerm->RowElementMultiplyWith(*m_temp);
 
             m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-            m_leftTerm->SetValue(Input(1 - inputIndex)->OutputFor(fr));
+            m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
             m_leftTerm->RowElementMultiplyWith(*m_temp);
 
             *m_leftTerm -= *m_rightTerm;
@@ -1396,9 +1396,9 @@ private:
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override 
         {
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
             m_invNorm0->AssignElementInverseOf(*m_invNorm0);
@@ -1508,13 +1508,13 @@ private:
             if (inputIndex == 0)  //left derivative
             {
                 Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-                Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
+                Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
                 sliceInput0Grad.AddColumnReshapeProductOf(sliceOutputGrad, sliceInput1Value, false);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+                Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
 
                 sliceInput1Grad.AddColumnReshapeProductOf(sliceOutputGrad, sliceInput0Value, true);
@@ -1523,7 +1523,7 @@ private:
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            OutputFor(fr).AssignKhatriRaoProductOf(Input(0)->OutputFor(fr), Input(1)->OutputFor(fr));
+            ValueFor(fr).AssignKhatriRaoProductOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1555,7 +1555,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, m_output->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, m_value->GetNumRows(), 1);
         }
     };
 
@@ -1582,19 +1582,19 @@ private:
             if (inputIndex > 1)
                 InvalidArgument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, Output(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(), Input(inputIndex)->GradientValues(), GradientValues());
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, Value(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value(), Input(inputIndex)->Gradient(), Gradient());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
             Matrix<ElemType> sliceInputGrad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceThisGrad = GradientFor(fr);
 
-            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Input(2)->Output(), Input(3)->Output(), sliceInputGrad, sliceThisGrad);
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Input(2)->Value(), Input(3)->Value(), sliceInputGrad, sliceThisGrad);
         }
 
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
@@ -1700,17 +1700,17 @@ private:
 
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(*m_invNorm0, *m_invNorm1, Output(), Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, Value(), Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), Input(3)->Value(), *m_leftTerm, *m_rightTerm);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            ForwardPropS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Input(2)->Output(), Input(3)->Output(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Input(2)->Value(), Input(3)->Value(), *m_leftTerm, *m_rightTerm);
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)

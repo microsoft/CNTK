@@ -114,7 +114,7 @@ protected:
    
     // feature and label data are parallel arrays
     // The following two hold the actual MB data internally, created by EnsureDataAvailable().
-    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext; // [parSeq + t * numParSeq] word n-tuple in order of storage in m_output matrix
+    std::vector<std::vector<vector<LabelIdType>>> m_featureWordContext; // [parSeq + t * numParSeq] word n-tuple in order of storage in m_value matrix
     std::vector<LabelIdType> m_labelIdData;
 
     std::vector<ElemType> m_labelData;

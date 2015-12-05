@@ -283,7 +283,7 @@ public:
         }
     }
 
-    // When external code (readers, namely) updates InputValue's m_output,
+    // When external code (readers, namely) updates InputValue's m_value,
     // calling this function is required to make sure that any internal state gets updated correctly.
     // Only a change to the column dimension i sallowed
     void NotifyInputNodesFunctionValuesMBSizeModified()

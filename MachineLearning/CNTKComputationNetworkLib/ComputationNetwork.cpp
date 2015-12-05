@@ -425,21 +425,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
         if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->Output().SetValue((float)value);
+            AsNodePtr<LearnableParameter<float>>(pNode)->Value().SetValue((float)value);
         else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->Output().SetValue((double)value);
+            AsNodePtr<LearnableParameter<double>>(pNode)->Value().SetValue((double)value);
         else if (pNode->RequiresPreCompute())
         {
             if (IsNodePtr<PreComputedNode<float>>(pNode))
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
-                preComputedNode->Output().SetValue((float)value);
+                preComputedNode->Value().SetValue((float)value);
                 preComputedNode->MarkComputed(true);
             }
             else
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
-                preComputedNode->Output().SetValue((double)value);
+                preComputedNode->Value().SetValue((double)value);
                 preComputedNode->MarkComputed(true);
             }
         }
@@ -999,7 +999,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!ptr)
                     continue;
 
-                Matrix<ElemType> W = ptr->Output();
+                Matrix<ElemType> W = ptr->Value();
                 if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
                     continue;
 
@@ -1033,7 +1033,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //========================================
                 // Step 1. do SVD decomposition
                 //========================================
-                Matrix<ElemType> A = pNode->Output();
+                Matrix<ElemType> A = pNode->Value();
 
                 // it is a vector, no need to do it
                 if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
@@ -1113,8 +1113,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<ComputationNode<ElemType>> pLeft =  AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName,  m, r));
                 shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-                pLeft->Output() = redU;
-                pRight->Output() = redVT;
+                pLeft->Value() = redU;
+                pRight->Value() = redVT;
 
                 shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 

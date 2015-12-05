@@ -48,10 +48,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = true;
             m_sampleLayout = ImageLayoutWHC(1, rows, 1);
             // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
-            CreateMatrixIfNull(m_output);
+            CreateMatrixIfNull(m_value);
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
-            Output().SetValue(0);
+            Value().SetValue(0);
         }
         LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
             LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetParameterUpdateRequired(configp->Get(L"needGradient"));
             wstring initString = configp->Get(L"init");
             if (initString == L"fixedValue")
-                Output().SetValue((ElemType)configp->Get(L"value"));
+                Value().SetValue((ElemType)configp->Get(L"value"));
             else if (initString == L"uniform" || initString == L"gaussian")
             {
                 // TODO: add these options also to old NDL
@@ -86,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Save(fstream);
             fstream << m_parameterUpdateRequired;
             fstream << GetNumRows() << GetNumCols(); 
-            fstream << Output();
+            fstream << Value();
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
 
             SetDims(rows, cols);
-            LoadFunctionValues(fstream);
+            LoadValue(fstream);
 
             m_sampleLayout = ImageLayoutWHC(1, rows, 1);
         }
@@ -113,19 +113,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
-                m_output->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+                m_value->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
             if (uniformInit)
             {
                 ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
-                Output().SetUniformRandomValue(-randRange, randRange, randomSeed);
+                Value().SetUniformRandomValue(-randRange, randRange, randomSeed);
             }
             else
             {
                 ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-                Output().SetGaussianRandomValue(0, randInitstd, randomSeed);
+                Value().SetGaussianRandomValue(0, randInitstd, randomSeed);
             }
             if (initOnCPUOnly)
-                m_output->TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+                m_value->TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
         }
 
         // initialize by reading a matrix from a text file
@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numRows = 0;
             size_t numCols = 0;
             auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-            Output().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+            Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
         }
 
         void ReviseFromFile(const std::wstring & reviseFromFilePath)
@@ -142,8 +142,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numRows = 0; 
             size_t numCols = 0; 
             auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(reviseFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-            size_t nRows = m_output->GetNumRows(); 
-            size_t nCols = m_output->GetNumCols(); 
+            size_t nRows = m_value->GetNumRows(); 
+            size_t nCols = m_value->GetNumCols(); 
 
             if (numRows != nRows || numCols != nCols)
             {
@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_nodeName.c_str(), reviseFromFilePath.c_str(), (int)nRows, (int)nCols, (int)numRows, (int)numCols);
             }
 
-            Output().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
+            Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
             
         }
 
@@ -198,22 +198,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
-            CreateMatrixIfNull(m_gradientValues);
-            m_gradientValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+            CreateMatrixIfNull(m_gradient);
+            m_gradient->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         }
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
             LearnableParameter<ElemType>(deviceId, name, rows, cols)
         {
-            CreateMatrixIfNull(m_gradientValues);
-            m_gradientValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
-            m_gradientValues->Resize(rows, cols, size);
+            CreateMatrixIfNull(m_gradient);
+            m_gradient->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+            m_gradient->Resize(rows, cols, size);
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
             LearnableParameter<ElemType>::Load(fstream, modelVersion);
-            CreateMatrixIfNull(m_gradientValues);
-            m_gradientValues->Resize(GetNumRows(), GetNumCols());
+            CreateMatrixIfNull(m_gradient);
+            m_gradient->Resize(GetNumRows(), GetNumCols());
         }
     };
 
@@ -235,7 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
-            CreateMatrixIfNull(m_output);
+            CreateMatrixIfNull(m_value);
             if (isSparse)
                 ConvertToSparseMatrix();
 
@@ -337,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
         {
-            m_output->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
+            m_value->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
         }
     };
 
@@ -421,17 +421,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)        // left derivative (embedding matrix)
             {
                 // This is a reduction operation, hence we need to mask out gaps.
-                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueSlice(t);
-                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(t);
+                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-                BackpropToLeft(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
+                BackpropToLeft(sliceInput1Value, Input(0)->Gradient(), sliceOutputGrad);
             }
             else if (inputIndex == 1)   // right derivative (input)
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
                 Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-                BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
+                BackpropToRight(Input(0)->Value(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
@@ -468,9 +468,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & t) override
         {
             // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-            Matrix<ElemType> functionValues = OutputFor(t);
-            const Matrix<ElemType>&  input0 = Input(0)->Output();
-            Matrix<ElemType>         input1 = Input(1)->OutputFor(t);
+            Matrix<ElemType> functionValues = ValueFor(t);
+            const Matrix<ElemType>&  input0 = Input(0)->Value();
+            Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
 
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
@@ -511,50 +511,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 Input(0)->SetDims(nInput, nHidden);
                 Input(0)->UpdateFunctionValuesSize();
-                Input(0)->Output().SetValue(1.0);
-                Input(1)->Output().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
-                Input(1)->Output().SwitchToMatrixType(DENSE, matrixFormatDense, false);
+                Input(0)->Value().SetValue(1.0);
+                Input(1)->Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
+                Input(1)->Value().SwitchToMatrixType(DENSE, matrixFormatDense, false);
                 Input(1)->SetDims(nHidden, nOutput);
                 Input(1)->UpdateFunctionValuesSize();
-                Input(1)->Output().SetValue(0.0);
-                Input(1)->Output().SetValue(0, 0, 1.0);
-                Input(1)->Output().SetValue(1, 1, 2.0);
-                Input(1)->Output().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
-                Input(1)->Output().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
+                Input(1)->Value().SetValue(0.0);
+                Input(1)->Value().SetValue(0, 0, 1.0);
+                Input(1)->Value().SetValue(1, 1, 2.0);
+                Input(1)->Value().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
+                Input(1)->Value().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
                 SetDims(nInput, nOutput);
                 UpdateFunctionValuesSize();
 
                 ForwardProp(FrameRange(m_pMBLayout));
 
                 /// check with expected values
-                Output().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
-                if (!ISCLOSE(Output()(0, 0), 1.0, EPSILON) ||
-                    !ISCLOSE(Output()(0, 1), 2.0, EPSILON) ||
-                    !ISCLOSE(Output()(1, 1), 2.0, EPSILON) )
+                Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
+                if (!ISCLOSE(Value()(0, 0), 1.0, EPSILON) ||
+                    !ISCLOSE(Value()(0, 1), 2.0, EPSILON) ||
+                    !ISCLOSE(Value()(1, 1), 2.0, EPSILON) )
                     throw("LSTMNode forward computation error");
 
-                Output().TransferToDeviceIfNotThere( m_deviceId, true);
+                Value().TransferToDeviceIfNotThere( m_deviceId, true);
 
-                GradientValues().Resize(nInput, nOutput);
-                GradientValues().SetValue(1.0);
+                Gradient().Resize(nInput, nOutput);
+                Gradient().SetValue(1.0);
                 for (size_t i = 0; i < 2; i++)
                 {
-                    Input(i)->GradientValues().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
-                    Input(i)->GradientValues().SetValue(0);
+                    Input(i)->Gradient().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
+                    Input(i)->Gradient().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
                     BackpropTo(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
-                if (!ISCLOSE(Input(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
-                    || !ISCLOSE(Input(1)->GradientValues()(0, 1), 2, EPSILON)  // Wxi
-                    || !ISCLOSE(Input(1)->GradientValues()(1, 0), 2, EPSILON)  // Whi
-                    || !ISCLOSE(Input(1)->GradientValues()(2, 1), 2, EPSILON)  // Wci
+                if (!ISCLOSE(Input(1)->Gradient()(0, 0), 2, EPSILON) /// bi
+                    || !ISCLOSE(Input(1)->Gradient()(0, 1), 2, EPSILON)  // Wxi
+                    || !ISCLOSE(Input(1)->Gradient()(1, 0), 2, EPSILON)  // Whi
+                    || !ISCLOSE(Input(1)->Gradient()(2, 1), 2, EPSILON)  // Wci
                     )
                     throw("LSTMNode gradient error on input gates");
 
                 for (size_t i = 0; i < 2; i++)
-                    Input(i)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
+                    Input(i)->Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
             }
             catch (...)
             {
