@@ -77,9 +77,9 @@ protected:
         virtual void ForwardProp(const FrameRange &) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientOfChildren() instead
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override;
-        virtual void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
@@ -120,9 +120,9 @@ protected:
         virtual void ForwardProp(const FrameRange &) override;
         virtual void EndForwardProp() override { }
         virtual void BeginBackprop() override { }
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientOfChildren() instead
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call Backprop() instead
         virtual void EndBackprop() override { }
-        virtual void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
@@ -505,11 +505,11 @@ public:
 
     // main entry point for backprop
     template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr rootNode,
-                         bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
-                         const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
-                         bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
-                         bool resetTimeStampAfterComputation = false);
+    void Backprop(const ComputationNodeBasePtr rootNode,
+                  bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
+                  const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
+                  bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
+                  bool resetTimeStampAfterComputation = false);
 
     template<class NODESET>     // version that takes multiple nodes
     void ForwardProp(const NODESET & nodes)

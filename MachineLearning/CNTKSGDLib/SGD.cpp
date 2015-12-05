@@ -344,24 +344,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // evaluate eval nodes
         // The bulk of this evaluation is reused in ComputeGradient() below.
         net.ForwardProp(evalNodes);
+
+        // compute the gradient
+        // This is where the magic happens, baby!!
+
+        // ==============================
+        // forward prop
+        // ==============================
+        net.ForwardProp(criterionNode);
+        // ==============================
+        // backprop
+        // ==============================
         // only compute gradient when learning rate is large enough
         if (dobackpropogate)
-        {
-            // use only the first criterion. Is there any possibility to use more?
-            // ==============================
-            // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
-            // ==============================
-            net.ComputeGradient<ElemType>(criterionNode);
-            // TODO: we should split ForwardProp() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
-        }
-        else
-        {
-            // use only the first criterion. Is there any possibility to use more?
-            // ==============================
-            // forward prop
-            // ==============================
-            net.ForwardProp(criterionNode);
-        }
+            net.Backprop<ElemType>(criterionNode);
     }
 
     template<class ElemType>
@@ -2641,7 +2637,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->UpdateEvalTimeStamp();
 
-                net->ComputeGradient<ElemType>(criterionNodes[npos]);
+                net->ForwardProp(criterionNodes[npos]);
+                net->Backprop<ElemType>(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
                 {
