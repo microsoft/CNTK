@@ -419,17 +419,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)        // left derivative (embedding matrix)
             {
                 // This is a reduction operation, hence we need to mask out gaps.
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->MaskedValueSlice(t);
+                Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueSlice(t);
                 Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(t);
 
-                BackpropToLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                BackpropToLeft(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
             }
             else if (inputIndex == 1)   // right derivative (input)
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(t);
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(t);
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(t);
 
-                BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                BackpropToRight(Input(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
@@ -467,8 +467,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
             Matrix<ElemType> functionValues = ValueSlice(t);
-            const Matrix<ElemType>&  input0 = Inputs(0)->FunctionValues();
-            Matrix<ElemType>         input1 = Inputs(1)->ValueSlice(t);
+            const Matrix<ElemType>&  input0 = Input(0)->FunctionValues();
+            Matrix<ElemType>         input1 = Input(1)->ValueSlice(t);
 
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
@@ -488,12 +488,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass && Inputs(1)->GetNumRows() % Inputs(0)->GetNumCols() != 0)
+            if (isFinalValidationPass && Input(1)->GetNumRows() % Input(0)->GetNumCols() != 0)
                 InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-            int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
+            int wordsInEachSample = Input(1)->GetNumRows() / Input(0)->GetNumCols();
 
-            SetDims(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
+            SetDims(Input(0)->GetNumRows() * wordsInEachSample, Input(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -507,18 +507,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Inputs(0)->SetDims(nInput, nHidden);
-                Inputs(0)->UpdateFunctionValuesSize();
-                Inputs(0)->FunctionValues().SetValue(1.0);
-                Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
-                Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Inputs(1)->SetDims(nHidden, nOutput);
-                Inputs(1)->UpdateFunctionValuesSize();
-                Inputs(1)->FunctionValues().SetValue(0.0);
-                Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
-                Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
-                Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
-                Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
+                Input(0)->SetDims(nInput, nHidden);
+                Input(0)->UpdateFunctionValuesSize();
+                Input(0)->FunctionValues().SetValue(1.0);
+                Input(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
+                Input(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
+                Input(1)->SetDims(nHidden, nOutput);
+                Input(1)->UpdateFunctionValuesSize();
+                Input(1)->FunctionValues().SetValue(0.0);
+                Input(1)->FunctionValues().SetValue(0, 0, 1.0);
+                Input(1)->FunctionValues().SetValue(1, 1, 2.0);
+                Input(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
+                Input(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
                 SetDims(nInput, nOutput);
                 UpdateFunctionValuesSize();
 
@@ -537,22 +537,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GradientValues().SetValue(1.0);
                 for (size_t i = 0; i < 2; i++)
                 {
-                    Inputs(i)->GradientValues().Resize(Inputs(i)->GetNumRows(), Inputs(i)->GetNumCols());
-                    Inputs(i)->GradientValues().SetValue(0);
+                    Input(i)->GradientValues().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
+                    Input(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
                     BackpropTo(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
-                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 2, EPSILON)  // Wxi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(1, 0), 2, EPSILON)  // Whi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(2, 1), 2, EPSILON)  // Wci
+                if (!ISCLOSE(Input(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
+                    || !ISCLOSE(Input(1)->GradientValues()(0, 1), 2, EPSILON)  // Wxi
+                    || !ISCLOSE(Input(1)->GradientValues()(1, 0), 2, EPSILON)  // Whi
+                    || !ISCLOSE(Input(1)->GradientValues()(2, 1), 2, EPSILON)  // Wci
                     )
                     throw("LSTMNode gradient error on input gates");
 
                 for (size_t i = 0; i < 2; i++)
-                    Inputs(i)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
+                    Input(i)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
             }
             catch (...)
             {
@@ -611,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("PairNetwork operation only takes one input.");
 
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Input(inputIndex)->GradientValues());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -620,50 +620,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> mTmp = Input(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)), mTmp);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             Matrix<ElemType> mTmp = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            mTmp.SetValue(Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
+            mTmp.SetValue(Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
-                SetDims(Inputs(0));
+                SetDims(Input(0));
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
-
-#if 0   // folded into base function, to avoid virtual; that base function already knows about some node types anyway
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-                                           std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
-        {
-            if (visited.find(shared_from_this()) == visited.end())  //not visited
-            {
-                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
-
-                //children first for function evaluation
-                if (!IsLeaf())
-                    m_parameterUpdateRequired = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-
-                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                this->m_visitedOrder = result.size();
-            }
-            else
-            {
-                if (!IsLeaf() && bFromDelayNode)
-                    sourceRecurrentNodePtr.push_back(shared_from_this());
-            }
-        }
-#endif
     };
 
     template class PairNetworkNode<float>;

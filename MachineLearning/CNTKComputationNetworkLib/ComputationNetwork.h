@@ -17,7 +17,6 @@
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     Inputs()                     -> Input()              // or In()? or GetInput()?
 //     Children()                   -> Inputs()
 //     ChildrenSize()               -> NumInputs()
 //     m_functionValues             -> m_output

@@ -223,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "(");
             for (size_t i = 0; i < ChildrenSize(); i++)
             {
-                ComputationNodePtr child = Inputs(i);
+                ComputationNodePtr child = Input(i);
                 if (i > 0)
                     fprintf(stderr, ", ");
                 if (!child)
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
+            size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             // Note: During initial validation, cols may not be a multiple. E.g. cols may be 1 or 3. So we cannot check here whether the integer-multiple conditions are fulfilled.
             size_t newCols = cols * rows / m_numTargetRows;
             if (isFinalValidationPass)
@@ -252,8 +252,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             SetDims(m_numTargetRows, newCols);
             if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the TensorShape)
-                m_pMBLayout = Inputs(0)->GetMBLayout();
-            else if (Inputs(0)->HasMBLayout())
+                m_pMBLayout = Input(0)->GetMBLayout();
+            else if (Input(0)->HasMBLayout())
             {
                 if (!m_pMBLayout)
                     m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates its own layout
@@ -265,7 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void UpdateFunctionMBSize() override
         {
-            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
+            size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
             if (!m_pMBLayout)
             {
@@ -286,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
-                m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numTargetRows);
+                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
                 if (weStack() || factor() == 1)
                 {
                     // going from many samples to one: layout entry will get no flags
@@ -297,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
-                    if (Inputs(0)->GetMBLayout()->GetNumTimeSteps() != 1)
+                    if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
                         m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
@@ -310,7 +310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
+            size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
             assert(newCols * m_numTargetRows == cols * rows); // follows from above check
             VerifyDims(m_numTargetRows, newCols);
@@ -319,7 +319,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout || factor() == 1)
             {
-                FunctionValues().Reshaped(newCols * m_numTargetRows, 1).SetValue(Inputs(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
+                FunctionValues().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
@@ -329,36 +329,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!frameRange.IsAllFrames())
                     InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
                 if (weStack())
-                    Base::Stack(frameRange, m_pMBLayout, Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Stack(frameRange, m_pMBLayout, Input(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(frameRange.WithLayout(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Unstack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
             }
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
+            size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
 
             // no layout case: this is indeed just a reshape. Same for canonical case
             if (!m_pMBLayout || factor() == 1)
             {
-                Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numTargetRows, 1);   // treat the values as one long vector
+                Input(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numTargetRows, 1);   // treat the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
             {
                 if (weStack())
-                    Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
                 else
-                    Base::Stack(frameRange.WithLayout(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Stack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
             }
         }
 
     private:
         size_t m_numTargetRows;
-        bool weStack() const { return m_numTargetRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
-        size_t factor() const { return m_numTargetRows > Inputs(0)->GetNumRows() ? m_numTargetRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
+        bool weStack() const { return m_numTargetRows > Input(0)->GetNumRows(); }        // do we stack (multiple frames into one)
+        size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
         void InferImageDimensions()
@@ -439,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange.WithLayout(Inputs(0)->GetMBLayout())) += GradientSlice(frameRange);
+            Input(0)->GradientSlice(frameRange.WithLayout(Input(0)->GetMBLayout())) += GradientSlice(frameRange);
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
@@ -447,14 +447,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // enforce compatibility of 'dataInput' with 'layoutInput'
             // TODO: how to deal with boundary flags?
-            if (*m_pMBLayout != *Inputs(0)->GetMBLayout())   // this does a deep value-level comparison
+            if (*m_pMBLayout != *Input(0)->GetMBLayout())   // this does a deep value-level comparison
                 InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.",
                                 NodeName().c_str(), OperationName().c_str(),
-                                Inputs(0)->NodeName().c_str(), Inputs(0)->OperationName().c_str(),
-                                Inputs(1)->NodeName().c_str(), Inputs(1)->OperationName().c_str());
+                                Input(0)->NodeName().c_str(), Input(0)->OperationName().c_str(),
+                                Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
             // copy the data from 'dataInput'
-            ValueSlice(frameRange).SetValue(Inputs(0)->ValueSlice(frameRange.WithLayout(Inputs(0)->GetMBLayout())));  // just propagate through
+            ValueSlice(frameRange).SetValue(Input(0)->ValueSlice(frameRange.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
         }
 
@@ -462,12 +462,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass && (!Inputs(0)->HasMBLayout() || !Inputs(1)->HasMBLayout()))
+            if (isFinalValidationPass && (!Input(0)->HasMBLayout() || !Input(1)->HasMBLayout()))
                 RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
-            m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
+            m_pMBLayout = Input(1)->GetMBLayout(); // output layout is that of 'layoutInput'
             // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
-            SetDims(Inputs(0));
+            SetDims(Input(0));
             InferImageDimsFromInputs();
         }
     };
@@ -521,22 +521,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_sliceHeight);
+            Input(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_sliceHeight);
+            ValueSlice(frameRange).AssignRowSliceValuesOf(Input(0)->ValueSlice(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_sliceHeight)
+            if (isFinalValidationPass && Input(0)->GetNumRows() < m_startIndex + m_sliceHeight)
                 RuntimeError("RowSlice operation: m_startIndex + m_sliceHeight exceeds number of rows in the input.");
 
-            SetDims(m_sliceHeight, Inputs(0)->GetNumCols());
+            SetDims(m_sliceHeight, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -586,13 +586,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            Inputs(inputIndex)->GradientSlice(frameRange).AddWithRowSliceValuesOf(GradientSlice(frameRange), m_startRowIndices[inputIndex], Inputs(inputIndex)->GetNumRows());
+            Input(inputIndex)->GradientSlice(frameRange).AddWithRowSliceValuesOf(GradientSlice(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             for (size_t inputIndex = 0; inputIndex < ChildrenSize(); inputIndex++)
-                ValueSlice(frameRange).AssignToRowSliceValuesOf(Inputs(inputIndex)->ValueSlice(frameRange), m_startRowIndices[inputIndex], Inputs(inputIndex)->GetNumRows());
+                ValueSlice(frameRange).AssignToRowSliceValuesOf(Input(inputIndex)->ValueSlice(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -600,7 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            size_t numCols = Inputs(0)->GetNumCols();
+            size_t numCols = Input(0)->GetNumCols();
 
             // count totalRows and form m_startRowIndices[] array, which is the cumulative sum of matrix heights
             m_startRowIndices.resize(ChildrenSize());
@@ -608,11 +608,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                if (isFinalValidationPass && Inputs(i)->GetNumCols() != numCols)
-                    LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
+                if (isFinalValidationPass && Input(i)->GetNumCols() != numCols)
+                    LogicError("RowStack operation: the input node %ls has different number of columns.", Input(i)->NodeName().c_str());
 
                 m_startRowIndices[i] = totalRows;
-                totalRows += Inputs(i)->GetNumRows();
+                totalRows += Input(i)->GetNumRows();
             }
 
             SetDims(totalRows, numCols);
@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "(");
                 for (size_t i = 0; i<ChildrenSize(); i++)
                 {
-                    ComputationNodePtr child = Inputs(i);
+                    ComputationNodePtr child = Input(i);
                     if (i > 0)
                         fprintf(stderr, ", ");
 
@@ -722,7 +722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            SetDims(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
+            SetDims(Input(0)->GetNumRows() * m_numRepeat, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -730,12 +730,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //if (!isNoop())    // if m_numRepeat == 1 then virtual FunctionValues() will return the child   --TODO: do this as an in-place optimization instead
-            ValueSlice(frameRange).AssignRepeatOf(Inputs(0)->ValueSlice(frameRange), m_numRepeat, 1);
+            ValueSlice(frameRange).AssignRepeatOf(Input(0)->ValueSlice(frameRange), m_numRepeat, 1);
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange).AddToRowRepeatValuesOf(GradientSlice(frameRange), m_numRepeat);
+            Input(0)->GradientSlice(frameRange).AddToRowRepeatValuesOf(GradientSlice(frameRange), m_numRepeat);
         }
 
     private:

@@ -661,7 +661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This function can operate on the whole range or on a selected single frame and/or a single sequence.
     // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
     // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
-    // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
+    // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Input(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
     template<class ElemType>
     static inline bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange, ElemType val)
     {

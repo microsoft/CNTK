@@ -3164,7 +3164,7 @@ virtual void Validate()
 
 \begin_layout Plain Layout
 
-    if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionV
+    if (Input(0)->FunctionValues().GetNumElements() == 0 || Input(1)->FunctionV
 alues().GetNumElements() == 0)
 \end_layout
 
@@ -3180,7 +3180,7 @@ alues().GetNumElements() == 0)
 
 \begin_layout Plain Layout
 
-    if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValue
+    if (Input(0)->FunctionValues().GetNumRows() != 1 || Input(0)->FunctionValue
 s().GetNumCols() != 1)      
 \end_layout
 
@@ -3197,7 +3197,7 @@ s().GetNumCols() != 1)
 
 \begin_layout Plain Layout
 
-    FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->F
+    FunctionValues().Resize(Input(1)->FunctionValues().GetNumRows(), Input(1)->F
 unctionValues().GetNumCols());             
 \end_layout
 
@@ -3263,7 +3263,7 @@ virtual void ForwardProp()
 
 \begin_layout Plain Layout
 
-    ForwardPropS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->
+    ForwardPropS(FunctionValues(), Input(0)->FunctionValues(), Input(1)->
 FunctionValues());
 \end_layout
 
@@ -3288,7 +3288,7 @@ virtual void ForwardProp(const size_t timeIdxInSeq)
 
 \begin_layout Plain Layout
 
-    Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(t
+    Matrix<ElemType> sliceInput1Value = Input(1)->FunctionValues().ColumnSlice(t
 imeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);     
         
 \end_layout
@@ -3301,7 +3301,7 @@ imeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-    ForwardPropS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1
+    ForwardPropS(sliceOutputValue, Input(0)->FunctionValues(), sliceInput1
 Value);         
 \end_layout
 
@@ -3435,7 +3435,7 @@ virtual void BackpropTo(const size_t inputIndex)
 
 \begin_layout Plain Layout
 
-        BackpropToLeft(Inputs(1)->FunctionValues(), Inputs(0)->Gradient
+        BackpropToLeft(Input(1)->FunctionValues(), Input(0)->Gradient
 Values(), GradientValues());             
 \end_layout
 
@@ -3456,7 +3456,7 @@ Values(), GradientValues());
 
 \begin_layout Plain Layout
 
-    BackpropToRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientVal
+    BackpropToRight(Input(0)->FunctionValues(), Input(1)->GradientVal
 ues(), GradientValues());             
 \end_layout
 
@@ -3525,13 +3525,13 @@ Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-       Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlic
+       Matrix<ElemType> sliceInput1Value = Input(1)->FunctionValues().ColumnSlic
 e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 \end_layout
 
 \begin_layout Plain Layout
 
-        BackpropToLeft(sliceInput1Value, Inputs(0)->GradientValues(),
+        BackpropToLeft(sliceInput1Value, Input(0)->GradientValues(),
  sliceOutputGrad);
 \end_layout
 
@@ -3552,7 +3552,7 @@ e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-        Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlic
+        Matrix<ElemType> sliceInput1Grad = Input(1)->GradientValues().ColumnSlic
 e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 \end_layout
 
@@ -3564,7 +3564,7 @@ Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
 \begin_layout Plain Layout
 
-        BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad,
+        BackpropToRight(Input(0)->FunctionValues(), sliceInput1Grad,
  sliceOutputGrad);
 \end_layout
 

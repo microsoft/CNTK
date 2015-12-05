@@ -239,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
                             Matrix<ElemType> frm = GradientSlice(frameRange.Sequence(id));
-                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Input(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
                             to += frm;
                         }
                     }
@@ -247,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else    // operate on entire time step in one go (over all parallel sequences)
                 {
                     Matrix<ElemType> frm = GradientSlice(frameRange);
-                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed)); // TODO: we need to be able to create a FrameRange with a delta, not like this
+                    Matrix<ElemType> to = Input(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed)); // TODO: we need to be able to create a FrameRange with a delta, not like this
                     to += frm;
                 }
             }
@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //         Maybe we should carry over the shifted layout (cf. CacheMBLayout())? We could just move the pointer. But the code must be adapted as well.
             if (!m_isHistoryCarryOverManagedExternally) // means it's externally managed (for PairNetworkNode)
             {
-                m_delayedActivation = Inputs(0)->FunctionValues();
+                m_delayedActivation = Input(0)->FunctionValues();
                 if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
                 m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
             }
@@ -300,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = frameRange.t();
 
-            VerifyDims(Inputs(0));
+            VerifyDims(Input(0));
 
             size_t T = GetNumTimeSteps();
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0;  // (note: should never happen in full-sequence mode)
@@ -330,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else if (t_delayed >= T)
                             inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            inp = Input(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -345,7 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else if (t_delayed >= T)
                     inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed));
+                    inp = Input(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DEVICEID_TYPE device = hist.GetDeviceId();
             hist.TransferFromDeviceToDevice(device, m_deviceId, true);
 
-            hist.SetValue(Inputs(0)->FunctionValues());
+            hist.SetValue(Input(0)->FunctionValues());
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
             return true;
@@ -677,9 +677,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 4)
                 InvalidArgument("LSTM operation only takes five inputs.");
 
-            size_t nT = Inputs(0)->GetNumCols();
-            size_t inputDim = Inputs(0)->GetNumRows();
-            size_t outputDim = Inputs(1)->GetNumRows();
+            size_t nT = Input(0)->GetNumCols();
+            size_t inputDim = Input(0)->GetNumRows();
+            size_t outputDim = Input(1)->GetNumRows();
 
             if (m_GradientComputed == false)
             {
@@ -691,10 +691,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // reset gradients
                 grdToObs.Resize(inputDim, nT); grdToObs.SetValue(0);
-                grdToInputGate.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols()); grdToInputGate.SetValue(0);
-                grdToForgetGate.Resize(Inputs(2)->GetNumRows(), Inputs(2)->GetNumCols()); grdToForgetGate.SetValue(0);
-                grdToOutputGate.Resize(Inputs(3)->GetNumRows(), Inputs(3)->GetNumCols()); grdToOutputGate.SetValue(0);
-                grdToCellWgt.Resize(Inputs(4)->GetNumRows(), Inputs(4)->GetNumCols()); grdToCellWgt.SetValue(0);
+                grdToInputGate.Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols()); grdToInputGate.SetValue(0);
+                grdToForgetGate.Resize(Input(2)->GetNumRows(), Input(2)->GetNumCols()); grdToForgetGate.SetValue(0);
+                grdToOutputGate.Resize(Input(3)->GetNumRows(), Input(3)->GetNumCols()); grdToOutputGate.SetValue(0);
+                grdToCellWgt.Resize(Input(4)->GetNumRows(), Input(4)->GetNumCols()); grdToCellWgt.SetValue(0);
 
                 Matrix<ElemType> slicePrevOutput(m_deviceId), slicePrevState(m_deviceId);
                 Matrix<ElemType> grdToPrevOutput(m_deviceId), grdToPrevState(m_deviceId);
@@ -713,7 +713,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
                     FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
-                    Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceObs = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
 
@@ -752,13 +752,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         error,
                         sliceObs,
                         grdToObsSlice,
-                        Inputs(1)->FunctionValues(),
+                        Input(1)->FunctionValues(),
                         grdToInputGate,
-                        Inputs(2)->FunctionValues(),
+                        Input(2)->FunctionValues(),
                         grdToForgetGate,
-                        Inputs(3)->FunctionValues(),
+                        Input(3)->FunctionValues(),
                         grdToOutputGate,
-                        Inputs(4)->FunctionValues(),
+                        Input(4)->FunctionValues(),
                         grdToCellWgt,
                         mSlicePrevOutput,
                         mSlicePrevState,
@@ -778,7 +778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), &m_pMBLayout->GetM());
                 }
 #ifdef DEBUG_DECODER
-                fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
+                fprintf(stderr, "after error prop b_c norm = %.8e\n", Input(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
 #endif
                 m_obs_error_from_future_minibatch = grdToPrevOutput;
                 m_state_error_from_future_minibatch = grdToPrevState;
@@ -792,45 +792,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)  //derivative with regard to the observation
             {
-                if (Inputs(inputIndex)->GradientValues().HasNoElements())
-                    Inputs(inputIndex)->GradientValues().SetValue(grdToObs);
+                if (Input(inputIndex)->GradientValues().HasNoElements())
+                    Input(inputIndex)->GradientValues().SetValue(grdToObs);
                 else
-                    Inputs(inputIndex)->GradientValues() += grdToObs;
+                    Input(inputIndex)->GradientValues() += grdToObs;
             }
 
             if (inputIndex == 1)
             {
-                if (Inputs(inputIndex)->GradientValues().HasNoElements())
-                    Inputs(inputIndex)->GradientValues().SetValue(grdToInputGate);
+                if (Input(inputIndex)->GradientValues().HasNoElements())
+                    Input(inputIndex)->GradientValues().SetValue(grdToInputGate);
                 else
-                    Inputs(inputIndex)->GradientValues() += grdToInputGate;
+                    Input(inputIndex)->GradientValues() += grdToInputGate;
             }
 
             if (inputIndex == 2)
             {
-                if (Inputs(inputIndex)->GradientValues().HasNoElements())
-                    Inputs(inputIndex)->GradientValues().SetValue(grdToForgetGate);
+                if (Input(inputIndex)->GradientValues().HasNoElements())
+                    Input(inputIndex)->GradientValues().SetValue(grdToForgetGate);
                 else
-                    Inputs(inputIndex)->GradientValues() += grdToForgetGate;
+                    Input(inputIndex)->GradientValues() += grdToForgetGate;
             }
 
             if (inputIndex == 3)
             {
-                if (Inputs(inputIndex)->GradientValues().HasNoElements())
-                    Inputs(inputIndex)->GradientValues().SetValue(grdToOutputGate);
+                if (Input(inputIndex)->GradientValues().HasNoElements())
+                    Input(inputIndex)->GradientValues().SetValue(grdToOutputGate);
                 else
-                    Inputs(inputIndex)->GradientValues() += grdToOutputGate;
+                    Input(inputIndex)->GradientValues() += grdToOutputGate;
             }
 
             if (inputIndex == 4)
             {
-                if (Inputs(inputIndex)->GradientValues().HasNoElements())
-                    Inputs(inputIndex)->GradientValues().SetValue(grdToCellWgt);
+                if (Input(inputIndex)->GradientValues().HasNoElements())
+                    Input(inputIndex)->GradientValues().SetValue(grdToCellWgt);
                 else
-                    Inputs(inputIndex)->GradientValues() += grdToCellWgt;
+                    Input(inputIndex)->GradientValues() += grdToCellWgt;
             }
 #ifdef DEBUG_DECODER
-            fprintf(stderr, "LSTM gradient[%d] norm = %.8e\n", inputIndex, Inputs(inputIndex)->GradientValues().FrobeniusNorm());
+            fprintf(stderr, "LSTM gradient[%d] norm = %.8e\n", inputIndex, Input(inputIndex)->GradientValues().FrobeniusNorm());
 #endif
 
         }
@@ -1027,7 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (streamid >= GetNumParallelSequences())
                 LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int)streamid, (int)GetNumParallelSequences());
 
-            size_t nT = Inputs(0)->GetNumCols();
+            size_t nT = Input(0)->GetNumCols();
             if (t >= nT)
                 LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
 
@@ -1042,8 +1042,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         void SaveLastStateActity()
         {
-            size_t nT = Inputs(0)->GetNumCols();
-            size_t outputDim = Inputs(1)->GetNumRows();
+            size_t nT = Input(0)->GetNumCols();
+            size_t outputDim = Input(1)->GetNumRows();
             
             // save the hidden activities and output for the next minibatch
             mLastOutput.Resize(outputDim, GetNumParallelSequences());
@@ -1065,8 +1065,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            size_t nT = Inputs(0)->GetNumCols();
-            size_t outputDim = Inputs(1)->GetNumRows();
+            size_t nT = Input(0)->GetNumCols();
+            size_t outputDim = Input(1)->GetNumRows();
 
             {
                 SetDims(outputDim, nT);
@@ -1104,7 +1104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
                     FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
-                    Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceObs = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
 
@@ -1117,7 +1117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
-                    ForwardPropS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
+                    ForwardPropS(Input(1)->FunctionValues(), Input(2)->FunctionValues(), Input(3)->FunctionValues(), Input(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
                 }
 
@@ -1137,7 +1137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "check!");
                 fprintf(stderr, "LSTM function norm = %.8e\n", tmpnorm);
                 for (size_t i = 0; i < 5; i++)
-                    fprintf(stderr, "LSTM input[%d] norm = %.8e ", i, Inputs(i)->FunctionValues().FrobeniusNorm());
+                    fprintf(stderr, "LSTM input[%d] norm = %.8e ", i, Input(i)->FunctionValues().FrobeniusNorm());
                 fprintf(stderr, "\n");
 #endif
 
@@ -1391,49 +1391,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
+            if (Input(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
 
 #if 0
             // TODO: use dynamic_pointer_cast instead
-            if (Inputs(1)->OperationName() != OperationNameOf(LearnableParameter) ||
-                Inputs(2)->OperationName() != OperationNameOf(LearnableParameter) ||
-                Inputs(3)->OperationName() != OperationNameOf(LearnableParameter) ||
-                Inputs(4)->OperationName() != OperationNameOf(LearnableParameter))
+            if (Input(1)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Input(2)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Input(3)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Input(4)->OperationName() != OperationNameOf(LearnableParameter))
                 LogicError("LSTM validation: need to have learnable parameters ");
 #endif
 
-            //if (Inputs(0)->GetNumRows() == 0)
+            //if (Input(0)->GetNumRows() == 0)
             //    LogicError("LSTM validation: input size is zero!");
 
-            //if (Inputs(1)->GetNumRows() == 0 ||
-            //    Inputs(2)->GetNumRows() == 0 ||
-            //    Inputs(3)->GetNumRows() == 0 ||
-            //    Inputs(4)->GetNumRows() == 0)
+            //if (Input(1)->GetNumRows() == 0 ||
+            //    Input(2)->GetNumRows() == 0 ||
+            //    Input(3)->GetNumRows() == 0 ||
+            //    Input(4)->GetNumRows() == 0)
             //    LogicError("LSTM validation : parameter size is zero!");
 
-            size_t nindim = Inputs(0)->GetNumRows();
-            size_t noutdim = Inputs(1)->GetNumRows();
-            size_t nT = Inputs(0)->GetNumCols();
+            size_t nindim = Input(0)->GetNumRows();
+            size_t noutdim = Input(1)->GetNumRows();
+            size_t nT = Input(0)->GetNumCols();
             size_t nCol = nindim + noutdim + 2;
             if (isFinalValidationPass)
             {
-                if (Inputs(1)->GetNumCols() != nCol)
+                if (Input(1)->GetNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and inputGate");
                 }
-                if (Inputs(2)->GetNumCols() != nCol)
+                if (Input(2)->GetNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and forgetGate");
                 }
-                if (Inputs(3)->GetNumCols() != nCol)
+                if (Input(3)->GetNumCols() != nCol)
                 {
                     LogicError("LSTM validation : dimension mismatched between child and outputGate");
                 }
 
-                if (noutdim != Inputs(2)->GetNumRows() ||
-                    noutdim != Inputs(3)->GetNumRows() ||
-                    noutdim != Inputs(4)->GetNumRows())
+                if (noutdim != Input(2)->GetNumRows() ||
+                    noutdim != Input(3)->GetNumRows() ||
+                    noutdim != Input(4)->GetNumRows())
                 {
                     LogicError("LSTM validation: output dimension mismatched!");
                 }
@@ -1465,28 +1465,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
                 Base::LinkToMBLayout(pMBLayout);
 
-                f0 = Inputs(0)->FunctionValues();
-                f1 = Inputs(1)->FunctionValues();
-                f2 = Inputs(2)->FunctionValues();
-                f3 = Inputs(3)->FunctionValues();
-                f4 = Inputs(4)->FunctionValues();
+                f0 = Input(0)->FunctionValues();
+                f1 = Input(1)->FunctionValues();
+                f2 = Input(2)->FunctionValues();
+                f3 = Input(3)->FunctionValues();
+                f4 = Input(4)->FunctionValues();
                 func = FunctionValues();
 
                 target.Resize(nOutput, nT);
                 for (size_t i = 0; i < nT; i++)
                     target(0, i) = 1;
 
-                Inputs(0)->SetDims(nInput, nT);
-                Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
-                Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(1)->SetDims(nHidden, nInput + nOutput + 2);
-                Inputs(1)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(2)->SetDims(nHidden, nInput + nHidden + 2);
-                Inputs(2)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(3)->SetDims(nOutput, nInput + nHidden + 2);
-                Inputs(3)->FunctionValues().SetValue((ElemType)0.1);
-                Inputs(4)->SetDims(nOutput, nHidden + nInput + 1);
-                Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
+                Input(0)->SetDims(nInput, nT);
+                Input(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
+                Input(0)->FunctionValues().SetValue((ElemType)0.1);
+                Input(1)->SetDims(nHidden, nInput + nOutput + 2);
+                Input(1)->FunctionValues().SetValue((ElemType)0.1);
+                Input(2)->SetDims(nHidden, nInput + nHidden + 2);
+                Input(2)->FunctionValues().SetValue((ElemType)0.1);
+                Input(3)->SetDims(nOutput, nInput + nHidden + 2);
+                Input(3)->FunctionValues().SetValue((ElemType)0.1);
+                Input(4)->SetDims(nOutput, nHidden + nInput + 1);
+                Input(4)->FunctionValues().SetValue((ElemType)0.1);
                 SetDims(nOutput, nT);
 
                 m_DefaultState = 0.0;
@@ -1506,41 +1506,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GradientValues().SetValue(1.0);
                 for (size_t i = 0; i < 5; i++)
                 {
-                    Inputs(i)->GradientValues().Resize(Inputs(i)->GetNumRows(), Inputs(i)->GetNumCols());
-                    Inputs(i)->GradientValues().SetValue(0);
+                    Input(i)->GradientValues().Resize(Input(i)->GetNumRows(), Input(i)->GetNumCols());
+                    Input(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)
                     BackpropTo(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
-                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 0.00784382, EPSILON)  // Wxi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 3), 0.00192997, EPSILON)  // Whi
-                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 6), 0.00362767, EPSILON)  // Wci
+                if (!ISCLOSE(Input(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi
+                    || !ISCLOSE(Input(1)->GradientValues()(0, 1), 0.00784382, EPSILON)  // Wxi
+                    || !ISCLOSE(Input(1)->GradientValues()(0, 3), 0.00192997, EPSILON)  // Whi
+                    || !ISCLOSE(Input(1)->GradientValues()(0, 6), 0.00362767, EPSILON)  // Wci
                     )
                     throw("LSTMNode gradient error on input gates");
-                if (!ISCLOSE(Inputs(2)->GradientValues()(0, 0), 0.02738655, EPSILON)  // bf
-                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 1), 0.00273866, EPSILON)  // Wxf
-                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 3), 0.00120922, EPSILON)  // Whf
-                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 6), 0.00227184, EPSILON)  // Wcf
+                if (!ISCLOSE(Input(2)->GradientValues()(0, 0), 0.02738655, EPSILON)  // bf
+                    || !ISCLOSE(Input(2)->GradientValues()(0, 1), 0.00273866, EPSILON)  // Wxf
+                    || !ISCLOSE(Input(2)->GradientValues()(0, 3), 0.00120922, EPSILON)  // Whf
+                    || !ISCLOSE(Input(2)->GradientValues()(0, 6), 0.00227184, EPSILON)  // Wcf
                     )
                     throw("LSTMNode gradient error on forget gates");
-                if (!ISCLOSE(Inputs(3)->GradientValues()(0, 0), 0.07801557, EPSILON)  // bo
-                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 1), 0.00780156, EPSILON)  // Wxo
-                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 3), 0.00268089, EPSILON)  // Who
-                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 6), 0.00809852, EPSILON)  // Wco
+                if (!ISCLOSE(Input(3)->GradientValues()(0, 0), 0.07801557, EPSILON)  // bo
+                    || !ISCLOSE(Input(3)->GradientValues()(0, 1), 0.00780156, EPSILON)  // Wxo
+                    || !ISCLOSE(Input(3)->GradientValues()(0, 3), 0.00268089, EPSILON)  // Who
+                    || !ISCLOSE(Input(3)->GradientValues()(0, 6), 0.00809852, EPSILON)  // Wco
                     )
                     throw("LSTMNode gradient error on output gates");
-                if (!ISCLOSE(Inputs(4)->GradientValues()(0, 0), 1.3075038, EPSILON)  // bc
-                    || !ISCLOSE(Inputs(4)->GradientValues()(0, 1), 0.13075038, EPSILON)  // Wxc
-                    || !ISCLOSE(Inputs(4)->GradientValues()(0, 3), 0.03080355, EPSILON)  // Whc
+                if (!ISCLOSE(Input(4)->GradientValues()(0, 0), 1.3075038, EPSILON)  // bc
+                    || !ISCLOSE(Input(4)->GradientValues()(0, 1), 0.13075038, EPSILON)  // Wxc
+                    || !ISCLOSE(Input(4)->GradientValues()(0, 3), 0.03080355, EPSILON)  // Whc
                     )
                     throw("LSTMNode gradient error on memory cells");
 
                 for (size_t i = 0; i < 5; i++)
                 {
                     
-                        Inputs(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+                        Input(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
                 }
                 m_DefaultState = initStateValue;
             }

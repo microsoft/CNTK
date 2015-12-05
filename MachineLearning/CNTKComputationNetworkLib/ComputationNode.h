@@ -399,7 +399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_inputs; }
-        ComputationNodeBasePtr Inputs(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
+        ComputationNodeBasePtr Input(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
@@ -1050,7 +1050,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        inline ComputationNodePtr Inputs(const size_t childIndex) const       // TODO: rename to Input
+        inline ComputationNodePtr Input(const size_t childIndex) const       // TODO: rename to Input
         {
 #ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_inputs.size())
@@ -1171,7 +1171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef TRACK_GAP_NANS
             for (size_t i = 0; i < m_inputs.size(); i++)
             {
-                ComputationNodePtr child = Inputs(i);
+                ComputationNodePtr child = Input(i);
                 if (child->m_needsGradient)
                 {
                     child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout()));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
@@ -1192,7 +1192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i = 0; i < m_inputs.size(); i++)
             {
-                ComputationNodePtr child = Inputs(i);
+                ComputationNodePtr child = Input(i);
                 if (child->m_needsGradient &&
                     (childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop() ||
                      childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()
@@ -1237,7 +1237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void /*ComputationNodeBase::*/ClearGradientForChildren() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
         {
             for (size_t i = 0; i < m_inputs.size(); i++)
-                Inputs(i)->m_gradientInitialized = false;
+                Input(i)->m_gradientInitialized = false;
         }
 
         // lazy resetting of gradient
@@ -1509,7 +1509,7 @@ protected: \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
-    using Base::Inputs; using Base::SetInput; \
+    using Base::Input; using Base::SetInput; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
     using Base::Load; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \

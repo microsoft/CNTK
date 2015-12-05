@@ -119,10 +119,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
             for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
             {
-                if (!nodePtr->Inputs(i))
+                if (!nodePtr->Input(i))
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
-                    fstream << nodePtr->Inputs(i)->NodeName();
+                    fstream << nodePtr->Input(i)->NodeName();
             }
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
