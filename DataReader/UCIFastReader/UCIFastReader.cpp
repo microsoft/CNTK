@@ -323,7 +323,6 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     m_parser.SetTraceLevel(m_traceLevel);
 
     m_prefetchEnabled = readerConfig(L"prefetch", false);
-
     // set the feature count to at least one (we better have one feature...)
     assert (m_featureCount != 0);
 
@@ -659,7 +658,6 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
 {
     m_subsetNum = subsetNum;
     m_numSubsets = numSubsets;
-
     if (mOneLinePerFile)
         mbSize = mRequestedNumParallelSequences; /// each file has only one observation, therefore the number of data to read is the number of files
 
@@ -678,13 +676,13 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
         return;
     } 
 
-    // if we are reallocating bigger, release the original
+        // if we are reallocating bigger, release the original
     if (mbSize > m_mbSize)
     {
         m_featuresBuffer = NULL;
         m_labelsBuffer = NULL;
-        m_labelsIdBuffer = NULL;
-    }
+            m_labelsIdBuffer = NULL;
+        }
 
     m_mbSize = mbSize;
     if (requestedEpochSamples == requestDataSize)
@@ -870,15 +868,15 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     if (m_labelsBuffer == NULL)
     {
-        if (m_labelType == labelCategory)
-        {
+    if (m_labelType == labelCategory)
+    {
             m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_labelDim * m_mbSize);
             m_labelsIdBuffer = std::shared_ptr<LabelIdType>(new LabelIdType[m_mbSize], [](LabelIdType* p) {
                 delete[] p;
             });
-        }
-        else if (m_labelType != labelNone)
-        {
+    }
+    else if (m_labelType != labelNone)
+    {
             m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_mbSize);
             m_labelsIdBuffer = NULL;
         }
@@ -937,10 +935,9 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     size_t currSubsetStartCol = (actualmbsize * m_subsetNum) / m_numSubsets;
     size_t currSubsetEndCol = (actualmbsize * (m_subsetNum + 1)) / m_numSubsets;
     size_t currSubsetSize = currSubsetEndCol - currSubsetStartCol;
-
     // create the respective MBLayout
     // Every sample is returned as a sequence of 1 frame.
-    m_pMBLayout->Init(currSubsetSize, 1, false/*means it is not sequential*/);
+    m_pMBLayout->Init(currSubsetSize, 1);
 
     // if we are writing out to the caching writer, do it now
     if (m_cachingWriter && (m_subsetNum == 0))

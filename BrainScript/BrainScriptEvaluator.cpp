@@ -1,30 +1,5 @@
 // BrainScriptEvaluator.cpp -- execute what's given in a config file
 
-// main TODO items:
-//  - dictionary merging, to allow overwriting from command line
-//     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
-//     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
-//     - d1 + d2 == wrapper around d1 with filter(d2)
-//       When processing [ ] expressions inside d1, the current filter chain is applied straight away.
-//     - model merging =
-//        - Network exposes dictionary          // or use explicit expression new ConfigRecord(network)?
-//        - ^^ + [ new nodes ] - [ nodes to delete ]
-//          creates modified network
-//        - pass into new NDLComputationNetwork
-//     - also, any access needs to go up the chain and check for qualified matches there, and take the first
-//       Or is that maybe the sole solution to the filter problem? [ ] + [ ] just computes a merged dict with possibly fully qualified names detected downstream?
-//  - I get stack overflows...? What's wrong with stack usage?? Need to use more references? Or only a problem in Debug?
-//  - a way to explicitly access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
-//     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
-//     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
-//  - name lookup should inject TextLocation into error stack
-//  - doc strings for every parameter? E.g. LearnableParameter(rows{"Output dimension"},cols{"Input dimension"}) = new ...
-//     - identifier become more complicated; they become a struct that carries the doc string
-//  - expression-path problem:
-//     - macro arg expressions get their path assigned when their thunk is created, the thunk remembers it
-//     - however, really, the thunk should get the expression path from the context it is executed in, not the context it was created in
-//     - maybe there is some clever scheme of overwriting when a result comes back? E.g. we retrieve a value but its name is not right, can we patch it up? Very tricky to find the right rules/conditions
-
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
@@ -50,622 +25,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     using namespace Microsoft::MSR::CNTK;
     using namespace Microsoft::MSR::ScriptableObjects;
 
-    bool trace = false;     // enable to get debug output
-
-#define exprPathSeparator L"."
-
-    // =======================================================================
-    // string formatting
-    // =======================================================================
-
-    // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
-    // TODO: change to taking a regular format string and a :: array of args that are checked. Support d,e,f,g,x,c,s (s also for ToString()).
-    // TODO: :: array. Check if that is the right operator for e.g. Haskell.
-    // TODO: turn Print into PrintF; e.g. PrintF provides 'format' arg. Printf('solution to %s is %d', 'question' :: 42)
-    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
-    {
-        size_t pos = how.find(L'%');
-        if (pos != wstring::npos)
-            RuntimeError("FormatConfigValue: format string must not contain %%");
-        if (arg.Is<String>())
-        {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
-        }
-        else if (arg.Is<Double>())
-        {
-            let val = arg.AsRef<Double>();
-            if (val == (int)val)
-                return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
-            else
-                return wstrprintf((L"%" + how + L"f").c_str(), val);
-        }
-        else if (arg.Is<ConfigRecord>())            // TODO: should have its own ToString() method
-        {
-            let record = arg.AsPtr<ConfigRecord>();
-            let memberIds = record->GetMemberIds(); // TODO: test this after change to ids
-            wstring result;
-            bool first = true;
-            for (let & id : memberIds)
-            {
-                if (first)
-                    first = false;
-                else
-                    result.append(L"\n");
-                result.append(id);
-                result.append(L" = ");
-                result.append(FormatConfigValue((*record)[id], how));
-            }
-            return HasToString::NestString(result, L'[', true, L']');
-        }
-        else if (arg.Is<ConfigArray>())             // TODO: should have its own ToString() method
-        {
-            let arr = arg.AsPtr<ConfigArray>();
-            wstring result;
-            let range = arr->GetIndexRange();
-            for (int i = range.first; i <= range.second; i++)
-            {
-                if (i > range.first)
-                    result.append(L"\n");
-                result.append(FormatConfigValue(arr->At(i, [](const wstring &){ LogicError("FormatConfigValue: out of bounds index while iterating??"); }), how));
-            }
-            return HasToString::NestString(result, L'(', false, L')');
-        }
-        else if (arg.Is<HasToString>())
-            return arg.AsRef<HasToString>().ToString();
-        else
-            return msra::strfun::utf16(arg.TypeName());             // cannot print this type
-    }
-
-#if 0
-    // #######################################################################
-    // BEGIN MOVE TO EXTERNAL CODE
-    // #######################################################################
-
-    // =======================================================================
-    // dummy implementation of several ComputationNode derivates for experimental purposes
-    // =======================================================================
-
-    struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
-    typedef shared_ptr<Matrix> MatrixPtr;
-
-    // a ComputationNode that derives from MustFinalizeInit does not resolve some args immediately (just keeps ConfigValuePtrs),
-    // assuming they are not ready during construction.
-    // This is specifically meant to be used by DelayNode, see comments there.
-    struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
-
-    // TODO: implement ConfigRecord should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
-    struct ComputationNode : public Object, public HasToString, public HasName
-    {
-        typedef shared_ptr<ComputationNode> ComputationNodePtr;
-
-        // inputs and output
-        vector<ComputationNodePtr> m_inputs;  // these are the inputs
-        MatrixPtr m_functionValue;              // this is the result
-
-        // other
-        wstring m_nodeName;                     // node name in the graph
-        static wstring TidyName(wstring name)
-        {
-#if 0
-            // clean out the intermediate name, e.g. A._b.C -> A.C for pretty printing of names, towards dictionary access
-            // BUGBUG: anonymous ComputationNodes will get a non-unique name this way
-            if (!name.empty())
-            {
-                let pos = name.find(exprPathSeparator);
-                let left = pos == wstring::npos ? name : name.substr(0, pos);
-                let right = pos == wstring::npos ? L"" : TidyName(name.substr(pos + 1));
-                if (left.empty() || left[0] == '_')
-                    name = right;
-                else if (right.empty())
-                    name = left;
-                else
-                    name = left + exprPathSeparator + right;
-            }
-#endif
-            return name;
-        }
-        wstring NodeName() const { return m_nodeName; }        // TODO: should really be named GetNodeName()
-        /*HasName::*/ void SetName(const wstring & name) { m_nodeName = name; }
-
-        wstring m_tag;
-        void SetTag(const wstring & tag) { m_tag = tag; }
-        const wstring & GetTag() const { return m_tag; }
-
-        virtual const wchar_t * OperationName() const = 0;
-
-        ComputationNode()
-        {
-            // node nmaes are not implemented yet; use a unique node name instead
-            static int nodeIndex = 1;
-            m_nodeName = wstrprintf(L"anonymousNode%d", nodeIndex);
-            nodeIndex++;
-        }
-
-        virtual void AttachInputs(ComputationNodePtr arg)
-        {
-            m_inputs.resize(1);
-            m_inputs[0] = arg;
-        }
-        virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
-        {
-            m_inputs.resize(2);
-            m_inputs[0] = leftNode;
-            m_inputs[1] = rightNode;
-        }
-        virtual void AttachInputs(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
-        {
-            m_inputs.resize(3);
-            m_inputs[0] = arg1;
-            m_inputs[1] = arg2;
-            m_inputs[2] = arg3;
-        }
-        void AttachInputs(vector<ComputationNodePtr> && inputs, size_t num = 0/*0 means all OK*/)
-        {
-            if (num != 0 && inputs.size() != num)
-                LogicError("AttachInputs: called with incorrect number of arguments");
-            m_inputs = inputs;
-        }
-        const std::vector<ComputationNodePtr> & GetChildren() const { return m_inputs; }
-
-        /*HasToString::*/ wstring ToString() const
-        {
-            // we format it like "[TYPE] ( args )"
-            wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
-            if (!m_tag.empty())
-                result += L" {tag: " + m_tag + L"}";
-            if (m_inputs.empty()) result.append(L"()");
-            else
-            {
-                wstring args;
-                bool first = true;
-                for (auto & child : m_inputs)
-                {
-                    if (first)
-                        first = false;
-                    else
-                        args.append(L"\n");
-                    args.append(TidyName(child->NodeName()));
-                }
-                result += L" " + NestString(args, L'(', true, ')');
-            }
-            return result;
-        }
-    };
-    typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
-    struct UnaryComputationNode : public ComputationNode
-    {
-        UnaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 1); SetTag(tag); }
-    };
-    struct BinaryComputationNode : public ComputationNode
-    {
-        BinaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 2); SetTag(tag); }
-    };
-    struct TernaryComputationNode : public ComputationNode
-    {
-        TernaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 3); SetTag(tag); }
-    };
-
-#define DefineComputationNode(T,C) \
-    struct T##Node : public C##ComputationNode \
-    { \
-    T##Node(vector<ComputationNodePtr> && inputs, const wstring & tag) : C##ComputationNode(move(inputs), tag) { } \
-    /*ComputationNode::*/ const wchar_t * OperationName() const { return L#T; } \
-    };
-#define DefineUnaryComputationNode(T)   DefineComputationNode(T,Unary)
-#define DefineBinaryComputationNode(T)  DefineComputationNode(T,Binary)
-#define DefineTernaryComputationNode(T) DefineComputationNode(T,Ternary)
-    DefineBinaryComputationNode(Plus);
-    DefineBinaryComputationNode(Minus);
-    DefineBinaryComputationNode(Times);
-    DefineBinaryComputationNode(DiagTimes);
-    DefineBinaryComputationNode(Scale);
-    DefineUnaryComputationNode(Log);
-    DefineUnaryComputationNode(Sigmoid);
-    DefineUnaryComputationNode(Mean);
-    DefineUnaryComputationNode(InvStdDev);
-    DefineTernaryComputationNode(PerDimMeanVarNormalization);
-    DefineBinaryComputationNode(CrossEntropyWithSoftmax);
-    DefineBinaryComputationNode(ErrorPrediction);
-
-#if 0   // ScaleNode is something more complex it seems
-    class ScaleNode : public ComputationNode
-    {
-        double factor;
-    public:
-        PlusNode(vector<ComputationNodePtr> && inputs, const wstring & tag) : BinaryComputationNode(move(inputs), tag) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Scale"; }
-    };
-#endif
-    struct RowSliceNode : public UnaryComputationNode
-    {
-        size_t firstRow, numRows;
-    public:
-        RowSliceNode(vector<ComputationNodePtr> && inputs, size_t firstRow, size_t numRows, const wstring & tag) : UnaryComputationNode(move(inputs), tag), firstRow(firstRow), numRows(numRows) { }
-        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"RowSlice"; }
-    };
-    // Nodes deriving from RecurrentComputationNode are special in that it may involve cycles.
-    // Specifically, to break circular references, RecurrentComputationNode does not resolve its inputs arg (ComputationNodes),
-    // but rather keeps a lambda to do so later.
-    // By contract, the network builders will know to call FinalizeInit() on such nodes at the right time (before traversing its children to allow for more nodes to be created)/
-    // I.e. after construction, a RecurrentComputationNode can be referenced, but it cannot perform any operation on its inputs, since it does not know them yet.
-    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when pointers for anything this may reference
-    // from its or outer scope have been created (if those pointers involve recurrent nodes in turn, those would again resolve in their
-    // later FinalizeInit() call, which may yet again create new nodes etc.).
-    struct RecurrentComputationNode : public ComputationNode, public MustFinalizeInit
-    {
-        function<vector<ComputationNodePtr>()> GetInputsLambda;
-    public:
-        RecurrentComputationNode(function<vector<ComputationNodePtr>()> GetInputsLambda) : GetInputsLambda(GetInputsLambda) { }
-        // FinalizeInit() is called form NDLNetworkBuilder when collecting all nodes; this is where we can lazily evaluate the recurrent connections.
-        /*MustFinalizeInit::*/ void FinalizeInit()
-        {
-            vector<ComputationNodePtr> inputs = GetInputsLambda();   // this evaluates the nodes, and possibly creates local downstream pieces of the graph
-            AttachInputs(move(inputs));
-            GetInputsLambda = []() -> vector<ComputationNodePtr> { LogicError("RecurrentComputationNode::FinalizeInit: called twice"); };   // avoid it being called twice
-            // dim?
-        }
-    };
-    struct DelayNode : public RecurrentComputationNode
-    {
-        int deltaT;
-    public:
-        DelayNode(function<vector<ComputationNodePtr>()> GetInputsLambda, int deltaT, const wstring & tag) : RecurrentComputationNode(GetInputsLambda), deltaT(deltaT) { SetTag(tag); }
-        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"Delay"; }
-    };
-    class InputValue : public ComputationNode
-    {
-    public:
-        InputValue(const ConfigRecord & config) // TODO
-        {
-            config;
-        }
-        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"InputValue"; }
-    };
-    class LearnableParameter : public ComputationNode
-    {
-        size_t outDim, inDim;
-    public:
-        LearnableParameter(size_t outDim, size_t inDim, const wstring & tag) : outDim(outDim), inDim(inDim) { SetTag(tag); }
-        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
-        /*HasToString::*/ wstring ToString() const
-        {
-            return wstrprintf(L"%ls : %ls {tag: %s} (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), GetTag().c_str(), (int)outDim, (int)inDim);
-        }
-    };
-    // helper for the factory function for ComputationNodes
-    static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config, size_t expectedNumInputs, const wstring & classId/*for error msg*/)
-    {
-        vector<ComputationNodePtr> inputs;
-        let inputsArg = config[L"inputs"];
-        if (inputsArg.Is<ComputationNodeObject>())  // single arg
-            inputs.push_back(inputsArg);
-        else
-        {
-            let inputsArray = (ConfigArrayPtr)inputsArg;
-            let range = inputsArray->GetIndexRange();
-            for (int i = range.first; i <= range.second; i++)
-                inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
-        }
-        if (inputs.size() != expectedNumInputs)
-            EvaluationError(L"unexpected number of inputs to ComputationNode class " + classId, inputsArg.GetLocation());
-        return inputs;
-    }
-    // factory function for ComputationNodes
-    template<>
-    shared_ptr<Object> MakeRuntimeObject<ComputationNode>(const IConfigRecordPtr configp)
-    {
-        let & config = *configp;
-        let classIdParam = config[L"operation"];
-        wstring classId = classIdParam;
-        let tagp = config.Find(L"tag");
-        wstring tag = tagp ? *tagp : wstring();
-        // TODO: factor these GetInputs() calls out
-        if (classId == L"LearnableParameter")
-            return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"], tag);
-        else if (classId == L"Plus")
-            return make_shared<PlusNode>(GetInputs(config, 2, L"Plus"), tag);
-        else if (classId == L"Minus")
-            return make_shared<MinusNode>(GetInputs(config, 2, L"Minus"), tag);
-        else if (classId == L"Times")
-            return make_shared<TimesNode>(GetInputs(config, 2, L"Times"), tag);
-        else if (classId == L"DiagTimes")
-            return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimes"), tag);
-        // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode; need to create a Const first
-        else if (classId == L"Scale")
-            return make_shared<ScaleNode>(GetInputs(config, 2, L"Scale"), tag);
-        else if (classId == L"Log")
-            return make_shared<LogNode>(GetInputs(config, 1, L"Log"), tag);
-        else if (classId == L"Sigmoid")
-            return make_shared<SigmoidNode>(GetInputs(config, 1, L"Sigmoid"), tag);
-        else if (classId == L"Mean")
-            return make_shared<MeanNode>(GetInputs(config, 1, L"Mean"), tag);
-        else if (classId == L"InvStdDev")
-            return make_shared<InvStdDevNode>(GetInputs(config, 1, L"InvStdDev"), tag);
-        else if (classId == L"PerDimMeanVarNormalization")
-            return make_shared<PerDimMeanVarNormalizationNode>(GetInputs(config, 3, L"PerDimMeanVarNormalization"), tag);
-        else if (classId == L"RowSlice")
-            return make_shared<RowSliceNode>(GetInputs(config, 1, L"RowSlice"), (size_t)config[L"first"], (size_t)config[L"num"], tag);
-        else if (classId == L"CrossEntropyWithSoftmax")
-            return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmax"), tag);
-        else if (classId == L"ErrorPrediction")
-            return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPrediction"), tag);
-        else
-            EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
-    }
-    // factory function for RecurrentComputationNodes
-    // The difference to the above is that the children are not resolved immediately but later during network connection.
-    // This takes the record as a shared_ptr so that we can keep it inside a lambda.
-    template<>
-    shared_ptr<Object> MakeRuntimeObject<RecurrentComputationNode>(const IConfigRecordPtr configp)
-    {
-        let & config = *configp;
-        let classIdParam = config[L"class"];
-        wstring classId = classIdParam;
-        let tagp = config.Find(L"tag");
-        wstring tag = tagp ? *tagp : wstring();
-        // instead of passing the array of input nodes, we pass a lambda that computes this array in the network-gathering path in NDLComputationNetwork
-        if (classId == L"Delay")
-            return make_shared<DelayNode>([configp](){ return GetInputs(*configp, 1, L"Delay"); }, config[L"deltaT"], tag);
-        else
-            EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
-    }
-
-    // =======================================================================
-    // dummy implementations of ComputationNetwork derivates
-    // =======================================================================
-
-    // ComputationNetwork class
-    class ComputationNetwork : public Object, public IConfigRecord
-    {
-    protected:
-        map<wstring, ComputationNodePtr> m_namesToNodeMap;      // root nodes in this network; that is, nodes defined in the dictionary
-    public:
-        // pretending to be a ConfigRecord
-        /*IConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
-        {
-            id; message; RuntimeError("unknown class parameter");    // (for now)
-        }
-        /*IConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
-        {
-            id; return nullptr; // (for now)
-        }
-        /*IConfigRecord::*/ vector<wstring> GetMemberIds() const
-        {
-            return vector<wstring>();
-        }
-    };
-
-    class NDLComputationNetwork : public ComputationNetwork, public HasToString
-    {
-        set<ComputationNodePtr> inputs;     // all input nodes
-        set<ComputationNodePtr> outputs;    // all output nodes
-        set<ComputationNodePtr> parameters; // all parameter nodes
-    public:
-        NDLComputationNetwork(const IConfigRecordPtr configp)
-        {
-            let & config = *configp;
-            deque<ComputationNodePtr> workList;
-            // flatten the set of all nodes
-            // we collect all ComputationNodes from the config; that's it
-            for (let & id : config.GetMemberIds())
-            {
-                let & value = config[id];
-                if (value.Is<ComputationNodeObject>())
-                    workList.push_back((ComputationNodePtr)value);
-            }
-            // process work list
-            // Also call FinalizeInit where we must.
-            set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
-            while (!workList.empty())
-            {
-                let n = workList.front();
-                workList.pop_front();
-                // add to set
-                let res = m_namesToNodeMap.insert(make_pair(n->NodeName(), n));
-                if (!res.second)        // not inserted: we already got this one
-                    if (res.first->second != n)
-                        LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
-                    else
-                        continue;
-                // If node derives from MustFinalizeInit() then it has unresolved ConfigValuePtrs. Resolve them now.
-                // This may generate a whole new load of nodes, including nodes which in turn have late init.
-                // TODO: think this through whether it may generate delays nevertheless
-                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(n);
-                if (mustFinalizeInit)
-                    mustFinalizeInit->FinalizeInit();
-                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-                // get children
-                // traverse children (i.e., append them to the work list)
-                let children = n->GetChildren();
-                for (auto c : children)
-                {
-                    workList.push_back(c);  // (we could check whether c is in 'nodes' here to optimize, but this way it is cleaner)
-                    allChildren.insert(c);  // also keep track of all children, for computing the 'outputs' set below
-                }
-            }
-            // build sets of special nodes
-            for (auto iter : m_namesToNodeMap)
-            {
-                let n = iter.second;
-                if (n->GetChildren().empty())
-                {
-                    if (dynamic_pointer_cast<InputValue>(n))
-                        inputs.insert(n);
-                    else if (dynamic_pointer_cast<LearnableParameter>(n))
-                        parameters.insert(n);
-                    else
-                        LogicError("ComputationNetwork: found child-less node that is neither InputValue nor LearnableParameter");
-                }
-                if (allChildren.find(n) == allChildren.end())
-                    outputs.insert(n);
-            }
-            m_namesToNodeMap;
-        }
-        /*HasToString::*/ wstring ToString() const
-        {
-            wstring args;
-            bool first = true;
-            for (auto & iter : m_namesToNodeMap)
-            {
-                let node = iter.second;
-                if (first)
-                    first = false;
-                else
-                    args.append(L"\n");
-                args.append(node->ToString());
-            }
-            return L"NDLComputationNetwork " + NestString(args, L'[', true, ']');
-        }
-    };
-
-#if 0
-    // get information about configurable runtime types
-    const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
-    {
-        // lookup table for "new" expression
-        // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
-        static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
-        {
-            // ComputationNodes
-            DefineRuntimeType(ComputationNode),
-            DefineRuntimeType(RecurrentComputationNode),
-            // other relevant classes
-            DefineRuntimeType(NDLComputationNetwork),           // currently our fake
-            // glue to experimental integration
-            //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-            //{ L"Computation", MakeExperimentalComputationNodeConstructor() },
-        };
-
-        // first check our own
-        let newIter = configurableRuntimeTypes.find(typeId);
-        if (newIter != configurableRuntimeTypes.end())
-            return &newIter->second;
-        return nullptr; // not found
-    }
-#endif
-
-    // #######################################################################
-    // END MOVE TO EXTERNAL CODE
-    // #######################################################################
-#endif
-
-    // =======================================================================
-    // built-in functions (implemented as Objects that are also their value)
-    // =======================================================================
-
-    // StringFunction implements
-    //  - Format
-    //  - Chr(c) -- gives a string of one character with Unicode value 'c'
-    //  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
-    //  - Substr(s,begin,num) -- get a substring
-    // TODO: RegexReplace()
-    class StringFunction : public String
-    {
-        // actual operations that we perform
-        static wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
-        {
-            wstring res = s;
-            auto pos = res.find(what);
-            while (pos != wstring::npos)
-            {
-                res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
-                pos = res.find(what, pos + withwhat.size());
-            }
-            return res;
-        }
-        static wstring Substr(const wstring & s, int ibegin, int inum)
-        {
-            // negative index indexes from end; index may exceed
-            let begin = min(ibegin < 0 ? s.size() + ibegin : ibegin, s.size());
-            // 'num' is allowed to exceed
-            let num = min(inum < 0 ? SIZE_MAX : inum, s.size() - begin);
-            return s.substr(begin, num);
-        }
-        // TODO: RegexReplace!
-    public:
-        StringFunction(const IConfigRecordPtr & configp)
-        {
-            let & config = *configp;
-            wstring & us = *this;   // we write to this
-            let arg = config[L"arg"];
-            let whatArg = config[L"what"];
-            wstring what = whatArg;
-            if (what == L"Format")
-                us = FormatConfigValue(arg, config[L"how"]);
-            else if (what == L"Chr")
-                us = wstring(1, (wchar_t)(double)arg);
-            else if (what == L"Substr")
-                us = Substr(arg, config[L"pos"], config[L"chars"]);
-            else if (what == L"Replace")
-                us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
-            else
-                whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
-        }
-    };
-
-    // NumericFunctions
-    //  - Floor()
-    //  - Length() (of string or array)
-    class NumericFunction : public BoxOf<Double>
-    {
-    public:
-        NumericFunction(const IConfigRecordPtr & configp) : BoxOf<Double>(0.0)
-        {
-            let & config = *configp;
-            double & us = *this;   // we write to this
-            let arg = config[L"arg"];
-            let whatArg = config[L"what"];
-            wstring what = whatArg;
-            if (what == L"Floor")
-                us = floor((double)arg);
-            else if (what == L"Length")
-            {
-                if (arg.Is<String>())
-                    us = (double)((wstring&)arg).size();
-                else        // otherwise expect an array
-                {
-                    let arr = (ConfigArray)arg;
-                    let range = arr.GetIndexRange();
-                    us = (double)(range.second + 1 - range.first);
-                }
-            }
-            else
-                whatArg.Fail(L"unknown 'what' value to NumericFunction: " + what);
-        }
-    };
-
-    // =======================================================================
-    // general-purpose use Actions
-    // =======================================================================
-
-    // sample runtime objects for testing
-    class PrintAction : public Object
-    {
-    public:
-        PrintAction(const IConfigRecordPtr & configp)
-        {
-            let & config = *configp;
-            let what = config[L"what"];
-            let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
-            fprintf(stderr, "%ls\n", str.c_str());
-        }
-    };
-
-    // FailAction just throw a config error
-    class FailAction : public Object
-    {
-    public:
-        FailAction(const IConfigRecordPtr & configp)
-        {
-            let & config = *configp;
-            // note: not quite optimal yet in terms of how the error is shown; e.g. ^ not showing under offending variable
-            let messageValue = config[L"what"];
-            bool fail = true;
-            if (fail)   // this will trick the VS compiler into not issuing warning 4702: unreachable code
-                messageValue.Fail(messageValue);    // this will show the location of the message string, which is next to the Fail() call
-        }
-    };
-
+    static bool trace = false;     // set to true to enable to get debug output
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
@@ -682,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
     public:
         EvaluationException(const wstring & msg, TextLocation where) : ConfigException(msg, where) { }
-        /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
+        /*Configerror::*/ const wchar_t * kind() const override { return L"evaluating"; }
     };
 
     __declspec_noreturn static inline void EvaluationError(const wstring & msg, TextLocation where) 
@@ -760,71 +120,11 @@ namespace Microsoft { namespace MSR { namespace BS {
         return rtInfo;
     }
 
-
-    // Debug is a special class that just dumps its argument's value to log and then returns that value
-    struct Debug : public Object { Debug(const IConfigRecordPtr) { } };   // fake class type to get the template below trigger
-    template<>
-    /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
-    {
-        ConfigurableRuntimeType rtInfo;
-        rtInfo.construct = [](const IConfigRecordPtr & configp)
-        {
-            let & config = *configp;
-            let value = config[L"value"];
-            bool enabled = config[L"enabled"];
-            if (enabled)
-            {
-                wstring say = config[L"say"];
-                if (!say.empty())
-                    fprintf(stderr, "%ls\n", say.c_str());
-                let str = value.Is<String>() ? value : FormatConfigValue(value, L""); // convert to string (without formatting information)
-                fprintf(stderr, "%ls\n", str.c_str());
-            }
-            return value;
-        };
-        rtInfo.isConfigRecord = false;
-        return rtInfo;
-    }
-
     // get information about configurable runtime types
     static const ConfigurableRuntimeType * FindRuntimeTypeInfo(const wstring & typeId)
     {
-#if 1
         return ConfigurableRuntimeTypeRegister::Find(typeId);
-#else
-        // lookup table for "new" expression
-        // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
-        static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
-        {
-            // Functions
-            DefineRuntimeType(StringFunction),
-            DefineRuntimeType(NumericFunction),
-            // Actions
-            DefineRuntimeType(PrintAction),
-            DefineRuntimeType(FailAction),
-            // Special
-            DefineRuntimeType(Debug),
-        };
-
-        // first check our own internal types
-        let newIter = configurableRuntimeTypes.find(typeId);
-        if (newIter != configurableRuntimeTypes.end())
-            return &newIter->second;
-
-        // not our own type: check external types
-        return FindExternalRuntimeTypeInfo(typeId);
-#endif
     }
-
-    // register ComputationNetwork with the ScriptableObject system
-    // Functions
-    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
-    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
-    // Actions
-    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
-    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
-    // Special
-    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
 
     // -----------------------------------------------------------------------
     // name lookup
@@ -1077,7 +377,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             // expression names
             // Merge exprPath and exprId into one unless one is empty
             if (!exprPath.empty() && !exprId.empty())
-                exprPath.append(exprPathSeparator);
+                exprPath.append(L".");
             exprPath.append(exprId);
             // tracing
             if (trace)
@@ -1156,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
-                    let pos = macroId.find(exprPathSeparator);
+                    let pos = macroId.find(L".");
                     if (pos != wstring::npos)
                         macroId.erase(0, pos + 1);
                     // now evaluate the function
@@ -1401,5 +701,250 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
         return /*Evaluator().*/EvaluateParse(e);
     }
+
+    // =======================================================================
+    // built-in BrainScript functions and actions
+    // =======================================================================
+
+    // -----------------------------------------------------------------------
+    // built-in functions (implemented as Objects that are also their value)
+    // -----------------------------------------------------------------------
+
+    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how);
+
+    // StringFunction implements
+    //  - Format
+    //  - Chr(c) -- gives a string of one character with Unicode value 'c'
+    //  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
+    //  - Substr(s,begin,num) -- get a substring
+    // TODO: RegexReplace()
+    class StringFunction : public String
+    {
+        // actual operations that we perform
+        static wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
+        {
+            wstring res = s;
+            auto pos = res.find(what);
+            while (pos != wstring::npos)
+            {
+                res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
+                pos = res.find(what, pos + withwhat.size());
+            }
+            return res;
+        }
+        static wstring Substr(const wstring & s, int ibegin, int inum)
+        {
+            // negative index indexes from end; index may exceed
+            let begin = min(ibegin < 0 ? s.size() + ibegin : ibegin, s.size());
+            // 'num' is allowed to exceed
+            let num = min(inum < 0 ? SIZE_MAX : inum, s.size() - begin);
+            return s.substr(begin, num);
+        }
+        // TODO: RegexReplace!
+    public:
+        StringFunction(const IConfigRecordPtr & configp)
+        {
+            let & config = *configp;
+            wstring & us = *this;   // we write to this
+            let arg = config[L"arg"];
+            let whatArg = config[L"what"];
+            wstring what = whatArg;
+            if (what == L"Format")
+                us = FormatConfigValue(arg, config[L"how"]);
+            else if (what == L"Chr")
+                us = wstring(1, (wchar_t)(double)arg);
+            else if (what == L"Substr")
+                us = Substr(arg, config[L"pos"], config[L"chars"]);
+            else if (what == L"Replace")
+                us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
+            else
+                whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
+        }
+    };
+
+    // FormatConfigValue() -- helper to print a config value to log
+    // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
+    // TODO: change to taking a regular format string and a :: array of args that are checked. Support d,e,f,g,x,c,s (s also for ToString()).
+    // TODO: :: array. Check if that is the right operator for e.g. Haskell.
+    // TODO: turn Print into PrintF; e.g. PrintF provides 'format' arg. Printf('solution to %s is %d', 'question' :: 42)
+    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
+    {
+        size_t pos = how.find(L'%');
+        if (pos != wstring::npos)
+            RuntimeError("FormatConfigValue: format string must not contain %%");
+        if (arg.Is<String>())
+        {
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
+        }
+        else if (arg.Is<Double>())
+        {
+            let val = arg.AsRef<Double>();
+            if (val == (int)val)
+                return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
+            else
+                return wstrprintf((L"%" + how + L"f").c_str(), val);
+        }
+        else if (arg.Is<ConfigRecord>())            // TODO: should have its own ToString() method
+        {
+            let record = arg.AsPtr<ConfigRecord>();
+            let memberIds = record->GetMemberIds(); // TODO: test this after change to ids
+            wstring result;
+            bool first = true;
+            for (let & id : memberIds)
+            {
+                if (first)
+                    first = false;
+                else
+                    result.append(L"\n");
+                result.append(id);
+                result.append(L" = ");
+                result.append(FormatConfigValue((*record)[id], how));
+            }
+            return HasToString::NestString(result, L'[', true, L']');
+        }
+        else if (arg.Is<ConfigArray>())             // TODO: should have its own ToString() method
+        {
+            let arr = arg.AsPtr<ConfigArray>();
+            wstring result;
+            let range = arr->GetIndexRange();
+            for (int i = range.first; i <= range.second; i++)
+            {
+                if (i > range.first)
+                    result.append(L"\n");
+                result.append(FormatConfigValue(arr->At(i, [](const wstring &){ LogicError("FormatConfigValue: out of bounds index while iterating??"); }), how));
+            }
+            return HasToString::NestString(result, L'(', false, L')');
+        }
+        else if (arg.Is<HasToString>())
+            return arg.AsRef<HasToString>().ToString();
+        else
+            return msra::strfun::utf16(arg.TypeName());             // cannot print this type
+    }
+
+    // NumericFunctions
+    //  - Floor()
+    //  - Length() (of string or array)
+    class NumericFunction : public BoxOf<Double>
+    {
+    public:
+        NumericFunction(const IConfigRecordPtr & configp) : BoxOf<Double>(0.0)
+        {
+            let & config = *configp;
+            double & us = *this;   // we write to this
+            let arg = config[L"arg"];
+            let whatArg = config[L"what"];
+            wstring what = whatArg;
+            if (what == L"Floor")
+                us = floor((double)arg);
+            else if (what == L"Length")
+            {
+                if (arg.Is<String>())
+                    us = (double)((wstring&)arg).size();
+                else        // otherwise expect an array
+                {
+                    let arr = (ConfigArray)arg;
+                    let range = arr.GetIndexRange();
+                    us = (double)(range.second + 1 - range.first);
+                }
+            }
+            else
+                whatArg.Fail(L"unknown 'what' value to NumericFunction: " + what);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // general-purpose use Actions
+    // -----------------------------------------------------------------------
+
+    // sample runtime objects for testing
+    class PrintAction : public Object
+    {
+    public:
+        PrintAction(const IConfigRecordPtr & configp)
+        {
+            let & config = *configp;
+            let what = config[L"what"];
+            let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
+            fprintf(stderr, "%ls\n", str.c_str());
+        }
+    };
+
+    // FailAction just throw a config error
+    class FailAction : public Object
+    {
+    public:
+        FailAction(const IConfigRecordPtr & configp)
+        {
+            let & config = *configp;
+            // note: not quite optimal yet in terms of how the error is shown; e.g. ^ not showing under offending variable
+            let messageValue = config[L"what"];
+            bool fail = true;
+            if (fail)   // this will trick the VS compiler into not issuing warning 4702: unreachable code
+                messageValue.Fail(messageValue);    // this will show the location of the message string, which is next to the Fail() call
+        }
+    };
+
+    // Debug is a special class that just dumps its argument's value to log and then returns that value
+    struct Debug : public Object { Debug(const IConfigRecordPtr) { } };   // fake class type to get the template below trigger
+    template<>
+    /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
+    {
+        ConfigurableRuntimeType rtInfo;
+        rtInfo.construct = [](const IConfigRecordPtr & configp)
+        {
+            let & config = *configp;
+            let value = config[L"value"];
+            bool enabled = config[L"enabled"];
+            if (enabled)
+            {
+                wstring say = config[L"say"];
+                if (!say.empty())
+                    fprintf(stderr, "%ls\n", say.c_str());
+                let str = value.Is<String>() ? value : FormatConfigValue(value, L""); // convert to string (without formatting information)
+                fprintf(stderr, "%ls\n", str.c_str());
+            }
+            return value;
+        };
+        rtInfo.isConfigRecord = false;
+        return rtInfo;
+    }
+
+    // =======================================================================
+    // register ComputationNetwork with the ScriptableObject system
+    // =======================================================================
+
+    // Functions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<StringFunction>  registerStringFunction(L"StringFunction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<NumericFunction> registerNumericFunction(L"NumericFunction");
+    // Actions
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<PrintAction>     registerPrintAction(L"PrintAction");
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<FailAction>      registerFailAction(L"FailAction");
+    // Special
+    static ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<Debug>           registerDebug(L"Debug");
+
+    // main TODO items:
+    //  - break Evaluate() to optimize stack usage
+    //  - dictionary merging, to allow overwriting from command line
+    //     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
+    //     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
+    //     - d1 + d2 == wrapper around d1 with filter(d2)
+    //       When processing [ ] expressions inside d1, the current filter chain is applied straight away.
+    //     - model merging =
+    //        - Network exposes dictionary          // or use explicit expression new ConfigRecord(network)?
+    //        - ^^ + [ new nodes ] - [ nodes to delete ]
+    //          creates modified network
+    //        - pass into new NDLComputationNetwork
+    //     - also, any access needs to go up the chain and check for qualified matches there, and take the first
+    //       Or is that maybe the sole solution to the filter problem? [ ] + [ ] just computes a merged dict with possibly fully qualified names detected downstream?
+    //  - a way to explicitly access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
+    //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
+    //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
+    //  - name lookup should inject TextLocation into error stack
+    //  - doc strings for every parameter? E.g. LearnableParameter(rows{"Output dimension"},cols{"Input dimension"}) = new ...
+    //     - identifier become more complicated; they become a struct that carries the doc string
+    //  - expression-path problem:
+    //     - macro arg expressions get their path assigned when their thunk is created, the thunk remembers it
+    //     - however, really, the thunk should get the expression path from the context it is executed in, not the context it was created in
+    //     - maybe there is some clever scheme of overwriting when a result comes back? E.g. we retrieve a value but its name is not right, can we patch it up? Very tricky to find the right rules/conditions
 
 }}}     // namespaces

@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
             }
             // decimate MBLayout as well 
-            pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT, true);
+            pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
             for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
                 pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
 

@@ -249,7 +249,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }
 
-    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize, false);
+    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize);
 
     for (int i = 0; i < m_featureCount; i++)
     {
