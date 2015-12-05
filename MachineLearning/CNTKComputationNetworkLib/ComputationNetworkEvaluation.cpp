@@ -511,7 +511,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         todo = 0;           // returns how many nodes are to be redone
         for (auto & node : nodes)
         {
-            const auto & children = node->GetChildren();
+            const auto & children = node->GetInputs();
             const bool isLeaf = node->IsLeaf();
             // only validate a node if it has at least one child
             bool hasVisitedChild = false;
@@ -630,7 +630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (int i = 0; i < n->ChildrenSize(); i++)
             {
-                ComputationNodeBasePtr pNode = n->GetChildren()[i];
+                ComputationNodeBasePtr pNode = n->GetInputs()[i];
                 parentCount[pNode]++;
             }
         }
@@ -675,7 +675,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         for (int i = 0; i < n->ChildrenSize(); i++)
         {
-            ComputationNodeBasePtr pNode = n->GetChildren()[i];
+            ComputationNodeBasePtr pNode = n->GetInputs()[i];
             parentCount[pNode]--;
             if (parentCount[pNode] == 0)
                 pNode->ReleaseMatricesAfterEval(m_matrixPool);
@@ -735,17 +735,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
-
-#if 0
-    void ComputationNetwork::AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode)
-    {
-        std::vector<ComputationNodeBasePtr> children = parentNode->GetChildren();
-        for (int i = 0; i < children.size(); i++)
-        {
-            if (children[i]->NeedGradient())
-                children[i]->RequestMatricesBeforeGradientComp(m_matrixPool);
-        }
-    }
-#endif
 
 }}}
