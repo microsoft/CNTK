@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
-                    m_net->Evaluate(outputNodes[i]);
+                    m_net->ForwardProp(outputNodes[i]);
                     outputMatrices[outputNodes[i]->NodeName()] = (void *)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Output());
                 }
 
@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
-                    m_net->Evaluate(outputNodes[i]);
+                    m_net->ForwardProp(outputNodes[i]);
                     
                     Matrix<ElemType> & outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Output();
                     ofstream & outputStream = *outputStreams[i];

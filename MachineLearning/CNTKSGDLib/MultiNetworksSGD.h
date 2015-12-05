@@ -1163,7 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
             encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
-            encoderNet->Evaluate(encoderEvaluationNodes[0]);
+            encoderNet->ForwardProp(encoderEvaluationNodes[0]);
 
             //decoderNet->SetActualMiniBatchSizeFromFeatures();
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
@@ -1172,11 +1172,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {
-                decoderNet->Evaluate(decoderPairNodes[0]);
+                decoderNet->ForwardProp(decoderPairNodes[0]);
             }
             else
             {
-                decoderNet->Evaluate(decoderCriterionNodes[0]);
+                decoderNet->ForwardProp(decoderCriterionNodes[0]);
 
                 Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->Output(), 0, 0, localEpochCriterion, 0, 0);
 
@@ -1185,7 +1185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
-                    decoderNet->Evaluate(decoderEvaluationNodes[i]);
+                    decoderNet->ForwardProp(decoderEvaluationNodes[i]);
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->Output(), 0, 0, localEpochEvalErrors, 0, i);
                 }
 #ifdef DEBUG_DECODER

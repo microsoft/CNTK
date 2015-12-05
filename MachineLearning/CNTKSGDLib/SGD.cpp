@@ -337,11 +337,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void SGD<ElemType>::ForwardBackward(ComputationNetwork& net, 
-               const std::vector<ComputationNodeBasePtr>& evalNodes,
-               shared_ptr<ComputationNodeBase> criterionNode, 
-               bool dobackpropogate)
+                                        const std::vector<ComputationNodeBasePtr>& evalNodes,
+                                        shared_ptr<ComputationNodeBase> criterionNode, 
+                                        bool dobackpropogate)
     {
-        net.Evaluate(evalNodes);
+        // evaluate eval nodes
+        // The bulk of this evaluation is reused in ComputeGradient() below.
+        net.ForwardProp(evalNodes);
         // only compute gradient when learning rate is large enough
         if (dobackpropogate)
         {
@@ -350,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // forward prop, back-prop  --this is where the magic happens baby, what we have all be waiting for!
             // ==============================
             net.ComputeGradient<ElemType>(criterionNode);
-            // TODO: we should split Evaluate() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
+            // TODO: we should split ForwardProp() out from ComputeGradient(), then call them ForwardProp() and BackProp(), for clarity
         }
         else
         {
@@ -358,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // ==============================
             // forward prop
             // ==============================
-            net.Evaluate(criterionNode);
+            net.ForwardProp(criterionNode);
         }
     }
 
@@ -1185,7 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            net->Evaluate(nodes);
+            net->ForwardProp(nodes);
         }
         // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1645,7 +1647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //net->SetActualMiniBatchSizeFromFeatures();
             trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
             net->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
-            net->Evaluate(outputNodes[0]);   // Only evaluate the first output
+            net->ForwardProp(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Output(),
                                              pMBLayout);
@@ -1864,7 +1866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (actualMBSize2 != actualMBSize)
                         LogicError("TrainOneEpoch: refNet has different MB size than main net??");
 
-                    refNet->Evaluate(refNode);
+                    refNet->ForwardProp(refNode);
                     Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
                                                   dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->Output(),
                                                   (ElemType)(1.0 - m_adaptationRegWeight),
@@ -2660,7 +2662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
-                net->Evaluate(criterionNodes[npos]);
+                net->ForwardProp(criterionNodes[npos]);
                 //criterionNode should be a scalar
 
                 double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
@@ -2669,7 +2671,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
-                net->Evaluate(criterionNodes[npos]);
+                net->ForwardProp(criterionNodes[npos]);
 
                 // criterionNode should be a scalar
                 double mbEvalCriNeg = criterionNodes[npos]->Get00Element();

@@ -35,7 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - these must be executed frame by frame rather than as a map
     //  - such a loop is treated as if they were a little nested network; this is done inside SEQTraversalFlowControlNodes
     //  - these little nested networks are defined in m_recurrentInfo[]
-    void ComputationNetwork::Evaluate(const ComputationNodeBasePtr & rootNode)
+    void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr & rootNode)
     {
         // caller must call BuildAndValidateSubNetwork() before
         // TODO: Some places are hard to fix, e.g. encoder-decoder best-path functions. Those may be broken; this message will tell you.
@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - Evaluate() for eval nodes
         //  - ComputeGradient() for the training criterion
         // I.e. we must call Evaluate() inside here as well, but it will typically only evaluate the training criterion bits because the eval nodes already require most of the network to be computed.
-        Evaluate(rootNode);
+        ForwardProp(rootNode);
 
         // TODO: comment what the purpose/condition of this is
         if (bClearGradient)
