@@ -87,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
                 //copy the children structure but use the new nodes generated
-                for (int i = 0; i < fromNode->ChildrenSize(); i++)
+                for (int i = 0; i < fromNode->GetNumInputs(); i++)
                     toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetInputs()[i]->NodeName()));
             }
         }
@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr node = nodeIter->second;
-            for (size_t i = 0; i < node->ChildrenSize(); i++)
+            for (size_t i = 0; i < node->GetNumInputs(); i++)
             {
                 ComputationNodeBasePtr child = node->GetInputs()[i];
 
@@ -181,14 +181,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr node = nodeIter->second;
-            for (int i = 0; i < node->ChildrenSize(); i++)
+            for (int i = 0; i < node->GetNumInputs(); i++)
                 if (node->GetInputs()[i] == oldNode)
                     node->SetInput(i, newNode);
         }
 
         //change name map
         m_nameToNodeMap[nodeName] = newNode;
-        for (int i = 0; i < oldNode->ChildrenSize(); i++)
+        for (int i = 0; i < oldNode->GetNumInputs(); i++)
             newNode->SetInput(i, oldNode->GetInputs()[i]);
 
         //change other maps
@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr node = nodeIter->second;
-            for (int i = 0; i < node->ChildrenSize(); i++)
+            for (int i = 0; i < node->GetNumInputs(); i++)
                 if (node->GetInputs()[i] == oldNode)
                     node->SetInput(i, newNode);
         }
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
 
         // Replaces children.
-        for (int i = 0; i < newNode->ChildrenSize(); ++i)
+        for (int i = 0; i < newNode->GetNumInputs(); ++i)
         {
             if (m_nameToNodeMap.find(newNode->GetInputs()[i]->NodeName()) == m_nameToNodeMap.end())
                 RuntimeError("Child node does not exist.");
@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
         {
             ComputationNodeBasePtr node = nodeIter->second;
-            for (size_t i = 0; i < node->ChildrenSize(); ++i)
+            for (size_t i = 0; i < node->GetNumInputs(); ++i)
             {
                 ComputationNodeBasePtr child = node->GetInputs()[i];
                 if (child == featureNode)

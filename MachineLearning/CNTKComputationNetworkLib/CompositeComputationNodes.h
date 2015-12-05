@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            ForwardPropS(FunctionValues(), Input(0)->FunctionValues(), Input(1)->FunctionValues());
+            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
@@ -122,37 +122,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId), f1(m_deviceId);
 
-            f0 = Input(0)->FunctionValues();
-            f1 = Input(1)->FunctionValues();
-            func = FunctionValues();
+            f0 = Input(0)->Output();
+            f1 = Input(1)->Output();
+            func = Output();
 
             Input(0)->SetDims(nInput0, nT);
             Input(0)->UpdateFunctionValuesSize();
-            Input(0)->FunctionValues().SetValue(0);
-            Input(0)->FunctionValues()(0, 0) = 1;
-            Input(0)->FunctionValues()(0, 1) = 2;
-            Input(0)->FunctionValues()(0, 2) = 3;
+            Input(0)->Output().SetValue(0);
+            Input(0)->Output()(0, 0) = 1;
+            Input(0)->Output()(0, 1) = 2;
+            Input(0)->Output()(0, 2) = 3;
 
             Input(1)->SetDims(nInput1, nT);
             Input(1)->UpdateFunctionValuesSize();
-            Input(1)->FunctionValues().SetValue(0);
-            Input(1)->FunctionValues()(0, 0) = 4;
-            Input(1)->FunctionValues()(0, 1) = 5;
-            Input(1)->FunctionValues()(0, 2) = 6;
+            Input(1)->Output().SetValue(0);
+            Input(1)->Output()(0, 0) = 4;
+            Input(1)->Output()(0, 1) = 5;
+            Input(1)->Output()(0, 2) = 6;
             SetDims(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
             ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 2), 3, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 0), 4, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 1), 5, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 2), 6, EPSILON))
+            if (!ISCLOSE(Output()(0, 0), 1, EPSILON) ||
+                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Output()(0, 2), 3, EPSILON) ||
+                !ISCLOSE(Output()(3, 0), 4, EPSILON) ||
+                !ISCLOSE(Output()(3, 1), 5, EPSILON) ||
+                !ISCLOSE(Output()(3, 2), 6, EPSILON))
                 return false;
-            FunctionValues().TransferToDeviceIfNotThere(m_deviceId, true);
+            Output().TransferToDeviceIfNotThere(m_deviceId, true);
 
             GradientValues().Resize(nInput0 + nInput1, nT);
             GradientValues().SetValue(0);
@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MarkComputed(const bool hasComputed)
         {
             m_hasComputed = hasComputed;
-            CreateMatrixIfNull(m_functionValues);
+            CreateMatrixIfNull(m_output);
         }
 
         virtual bool RequiresPreCompute() const override { return true; }
@@ -226,7 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << FunctionValues();   // TODO: why serialize if not yet computed?
+            fstream << Output();   // TODO: why serialize if not yet computed?
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
@@ -276,8 +276,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
         virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
         {
-            CreateMatrixIfNull(m_functionValues); 
-            m_functionValues->SetValue(value);
+            CreateMatrixIfNull(m_output);
+            m_output->SetValue(value);
             m_hasComputed = true; 
         }
     public:
@@ -382,9 +382,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed)     // initialize accumulation
             {
                 UpdateFunctionValuesSize();
-                FunctionValues().SetValue(0);
+                Output().SetValue(0);
             }
-            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_functionValues
+            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_output
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -399,8 +399,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // set gaps to zero, since we are reducing in time
             Input(0)->MaskMissingValuesColumnsToZero(frameRange);
 
-            auto & samples = Input(0)->FunctionValues();
-            auto & avg = FunctionValues();
+            auto & samples = Input(0)->Output();
+            auto & avg = Output();
 
 #if 1//NANCHECK
             samples.HasNan("Mean-Samples");
@@ -452,7 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_mean.SetValue(0);
                 m_var.SetValue(0);
                 UpdateFunctionValuesSize();
-                FunctionValues().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
+                Output().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
             }
             else                // finalize
             {
@@ -471,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
-                FunctionValues().SetValue(m_var);
+                Output().SetValue(m_var);
             }
         }
 
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // set gaps to zero, since we are reducing in time
             Input(0)->MaskMissingValuesColumnsToZero(frameRange);
 
-            auto & samples = Input(0)->FunctionValues();
+            auto & samples = Input(0)->Output();
 #if 1//NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
@@ -563,7 +563,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->FunctionValues(), Input(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
@@ -614,12 +614,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             {
                 size_t rows = (Input(1)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
-                ValidateInferChildDims(1, rows, 1);
+                ValidateInferInputDims(1, rows, 1);
             }
 
             {
                 size_t rows = (Input(2)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(2)->GetNumRows();
-                ValidateInferChildDims(2, rows, 1);
+                ValidateInferInputDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)
@@ -674,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->FunctionValues(), Input(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
@@ -732,12 +732,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             {
                 size_t rows = Input(1)->GetNumRows() == 0 ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
-                ValidateInferChildDims(1, rows, 1);
+                ValidateInferInputDims(1, rows, 1);
             }
 
             {
                 size_t rows = Input(2)->GetNumRows() == 0? Input(0)->GetNumRows() : Input(2)->GetNumRows();
-                ValidateInferChildDims(2, rows, 1);
+                ValidateInferInputDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)
@@ -799,7 +799,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << FunctionValues();
+            fstream << Output();
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
@@ -907,13 +907,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 #if NANCHECK
-                FunctionValues().HasNan("TimeReverse");
+                Output().HasNan("TimeReverse");
 #endif
 #if DUMPOUTPUT
-                FunctionValues().Print("TimeReverseNode");
+                Output().Print("TimeReverseNode");
 #endif
 
-                m_memory.SetValue(FunctionValues());
+                m_memory.SetValue(Output());
             }
             // TODO: don't need to set m_hasCompute? Or what is it for?
         }
@@ -937,29 +937,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// backup
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
 
-            f0 = Input(0)->FunctionValues();
-            func = FunctionValues();
+            f0 = Input(0)->Output();
+            func = Output();
 
             Input(0)->SetDims(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
-            Input(0)->FunctionValues().SetValue(0);
-            Input(0)->FunctionValues()(0, 0) = 1;
-            Input(0)->FunctionValues()(0, 1) = 2;
-            Input(0)->FunctionValues()(0, 2) = 3;
+            Input(0)->Output().SetValue(0);
+            Input(0)->Output()(0, 0) = 1;
+            Input(0)->Output()(0, 1) = 2;
+            Input(0)->Output()(0, 2) = 3;
             SetDims(nOutput, nT);
             UpdateFunctionValuesSize();
-            Input(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(0)->Output().TransferToDeviceIfNotThere( m_deviceId, true);
             ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 2), 1, EPSILON))
+            if (!ISCLOSE(Output()(0, 0), 3, EPSILON) ||
+                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Output()(0, 2), 1, EPSILON))
             {
                 return false;
             }
 
-            FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Output().TransferToDeviceIfNotThere( m_deviceId, true);
 
             Input(0)->GradientValues().Resize(nOutput, nT);
             Input(0)->GradientValues().SetValue(1.0);

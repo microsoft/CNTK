@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(1);
             else //same size
             {
-                if (IsChildAnImage(0))  //when conflict, give priority to child 0
+                if (IsInputAnImage(0))  //when conflict, give priority to child 0
                     InferImageDimsFromInput(0);
                 else
                     InferImageDimsFromInput(1);
@@ -222,11 +222,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t colspExpand = rowsp * colsp / rowsc;
                 MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
-                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, FunctionValues().GetDeviceId()), false, 1, childGradientValues);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, Output().GetDeviceId()), false, 1, childGradientValues);
             }
             else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
             {
-                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, ConstOnes(1, rowsp, FunctionValues().GetDeviceId()), false, gradientValues, false, 1, childGradientValues);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, ConstOnes(1, rowsp, Output().GetDeviceId()), false, gradientValues, false, 1, childGradientValues);
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
@@ -276,7 +276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(1);
             else //same size
             {
-                if (IsChildAnImage(0))  //when conflict, give priority to child 0
+                if (IsInputAnImage(0))  //when conflict, give priority to child 0
                     InferImageDimsFromInput(0);
                 else
                     InferImageDimsFromInput(1);
@@ -312,15 +312,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)   // right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(Input(0)->FunctionValues().Get00Element(), GradientSlice(frameRange), sliceInput1Grad);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->FunctionValues()/*1x1*/, GradientSlice(frameRange), 1.0f, sliceInput1Grad);
+                //Matrix<ElemType>::ScaleAndAdd(Input(0)->Output().Get00Element(), GradientSlice(frameRange), sliceInput1Grad);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Output()/*1x1*/, GradientSlice(frameRange), 1.0f, sliceInput1Grad);
             }
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override  
         {
-            //ValueSlice(frameRange).AssignProductOf(Input(0)->FunctionValues().Get00Element(), Input(1)->ValueSlice(frameRange));
-            ValueSlice(frameRange).Assign1x1ProductOf(Input(0)->FunctionValues()/*1x1*/, Input(1)->ValueSlice(frameRange));
+            //ValueSlice(frameRange).AssignProductOf(Input(0)->Output().Get00Element(), Input(1)->ValueSlice(frameRange));
+            ValueSlice(frameRange).Assign1x1ProductOf(Input(0)->Output()/*1x1*/, Input(1)->ValueSlice(frameRange));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -417,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
-                Matrix<ElemType>::MultiplyAndAdd(Input(0)->FunctionValues(), true, sliceOutputGrad, false, sliceInput1Grad);
+                Matrix<ElemType>::MultiplyAndAdd(Input(0)->Output(), true, sliceOutputGrad, false, sliceInput1Grad);
             }
         }
 
@@ -430,9 +430,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 #if DUMPOUTPUT
-            Input(0)->FunctionValues().Print("TimesNode - Input0");
+            Input(0)->Output().Print("TimesNode - Input0");
 #endif
-            sliceOutputValue.AssignProductOf(Input(0)->FunctionValues(), false, sliceInput1Value, false);
+            sliceOutputValue.AssignProductOf(Input(0)->Output(), false, sliceInput1Value, false);
 #if NANCHECK
             sliceOutputValue.HasNan("Times");
 #endif
@@ -457,11 +457,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: use dynamic_pointer_cast
             // infer cols0 as rows1
             if (cols0 == 0 && !Input(0)->GetMBLayout() && rows1 != 0 && isFinalValidationPass)
-                ValidateInferChildDims(0, rows0, rows1);
+                ValidateInferInputDims(0, rows0, rows1);
 
             // infer rows1 as cols0
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferChildDims(1, cols0, cols1);
+                ValidateInferInputDims(1, cols0, cols1);
 
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumCols())
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Input(1)->GetNumRows(), (int)Input(0)->GetNumCols());
@@ -484,7 +484,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
         {
             //this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
-            if (m_inputs[0]->NeedGradient() && Input(1)->FunctionValues().GetMatrixType() == SPARSE)
+            if (m_inputs[0]->NeedGradient() && Input(1)->Output().GetMatrixType() == SPARSE)
             {
                 CreateMatrixIfNull(Input(0)->GradientValuesPtr());
                 Input(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
@@ -531,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
 
-                BackpropToRight(Input(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
@@ -573,7 +573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            sliceOutputValue.AssignProductOf(Input(0)->FunctionValues(), true, sliceInput1Value, false);
+            sliceOutputValue.AssignProductOf(Input(0)->Output(), true, sliceInput1Value, false);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -588,10 +588,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("TransposeTimes operation: Input(0)->GetNumRows() and Input(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             if (cols0 == 0 && rows1 != 0 && isFinalValidationPass)
-                ValidateInferChildDims(0, rows0, rows1);
+                ValidateInferInputDims(0, rows0, rows1);
 
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferChildDims(1, cols0, cols1);
+                ValidateInferInputDims(1, cols0, cols1);
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumRows())
@@ -658,7 +658,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            if (IsChildAnImage(0))  // if conflict, give priority to child 0
+            if (IsInputAnImage(0))  // if conflict, give priority to child 0
                 InferImageDimsFromInput(0);
             else
                 InferImageDimsFromInput(1);
@@ -690,11 +690,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                BackpropToLeftS(Input(1)->FunctionValues(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Output(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                BackpropToRightS(Input(0)->FunctionValues(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Input(0)->Output(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
@@ -746,7 +746,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(FunctionValues(), Input(0)->FunctionValues(), Input(1)->FunctionValues());
+            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
@@ -832,11 +832,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                BackpropToLeftS(Input(1)->FunctionValues(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Output(), Input(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                BackpropToRightS(Input(0)->FunctionValues(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
+                BackpropToRightS(Input(0)->Output(), Input(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
@@ -849,7 +849,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> sliceInput0Grad = Input(0)->GradientSlice(frameRange);
 
-                BackpropToLeftS(Input(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+                BackpropToLeftS(Input(1)->Output(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
@@ -888,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(FunctionValues(), Input(0)->FunctionValues(), Input(1)->FunctionValues());
+            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
@@ -897,7 +897,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
@@ -919,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
                 size_t cols = Input(index)->GetNumCols() == 0 ? Input(1 - index)->GetNumCols() : Input(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
+                ValidateInferInputDims(index, rows, cols);
             }
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -988,7 +988,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
                 m_rightGradient->SetValue(sliceOutputGrad);
-                m_rightGradient->ColumnElementMultiplyWith(Input(0)->FunctionValues());
+                m_rightGradient->ColumnElementMultiplyWith(Input(0)->Output());
                 sliceInput1Grad += *m_rightGradient;
             }
         }
@@ -1012,7 +1012,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
             sliceOutputValue.SetValue(sliceInput1Value);
-            sliceOutputValue.ColumnElementMultiplyWith(Input(0)->FunctionValues());
+            sliceOutputValue.ColumnElementMultiplyWith(Input(0)->Output());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1021,10 +1021,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //if dimension not specified we assume two operands' dimensions should match
             if (Input(0)->GetNumRows() == 0 && Input(1)->GetNumRows() != 0)
-                ValidateInferChildDims(0, Input(1)->GetNumRows(), 1);
+                ValidateInferInputDims(0, Input(1)->GetNumRows(), 1);
 
             if (Input(0)->GetNumRows() != 0 && Input(1)->GetNumRows() == 0)
-                ValidateInferChildDims(1, Input(0)->GetNumRows(), Input(1)->GetNumCols());
+                ValidateInferInputDims(1, Input(0)->GetNumRows(), Input(1)->GetNumCols());
 
             if (isFinalValidationPass)
             {
@@ -1102,7 +1102,7 @@ private:
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            FunctionValues().AssignSumOfElements(Input(0)->MaskedValueSlice(frameRange));  // since we are reducing over frames, we must first mask gaps in input to zero
+            Output().AssignSumOfElements(Input(0)->MaskedValueSlice(frameRange));  // since we are reducing over frames, we must first mask gaps in input to zero
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1213,14 +1213,14 @@ private:
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
 #if DUMPOUTPUT
-            Input(0)->FunctionValues().Print("TransposeNode- Input0");
+            Input(0)->Output().Print("TransposeNode- Input0");
 #endif
-            FunctionValues().AssignTransposeOf(Input(0)->FunctionValues());
+            Output().AssignTransposeOf(Input(0)->Output());
 #if NANCHECK
-            FunctionValues().HasNan("Transpose");
+            Output().HasNan("Transpose");
 #endif
 #if DUMPOUTPUT
-            FunctionValues().Print("TransposeNode");
+            Output().Print("TransposeNode");
 #endif
         }
 
@@ -1290,7 +1290,7 @@ private:
             if (!IsLeaf())
             {
                 fprintf(stderr, "(");
-                for (size_t i = 0; i < ChildrenSize(); i++)
+                for (size_t i = 0; i < GetNumInputs(); i++)
                 {
                     ComputationNodePtr child = Input(i);
                     if (i > 0)
@@ -1306,7 +1306,7 @@ private:
                         RuntimeError("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->Output().GetNumRows(), child->Output().GetNumCols());
                 }
 
                 fprintf(stderr, ")");
@@ -1331,9 +1331,9 @@ private:
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            Input(0)->FunctionValues().AssignDiagonalValuesTo(FunctionValues());
+            Input(0)->Output().AssignDiagonalValuesTo(Output());
 #if NANCHECK
-            FunctionValues().HasNan("Diagonal");
+            Output().HasNan("Diagonal");
 #endif
         }
 
@@ -1417,7 +1417,7 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-            ValidateInferBinaryChildrenDims();
+            ValidateInferBinaryInputDims();
 
 #if 0
             if (isFinalValidationPass && (Input(1)->GetNumRows() != Input(0)->GetNumRows() || (HasMBLayout() && (Input(1)->GetNumCols() != Input(0)->GetNumCols()))))
@@ -1540,10 +1540,10 @@ private:
             size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
             if (cols0 == 0 && cols1 != 0)
-                ValidateInferChildDims(0, rows0, cols1);
+                ValidateInferInputDims(0, rows0, cols1);
 
             if (cols0 != 0 && cols1 == 0)
-                ValidateInferChildDims(1, rows1, cols0);
+                ValidateInferInputDims(1, rows1, cols0);
 
             if (isFinalValidationPass && !HasMBLayout() && Input(1)->GetNumCols() != Input(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
@@ -1558,7 +1558,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, m_functionValues->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, m_output->GetNumRows(), 1);
         }
     };
 
@@ -1585,7 +1585,7 @@ private:
             if (inputIndex > 1)
                 InvalidArgument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Input(0)->FunctionValues(), Input(1)->FunctionValues(), Input(2)->FunctionValues(), Input(3)->FunctionValues(), Input(inputIndex)->GradientValues(), GradientValues());
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, Output(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(), Input(inputIndex)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -1597,7 +1597,7 @@ private:
             Matrix<ElemType> sliceInputGrad = Input(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType> sliceThisGrad = GradientSlice(frameRange);
 
-            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Input(2)->FunctionValues(), Input(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
+            BackpropToS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Input(2)->Output(), Input(3)->Output(), sliceInputGrad, sliceThisGrad);
         }
 
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
@@ -1703,7 +1703,7 @@ private:
 
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(*m_invNorm0, *m_invNorm1, FunctionValues(), Input(0)->FunctionValues(), Input(1)->FunctionValues(), Input(2)->FunctionValues(), Input(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, Output(), Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(), *m_leftTerm, *m_rightTerm);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
@@ -1713,7 +1713,7 @@ private:
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            ForwardPropS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Input(2)->FunctionValues(), Input(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
+            ForwardPropS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Input(2)->Output(), Input(3)->Output(), *m_leftTerm, *m_rightTerm);
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)
@@ -1750,14 +1750,14 @@ private:
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
                 size_t cols = Input(index)->GetNumCols() == 0 ? Input(1 - index)->GetNumCols() : Input(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
+                ValidateInferInputDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
                 size_t cols = Input(index)->GetNumCols() == 0 ? Input(1 - index)->GetNumCols() : Input(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
+                ValidateInferInputDims(index, rows, cols);
             }
 
             if (isFinalValidationPass &&

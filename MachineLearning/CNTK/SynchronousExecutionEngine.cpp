@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1"/*disabled*/);
 
                 if (!_wcsicmp(initString.c_str(), L"fixedValue"))
-                    nodePtr->FunctionValues().SetValue(value);
+                    nodePtr->Output().SetValue(value);
                 else if (!_wcsicmp(initString.c_str(), L"uniform"))
                     m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
                 else if (!_wcsicmp(initString.c_str(), L"gaussian"))
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType value = node->GetOptionalParameter("value", "0");
                 
                 if (!_wcsicmp(initString.c_str(), L"fixedValue"))
-                    nodePtr->FunctionValues().SetValue(value);
+                    nodePtr->Output().SetValue(value);
                 else if (!_wcsicmp(initString.c_str(), L"uniform"))
                     m_net->InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
                 else if (!_wcsicmp(initString.c_str(), L"gaussian"))
@@ -239,10 +239,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodePtr = builder.CreateLearnableParameter(name, rows, cols);
                 nodePtr->SetParameterUpdateRequired(false);
             }
-            else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
+            else if (pass == ndlPassFinal || nodePtr->Output().GetNumElements() != 0)
             {
                 ElemType val = parameter[0]->GetScalar();
-                nodePtr->FunctionValues().SetValue(val);
+                nodePtr->Output().SetValue(val);
             }
         }
         else if (cnNodeType == OperationNameOf(RowSliceNode))

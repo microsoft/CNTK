@@ -116,8 +116,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodeBasePtr nodePtr = nodeIter->second;
-            fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
-            for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
+            fstream << nodePtr->NodeName() << nodePtr->GetNumInputs();
+            for (size_t i = 0; i < nodePtr->GetNumInputs(); i++)
             {
                 if (!nodePtr->Input(i))
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
@@ -425,21 +425,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: this is a bit ugly, but does SetNodeValue() really belong here?
         if (IsNodePtr<LearnableParameter<float>>(pNode))
-            AsNodePtr<LearnableParameter<float>>(pNode)->FunctionValues().SetValue((float)value);
+            AsNodePtr<LearnableParameter<float>>(pNode)->Output().SetValue((float)value);
         else if (IsNodePtr<LearnableParameter<double>>(pNode))
-            AsNodePtr<LearnableParameter<double>>(pNode)->FunctionValues().SetValue((double)value);
+            AsNodePtr<LearnableParameter<double>>(pNode)->Output().SetValue((double)value);
         else if (pNode->RequiresPreCompute())
         {
             if (IsNodePtr<PreComputedNode<float>>(pNode))
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
-                preComputedNode->FunctionValues().SetValue((float)value);
+                preComputedNode->Output().SetValue((float)value);
                 preComputedNode->MarkComputed(true);
             }
             else
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
-                preComputedNode->FunctionValues().SetValue((double)value);
+                preComputedNode->Output().SetValue((double)value);
                 preComputedNode->MarkComputed(true);
             }
         }
@@ -998,7 +998,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!ptr)
                     continue;
 
-                Matrix<ElemType> W = ptr->FunctionValues();
+                Matrix<ElemType> W = ptr->Output();
                 if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
                     continue;
 
@@ -1032,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //========================================
                 // Step 1. do SVD decomposition
                 //========================================
-                Matrix<ElemType> A = pNode->FunctionValues();
+                Matrix<ElemType> A = pNode->Output();
 
                 // it is a vector, no need to do it
                 if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
@@ -1112,8 +1112,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<ComputationNode<ElemType>> pLeft =  AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName,  m, r));
                 shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-                pLeft->FunctionValues() = redU;
-                pRight->FunctionValues() = redVT;
+                pLeft->Output() = redU;
+                pRight->Output() = redVT;
 
                 shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
