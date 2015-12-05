@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include "Basics.h"
 #include <string>
 #include <stdint.h>
 
@@ -47,12 +48,6 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
 #define LZERO  -10e10
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
-
-#define NOT_IMPLEMENTED \
-    {   \
-    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    LogicError("Not Implemented"); \
-    }
 
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int  //to be consistent with cuSparse but limited the possible size of the matrix.

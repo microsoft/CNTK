@@ -83,6 +83,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 #pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+
+#ifndef NOT_IMPLEMENTED
+#define NOT_IMPLEMENTED \
+{   \
+    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+}
+#endif
+
 }}}
 
 #ifndef _MSC_VER
