@@ -28,14 +28,6 @@
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
-#ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED \
-{   \
-    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    LogicError("Not Implemented"); \
-}
-#endif
-
 #pragma warning (disable: 4267)
 
 // version number to control how to read and write 

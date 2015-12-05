@@ -13,9 +13,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // TensorShape -- tensor descriptor to describe the inner layout of a data vector that holds a tensor
+    // TensorShape -- tensor descriptor to describe the inner layout of a sample vector that holds a tensor
     //
-    // Minibatches are stored as Matrices. While the column dimension represents multiple data vectors, and may have
+    // Minibatches are stored as Matrix objects. While the column dimension represents multiple sample vectors, and may have
     // an inner structure (time, parallel sequences) described by the MBLayout, the row dimension represents data
     // vectors that hold tensors of data.
     //
@@ -23,14 +23,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //
     // Specifically, when the image is an image, then this is a 3-dimensional tensor with dimensions ( channels, width, height ),
     // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores (R,G,B) as a float3.
-    //
-    // BUGBUG: Tensors with other than 3 dimensions can currently not be used because they cannot be serialized with the current file format.
     // -----------------------------------------------------------------------
 
-    // TODO: really support lengths other than 3, e.g. fix serialization code to handle variable-length descriptors
-    // TODO: rename to DataLayout
     // TODO: must match ComputationNode::m_numRows; or, rather, the TensorShape is how m_numRows is stored??
-    // TODO: move this elsewhere, maybe a separate header Tensors.h?
     struct TensorShape
     {
     public:
