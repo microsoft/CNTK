@@ -1,108 +1,183 @@
-######################
-1. User Manual
-######################
+##############################################################################
+#                                                                            #
+#                                    CNTK                                    #
+#                                                                            #
+##############################################################################
 
-The detailed introduction of the computational network and its implementation as well as the user manual of the computational network toolkit (CNTK) can be found at
+-------------------------------
+1. Documentation
+-------------------------------
 
-Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott Cyphers, Jasha Droppo, Adam Eversole, Brian Guenter, Mark Hillebrand, Xuedong Huang, Zhiheng Huang, Vladimir Ivanov, Alexey Kamenev, Philipp Kranen, Oleksii Kuchaiev, Wolfgang Manousek, Avner May, Bhaskar Mitra, Olivier Nano, Gaizka Navarro, Alexey Orlov, Marko Padmilac, Hari Parthasarathi, Baolin Peng, Alexey Reznichenko, Frank Seide, Michael L. Seltzer, Malcolm Slaney, Andreas Stolcke, Huaming Wang, Kaisheng Yao, Dong Yu, Yu Zhang, Geoffrey Zweig (in alphabetical order), "An Introduction to Computational Networks and the Computational Network Toolkit", Microsoft Technical Report MSR-TR-2014-112, 2014.
+The detailed introduction of the Computational Network and its
+implementation as well as the user manual of the Computational Network
+Toolkit (CNTK) can be found at
 
-YOu can also check Examples and Demos under the ExampleSetups folder.
+    "An Introduction to Computational Networks and the Computational
+    Network Toolkit"
 
-Note: For builds before May 18, 2015 the executable is called cn which is now changed to cntk.
+    by Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott
+    Cyphers, Jasha Droppo, Adam Eversole, Brian Guenter, Mark
+    Hillebrand, Xuedong Huang, Zhiheng Huang, Vladimir Ivanov, Alexey
+    Kamenev, Philipp Kranen, Oleksii Kuchaiev, Wolfgang Manousek,
+    Avner May, Bhaskar Mitra, Olivier Nano, Gaizka Navarro, Alexey
+    Orlov, Hari Parthasarathi, Baolin Peng, Marko Radmilac, Alexey
+    Reznichenko, Frank Seide, Michael L. Seltzer, Malcolm Slaney,
+    Andreas Stolcke, Huaming Wang, Kaisheng Yao, Dong Yu, Yu Zhang, and
+    Geoffrey Zweig (in alphabetical order)
 
-There are also four files in the documentation directory of the source that contain additional details.
+    Microsoft Technical Report MSR-TR-2014-112, 2014.
 
-######################
-2. Clone Source Code (Windows)
-######################
+    Available through Codeplex and inside the repository.
+
+For Examples and Demos see the ExampleSetups/ folder.
+
+There are also four files in the Documentation/ directory of the source
+that contain additional details.
+
+
+-------------------------------
+2. Cloning the Source Code (Windows)
+-------------------------------
 
 The CNTK project uses Git as the source version control system.
 
-If you have Visual Studio 2013 installed Git is already available. You can follow the "Clone a remote Git repository from a third-party service" section in Set up Git on your dev machine (configure, create, clone, add) and connect to https://git01.codeplex.com/cntk to clone the source code. We found that installing Git Extension for VS is still helpful esp. for new users.
+If you have Visual Studio 2013 installed, Git is already
+available. You can follow the "Clone a remote Git repository from a
+third-party service" section under Set up Git on your dev machine
+(configure, create, clone, add) and connect to
+https://git01.codeplex.com/cntk to clone the source code. We found
+that installing Git Extension for VS is still helpful esp. for new
+users.
 
-Otherwise you can install Git for your OS from the  Using Git with CodePlex page and clone the CNTK source code with the command "git clone https://git01.codeplex.com/cntk".
+Otherwise you can install Git for your OS from the Using Git with
+CodePlex page and clone the CNTK source code with the command
 
-######################
-3. Clone Source Code (Linux/mac)
-######################
+    git clone https://git01.codeplex.com/cntk
 
-For the linux user please replace "git01" to "git" (otherwise you will get an RPC error):
 
-git clone https://git.codeplex.com/cntk 
+-------------------------------
+3. Cloning Source Code (Linux/Mac)
+-------------------------------
 
-More detail you can follow this thread: http://codeplex.codeplex.com/workitem/26133
+Linux users should clone from this URL: https://git.codeplex.com/cntk
 
-######################
-4. Windows Visual Studio Setup (CNTK only runs on 64-bit OS)
-######################
+    git clone https://git.codeplex.com/cntk
 
-# 4.1 Install Visual Studio 2013. After installation make sure to install Update 5 or higher: Go to menu Tools -> Extensions and Updates -> Updates -> Product Updates -> Visual Studio 2013 Update 5 (or higher if applicable) 
+More detail you can follow this thread:
+http://codeplex.codeplex.com/workitem/26133
 
-# 4.2 Install CUDA 7.0 from  https://developer.nvidia.com/cuda-toolkit-70. 
-# 4.3 Install NVIDIA CUB from https://github.com/NVlabs/cub/archive/1.4.1.zip Unzip the archive. 
-      Set environment variable CUB_PATH to CUB folder, e.g.:
-          CUB_PATH=c:\src\cub-1.4.1 
 
-# 4.4 Install ACML 5.3.1 or above (specifically the ifort64 variant, e.g., acml5.3.1-ifort64.exe) from  http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/. Before launching Visual Studio set the system environment variable e.g.:
-      ACML_PATH=C:\AMD\acml5.3.1\ifort64_mp
-or the folder you installed acml. (The easiest way to do this on Windows 8 is to press the windows key, and then in the metro interface start typing: edit environment variables.) 
-If you are running on an Intel processor with FMA3 support, we also advise to set ACML_FMA=0 in your environment to work around issue in the ACML library. 
+-------------------------------
+4. Windows Visual Studio Setup (64-bit OS only)
+-------------------------------
 
-#  4.5 Alternatively if you have an MKL license, you can install Intel MKL library instead of ACML from https://software.intel.com/en-us/intel-math-kernel-library-evaluation-options and define USE_MKL in the CNTKMath project. MKL is faster and more reliable on Intel chips if you have the license. 
+Install Visual Studio 2013. After installation make sure to
+install Update 5 or higher: Go to menu Tools -> Extensions and
+Updates -> Updates -> Product Updates -> Visual Studio 2013 Update 5
+(or higher if applicable)
 
-#  4.6 Install the latest Microsoft MS-MPI SDK and runtime from  https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx 
+Install CUDA 7.0 from
 
-#  4.7 If you want to use ImageReader, install OpenCV v3.0.0: Download and install OpenCV v3.0.0 for Windows from http://opencv.org/downloads.html 
-Set OPENCV_PATH environment variable to OpenCV build folder (e.g. C:\src\opencv\build) 
+    https://developer.nvidia.com/cuda-toolkit-70
 
-#  4.8 Load the CNTKSolution and build the cntk project. 
+and NVidia CUB from
 
-######################
+    https://github.com/NVlabs/cub/archive/1.4.1.zip
+
+by unzipping the archive and setting environment variable CUB_PATH to the location, e.g.:
+
+    CUB_PATH=c:\src\cub-1.4.1
+
+The easiest way to set a global environment variable is to press the windows
+key, and then in the search interface start typing: edit environment
+variables. Then close and reopen CMD shells and Visual Studio.
+
+Install ACML 5.3.1 or above (specifically the ifort64_mp variant, e.g.,
+acml5.3.1-ifort64.exe) from
+
+    http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
+
+Before launching Visual Studio, set environment variable ACML_PATH, to
+the folder you installed the library to, e.g.
+
+    ACML_PATH=C:\AMD\acml5.3.1\ifort64_mp
+
+If you are running on an Intel processor with FMA3 support, we also
+advise to set ACML_FMA=0 in your environment to work around an issue in
+the ACML library.
+
+Alternatively if you have an MKL license, you can install Intel MKL
+library instead of ACML from
+
+    https://software.intel.com/en-us/intel-math-kernel-library-evaluation-options
+
+and define USE_MKL in the CNTKMath project. MKL is faster and more
+reliable on Intel chips if you have the license.
+
+Install the latest Microsoft MS-MPI SDK and runtime from
+
+    https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx
+
+If you want to use ImageReader, install OpenCV v3.0.0. Download and
+install OpenCV v3.0.0 for Windows from
+
+    http://opencv.org/downloads.html
+
+Set environment variable OPENCV_PATH to the OpenCV build folder, e.g.
+
+    C:\src\opencv\build
+
+Open the CNTKSolution and build the CNTK project.
+
+Note: If you make modifications to the code, please first disable the
+insertion of TAB characters. If you use Visual Studio as your editor,
+goto Tools|Options|Text Editor|C/C++|Tabs and make sure it is set to
+Smart Indenting Tab, Indent Size set to 4, and "Insert Spaces" option
+selected. You can also load the CppCntk.vssettings file (in the CNTK
+home directory) which contains settings for C++ editor. To
+import/export the settings, use Tools -> Import and Export
+Settings... Visual Studio menu option.
+
+Please do *not* auto-format existing code (Edit -> Advanced -> Format
+Document/Ctrl+E,D).
+
+
+-------------------------------
 5. Linux GCC Setup
-######################
+ -------------------------------
 
-# 5.1 install needed libraries as indicated in section 4 on your Linux box.
+Install needed libraries as indicated in the Windows section above on
+your Linux box. You need GCC 4.8.4 or above.
 
-# 5.2 create a directory to build in and make a Config.make in the directory
-      that provides
-      ACML_PATH= path to ACML library installation
-        only needed if MATHLIB=acml
-      MKL_PATH= path to MKL library installation
-        only needed if MATHLIB=mkl
-      GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-        defaults to /usr
-      BUILDTYPE= One of release or debug
-        defaults to release
-      MATHLIB= One of acml or mkl
-        defaults to acml
-      CUDA_PATH= Path to CUDA
-        If not specified, GPU will not be enabled
-      CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
-        defaults to /usr/local/cub-1.4.1
-      KALDI_PATH= Path to Kaldi
-        If not specified, Kaldi plugins will not be built
-      OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
-        defaults to /usr/local/opencv-3.0.0
+Create a directory to build in and make a Config.make in the
+directory that provides:
+
+   * ACML_PATH= path to ACML library installation (only if MATHLIB=acml)
+
+   * MKL_PATH= to MKL library installation (only if MATHLIB=mkl)
+
+   * GDK_PATH= path to cuda gdk installation, such that
+$(GDK_PATH)/include/nvidia/gdk/nvml.h exists (defaults to /usr)
+
+   * BUILDTYPE= release (default) or debug
+
+   * MATHLIB= acml (default) or mkl
+
+   * CUDA_PATH= path to CUDA (if not specified, GPU will not be
+enabled)
+
+  * CUB_PATH= path to NVidia CUB installation, such that the
+file $(CUB_PATH)/cub/cub.cuh exists (defaults to /usr/local/cub-1.4.1)
+
+  * KALDI_PATH= Path to Kaldi (if not specified, Kaldi plugins will
+not be built)
+
+  * OPENCV_PATH= path to OpenCV 3.0.0 installation, such that the
+directory $(OPENCV_PATH) exists (defaults to /usr/local/opencv-3.0.0)
  
-# 5.3 Build the clean version with command 
-      make -j all
+Build the clean version with command
 
+    make -j all
 
-######################
-6. Coding Standard
-######################
-
-No TABs. Each TAB should be replaced with 4 spaces in the source code. If you use Visual Studio as your editor, goto Tools|Options|Text Editor|C/C++|Tabs and make sure it is set to Smart Indenting Tab and Indent Size set to 4, and "Insert Spaces" option selected. 
-Follow the same naming conventions as shown in the ComputationNetwork.h file. 
-Open/close braces should be on lines by themselves aligned with previous code indent level, e.g., 
-
-           if (true) 
-            { 
-                Function(); 
-            }
-
-If you are using Visual Studio 2013 as your main development environment, you can load the CppCntk.vssettings file (in the CNTK home directory) which contains settings for C++ editor with defaults like using spaces for tabs, curly brace positioning and other preferences that meet CNTK style guidelines. Note that this file will not change any other settings, like your windows layout etc but it's still a good idea to backup your current settings just in case.
-
-To import/export the settings, use Tools -> Import and Export Settings... Visual Studio menu option.
-
-Once the settings are loaded, you can use Edit -> Advanced -> Format Document (or Ctrl+E,D shortcut) or, which is recommended, Edit -> Advanced -> Format Selection (or Ctrl+E,F shortcut) to format only selected fragment.
+Note: If you make modifications to the code, please first disable the
+insertion of TAB characters in your editor.

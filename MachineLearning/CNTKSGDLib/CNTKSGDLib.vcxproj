@@ -155,7 +155,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
+    <ClInclude Include="..\..\Common\Include\Config.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataTensor.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
@@ -198,7 +198,10 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\ConfigFile.cpp" />
+    <ClCompile Include="..\..\Common\Config.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\Common\DataWriter.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">

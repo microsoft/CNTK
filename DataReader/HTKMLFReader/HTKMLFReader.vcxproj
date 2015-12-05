@@ -105,6 +105,7 @@
     <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="basetypes.h" />
     <ClInclude Include="biggrowablevectors.h" />
+    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h" />
     <ClInclude Include="chunkevalsource.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />

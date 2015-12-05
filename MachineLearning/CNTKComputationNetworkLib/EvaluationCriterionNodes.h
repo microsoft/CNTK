@@ -38,11 +38,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
-            Input(0)->OutputFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-            Input(1)->OutputFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
-            MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
-            MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+            FrameRange fr(Input(0)->GetMBLayout());
+            Input(0)->OutputFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+            Input(1)->OutputFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+            MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), fr);
+            MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
             Output().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
         #if NANCHECK
             Output().HasNan("ErrorPrediction");
@@ -91,9 +91,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_maxIndexes0, matrixPool);
             RequestMatrixFromPool(m_maxIndexes1, matrixPool);
             RequestMatrixFromPool(m_maxValues, matrixPool);
@@ -101,9 +101,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterEval(matrixPool);
+            Base::ReleaseMatricesAfterForwardProp(matrixPool);
             ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
             ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
             ReleaseMatrixToPool(m_maxValues, matrixPool);

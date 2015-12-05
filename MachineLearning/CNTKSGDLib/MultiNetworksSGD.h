@@ -18,7 +18,7 @@
 #include <string>
 #include <stdexcept>
 #include "fileutil.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include <chrono> 
 #include <random>
 #include "TimerUtility.h"
@@ -1209,13 +1209,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < pairNodes.size(); i++)
             {
                 for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientOfAllNodes(*ptr);
+                    networks[i]->ZeroGradients(*ptr);
             }
 
             for (size_t i = 0; i < criterionNodes.size(); i++)
             {
                 for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientOfAllNodes(*ptr);
+                    networks[i]->ZeroGradients(*ptr);
             }
 
             for (auto ptr = criterionNodes[inetworks - 1]->begin(); ptr != criterionNodes[inetworks - 1]->end(); ptr++)
@@ -1223,12 +1223,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (ptr == criterionNodes[inetworks - 1]->begin())
                 {
                     networks[inetworks - 1]->ForwardProp(*ptr);
-                    networks[inetworks - 1]->Backprop<ElemType>(*ptr);
+                    networks[inetworks - 1]->Backprop(*ptr);
                 }
                 else
                 {
                     networks[inetworks - 1]->ForwardProp(*ptr);
-                    networks[inetworks - 1]->Backprop<ElemType>(*ptr, false, nullptr, false);
+#if 1               // disable this, so that we can remove the options from Backprop() (trivial to bring back if ever needed)
+                    NOT_IMPLEMENTED;
+#else
+                    // This is the old signature of Backprop()
+                    // void Backprop(const ComputationNodeBasePtr rootNode, bool /*bResetToOne*/, bool /*bClearGradient*/)
+                    networks[inetworks - 1]->Backprop(*ptr, false, false);
+#endif
                 }
             }
 
@@ -1241,7 +1247,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                     {
                         networks[i]->ForwardProp(*ptr);
-                        networks[i]->Backprop<ElemType>(*ptr, true, nullptr, false);
+#if 1
+                        NOT_IMPLEMENTED;
+#else
+                        networks[i]->Backprop(*ptr, true, false);
+#endif
                     }
                 }
                 else if (pairNodes[i]->size() > 0)
@@ -1250,7 +1260,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
                     {
                         networks[i]->ForwardProp(*ptr);
-                        networks[i]->Backprop<ElemType>(*ptr, false, nullptr, false);
+#if 1
+                        NOT_IMPLEMENTED;
+#else
+                        networks[i]->Backprop(*ptr, false, false);
+#endif
                     }
                 }
             }

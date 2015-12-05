@@ -6,9 +6,6 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="UCIFastReader.cpp" />
     <ClCompile Include="UCIParser.cpp" />
-    <ClCompile Include="..\..\Common\ConfigFile.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -22,6 +19,9 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -46,6 +46,9 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

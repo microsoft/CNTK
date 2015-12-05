@@ -5,6 +5,8 @@
 //
 #pragma once
 
+// This file represents the beginning of moving actions out from CNTK.cpp to make them accessible as a library. To be continued...
+
 #include "ScriptableObjects.h"
 #include "File.h"
 
@@ -16,7 +18,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    class ActionsBase : public ScriptableObjects::Object        //, public ScriptableObjects::CanDo   --we call Do() method on actions
+    class ActionsBase : public ScriptableObjects::Object
     {
     };
 

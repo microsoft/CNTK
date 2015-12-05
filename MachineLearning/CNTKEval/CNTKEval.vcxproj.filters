@@ -2,9 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="CNTKEval.cpp" />
-    <ClCompile Include="..\..\Common\ConfigFile.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\Eval.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -25,6 +22,9 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +57,9 @@
     </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Config.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

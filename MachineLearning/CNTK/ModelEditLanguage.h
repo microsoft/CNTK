@@ -6,7 +6,7 @@
 #pragma once
 
 #include "Basics.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
