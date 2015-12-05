@@ -1134,7 +1134,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
 #pragma region MatrixQuantizerGPU functions
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync)
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync)
     {
     }
 
@@ -1165,21 +1165,19 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
 #pragma endregion MatrixQuantizerGPU functions
 
-#pragma region MainComputeStreamEvent functions
+#pragma region GPUMatrixComputeStreamEvent functions
 
-    MainComputeStreamEvent::MainComputeStreamEvent()
+    GPUMatrixComputeStreamEvent::GPUMatrixComputeStreamEvent(int deviceId)
+        : MatrixComputeStreamEvent(deviceId)
     {
     }
 
-    MainComputeStreamEvent::~MainComputeStreamEvent()
-    {
-    }
+    GPUMatrixComputeStreamEvent::~GPUMatrixComputeStreamEvent() { };
+    void GPUMatrixComputeStreamEvent::SynchronizeEvent() { };
+    template <typename ElemType>
+    void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent() { };
 
-    void MainComputeStreamEvent::Synchronize()
-    {
-    }
-
-#pragma endregion MainComputeStreamEvent functions
+#pragma endregion GPUMatrixComputeStreamEvent functions
 
     template class GPUMatrix<char>;
     template class GPUMatrix<float>;
