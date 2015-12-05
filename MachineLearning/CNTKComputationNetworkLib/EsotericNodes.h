@@ -51,9 +51,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
             {
-                auto gradient = Input(2)->GradientSlice(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Input(1)->ValueSlice(frameRange), gradient);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Input(1)->ValueSlice(frameRange), 1.0f, gradient);
+                auto gradient = Input(2)->GradientFor(frameRange);
+                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Input(1)->OutputFor(frameRange), gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Input(1)->OutputFor(frameRange), 1.0f, gradient);
             }
         }
 
@@ -339,13 +339,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 2)
                 return;     // that's a constant
 
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange);
 
             if (m_strideDim == 1) // column stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
 
                     //BackpropToLeft1(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
 
@@ -370,7 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange);
 
                     //BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
 
@@ -395,7 +395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
@@ -418,7 +418,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(frameRange);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             size_t rows0 = Input(0)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-            Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
+            Matrix<ElemType> sliceInput1Value = Input(1)->OutputFor(frameRange);
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
@@ -505,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_strideDim == 1)       // TODO: no else??
                 SetDims(rows0, cols1);
 
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange);
 
             // (TODO: these following assignments are leftovers of refactoring and can be short-circuited)
             Matrix<ElemType>& functionValues = sliceOutputValue;

@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: comment what the purpose/condition of this is
         if (bClearGradient)
-            ClearGradientForAllNodes(rootNode);     // reset m_completedGradient, which is meant to make sure each gradient is computed only once. Only used for recurrence, actually.
+            ClearGradientOfAllNodes(rootNode);     // reset m_completedGradient, which is meant to make sure each gradient is computed only once. Only used for recurrence, actually.
 
         // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
         // The normal case is with the top root with a scalar gradient value of 1.0. This assumes a single and closure network. 
@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
-        GetOuterLoopNode(rootNode)->ComputeGradientForChildren(FrameRange(nullptr), true, true);
+        GetOuterLoopNode(rootNode)->ComputeGradientOfChildren(FrameRange(nullptr), true, true);
 
         // Since we allow sharing of the matrix for function value and gradient value. the function values are destroyed
         // after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
@@ -148,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         // process nodes in pre-determined order
@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & node = *pnode;
 
             node->BeginBackprop();
-            node->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node->ComputeGradientOfChildren(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
             node->EndBackprop();
         }
     }
@@ -229,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node2->BeginBackprop();
     }
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ComputeGradientOfChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         const auto & recurrentNodes = m_nestedNodes;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
@@ -240,8 +240,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
             {
                 auto & node2 = *nodeIter2;
-                node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
-                // The above flags tell ComputeGradientForChildren() to skip back-propagation from inside a node into
+                node2->ComputeGradientOfChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
+                // The above flags tell ComputeGradientOfChildren() to skip back-propagation from inside a node into
                 // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
             }
         }
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
-            node2->ComputeGradientForChildren(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node2->ComputeGradientOfChildren(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 
         // tell all nodes we are done for this iteraTion

@@ -560,8 +560,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
@@ -671,8 +671,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
@@ -882,8 +882,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t nT = GetNumTimeSteps();
             for (size_t t = 0; t < nT; t++)
             {
-                Matrix<ElemType>  g =            GradientSlice(FrameRange(GetMBLayout(), t));
-                Matrix<ElemType> ig = Input(0)->GradientSlice(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
+                Matrix<ElemType>  g =           GradientFor(FrameRange(GetMBLayout(), t));
+                Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
                 ig += g;
             }
         }
@@ -902,8 +902,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
                 {
-                    Matrix<ElemType> v = Input(0)->ValueSlice(FrameRange(Input(0)->GetMBLayout(), t));
-                    ValueSlice(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
+                    Matrix<ElemType> v = Input(0)->OutputFor(FrameRange(Input(0)->GetMBLayout(), t));
+                    OutputFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
                 }
 
 #if NANCHECK

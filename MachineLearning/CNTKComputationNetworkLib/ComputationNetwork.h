@@ -13,15 +13,13 @@
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
+//     Evaluate(), ComputeGradient()
 //     frameRange                   -> t                    // make it more lightweight
-//     DataSlice(frameRange)        -> DataFor(t)           // also more lightweight; 'slice' is an implementation detail
-//     ValueSlice(.)                -> OutputFor(t)
-//     GradientSlice(.)             -> GradientFor(t)
 //  - finish the job:
 //     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
 //  - known issues that need actual test cases to be fixed:
-//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataSlice() not being able to return whole sequences
+//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
 //     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
@@ -79,9 +77,9 @@ protected:
         virtual void ForwardProp(const FrameRange &) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientOfChildren() instead
         virtual void EndBackprop() override;
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
@@ -122,9 +120,9 @@ protected:
         virtual void ForwardProp(const FrameRange &) override;
         virtual void EndForwardProp() override { }
         virtual void BeginBackprop() override { }
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientOfChildren() instead
         virtual void EndBackprop() override { }
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
@@ -852,15 +850,12 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
+    void ClearGradientOfAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
 
         for (auto &node : allNodes)
-            node->ClearGradientForInputs();
-
-        //for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
-        //    recInfo->m_completedGradient = false;
+            node->ClearGradientOfInputs();
     }
 
     // -----------------------------------------------------------------------

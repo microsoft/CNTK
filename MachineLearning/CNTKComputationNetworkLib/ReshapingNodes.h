@@ -86,8 +86,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We operate on the 'to' layout, frameRange refers to result, not the input.
             // The input layout is different, but reshaping the input to output dimensions will allow us to pull out the right values anyway.
             auto from0      = from.Reshaped(to.GetNumRows(), to.GetNumCols());   // we operate on 'to' layout
-            auto fromSlice0 = DataSliceWithMBLayout(from0, frameRange, pMBLayout);
-            auto   toSlice0 = DataSliceWithMBLayout(to,    frameRange, pMBLayout);
+            auto fromSlice0 = DataWithMBLayoutFor(from0, frameRange, pMBLayout);
+            auto   toSlice0 = DataWithMBLayoutFor(to,    frameRange, pMBLayout);
             // now we got views on the right ranges of values, but with weird dimensions
 
             // reshape them into a unified view with D being the row dimension, and (S,M,K,T) the column dimension
@@ -108,9 +108,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This function is the inverse of Stack(). See comments there and exchange from and to.
         static void Unstack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
-            auto fromSlice0 = DataSliceWithMBLayout(from, frameRange, pMBLayout);
+            auto fromSlice0 = DataWithMBLayoutFor(from, frameRange, pMBLayout);
             auto   to0      = to.Reshaped(from.GetNumRows(), from.GetNumCols());
-            auto   toSlice0 = DataSliceWithMBLayout(to0, frameRange, pMBLayout);
+            auto   toSlice0 = DataWithMBLayoutFor(to0, frameRange, pMBLayout);
 
             size_t    D = to.GetNumRows();
             size_t SMKT = to.GetNumCols();
@@ -439,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Input(0)->GradientSlice(frameRange.WithLayout(Input(0)->GetMBLayout())) += GradientSlice(frameRange);
+            Input(0)->GradientFor(frameRange.WithLayout(Input(0)->GetMBLayout())) += GradientFor(frameRange);
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
@@ -454,7 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
             // copy the data from 'dataInput'
-            ValueSlice(frameRange).SetValue(Input(0)->ValueSlice(frameRange.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
+            OutputFor(frameRange).SetValue(Input(0)->OutputFor(frameRange.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
         }
 
@@ -521,12 +521,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Input(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_sliceHeight);
+            Input(0)->GradientFor(frameRange).AddToRowSliceValuesOf(GradientFor(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            ValueSlice(frameRange).AssignRowSliceValuesOf(Input(0)->ValueSlice(frameRange), m_startIndex, m_sliceHeight);
+            OutputFor(frameRange).AssignRowSliceValuesOf(Input(0)->OutputFor(frameRange), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -586,13 +586,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            Input(inputIndex)->GradientSlice(frameRange).AddWithRowSliceValuesOf(GradientSlice(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+            Input(inputIndex)->GradientFor(frameRange).AddWithRowSliceValuesOf(GradientFor(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
-                ValueSlice(frameRange).AssignToRowSliceValuesOf(Input(inputIndex)->ValueSlice(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+                OutputFor(frameRange).AssignToRowSliceValuesOf(Input(inputIndex)->OutputFor(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -729,17 +729,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            //if (!isNoop())    // if m_numRepeat == 1 then virtual Output() will return the child   --TODO: do this as an in-place optimization instead
-            ValueSlice(frameRange).AssignRepeatOf(Input(0)->ValueSlice(frameRange), m_numRepeat, 1);
+            OutputFor(frameRange).AssignRepeatOf(Input(0)->OutputFor(frameRange), m_numRepeat, 1);
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Input(0)->GradientSlice(frameRange).AddToRowRepeatValuesOf(GradientSlice(frameRange), m_numRepeat);
+            Input(0)->GradientFor(frameRange).AddToRowRepeatValuesOf(GradientFor(frameRange), m_numRepeat);
         }
 
     private:
-        //bool isNoop() const { return m_numRepeat == 1; }    // in this case this node does nothing
         size_t m_numRepeat;
     };
 
