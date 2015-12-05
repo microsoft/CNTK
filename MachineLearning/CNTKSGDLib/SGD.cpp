@@ -597,7 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < nodes.size(); i++)
             {
                 auto & node = nodes[i];
-                auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Output();
+                auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value();
                 assert(functionValues->GetNumCols() == net->GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
             }
@@ -1620,7 +1620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             net->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
             net->ForwardProp(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
-                                             dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Output(),
+                                             dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value(),
                                              pMBLayout);
         }
     }
@@ -1836,9 +1836,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     refNet->ForwardProp(refNode);
                     Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
-                                                  dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->Output(),
+                                                  dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->Value(),
                                                   (ElemType)(1.0 - m_adaptationRegWeight),
-                                                  dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Output());
+                                                  dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
                 }
 
                 // do forward and back propagation
@@ -1897,12 +1897,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // accumulate criterion values (objective, eval)
                 if (actualMBSize != 0)
                 {
-                    // criteria are in Output()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->Output(),
+                    // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
+                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->Value(),
                                                           0, 0, localEpochCriterion, 0, 0);
                     for (size_t i = 0; i < evaluationNodes.size(); i++)
                     {
-                        Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->Output(),
+                        Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->Value(),
                                                               0, 0, localEpochEvalErrors, 0, i);
                     }
                 }
@@ -1918,13 +1918,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                         if (node->IsParameterUpdateRequired())
                         {
-                            Matrix<ElemType>* currParamsGradient = &(node->GradientValues());
+                            Matrix<ElemType>* currParamsGradient = &(node->Gradient());
 
                             // Sometimes, in parallel training, the current node may not get any samples to process
                             // In this case, the gradient matrix may not have been sized yet. If so, lets size it.
                             if (currParamsGradient->GetNumCols() == 0)
                             {
-                                Matrix<ElemType>* currParamsValues = &(node->Output());
+                                Matrix<ElemType>* currParamsValues = &(node->Value());
                                 currParamsGradient->Resize(currParamsValues->GetNumRows(), currParamsValues->GetNumCols());
                             }
 
@@ -1970,7 +1970,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                       m_L2RegWeight, m_L1RegWeight,
                                       m_needAveMultiplier);
 #ifdef _DEBUG
-                        if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Output().HasNan("TrainOneEpoch/UpdateWeights(): "))
+                        if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                             LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     }
@@ -2304,7 +2304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!pNode->IsParameterUpdateRequired())
                 continue;
 
-            Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->Output();
+            Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->Value();
             // 1. normalize the weight matrix 
             Matrix<ElemType>::Scale(factor, mat);
             // 2. send weight matrix over MPI nodes; 
@@ -2432,7 +2432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!node->IsParameterUpdateRequired())
             LogicError("UpdateWeights() called for a learnable ComputationNode which has m_parameterUpdateRequired == false!");
 
-        UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Output(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->GradientValues(),
+        UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
                        needAveMultiplier);
@@ -2629,7 +2629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             char wstrtmp[2048];
 
-            for (size_t itry = 0; itry < min((size_t)50, node->Output().GetNumElements()); itry++)
+            for (size_t itry = 0; itry < min((size_t)50, node->Value().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
                 int irow = (int) fmod(rand(), node->GetNumRows() - 1);
@@ -2639,15 +2639,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
 
-                double eOrg = node->Output()(irow, icol);
-                node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
+                double eOrg = node->Value()(irow, icol);
+                node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
 
                 net->ForwardProp(criterionNodes[npos]);
                 net->Backprop(criterionNodes[npos]);
 
-                if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                if (node->Gradient().GetMatrixType() == MatrixType::SPARSE)
                 {
                     break;
                 }
@@ -2656,14 +2656,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //criterionNode should be a scalar
                 // TODO: why is this value not used?
                 criterionNodes[npos]->Get00Element();
-                double eGradErr = node->GradientValues()(irow, icol);
-                node->GradientValues().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
+                double eGradErr = node->Gradient()(irow, icol);
+                node->Gradient().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 double ePos = eOrg + EPSILON;
                 double eNeg = eOrg - EPSILON;
 
-                node->Output()(irow, icol) = (ElemType)ePos;
-                node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
+                node->Value()(irow, icol) = (ElemType)ePos;
+                node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
@@ -2671,8 +2671,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
-                node->Output()(irow, icol) = (ElemType)eNeg;
-                node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
+                node->Value()(irow, icol) = (ElemType)eNeg;
+                node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
@@ -2681,8 +2681,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double mbEvalCriNeg = criterionNodes[npos]->Get00Element();
 
                 // back to its original parameter value
-                node->Output()(irow, icol) = (ElemType)eOrg;
-                node->Output().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
+                node->Value()(irow, icol) = (ElemType)eOrg;
+                node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
                 // check if they are consistent
                 double eGradNum = ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));

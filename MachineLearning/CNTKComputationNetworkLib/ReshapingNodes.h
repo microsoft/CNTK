@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_targetImageLayout.GetWidth() == 0 || m_targetImageLayout.GetHeight() == 0 || m_targetImageLayout.GetNumChannels() == 0)
             {
                 m_sampleLayout = ImageLayoutWHC(1, 1, m_numTargetRows);
-                if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
+                if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             }
             else
@@ -319,7 +319,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout || factor() == 1)
             {
-                Output().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->Output().Reshaped(cols * rows, 1));   // copy the values as one long vector
+                Value().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->Value().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
@@ -329,9 +329,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!fr.IsAllFrames())
                     InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
                 if (weStack())
-                    Base::Stack(fr, m_pMBLayout, Input(0)->Output(), Output(), factor(), false/*addTo*/);
+                    Base::Stack(fr, m_pMBLayout, Input(0)->Value(), Value(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Output(), Output(), factor(), false/*addTo*/);
+                    Base::Unstack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Value(), Value(), factor(), false/*addTo*/);
             }
         }
 
@@ -343,15 +343,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // no layout case: this is indeed just a reshape. Same for canonical case
             if (!m_pMBLayout || factor() == 1)
             {
-                Input(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numTargetRows, 1);   // treat the values as one long vector
+                Input(0)->Gradient().Reshaped(cols * rows, 1) += Gradient().Reshaped(newCols * m_numTargetRows, 1);   // treat the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
             {
                 if (weStack())
-                    Base::Unstack(fr, m_pMBLayout, GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Unstack(fr, m_pMBLayout, Gradient(), Input(0)->Gradient(), factor(), true/*addTo*/);
                 else
-                    Base::Stack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Stack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Gradient(), Input(0)->Gradient(), factor(), true/*addTo*/);
             }
         }
 
@@ -454,7 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
             // copy the data from 'dataInput'
-            OutputFor(fr).SetValue(Input(0)->OutputFor(fr.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
+            ValueFor(fr).SetValue(Input(0)->ValueFor(fr.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
         }
 
@@ -526,7 +526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            OutputFor(fr).AssignRowSliceValuesOf(Input(0)->OutputFor(fr), m_startIndex, m_sliceHeight);
+            ValueFor(fr).AssignRowSliceValuesOf(Input(0)->ValueFor(fr), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -547,7 +547,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_sliceHeight, m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
-            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
+            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -592,7 +592,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
-                OutputFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->OutputFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+                ValueFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->ValueFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -625,7 +625,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), GetNumRows(), m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
-            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
+            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -681,10 +681,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_inputImageLayout.GetHeight() * m_numRepeat, m_sampleLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_inputSampleLayout.GetHeight() * m_numRepeat, m_sampleLayout.GetNumChannels());
 
             // watn that this node will destroy the image size information from the child
-            if (m_inputImageLayout.GetWidth() * m_inputImageLayout.GetNumChannels() != 1)
+            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -729,7 +729,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            OutputFor(fr).AssignRepeatOf(Input(0)->OutputFor(fr), m_numRepeat, 1);
+            ValueFor(fr).AssignRepeatOf(Input(0)->ValueFor(fr), m_numRepeat, 1);
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override

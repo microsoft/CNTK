@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
-            CreateMatrixIfNull(m_output);
+            CreateMatrixIfNull(m_value);
             SetDims(row_size, col_size);
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_timeStep = (int)timeStep;
 
-            m_output->SetValue(m_initialActivationValue);
+            m_value->SetValue(m_initialActivationValue);
         }
         DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"rows"), configp->Get(L"cols"), configp->Get(L"timeStep"))
@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //         Maybe we should carry over the shifted layout (cf. CacheMBLayout())? We could just move the pointer. But the code must be adapted as well.
             if (!m_isHistoryCarryOverManagedExternally) // means it's externally managed (for PairNetworkNode)
             {
-                m_delayedActivation = Input(0)->Output();
+                m_delayedActivation = Input(0)->Value();
                 if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
                 m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
             }
@@ -310,7 +310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
 
-            Matrix<ElemType> inp;   // ((DEVICEID_TYPE)m_output.GetDeviceId());
+            Matrix<ElemType> inp;   // ((DEVICEID_TYPE)m_value.GetDeviceId());
 
             // if any sequence at this time step has a boundary flag, then process one by one
             // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?
@@ -318,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
-                    Matrix<ElemType> out = OutputFor(fr.Sequence(id));
+                    Matrix<ElemType> out = ValueFor(fr.Sequence(id));
 
                     if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
                         out.SetValue(m_initialActivationValue);     // crossed a boundary
@@ -330,22 +330,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else if (t_delayed >= T)
                             inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Input(0)->OutputFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
                 }
             }
-            else        // frame has no boundary flags: use OutputFor directly (still may have a gap here)
+            else        // frame has no boundary flags: use ValueFor directly (still may have a gap here)
             {
-                Matrix<ElemType> out = OutputFor(fr);
+                Matrix<ElemType> out = ValueFor(fr);
 
                 if (t_delayed < 0)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
                 else if (t_delayed >= T)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Input(0)->OutputFor(FrameRange(m_pMBLayout, t_delayed));
+                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DEVICEID_TYPE device = hist.GetDeviceId();
             hist.TransferFromDeviceToDevice(device, m_deviceId, true);
 
-            hist.SetValue(Input(0)->Output());
+            hist.SetValue(Input(0)->Value());
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
             return true;

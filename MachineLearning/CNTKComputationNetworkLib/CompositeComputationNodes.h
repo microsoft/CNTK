@@ -51,16 +51,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t startidx = (inputIndex == 0) ? 0 : Input(0)->GetNumRows();
             size_t nrows = child->GetNumRows();
 
-            if (child->GradientValues().GetNumRows() != child->GetNumRows() || child->GradientValues().GetNumCols() != GetNumCols())
+            // TODO: why is this needed? If it is, it should be solved more centrally.
+            if (child->Gradient().GetNumRows() != child->GetNumRows() || child->Gradient().GetNumCols() != GetNumCols())
             {
-                child->GradientValues().Resize(child->GetNumRows(), child->GetNumCols());
-                child->GradientValues().SetValue(0);
+                child->Gradient().Resize(child->GetNumRows(), child->GetNumCols());
+                child->Gradient().SetValue(0);
             }
 
             Matrix<ElemType> tmpMat(m_deviceId);
-            tmpMat.AssignRowSliceValuesOf(GradientValues(), startidx, nrows);
+            tmpMat.AssignRowSliceValuesOf(Gradient(), startidx, nrows);
 
-            BackpropToS(tmpMat, child->GradientValues());
+            BackpropToS(tmpMat, child->Gradient());
         }
 
         /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
@@ -70,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
@@ -122,65 +123,65 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId), f1(m_deviceId);
 
-            f0 = Input(0)->Output();
-            f1 = Input(1)->Output();
-            func = Output();
+            f0 = Input(0)->Value();
+            f1 = Input(1)->Value();
+            func = Value();
 
             Input(0)->SetDims(nInput0, nT);
             Input(0)->UpdateFunctionValuesSize();
-            Input(0)->Output().SetValue(0);
-            Input(0)->Output()(0, 0) = 1;
-            Input(0)->Output()(0, 1) = 2;
-            Input(0)->Output()(0, 2) = 3;
+            Input(0)->Value().SetValue(0);
+            Input(0)->Value()(0, 0) = 1;
+            Input(0)->Value()(0, 1) = 2;
+            Input(0)->Value()(0, 2) = 3;
 
             Input(1)->SetDims(nInput1, nT);
             Input(1)->UpdateFunctionValuesSize();
-            Input(1)->Output().SetValue(0);
-            Input(1)->Output()(0, 0) = 4;
-            Input(1)->Output()(0, 1) = 5;
-            Input(1)->Output()(0, 2) = 6;
+            Input(1)->Value().SetValue(0);
+            Input(1)->Value()(0, 0) = 4;
+            Input(1)->Value()(0, 1) = 5;
+            Input(1)->Value()(0, 2) = 6;
             SetDims(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
             ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Output()(0, 0), 1, EPSILON) ||
-                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(Output()(0, 2), 3, EPSILON) ||
-                !ISCLOSE(Output()(3, 0), 4, EPSILON) ||
-                !ISCLOSE(Output()(3, 1), 5, EPSILON) ||
-                !ISCLOSE(Output()(3, 2), 6, EPSILON))
+            if (!ISCLOSE(Value()(0, 0), 1, EPSILON) ||
+                !ISCLOSE(Value()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Value()(0, 2), 3, EPSILON) ||
+                !ISCLOSE(Value()(3, 0), 4, EPSILON) ||
+                !ISCLOSE(Value()(3, 1), 5, EPSILON) ||
+                !ISCLOSE(Value()(3, 2), 6, EPSILON))
                 return false;
-            Output().TransferToDeviceIfNotThere(m_deviceId, true);
+            Value().TransferToDeviceIfNotThere(m_deviceId, true);
 
-            GradientValues().Resize(nInput0 + nInput1, nT);
-            GradientValues().SetValue(0);
-            Input(0)->GradientValues().Resize(nInput0, nT);
-            Input(1)->GradientValues().Resize(nInput1, nT);
-            Input(0)->GradientValues().SetValue(0);
-            Input(1)->GradientValues().SetValue(0);
-            GradientValues()(0, 0) = 1;
-            GradientValues()(0, 1) = 2;
-            GradientValues()(0, 2) = 3;
-            GradientValues()(3, 0) = 4;
-            GradientValues()(3, 1) = 5;
-            GradientValues()(3, 2) = 6;
+            Gradient().Resize(nInput0 + nInput1, nT);
+            Gradient().SetValue(0);
+            Input(0)->Gradient().Resize(nInput0, nT);
+            Input(1)->Gradient().Resize(nInput1, nT);
+            Input(0)->Gradient().SetValue(0);
+            Input(1)->Gradient().SetValue(0);
+            Gradient()(0, 0) = 1;
+            Gradient()(0, 1) = 2;
+            Gradient()(0, 2) = 3;
+            Gradient()(3, 0) = 4;
+            Gradient()(3, 1) = 5;
+            Gradient()(3, 2) = 6;
 
             BackpropTo(0, FrameRange(m_pMBLayout));
             BackpropTo(1, FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Input(0)->GradientValues()(0, 0), 1, EPSILON)
-                || !ISCLOSE(Input(0)->GradientValues()(0, 1), 2, EPSILON)
-                || !ISCLOSE(Input(0)->GradientValues()(0, 2), 3, EPSILON)
-                || !ISCLOSE(Input(1)->GradientValues()(0, 0), 4, EPSILON)
-                || !ISCLOSE(Input(1)->GradientValues()(0, 1), 5, EPSILON)
-                || !ISCLOSE(Input(1)->GradientValues()(0, 2), 6, EPSILON))
+            if (!ISCLOSE(Input(0)->Gradient()(0, 0), 1, EPSILON)
+                || !ISCLOSE(Input(0)->Gradient()(0, 1), 2, EPSILON)
+                || !ISCLOSE(Input(0)->Gradient()(0, 2), 3, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 1), 5, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 2), 6, EPSILON))
                 return false;
 
-            Input(0)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            Input(1)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(0)->Gradient().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(1)->Gradient().TransferToDeviceIfNotThere( m_deviceId, true);
 
             return true;
         }
@@ -217,7 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MarkComputed(const bool hasComputed)
         {
             m_hasComputed = hasComputed;
-            CreateMatrixIfNull(m_output);
+            CreateMatrixIfNull(m_value);
         }
 
         virtual bool RequiresPreCompute() const override { return true; }
@@ -226,14 +227,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << Output();   // TODO: why serialize if not yet computed?
+            fstream << Value();   // TODO: why serialize if not yet computed?
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
-            LoadFunctionValues(fstream);
+            LoadValue(fstream);
          }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -276,8 +277,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
         virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
         {
-            CreateMatrixIfNull(m_output);
-            m_output->SetValue(value);
+            CreateMatrixIfNull(m_value);
+            m_value->SetValue(value);
             m_hasComputed = true; 
         }
     public:
@@ -382,9 +383,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed)     // initialize accumulation
             {
                 UpdateFunctionValuesSize();
-                Output().SetValue(0);
+                Value().SetValue(0);
             }
-            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_output
+            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_value
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -397,10 +398,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(fr);
+            Input(0)->MaskMissingValueColumnsToZero(fr);
 
-            auto & samples = Input(0)->Output();
-            auto & avg = Output();
+            auto & samples = Input(0)->Value();
+            auto & avg = Value();
 
 #if NANCHECK
             samples.HasNan("Mean-Samples");
@@ -452,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_mean.SetValue(0);
                 m_var.SetValue(0);
                 UpdateFunctionValuesSize();
-                Output().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
+                Value().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
             }
             else                // finalize
             {
@@ -471,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
-                Output().SetValue(m_var);
+                Value().SetValue(m_var);
             }
         }
 
@@ -485,9 +486,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(fr);
+            Input(0)->MaskMissingValueColumnsToZero(fr);
 
-            auto & samples = Input(0)->Output();
+            auto & samples = Input(0)->Value();
 #if NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
@@ -560,10 +561,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value(), Input(2)->Value());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
@@ -671,10 +672,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
-            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value(), Input(2)->Value());
         }
 
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
@@ -799,14 +800,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << Output();
+            fstream << Value();
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
-            LoadFunctionValues(fstream);
+            LoadValue(fstream);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -902,18 +903,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
                 {
-                    Matrix<ElemType> v = Input(0)->OutputFor(FrameRange(Input(0)->GetMBLayout(), t));
-                    OutputFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
+                    Matrix<ElemType> v = Input(0)->ValueFor(FrameRange(Input(0)->GetMBLayout(), t));
+                    ValueFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
                 }
 
 #if NANCHECK
-                Output().HasNan("TimeReverse");
+                Value().HasNan("TimeReverse");
 #endif
 #if DUMPOUTPUT
-                Output().Print("TimeReverseNode");
+                Value().Print("TimeReverseNode");
 #endif
 
-                m_memory.SetValue(Output());
+                m_memory.SetValue(Value());
             }
             // TODO: don't need to set m_hasCompute? Or what is it for?
         }
@@ -937,51 +938,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// backup
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
 
-            f0 = Input(0)->Output();
-            func = Output();
+            f0 = Input(0)->Value();
+            func = Value();
 
             Input(0)->SetDims(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
-            Input(0)->Output().SetValue(0);
-            Input(0)->Output()(0, 0) = 1;
-            Input(0)->Output()(0, 1) = 2;
-            Input(0)->Output()(0, 2) = 3;
+            Input(0)->Value().SetValue(0);
+            Input(0)->Value()(0, 0) = 1;
+            Input(0)->Value()(0, 1) = 2;
+            Input(0)->Value()(0, 2) = 3;
             SetDims(nOutput, nT);
             UpdateFunctionValuesSize();
-            Input(0)->Output().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(0)->Value().TransferToDeviceIfNotThere( m_deviceId, true);
             ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Output()(0, 0), 3, EPSILON) ||
-                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(Output()(0, 2), 1, EPSILON))
+            if (!ISCLOSE(Value()(0, 0), 3, EPSILON) ||
+                !ISCLOSE(Value()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Value()(0, 2), 1, EPSILON))
             {
                 return false;
             }
 
-            Output().TransferToDeviceIfNotThere( m_deviceId, true);
+            Value().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            Input(0)->GradientValues().Resize(nOutput, nT);
-            Input(0)->GradientValues().SetValue(1.0);
-            GradientValues().Resize(nOutput, nT);
-            GradientValues().SetValue(0);
-            GradientValues()(0, 0) = 1;
-            GradientValues()(0, 1) = 2;
-            GradientValues()(0, 2) = 3;
-            GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(0)->Gradient().Resize(nOutput, nT);
+            Input(0)->Gradient().SetValue(1.0);
+            Gradient().Resize(nOutput, nT);
+            Gradient().SetValue(0);
+            Gradient()(0, 0) = 1;
+            Gradient()(0, 1) = 2;
+            Gradient()(0, 2) = 3;
+            Gradient().TransferToDeviceIfNotThere( m_deviceId, true);
 
             BackpropTo(0, FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Input(0)->GradientValues()(0, 0), 4, EPSILON) ||
-                !ISCLOSE(Input(0)->GradientValues()(0, 1), 3, EPSILON) ||
-                !ISCLOSE(Input(0)->GradientValues()(0, 2), 2, EPSILON))
+            if (!ISCLOSE(Input(0)->Gradient()(0, 0), 4, EPSILON) ||
+                !ISCLOSE(Input(0)->Gradient()(0, 1), 3, EPSILON) ||
+                !ISCLOSE(Input(0)->Gradient()(0, 2), 2, EPSILON))
             {
                 return false;
             }
 
-            Input(0)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
-            GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
+            Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
+            Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
 
             return true;
         }

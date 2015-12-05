@@ -56,16 +56,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);
         if (nodeFloat)
         {
-            nodeFloat->GradientValues().Resize(1, 1);
-            nodeFloat->GradientValues().SetValue(1.0f);
+            nodeFloat->Gradient().Resize(1, 1);
+            nodeFloat->Gradient().SetValue(1.0f);
         }
         else
         {
             auto nodeDouble = dynamic_pointer_cast<ComputationNode<double>>(rootNode);
             if (nodeDouble)
             {
-                nodeDouble->GradientValues().Resize(1, 1);
-                nodeDouble->GradientValues().SetValue(1.0);
+                nodeDouble->Gradient().Resize(1, 1);
+                nodeDouble->Gradient().SetValue(1.0);
             }
             else
                 LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");

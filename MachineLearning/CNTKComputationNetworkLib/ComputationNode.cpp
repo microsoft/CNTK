@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
-            Input(i)->Output().SetValue(0);
+            Input(i)->Value().SetValue(0);
             fprintf(stderr, "ValidateInferInputDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)rows, (int)cols);
         }
     }
