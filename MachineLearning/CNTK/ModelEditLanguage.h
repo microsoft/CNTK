@@ -337,7 +337,7 @@ public:
                 ComputationNodeBasePtr toNode = mapCopied[fromNode];
                 for (int i=0; i<fromNode->ChildrenSize(); i++)
                 {
-                    auto found = mapCopied.find(fromNode->GetChildren()[i]);
+                    auto found = mapCopied.find(fromNode->GetInputs()[i]);
                     auto newNode = (found == mapCopied.end())?ComputationNodePtr():found->second;
                     toNode->SetInput(i, newNode);
                 }                     

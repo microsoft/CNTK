@@ -398,7 +398,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return inputs;
         }
 
-        const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_inputs; }
+        const std::vector<ComputationNodeBasePtr> & GetInputs() const { return m_inputs; }
         ComputationNodeBasePtr Input(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
