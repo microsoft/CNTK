@@ -9,7 +9,7 @@
 // #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
 #include "CommonMatrix.h"
 
-// define IConfigRecord and ConfigParameters as incomplete types, in order to avoid having to include "ScriptableObjects.h" and "commandArgUtil.h", as that confuses some .CU code
+// define IConfigRecord and ConfigParameters as incomplete types, in order to avoid having to include "ScriptableObjects.h" and "Config.h", as that confuses some .CU code
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     struct IConfigRecord;
 }}}

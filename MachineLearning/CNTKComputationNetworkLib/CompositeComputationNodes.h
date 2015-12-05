@@ -389,7 +389,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
+            FrameRange fr(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -397,12 +397,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(fr);
 
             auto & samples = Input(0)->Output();
             auto & avg = Output();
 
-#if 1//NANCHECK
+#if NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
             size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
                                                      ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
                                                      false, (ElemType)m_numSamples / totalNumSamples, avg);
-#if 1//NANCHECK
+#if NANCHECK
             avg.HasNan("Mean-avg");
 #endif
 
@@ -458,12 +458,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ElemType sqrtFloor = 1e-10f;
                 m_var.InplaceTruncateBottom(sqrtFloor);     // prevent too small variance (and negative square roots due to numeric inaccuracy)
-#if 1//NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
                 m_var.InplaceSqrt();
 
-#if 1//NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceSqrt");
 #endif
                 m_var.ElementInverse();
@@ -477,7 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
+            FrameRange fr(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -485,10 +485,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(fr);
 
             auto & samples = Input(0)->Output();
-#if 1//NANCHECK
+#if NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
@@ -510,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                      ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
                                                      false, (ElemType)m_numSamples / totalNumSamples, m_var);
 
-#if 1//NANCHECK
+#if NANCHECK
             m_var.HasNan("InvStdDev-m_var");
 #endif
 
@@ -557,11 +557,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
@@ -668,11 +668,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }

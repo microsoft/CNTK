@@ -201,7 +201,7 @@ $(BUILDINFO): Scripts/genrate_build_info
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/ConfigFile.cpp \
+	Common/Config.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
 	Common/DebugUtil.cpp \
@@ -432,7 +432,6 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
-	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
 	MachineLearning/CNTKActionsLib/TrainActions.cpp \

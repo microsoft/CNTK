@@ -13,9 +13,9 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // TensorShape -- tensor descriptor to describe the inner layout of a data vector that holds a tensor
+    // TensorShape -- tensor descriptor to describe the inner layout of a sample vector that holds a tensor
     //
-    // Minibatches are stored as Matrices. While the column dimension represents multiple data vectors, and may have
+    // Minibatches are stored as Matrix objects. While the column dimension represents multiple sample vectors, and may have
     // an inner structure (time, parallel sequences) described by the MBLayout, the row dimension represents data
     // vectors that hold tensors of data.
     //
@@ -23,14 +23,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //
     // Specifically, when the image is an image, then this is a 3-dimensional tensor with dimensions ( channels, width, height ),
     // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores (R,G,B) as a float3.
-    //
-    // BUGBUG: Tensors with other than 3 dimensions can currently not be used because they cannot be serialized with the current file format.
     // -----------------------------------------------------------------------
 
-    // TODO: really support lengths other than 3, e.g. fix serialization code to handle variable-length descriptors
-    // TODO: rename to DataLayout
     // TODO: must match ComputationNode::m_numRows; or, rather, the TensorShape is how m_numRows is stored??
-    // TODO: move this elsewhere, maybe a separate header Tensors.h?
     struct TensorShape
     {
     public:
@@ -113,6 +108,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // When constructing an image tensor with the usual W, H, C format, use the following function instead.
     // This will sort the three parameters into the correct order.
+    // BUGBUG: at several places, a comment says "after multiplication the structure is lost" and the vector dimension
+    //         is set as the image height. However, the image height is actually the wrong dimension since images are assumed transposed.
+    //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
     static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
         return TensorShape(std::vector<size_t> { channels, width, height });
@@ -122,6 +120,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return TensorShape(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
     }
-    // TODO: we need a constructor from config; that will generalize
+    // TODO: we need a constructor from config; that will allow us to generalize
 
 }}}

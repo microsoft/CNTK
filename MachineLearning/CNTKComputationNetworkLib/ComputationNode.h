@@ -28,14 +28,6 @@
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
-#ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED \
-{   \
-    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    LogicError("Not Implemented"); \
-}
-#endif
-
 #pragma warning (disable: 4267)
 
 // version number to control how to read and write 
@@ -78,34 +70,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
 
-        virtual void BeginForwardProp() = 0;
-        virtual void ForwardProp(const FrameRange &) = 0;  // forward prop for one minibatch
-        virtual void EndForwardProp() = 0;              // called after last iteration step of ForwardProp()
+        virtual void BeginForwardProp() = 0;                    // called beforefirst iteration step of ForwardProp()
+        virtual void ForwardProp(const FrameRange &) = 0;       // forward prop for one minibatch
+        virtual void EndForwardProp() = 0;                      // called after last iteration step of ForwardProp()
 
-        virtual void BeginBackprop() = 0;     // called before first iteration step of ComputeGradient()
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) = 0;
-        virtual void EndBackprop() = 0;       // called after last iteration step of ComputeGradient()
+        virtual void BeginBackprop() = 0;                       // called before first iteration step of ComputeGradient()
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange &) = 0;   // backprop gradient into one of the inputs
+        virtual void EndBackprop() = 0;                         // called after last iteration step of ComputeGradient()
 
         // --- these are meant to be overridden by ControlFlowNodes
 
-        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
+        virtual void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
 
         // Any override must call Base version as well.
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
 
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;         //request matrices needed to do node function value evaluation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;          //release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) = 0;
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0; //request matrices that are needed for gradient computation
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;  //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
         virtual void InferImageDimsFromInputs() = 0;
         virtual void Save(File& fstream) const = 0;
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) = 0;
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) = 0;  // request matrices needed to do node function value evaluation
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) = 0;   // release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) = 0;
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) = 0;     // request matrices that are needed for gradient computation
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) = 0;      // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
 
         // --- optional overrides that describe a feature or property of the node
 
@@ -300,22 +292,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
-        virtual // for now virtual as this still updates m_output
         void SetDims(size_t rows, size_t cols)
         {
             m_numRows = rows;
             m_numCols = cols;
             // actual memory allocation happens elsewhere
-            // NOTE: current ComputationNode<> overrides this in order to still do actual memory allocation like before
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_output--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
+            {
                 LogicError("VerifyDims: %ls %ls operation expected size %d x %d, but it is %d x %d",
                            NodeName().c_str(), OperationName().c_str(),
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+            }
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void VerifyDimsMatch() const = 0;     // verify that m_output dimensions match ours
@@ -425,8 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
     public: // the following should be protected, but nodes inquire about their children, requiring public access
-        // This is used at 284 places inside nodes, most of the time as
-        // ...Slice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences()), m_pMBLayout)
+
         size_t GetNumParallelSequences() const
         {
 #if 1
@@ -540,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InvalidateMissingValuesColumns(const FrameRange &) = 0;
         virtual void InvalidateMissingGradientColumns(const FrameRange &) = 0;
 
-        virtual void ClearGradientOfInputs() = 0;
+        virtual void ZeroGradientsOfInputs() = 0;
 
         virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {
@@ -885,34 +876,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
             RequestMatrixFromPool(m_output, matrixPool);
         }
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& /*matrixPool*/)
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& /*matrixPool*/)
         {
         }
 
-        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
         {
             for (int i = 0; i < m_inputs.size(); i++)
             {
                 if (m_inputs[i]->NeedGradient())
-                    m_inputs[i]->RequestMatricesBeforeGradientComp(matrixPool);
+                    m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
             }
         }
 
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
             RequestMatrixFromPool(m_gradientValues, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
             if (!IsLeaf() && !RequiresPreCompute())
             {
@@ -985,33 +976,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateInferInputDims(size_t i, size_t rows, size_t cols) override final;
 
     public:
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
+        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
         {
-            //fprintf(stderr, "masking column range %d\n", (int)frameRange.timeIdxInSeq);
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, (ElemType)0);
+            //fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
+            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
         }
 
-        void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final
+        void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & fr) override final
         {
             //fprintf(stderr, "%ls %ls m_output ", NodeName().c_str(), OperationName().c_str());
-            MaskMissingColumnsToZero(*m_output, m_pMBLayout, frameRange);
+            MaskMissingColumnsToZero(*m_output, m_pMBLayout, fr);
         }
-        void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final
+        void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & fr) override final
         {
             //fprintf(stderr, "%ls %ls m_gradientValues ", NodeName().c_str(), OperationName().c_str());
-            MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, frameRange);
+            MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, fr);
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
-        void InvalidateMissingValuesColumns(const FrameRange & frameRange) override final
+        void InvalidateMissingValuesColumns(const FrameRange & fr) override final
         {
-            //fprintf(stderr, "invalidating %ls %ls m_output column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
-            MaskMissingColumnsTo(*m_output, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
+            //fprintf(stderr, "invalidating %ls %ls m_output column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+            MaskMissingColumnsTo(*m_output, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
         }
-        void InvalidateMissingGradientColumns(const FrameRange & frameRange) override final
+        void InvalidateMissingGradientColumns(const FrameRange & fr) override final
         {
-            //fprintf(stderr, "invalidating %ls %ls m_gradientValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
-            MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
+            //fprintf(stderr, "invalidating %ls %ls m_gradientValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+            MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
         // for debugging purposes
@@ -1077,48 +1068,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const Matrix<ElemType>& Output() const    { return *m_output; }
         Matrix<ElemType>& Output()                { return *m_output; }
-        //shared_ptr<Matrix<ElemType>>& OutputPtr() { return m_output; }
 
         const Matrix<ElemType>& GradientValues() const    { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues()                { return *m_gradientValues; }
-        shared_ptr<Matrix<ElemType>>& GradientValuesPtr() { return m_gradientValues; }
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
-        Matrix<ElemType> DataFor(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> DataFor(Matrix<ElemType> & data, const FrameRange & fr/*select frame or entire batch*/)
         {
             try
             {
-                return DataWithMBLayoutFor(data, frameRange, m_pMBLayout);
+                return DataWithMBLayoutFor(data, fr, m_pMBLayout);
             }
             catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
             {
                 LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
             }
         }
-        Matrix<ElemType> ValueSliceToDense(const FrameRange & frameRange/*select frame or entire batch*/, bool keepValuesOnSwitch)
+        Matrix<ElemType> ValueSliceToDense(const FrameRange & fr/*select frame or entire batch*/, bool keepValuesOnSwitch)
         {
             Output().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
-            return OutputFor(frameRange);
+            return OutputFor(fr);
         }
-        Matrix<ElemType> OutputFor(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> OutputFor(const FrameRange & fr/*select frame or entire batch*/)
         {
-            return DataFor(Output(), frameRange);
+            return DataFor(Output(), fr);
         }
-        Matrix<ElemType> GradientFor(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> GradientFor(const FrameRange & fr/*select frame or entire batch*/)
         {
-            return DataFor(GradientValues(), frameRange);
+            return DataFor(GradientValues(), fr);
         }
         // use the following two versions if you assume the inputs may contain gaps that must be set to zero because you want to reduce over frames with a BLAS operation
-        Matrix<ElemType> MaskedValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> MaskedValueSlice(const FrameRange & fr/*select frame or entire batch*/)
         {
-            MaskMissingValuesColumnsToZero(frameRange);
-            return OutputFor(frameRange);
+            MaskMissingValuesColumnsToZero(fr);
+            return OutputFor(fr);
         }
-        Matrix<ElemType> MaskedGradientSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> MaskedGradientSlice(const FrameRange & fr/*select frame or entire batch*/)
         {
-            MaskMissingGradientColumnsToZero(frameRange);
-            return GradientFor(frameRange);
+            MaskMissingGradientColumnsToZero(fr);
+            return GradientFor(fr);
         }
 
         void UpdateFunctionValuesSize()
@@ -1185,9 +1174,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
         // TODO: move to -Base (or -Network?)
-        void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override
+        void Backprop(const FrameRange & fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
         {
-            if (frameRange.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
+            if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
                 LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
 
             for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1212,14 +1201,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // If we propagate from a loop to a node that is outside the loop, we are not efficient.
                     // This case is handled by SEQTraversalFlowControlNode::Backprop().
                     // The check below is to verify that.
-                    if (IsPartOfLoop() && !child->IsPartOfLoop() && !frameRange.IsAllFrames())
+                    if (IsPartOfLoop() && !child->IsPartOfLoop() && !fr.IsAllFrames())
                     {
                         LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                                    NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
                     }
 
-                    //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
-                    BackpropTo(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
+                    //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+                    BackpropTo(i, fr);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
@@ -1227,7 +1216,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void /*ComputationNodeBase::*/ClearGradientOfInputs() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
+        // TODO: why of the inputs, and not the node itself?
+        void /*ComputationNodeBase::*/ZeroGradientsOfInputs() override   // clears the lazy-init flags (LazyZeroGradient() actually clears the values lazily)
         {
             for (size_t i = 0; i < m_inputs.size(); i++)
                 Input(i)->m_gradientInitialized = false;
@@ -1245,10 +1235,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // TODO: we should move this pattern to class Matrix. We should not be concerned here with the storage format of the gradient.
             GradientValues().Resize(Output().GetNumRows(), Output().GetNumCols());
-            if (GradientValues().GetMatrixType() == DENSE)
+            //if (GradientValues().GetMatrixType() == DENSE)
                 GradientValues().SetValue(0);
-            else
-                GradientValues().Reset();
+            //else          // no longer needed, SetValue() does this right
+            //    GradientValues().Reset();
 
             m_gradientInitialized = true;
         }
@@ -1272,7 +1262,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *m;
         }
 
+        void CreateGradientMatrixIfNull()
+        {
+            CreateMatrixIfNull(m_gradientValues);
+        }
+
     protected:
+
+        // this function is used to create matrices for those needed before matrix pool is available
+        // e.g., for model parameters and input nodes you will need to resize the functions based on NDL
+        // and before matrix pool is available
+        void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
+        {
+            if (!matrixPtr)
+                matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
+        }
 
         void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
         {
@@ -1286,17 +1290,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(matrixPtr != nullptr);
             matrixPool.Release<ElemType>(matrixPtr);
-        }
-
-        //this function is used to create matrices for those needed before matrix pool is available
-        //e.g., for model parameters and input nodes you will need to resize the functions based on NDL
-        //and before matrix pool is available
-        void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
-        {
-            if (matrixPtr == nullptr)
-            {
-                matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
-            }
         }
 
         //to be called by derived classed if that class needs to print node values
@@ -1381,16 +1374,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // these two implement the ComputationNode<> interface
-        void ForwardProp(const FrameRange & frameRange) override final
+        void ForwardProp(const FrameRange & fr) override final
         {
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
                 ForwardPropNonLooping();
             else
                 LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        void BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override final
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override final
         {
-            if (frameRange.IsAllFrames())
+            if (fr.IsAllFrames())
                 BackpropToNonLooping(inputIndex);
             else
                 LogicError("%s node should never be in a loop.", typeid(*this).name());
@@ -1421,7 +1414,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
-        //virtual void SetDims(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
         virtual double Get00Element() const override     { NOT_IMPLEMENTED; }
         virtual void UpdateFunctionMBSize() override     { NOT_IMPLEMENTED; }
         virtual void VerifyDimsMatch() const override    { NOT_IMPLEMENTED; }
@@ -1429,7 +1421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
         virtual void ValidateInferInputDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }
         virtual void SetInput(const size_t,const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr &) override { NOT_IMPLEMENTED; }
-        virtual void ClearGradientOfInputs(void) override { NOT_IMPLEMENTED; }
+        virtual void ZeroGradientsOfInputs(void) override { NOT_IMPLEMENTED; }
         virtual void MaskMissingValuesColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
         virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
         virtual void InvalidateMissingValuesColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
@@ -1489,14 +1481,14 @@ protected: \
     using Base::SetDims; /*using Base::NotifyFunctionValuesMBSizeModified;*/ using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadFunctionValues; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::OutputFor; using Base::GradientValues; using Base::GradientValuesPtr; using Base::GradientFor; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::DataFor; using Base::OutputFor; using Base::GradientValues; using Base::GradientFor; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_deviceId; using Base::m_output; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_sampleLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
     using Base::CreateUniqId; \
-    using Base::GetNumInputs; using Base::ClearGradientOfInputs; using Base::VerifyDims; \
+    using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
@@ -1507,12 +1499,12 @@ protected: \
     using Base::Load; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::Save; using Base::UpdateFunctionMBSize; \
-    using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
-    using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
+    using Base::RequestMatricesBeforeForwardProp; using Base::ReleaseMatricesAfterForwardProp; \
+    using Base::RequestMatricesBeforeBackprop; using Base::ReleaseMatricesAfterBackprop; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryInputDims; using Base::ValidateInferInputDims; \
 public: \
     using Base::RequiresPreCompute; \
-    using Base::AttachInputs; using Base::NodeName; \
+    using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
     using Base::Output;
 
 #define ComputationNodeBoilerplate \

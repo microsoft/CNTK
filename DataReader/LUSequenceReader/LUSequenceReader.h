@@ -11,7 +11,7 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "LUSequenceParser.h"
-#include "commandArgUtil.h" // for intargvector
+#include "Config.h" // for intargvector
 #include "ScriptableObjects.h"
 #include <string>
 #include <map>

@@ -179,6 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
+#if 0   // not functional at present
         else if (OperationNameOf(SparseLearnableParameter) == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
@@ -226,6 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue ]");
             }
         }
+#endif
         else if (cnNodeType == L"Constant")
         {
             if (parameter.size() != 1)

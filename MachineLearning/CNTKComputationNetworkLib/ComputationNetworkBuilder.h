@@ -1,5 +1,7 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 
+// This is used by NDL and the SimpleNetworkBuilder. It will not be used by BrainScript except for New{Standard}Node().
+
 #pragma once
 
 #include "Basics.h"
@@ -27,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // TODO: can these be changed to ComputationNodeBasePtr?
+        // TODO: move into a separate header/class, to decouple from this class which would then be only used by old NDL and SimpleNetworkBuilder.
         static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
         static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
 
@@ -37,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols);
         //sparse matrix size is optionally specified
-        ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
+        //ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols);
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);

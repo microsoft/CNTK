@@ -41,7 +41,7 @@
 #include "CPUMatrix.h"  // used for SetNumThreads()
 #include "SGD.h"
 #include "MPIWrapper.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"

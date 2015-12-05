@@ -16,7 +16,7 @@
 #include "DataWriter.h"
 #include "SequenceReader.h"
 #include "SequenceWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif

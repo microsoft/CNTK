@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // stack K consecutive frames into a single frame that is K times taller
         // FrameRange and MBLayout refer to the 'to' (reduced) timeline.
         // BUGBUG: THIS IS UNTESTED!!
-        static void Stack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
+        static void Stack(const FrameRange & fr, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
             // example
             //  input: T=2, D=2, K=3, S=2 (abcdef and uvwxyz)
@@ -83,11 +83,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //     D = featDim
             //     M = 1, thrown in for generality of underlying Matrix function
 
-            // We operate on the 'to' layout, frameRange refers to result, not the input.
+            // We operate on the 'to' layout, fr refers to result, not the input.
             // The input layout is different, but reshaping the input to output dimensions will allow us to pull out the right values anyway.
             auto from0      = from.Reshaped(to.GetNumRows(), to.GetNumCols());   // we operate on 'to' layout
-            auto fromSlice0 = DataWithMBLayoutFor(from0, frameRange, pMBLayout);
-            auto   toSlice0 = DataWithMBLayoutFor(to,    frameRange, pMBLayout);
+            auto fromSlice0 = DataWithMBLayoutFor(from0, fr, pMBLayout);
+            auto   toSlice0 = DataWithMBLayoutFor(to,    fr, pMBLayout);
             // now we got views on the right ranges of values, but with weird dimensions
 
             // reshape them into a unified view with D being the row dimension, and (S,M,K,T) the column dimension
@@ -106,11 +106,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // split frames of D*K elements into K consecutive frames of dimension D.
         // FrameRange and MBLayout refer to the 'from' (reduced) timeline.
         // This function is the inverse of Stack(). See comments there and exchange from and to.
-        static void Unstack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
+        static void Unstack(const FrameRange & fr, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
-            auto fromSlice0 = DataWithMBLayoutFor(from, frameRange, pMBLayout);
+            auto fromSlice0 = DataWithMBLayoutFor(from, fr, pMBLayout);
             auto   to0      = to.Reshaped(from.GetNumRows(), from.GetNumCols());
-            auto   toSlice0 = DataWithMBLayoutFor(to0, frameRange, pMBLayout);
+            auto   toSlice0 = DataWithMBLayoutFor(to0, fr, pMBLayout);
 
             size_t    D = to.GetNumRows();
             size_t SMKT = to.GetNumCols();
@@ -307,8 +307,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // notes:
         //  - input and output have different time base and different layouts (unless the canonical case of factor() == 1)
-        //  - frameRange refers to *functionValues*, not the inputs
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        //  - fr refers to *functionValues*, not the inputs
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
@@ -326,16 +326,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // TODO: It does not make sense to run ReshapeNode frame-by-frame inside a loop, because it changes the time base.
                 //       However, in the future, we should be able to run inside an outer loop.
-                if (!frameRange.IsAllFrames())
+                if (!fr.IsAllFrames())
                     InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
                 if (weStack())
-                    Base::Stack(frameRange, m_pMBLayout, Input(0)->Output(), Output(), factor(), false/*addTo*/);
+                    Base::Stack(fr, m_pMBLayout, Input(0)->Output(), Output(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Output(), Output(), factor(), false/*addTo*/);
+                    Base::Unstack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Output(), Output(), factor(), false/*addTo*/);
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             size_t newCols = cols * rows / m_numTargetRows;
@@ -349,9 +349,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 if (weStack())
-                    Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Unstack(fr, m_pMBLayout, GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
                 else
-                    Base::Stack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Stack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), GradientValues(), Input(0)->GradientValues(), factor(), true/*addTo*/);
             }
         }
 
@@ -437,13 +437,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
-            Input(0)->GradientFor(frameRange.WithLayout(Input(0)->GetMBLayout())) += GradientFor(frameRange);
+            Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             // enforce compatibility of 'dataInput' with 'layoutInput'
             // TODO: how to deal with boundary flags?
@@ -454,7 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str());
 
             // copy the data from 'dataInput'
-            OutputFor(frameRange).SetValue(Input(0)->OutputFor(frameRange.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
+            OutputFor(fr).SetValue(Input(0)->OutputFor(fr.WithLayout(Input(0)->GetMBLayout())));  // just propagate through
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
         }
 
@@ -519,14 +519,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_startIndex >> m_sliceHeight;
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
-            Input(0)->GradientFor(frameRange).AddToRowSliceValuesOf(GradientFor(frameRange), m_startIndex, m_sliceHeight);
+            Input(0)->GradientFor(fr).AddToRowSliceValuesOf(GradientFor(fr), m_startIndex, m_sliceHeight);
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            OutputFor(frameRange).AssignRowSliceValuesOf(Input(0)->OutputFor(frameRange), m_startIndex, m_sliceHeight);
+            OutputFor(fr).AssignRowSliceValuesOf(Input(0)->OutputFor(fr), m_startIndex, m_sliceHeight);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -584,15 +584,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            Input(inputIndex)->GradientFor(frameRange).AddWithRowSliceValuesOf(GradientFor(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+            Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
-                OutputFor(frameRange).AssignToRowSliceValuesOf(Input(inputIndex)->OutputFor(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+                OutputFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->OutputFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -727,14 +727,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            OutputFor(frameRange).AssignRepeatOf(Input(0)->OutputFor(frameRange), m_numRepeat, 1);
+            OutputFor(fr).AssignRepeatOf(Input(0)->OutputFor(fr), m_numRepeat, 1);
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
-            Input(0)->GradientFor(frameRange).AddToRowRepeatValuesOf(GradientFor(frameRange), m_numRepeat);
+            Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
         }
 
     private:

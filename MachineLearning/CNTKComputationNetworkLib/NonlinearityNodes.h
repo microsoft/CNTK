@@ -43,20 +43,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: with FrameRange, this code has now been reduced so much that there is no need to have these overrides here; they can just be implemented in the derived classes directly.
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             assert(inputIndex == 0); inputIndex;
-            auto gradient = Input(0)->GradientFor(frameRange);
-            BackpropToV(*m_gradient, Input(0)->OutputFor(frameRange), gradient, GradientFor(frameRange));
+            auto gradient = Input(0)->GradientFor(fr);
+            BackpropToV(*m_gradient, Input(0)->OutputFor(fr), gradient, GradientFor(fr));
         }
 
         // derived class implement the actual non-linear operation
         virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) = 0;
 
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            auto values = OutputFor(frameRange);
-            ForwardPropV(values, Input(0)->OutputFor(frameRange));
+            auto values = OutputFor(fr);
+            ForwardPropV(values, Input(0)->OutputFor(fr));
         }
 
         // derived class implement the actual non-linear operation
@@ -78,16 +78,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_gradient, matrixPool);
         }
 
         // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_gradient, matrixPool);
         }
     protected:
@@ -160,15 +160,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             BackpropToS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -216,15 +216,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             BackpropToS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -274,15 +274,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
 
             BackpropToS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -324,13 +324,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange);
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(frameRange);
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
 
             m_gradient->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
             sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradient);
@@ -371,15 +371,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputValue = Input(0)->OutputFor(fr);
 
             BackpropToS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -429,15 +429,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, *m_diff, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             BackpropToS(*m_gradient, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -478,16 +478,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_diff, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_diff, matrixPool);
         }
     private:
@@ -519,15 +519,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradient, *m_softmax, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
 
             BackpropToS(*m_gradient, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -567,16 +567,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             RequestMatrixFromPool(m_softmax, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_softmax, matrixPool);
         }
     private:
@@ -623,14 +623,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             //get the right slice 
             const size_t colsPrior = Input(0)->GetNumCols();
 
-            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradientValues, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> slicePosterior = DataFor(*m_posterior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradientValues, fr);
+            Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
 
             switch (inputIndex)
             {
@@ -640,40 +640,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         BackpropToUnnormedPrior(Input(0)->GradientValues(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
                 else
                 {
-                    Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                        Matrix<ElemType> slicePrior = DataFor(*m_prior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
+                        Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
                         BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
                 }
             }
             break;
             case 1:
             {
-                      Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                      Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
                 if (colsPrior == 1)
                         BackpropToMean(Input(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 else
                 {
-                    Matrix<ElemType> sliceMeanGradient = Input(1)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceMeanGradient = Input(1)->GradientFor(fr);
                         BackpropToMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 }
             }
             break;
             case 2:
             {
-                    Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
                 if (colsPrior == 1)
                         BackpropToLogStddev(Input(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                 else
                 {
-                    Matrix<ElemType> sliceLotStddevGradient = Input(2)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceLotStddevGradient = Input(2)->GradientFor(fr);
                     BackpropToLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                 }
             }
             break;
             case 3:
             {
-                Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceFeatureGradient = Input(3)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+                Matrix<ElemType> sliceFeatureGradient = Input(3)->GradientFor(fr);
                 BackpropToFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
             }
             break;
@@ -784,18 +784,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            //if (frameRange.IsAllFrames()) { ForwardPropMap(); return; }
+            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
             size_t colsPrior = Input(0)->GetNumCols();
             size_t numSamples = Input(3)->GetNumCols();
 
             //get the right slice 
-            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceFeature = Input(3)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> slicePosterior = DataFor(*m_posterior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(fr);
+            Matrix<ElemType> sliceFeature = Input(3)->OutputFor(fr);
+            Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
+            Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+            Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
 
             if (colsPrior == 1)
             {
@@ -804,12 +804,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsPrior == numSamples)
             {
-                Matrix<ElemType> sliceUnnormedPrior = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceMean = Input(1)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceLogstddev = Input(2)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceUnnormedPrior = Input(0)->OutputFor(fr);
+                Matrix<ElemType> sliceMean = Input(1)->OutputFor(fr);
+                Matrix<ElemType> sliceLogstddev = Input(2)->OutputFor(fr);
 
-                Matrix<ElemType> slicePrior = DataFor(*m_prior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceStddev = DataFor(*m_stddev, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
+                Matrix<ElemType> sliceStddev = DataFor(*m_stddev, fr);
 
                 ForwardPropS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
                     slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
@@ -951,9 +951,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_prior, matrixPool);
             RequestMatrixFromPool(m_normedDeviation, matrixPool);
             RequestMatrixFromPool(m_normedDeviationVectors, matrixPool);
@@ -963,9 +963,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_prior, matrixPool);
             ReleaseMatrixToPool(m_normedDeviation, matrixPool);
             ReleaseMatrixToPool(m_normedDeviationVectors, matrixPool);
@@ -1011,16 +1011,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(m_dropoutRate, Input(0)->GradientValues(), *m_maskOfDropout, GradientValues());
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (frameRange.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                sliceMask = DataFor(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                sliceMask = DataFor(*m_maskOfDropout, fr);
             }
 
             BackpropToS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
@@ -1042,10 +1042,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ForwardPropS(m_dropoutRate, m_randomSeed, Output(), *m_maskOfDropout, Input(0)->Output());
         }
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            //if (frameRange.IsAllFrames()) { ForwardPropMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(fr);
             Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
@@ -1053,10 +1053,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 SetDims(Input(0));
                 m_maskOfDropout->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
-                sliceMask = DataFor(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                sliceMask = DataFor(*m_maskOfDropout, fr);
             }
 
-            sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            sliceOutputValue = OutputFor(fr);
 
             ForwardPropS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
@@ -1128,16 +1128,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_maskOfDropout, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
         }
     private:
@@ -1173,7 +1173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Hardmax is not differentiable and is used for evaluation only.");
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & /*fr*/) override
         {
             LogicError("Hardmax is not differentiable and is used for evaluation only.");
         }

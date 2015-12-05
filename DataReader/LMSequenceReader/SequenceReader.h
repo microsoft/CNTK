@@ -9,7 +9,7 @@
 
 #include "DataReader.h"
 #include "DataWriter.h"
-#include "commandArgUtil.h"
+#include "Config.h"
 #include "SequenceParser.h"
 #include "RandomOrdering.h"
 #include <string>

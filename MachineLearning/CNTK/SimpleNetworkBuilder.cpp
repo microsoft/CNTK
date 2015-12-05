@@ -1837,6 +1837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
         {
             input = inputObs[sidx];
+#if 0
             if (inputWeightSparse)
             {
                 Wxo = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
@@ -1845,6 +1846,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Wxc = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
             }
             else
+#endif
             {
                 Wxo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
                 Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);

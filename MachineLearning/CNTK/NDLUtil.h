@@ -11,7 +11,7 @@
 #include "ComputationNetwork.h"
 #include "SynchronousExecutionEngine.h"
 #include <string>
-#include "commandArgUtil.h"
+#include "Config.h"
 #include <stdexcept>
 
 using namespace std;
