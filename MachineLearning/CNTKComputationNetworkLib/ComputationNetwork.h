@@ -501,15 +501,10 @@ public:
     // -----------------------------------------------------------------------
 
     // main entry point for forward prop
-    void ForwardProp(const ComputationNodeBasePtr & rootNode);
+    void ForwardProp(const ComputationNodeBasePtr rootNode);
 
     // main entry point for backprop
-    template<class ElemType>
-    void Backprop(const ComputationNodeBasePtr rootNode,
-                  bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
-                  const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
-                  bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
-                  bool resetTimeStampAfterComputation = false);
+    void Backprop(const ComputationNodeBasePtr rootNode);
 
     template<class NODESET>     // version that takes multiple nodes
     void ForwardProp(const NODESET & nodes)
@@ -853,7 +848,6 @@ public:
     void ClearGradientOfAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
-
         for (auto &node : allNodes)
             node->ClearGradientOfInputs();
     }
