@@ -1163,12 +1163,23 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     {
     }
 
-    template<class ElemType>
-    /*static*/ void MatrixQuantizerGPU<ElemType>::SetDevice(int deviceId)
+#pragma endregion MatrixQuantizerGPU functions
+
+#pragma region MainComputeStreamEvent functions
+
+    MainComputeStreamEvent::MainComputeStreamEvent()
     {
     }
 
-#pragma endregion MatrixQuantizerGPU functions
+    MainComputeStreamEvent::~MainComputeStreamEvent()
+    {
+    }
+
+    void MainComputeStreamEvent::Synchronize()
+    {
+    }
+
+#pragma endregion MainComputeStreamEvent functions
 
     template class GPUMatrix<char>;
     template class GPUMatrix<float>;

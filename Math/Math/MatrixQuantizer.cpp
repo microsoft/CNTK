@@ -11,12 +11,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
     template<class ElemType>
     /*static*/ MatrixQuantizer<ElemType>*
-    MatrixQuantizer<ElemType>::CreateMatrixQuantizer(size_t numRows, size_t numCols, int deviceId)
+    MatrixQuantizer<ElemType>::CreateMatrixQuantizer(size_t numRows, size_t numCols, int deviceId, bool useAsync)
     {
         if (deviceId >= 0)
         {
 #ifndef CPUONLY
-            return new MatrixQuantizerGPU<ElemType>(numRows, numCols, deviceId);
+            bool useDedicatedComputeStream = useAsync;
+            return new MatrixQuantizerGPU<ElemType>(numRows, numCols, deviceId, useDedicatedComputeStream);
 #else
             RuntimeError("CreateMatrixQuantizer: attempted to use GPU while compiled without GPU support");
 #endif

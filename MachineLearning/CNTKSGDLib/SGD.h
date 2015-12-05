@@ -223,17 +223,18 @@ protected:
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
 
+    // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // 0: No sync perfomance stats
+    // 1: Show stats on every sync 
+    // n > 1: Show stats after every n sync
+    int  m_syncStatsTrace;
+
     // Data parallel SGD training parameters
     int m_numGradientBits;
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
     // Parallel training related with MA 
-    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
-    // 0: means no perfomance stats show
-    // 1: means show stats every sync 
-    // n>1: means show stats after every n sync
-    int    m_iMASyncStatsTrace;
     size_t m_nFramesBetweenMASync;
 
     bool m_needAveMultiplier;

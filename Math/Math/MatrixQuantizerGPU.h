@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MatrixQuantizerGPU : public MatrixQuantizer<ElemType>
     {
     public:
-        MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync = false);
+        MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync = false);
         ~MatrixQuantizerGPU();
 
         // Disallow copy and move construction and assignment
@@ -31,8 +31,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
         void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
         void WaitUnquantizeAsyncDone() override;            
-
-        static void SetDevice(int deviceId);
 
     private:        
         // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
@@ -67,9 +65,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SyncEvent(cudaEvent_t ev);
         
     private:
+        static cudaStream_t m_computeStream;
         static cudaStream_t m_fetchStream;
         static cudaStream_t m_assignStream;
 
+        mutable cudaEvent_t m_tempMatrixZeroingCompleteEvent;
         mutable cudaEvent_t m_quantizeCompleteEvent;
         mutable cudaEvent_t m_fetchCompleteEvent;
         mutable cudaEvent_t m_assignCompleteEvent;
@@ -81,6 +81,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // A temporary intermediate QuantizedMatrix buffer on the GPU
         QuantizedMatrix<ElemType>* m_tempGPUQuantizedMatrix; 
+    };
+
+    class MainComputeStreamEvent
+    {
+    public:
+        MainComputeStreamEvent();
+        ~MainComputeStreamEvent();
+
+        void Synchronize();
+
+    private:
+#ifndef CPUONLY
+        cudaEvent_t m_mainGPUComputeStreamCUDAEvent;
+#endif
     };
     
 }}}
