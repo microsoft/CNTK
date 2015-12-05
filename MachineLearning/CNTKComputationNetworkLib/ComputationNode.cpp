@@ -12,8 +12,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // TODO: move more code here to speed up compilation
-
     // -----------------------------------------------------------------------
     // subroutines for Validate() implementations
     // -----------------------------------------------------------------------
@@ -71,12 +69,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ValidateInferBinaryChildrenDims();
 
-        size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-        size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
+        size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+        size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
         if (isFinalValidationPass && !(
-               (rows0 == rows1 && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
-               (allowMultiples && (rows0 == 1 || rows1 == 1) && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||    // one is row vec
+               (rows0 == rows1 && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
+               (allowMultiples && (rows0 == 1 || rows1 == 1) && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||    // one is row vec
                (allowMultiples && ((!HasMBLayout() && cols0 > cols1 && cols0 % cols1 == 0) || (cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))
            ))   // TODO: ^^ I don't understand the asymmetry of this last one
         {
@@ -105,8 +103,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_pMBLayout = nullptr;              // this node does not hold mini-batch data
         ValidateInferBinaryChildrenDims();
         if (isFinalValidationPass &&
-            !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-              (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
+            !(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
+              (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         SetDims(1, 1);
         InferImageDimsFromInputs();
@@ -124,8 +122,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_inputs.size() >= 2);
         for (size_t index = 0; index < 2; index++)
         {
-            auto in = Inputs(index);
-            auto other = Inputs(1 - index);
+            auto in = Input(index);
+            auto other = Input(1 - index);
             // borrow any unset dimension on one input from the other input
             size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
             size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
@@ -135,16 +133,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void ComputationNode<ElemType>::ValidateInferChildDims(size_t i, size_t rows, size_t cols) //override final
     {
-        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(i)->GetNumRows() == 0)
+        if (Input(i)->OperationName() == OperationNameOf(LearnableParameter) && Input(i)->GetNumRows() == 0)
         {
             if (rows == 0 || cols == 0)
                 LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
-            Inputs(i)->SetDims(rows, cols);
-            Inputs(i)->Validate(true);  // validate it properly
+            Input(i)->SetDims(rows, cols);
+            Input(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
-            Inputs(i)->FunctionValues().SetValue(0);
-            fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
+            Input(i)->FunctionValues().SetValue(0);
+            fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)rows, (int)cols);
         }
     }
 
@@ -164,7 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (i > 0)
                     fstream << wstring(L",");
-                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+                fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
             }
             fstream << wstring(L")");
         }

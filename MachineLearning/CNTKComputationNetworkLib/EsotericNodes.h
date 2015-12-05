@@ -44,24 +44,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void BackpropToNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
             {
-                auto gradient = Inputs(2)->GradientSlice(frameRange);
-                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
-                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
+                auto gradient = Input(2)->GradientSlice(frameRange);
+                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Input(1)->ValueSlice(frameRange), gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Input(1)->ValueSlice(frameRange), 1.0f, gradient);
             }
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FunctionValues().VerifySize(1, 1);
-            Inputs(0)->FunctionValues().VerifySize(1, 1);
-            FunctionValues().SetValue(Inputs(0)->FunctionValues());
+            Input(0)->FunctionValues().VerifySize(1, 1);
+            FunctionValues().SetValue(Input(0)->FunctionValues());
 #if NANCHECK
             FunctionValues().HasNan("DummyCriterionNode");
 #endif
@@ -71,22 +71,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != L"InputValue")
+            if (Input(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
-            if (Inputs(0)->OperationName() != L"InputValue")
+            if (Input(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
             if (isFinalValidationPass)
             {
-                if (Inputs(0)->GetNumRows() != 1)
+                if (Input(0)->GetNumRows() != 1)
                 LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
-                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 || Inputs(2)->GetNumRows() == 0)
+                if (Input(0)->GetNumRows() == 0 || Input(1)->GetNumRows() == 0 || Input(2)->GetNumRows() == 0)
                     LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
-                if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
+                if (Input(1)->GetNumRows() != Input(2)->GetNumRows())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
-            // TODO: What is this about?
-            //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
-            //    ValidateInferChildDims(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
             SetDims(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -168,9 +165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute posterior probability of label y at position t
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            DecideStartEndingOutputLab(Inputs(0)->FunctionValues(), mStartLab, mEndLab);
-            ForwardPropS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
-                              Inputs(2)->FunctionValues(), mStartLab, mEndLab);
+            DecideStartEndingOutputLab(Input(0)->FunctionValues(), mStartLab, mEndLab);
+            ForwardPropS(mAlpha, mBacktrace, FunctionValues(), Input(1)->FunctionValues(),
+                              Input(2)->FunctionValues(), mStartLab, mEndLab);
         }
 
         // compute forward backward algorithm
@@ -266,10 +263,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             if (isFinalValidationPass)
-                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
-                    Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                    Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
+                if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
+                    Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Input(2)->GetNumCols() == Input(2)->GetNumRows()))
                 {
                     LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                 }
@@ -348,12 +345,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
 
-                    //BackpropToLeft1(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                    //BackpropToLeft1(sliceInput1Value, Input(0)->GradientValues(), sliceOutputGrad);
 
-                    size_t r = Inputs(0)->GetNumRows();
-                    size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                    size_t r = Input(0)->GetNumRows();
+                    size_t T1 = Input(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
                     Matrix<ElemType> mTmp1(r, T1, sliceInput1Value.GetDeviceId());
 
                     // process sequence by sequence
@@ -367,25 +364,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (size_t t = 0; t < T1; t++)
                         {
-                            Inputs(0)->GradientValues().ColumnSlice(t*GetNumParallelSequences() + k, 1) += mTmp1.ColumnSlice(t, 1);
+                            Input(0)->GradientValues().ColumnSlice(t*GetNumParallelSequences() + k, 1) += mTmp1.ColumnSlice(t, 1);
                         }
                     }
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
 
-                    //BackpropToRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                    //BackpropToRight(Input(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
 
                     // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t r = Inputs(0)->GetNumRows();
-                        size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                        size_t r = Input(0)->GetNumRows();
+                        size_t T1 = Input(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
                         Matrix<ElemType> mTmp1(r, T1, sliceOutputGrad.GetDeviceId());
                         for (size_t t = 0; t < T1; t++)
                         {
-                            mTmp1.ColumnSlice(t, 1).SetValue(Inputs(0)->FunctionValues().ColumnSlice(t*GetNumParallelSequences() + k, 1));
+                            mTmp1.ColumnSlice(t, 1).SetValue(Input(0)->FunctionValues().ColumnSlice(t*GetNumParallelSequences() + k, 1));
                         }
                         auto mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
                         auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
@@ -398,12 +395,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Inputs(1)->GetNumRows();
-                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
+                        size_t d = Input(1)->GetNumRows();
+                        size_t T1 = Input(0)->GetNumRows() / GetNumParallelSequences();
                         Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
                         mTmp1.Resize(d, T1);
                         Matrix<ElemType> mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
@@ -415,18 +412,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             mTmp4 = mTmp1.ColumnSlice(t, 1);
                             mTmp4.Reshape(1, d);
-                            Inputs(0)->GradientValues().AddToRowSliceValuesOf(mTmp4, t*GetNumParallelSequences() + k, 1);
+                            Input(0)->GradientValues().AddToRowSliceValuesOf(mTmp4, t*GetNumParallelSequences() + k, 1);
                         }
                     }
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
+                    Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Inputs(1)->GetNumRows();
-                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
+                        size_t d = Input(1)->GetNumRows();
+                        size_t T1 = Input(0)->GetNumRows() / GetNumParallelSequences();
 
                         Matrix<ElemType> mTmp0(sliceOutputGrad.GetDeviceId());
                         mTmp0.Resize(1, d);
@@ -436,7 +433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t t = 0; t < T1; t++)
                         {
                             mTmp0.SetValue(0);
-                            mTmp0.AddWithRowSliceValuesOf(Inputs(0)->FunctionValues(), t * GetNumParallelSequences() + k, 1);
+                            mTmp0.AddWithRowSliceValuesOf(Input(0)->FunctionValues(), t * GetNumParallelSequences() + k, 1);
                             mTmp1.AssignToRowSliceValuesOf(mTmp0, t, 1);
                         }
                         Matrix<ElemType> mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
@@ -499,8 +496,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
+            size_t rows0 = Input(0)->GetNumRows(), cols1 = Input(1)->GetNumCols();
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange);
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
@@ -512,7 +509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // (TODO: these following assignments are leftovers of refactoring and can be short-circuited)
             Matrix<ElemType>& functionValues = sliceOutputValue;
-            const Matrix<ElemType>& input0 = Inputs(0)->FunctionValues();
+            const Matrix<ElemType>& input0 = Input(0)->FunctionValues();
             const Matrix<ElemType>& input1 = sliceInput1Value;
 
             /**
@@ -597,16 +594,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(2)->FunctionValues().GetNumElements() != 1)
+            if (Input(2)->FunctionValues().GetNumElements() != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
-            m_strideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
+            m_strideDim = (size_t) Input(2)->FunctionValues().Get00Element();
             if (m_strideDim != 0 && m_strideDim != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
-            //if (Inputs(2)->m_needGradient)        // disabled because this is a flag that belongs to Network. Node should simply not propagate anything into it
+            //if (Input(2)->m_needGradient)        // disabled because this is a flag that belongs to Network. Node should simply not propagate anything into it
             //    RuntimeError("StrideTimes: No gradient update should be on input(2).");
 
-            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
             if (m_strideDim == 0) // by row
             {
@@ -622,7 +619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 SetDims(rows0, cols1);
             }
-            LinkToMBLayout(Inputs(1)->GetMBLayout());   // retains the layout of the right input
+            LinkToMBLayout(Input(1)->GetMBLayout());   // retains the layout of the right input
 
             InferImageDimsFromInputs();
         }
@@ -632,7 +629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Inputs(0)->GetNumRows(), 1);
+            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
         }
     };
 

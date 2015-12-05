@@ -84,12 +84,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodeBasePtr node = iter->m_nestedNodes[j];
                 for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
-                    if (node->Inputs(i)->m_loopId == node->m_loopId && 
+                    if (node->Input(i)->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
                         node->OperationName() != OperationNameOf(FutureValueNode))      // TODO: test for type RecurrentNode instead?
                     {
-                        //assert(node->Inputs(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
-                        node->Inputs(i)->m_indexInLoop++;               // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
+                        //assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
+                        node->Input(i)->m_indexInLoop++;               // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
                     }
                 }
             }
@@ -190,14 +190,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // set m_lowLink to min over m_lowLinks of children
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (!cur->Inputs(i)->m_visited)
+                if (!cur->Input(i)->m_visited)
                 {
-                    DetermineSCCsR(cur->Inputs(i), sccStack, index, loopId);
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
+                    DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
                 }
-                else if (cur->Inputs(i)->m_inStack)
+                else if (cur->Input(i)->m_inStack)
                 {
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
                 }
             }
         }
@@ -254,8 +254,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->Inputs(i)->m_loopId == cur->m_loopId)
-                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Inputs(i));
+                    if (cur->Input(i)->m_loopId == cur->m_loopId)
+                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Input(i));
             }
             recStack.erase(cur);
             nodesStack.push_back(cur);
@@ -278,7 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         visited.insert(node);
 
         for (int i = 0; i < node->ChildrenSize(); i++)
-            GatherLoopNodesR(node->Inputs(i), visited, recurrentResult, noRecurrentResult);
+            GatherLoopNodesR(node->Input(i), visited, recurrentResult, noRecurrentResult);
 
         if (node->m_loopId >= 0)
             recurrentResult[node->m_loopId].push_back(node);

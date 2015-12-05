@@ -315,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (i > 0)
                     fstream << wstring(L",");
-                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+                fstream << (Input(i) ? Input(i)->NodeName() : L"NULL");
             }
             fstream << wstring(L")");
         }

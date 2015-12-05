@@ -105,14 +105,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
         {
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Inputs(1)->GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Input(1)->GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
-                BackpropToOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
+                BackpropToOverWeight(sliceOutputGrad, Input(0)->GradientValues(), Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
             else if (inputIndex == 1)  // derivative with regard to the input feature
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
             }
         }
 
@@ -209,9 +209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            ForwardPropS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
+            ForwardPropS(sliceOutputValue, Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
         }
 
     private:
@@ -305,10 +305,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
-            //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
-            //    LogicError("ConvolutionNode requires the first input to be LearnableParameter type.");
-
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
@@ -317,21 +313,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputImageLayout.GetNumChannels();
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Input(0)->FunctionValues().HasNoElements())
                 ValidateInferChildDims(0, m_sampleLayout.GetNumChannels(), weightCols);
 
-            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_sampleLayout.GetNumChannels()))
+            if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != m_sampleLayout.GetNumChannels()))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_inputs[0]->NodeName().c_str(), (int)m_sampleLayout.GetNumChannels(), (int)weightCols);
 
             size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();
-            if (Inputs(1)->GetNumRows() == 0)
-                ValidateInferChildDims(1, inputDim, Inputs(1)->GetNumCols());
+            if (Input(1)->GetNumRows() == 0)
+                ValidateInferChildDims(1, inputDim, Input(1)->GetNumCols());
 
-            if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
+            if (isFinalValidationPass && Input(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)inputDim);
 
             size_t outputDim = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
-            SetDims(outputDim, Inputs(1)->GetNumCols());
+            SetDims(outputDim, Input(1)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -464,10 +460,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             BackpropToV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
@@ -478,7 +474,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             ForwardPropV(sliceOutputValue, sliceInput0Value);
         }
@@ -499,13 +495,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inputSizePerSample = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();
             m_outputSizePerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
 
-            if (Inputs(0)->GetNumRows() == 0)
-                ValidateInferChildDims(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
+            if (Input(0)->GetNumRows() == 0)
+                ValidateInferChildDims(0, m_inputSizePerSample, Input(0)->GetNumCols());
 
-            if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
+            if (isFinalValidationPass && Input(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)m_inputSizePerSample);
 
-            SetDims(m_outputSizePerSample, Inputs(0)->GetNumCols());
+            SetDims(m_outputSizePerSample, Input(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
