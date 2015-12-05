@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- these are meant to be overridden by ControlFlowNodes
 
-        virtual void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
+        virtual void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
 
@@ -1185,10 +1185,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
         // TODO: move to -Base (or -Network?)
-        void ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override
+        void Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override
         {
             if (frameRange.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
-                LogicError("%ls %ls operation: ComputeGradientOfChildren called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
+                LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
 
             for (size_t i = 0; i < m_inputs.size(); i++)
             {
@@ -1198,7 +1198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                      childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()
                     ))
                 {
-                    //fprintf(stderr, "ComputeGradientOfChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+                    //fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
                     if (!m_needsGradient)
                         LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
 #ifdef DISPLAY_DEBUG
@@ -1210,19 +1210,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     child->LazyZeroGradient();              // set gradient to 0 if this is the first time
 
                     // If we propagate from a loop to a node that is outside the loop, we are not efficient.
-                    // This case is handled by SEQTraversalFlowControlNode::ComputeGradientOfChildren().
+                    // This case is handled by SEQTraversalFlowControlNode::Backprop().
                     // The check below is to verify that.
                     if (IsPartOfLoop() && !child->IsPartOfLoop() && !frameRange.IsAllFrames())
                     {
-#if 1
-                        LogicError("ComputeGradientOfChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
+                        LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                                    NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-#else
-                        static int warnings = 0;
-                        if (warnings++ < 20)
-                            fprintf (stderr, "ComputeGradientOfChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
-                                     NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-#endif
                     }
 
                     //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());

@@ -1221,9 +1221,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto ptr = criterionNodes[inetworks - 1]->begin(); ptr != criterionNodes[inetworks - 1]->end(); ptr++)
             {
                 if (ptr == criterionNodes[inetworks - 1]->begin())
-                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr); 
+                {
+                    networks[inetworks - 1]->ForwardProp(*ptr);
+                    networks[inetworks - 1]->Backprop<ElemType>(*ptr);
+                }
                 else
-                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
+                {
+                    networks[inetworks - 1]->ForwardProp(*ptr);
+                    networks[inetworks - 1]->Backprop<ElemType>(*ptr, false, nullptr, false);
+                }
             }
 
             for (int i = inetworks - 2; i >= 0; i--)
@@ -1234,7 +1240,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no need to compute gradients from pairnodes, because the gradients are added from pair nodes already
                     for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient<ElemType>(*ptr, true, nullptr, false);
+                        networks[i]->ForwardProp(*ptr);
+                        networks[i]->Backprop<ElemType>(*ptr, true, nullptr, false);
                     }
                 }
                 else if (pairNodes[i]->size() > 0)
@@ -1242,7 +1249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no criterion, so use pair-node gradients
                     for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
+                        networks[i]->ForwardProp(*ptr);
+                        networks[i]->Backprop<ElemType>(*ptr, false, nullptr, false);
                     }
                 }
             }

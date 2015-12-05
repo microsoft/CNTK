@@ -48,20 +48,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one?
-    // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
+    // The actual call pattern is
+    //  - ForwardProp() for eval nodes
+    //  - ForwardProp() for the training criterion
+    //  - Backprop() for the training criterion
+    // I.e. we must call Evaluate() inside here as well, but it will typically only evaluate the training criterion bits because the eval nodes already require most of the network to be computed.
     template<class ElemType>
-    void ComputationNetwork::ComputeGradient(const ComputationNodeBasePtr rootNode,         // training criterion to compute the gradients for
-                                             bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0  --This is the default.
-                                             const Matrix<ElemType>* rootGradientInitValue, // if given then this is the starting gradient from the top
-                                             bool bClearGradient,                           // if false then gradients are not cleared  --TODO: When does that happen?
-                                             bool resetTimeStampAfterComputation)
+    void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode,         // training criterion to compute the gradients for
+                                      bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0  --This is the default.
+                                      const Matrix<ElemType>* rootGradientInitValue, // if given then this is the starting gradient from the top   --is this ever used?? f not, we can get rid of <ElemType>
+                                      bool bClearGradient,                           // if false then gradients are not cleared  --TODO: When does that happen?
+                                      bool resetTimeStampAfterComputation)
     {
-        // run forward pass first for criterion node
-        // The actual call pattern is
-        //  - Evaluate() for eval nodes
-        //  - ComputeGradient() for the training criterion
-        // I.e. we must call Evaluate() inside here as well, but it will typically only evaluate the training criterion bits because the eval nodes already require most of the network to be computed.
-        ForwardProp(rootNode);
+        // TODO: can we check whether criterion node has been computed actually? IsOutputValue...?
 
         // TODO: comment what the purpose/condition of this is
         if (bClearGradient)
@@ -80,17 +79,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
-        GetOuterLoopNode(rootNode)->ComputeGradientOfChildren(FrameRange(nullptr), true, true);
+        GetOuterLoopNode(rootNode)->Backprop(FrameRange(nullptr), true, true);
 
         // Since we allow sharing of the matrix for function value and gradient value. the function values are destroyed
         // after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
-        // resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
+        // resetTimeStampAfterComputation is by default false because Backprop in normal case is followed by new batch of input
         if (resetTimeStampAfterComputation)
             ResetEvalTimeStamp();
     }
 
-    template void ComputationNetwork::ComputeGradient<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
-    template void ComputationNetwork::ComputeGradient<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+    template void ComputationNetwork::Backprop<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+    template void ComputationNetwork::Backprop<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
 
     // -----------------------------------------------------------------------
     // PARTraversalFlowControlNode methods -- implements PAR traversal
@@ -148,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ComputeGradientOfChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         // process nodes in pre-determined order
@@ -157,7 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & node = *pnode;
 
             node->BeginBackprop();
-            node->ComputeGradientOfChildren(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node->Backprop(frameRange.WithLayout(node->GetMBLayout()), true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
             node->EndBackprop();
         }
     }
@@ -229,7 +228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node2->BeginBackprop();
     }
 
-    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::ComputeGradientOfChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::Backprop(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         const auto & recurrentNodes = m_nestedNodes;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
@@ -240,8 +239,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
             {
                 auto & node2 = *nodeIter2;
-                node2->ComputeGradientOfChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
-                // The above flags tell ComputeGradientOfChildren() to skip back-propagation from inside a node into
+                node2->Backprop(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
+                // The above flags tell Backprop() to skip back-propagation from inside a node into
                 // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
             }
         }
@@ -255,7 +254,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
-            node2->ComputeGradientOfChildren(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node2->Backprop(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 
         // tell all nodes we are done for this iteraTion
