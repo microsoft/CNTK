@@ -76,9 +76,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i = 0; i < featureNodes.size(); i++)
-                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Output();
             for (size_t i = 0; i < labelNodes.size(); i++)
-                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
+                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Output();
 
             // evaluate through minibatches
             size_t totalEpochSamples = 0;
@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numSamplesWithLabel = m_net->GetNumSamplesWithLabel(actualMBSize);
                 for (int i = 0; i < evalNodes.size(); i++)
                 {
-                    m_net->Evaluate(evalNodes[i]);
+                    m_net->ForwardProp(evalNodes[i]);
                     evalResults[i] += (double)evalNodes[i]->Get00Element(); // criterionNode should be a scalar
                 }
 

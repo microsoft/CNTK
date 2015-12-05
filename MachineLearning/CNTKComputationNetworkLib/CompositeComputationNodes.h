@@ -43,12 +43,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
-            ComputationNodePtr child = Inputs(inputIndex);
-            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->GetNumRows();
+            ComputationNodePtr child = Input(inputIndex);
+            size_t startidx = (inputIndex == 0) ? 0 : Input(0)->GetNumRows();
             size_t nrows = child->GetNumRows();
 
             if (child->GradientValues().GetNumRows() != child->GetNumRows() || child->GradientValues().GetNumCols() != GetNumCols())
@@ -60,20 +60,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> tmpMat(m_deviceId);
             tmpMat.AssignRowSliceValuesOf(GradientValues(), startidx, nrows);
 
-            ComputeInputPartialS(tmpMat, child->GradientValues());
+            BackpropToS(tmpMat, child->GradientValues());
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
         {
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
@@ -96,12 +96,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             size_t rows1, cols1;
-            rows1 = Inputs(1)->GetNumRows();
-            cols1 = Inputs(1)->GetNumCols();
+            rows1 = Input(1)->GetNumRows();
+            cols1 = Input(1)->GetNumCols();
 
             size_t rows0, cols0;
-            rows0 = Inputs(0)->GetNumRows();
-            cols0 = Inputs(0)->GetNumCols();
+            rows0 = Input(0)->GetNumRows();
+            cols0 = Input(0)->GetNumCols();
 
             if (isFinalValidationPass && cols0 != cols1)
                 LogicError("ParallelNode: column dimension mismatched!");
@@ -122,44 +122,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId), f1(m_deviceId);
 
-            f0 = Inputs(0)->FunctionValues();
-            f1 = Inputs(1)->FunctionValues();
-            func = FunctionValues();
+            f0 = Input(0)->Output();
+            f1 = Input(1)->Output();
+            func = Output();
 
-            Inputs(0)->SetDims(nInput0, nT);
-            Inputs(0)->UpdateFunctionValuesSize();
-            Inputs(0)->FunctionValues().SetValue(0);
-            Inputs(0)->FunctionValues()(0, 0) = 1;
-            Inputs(0)->FunctionValues()(0, 1) = 2;
-            Inputs(0)->FunctionValues()(0, 2) = 3;
+            Input(0)->SetDims(nInput0, nT);
+            Input(0)->UpdateFunctionValuesSize();
+            Input(0)->Output().SetValue(0);
+            Input(0)->Output()(0, 0) = 1;
+            Input(0)->Output()(0, 1) = 2;
+            Input(0)->Output()(0, 2) = 3;
 
-            Inputs(1)->SetDims(nInput1, nT);
-            Inputs(1)->UpdateFunctionValuesSize();
-            Inputs(1)->FunctionValues().SetValue(0);
-            Inputs(1)->FunctionValues()(0, 0) = 4;
-            Inputs(1)->FunctionValues()(0, 1) = 5;
-            Inputs(1)->FunctionValues()(0, 2) = 6;
+            Input(1)->SetDims(nInput1, nT);
+            Input(1)->UpdateFunctionValuesSize();
+            Input(1)->Output().SetValue(0);
+            Input(1)->Output()(0, 0) = 4;
+            Input(1)->Output()(0, 1) = 5;
+            Input(1)->Output()(0, 2) = 6;
             SetDims(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
-            EvaluateThisNode(FrameRange(m_pMBLayout));
+            ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 2), 3, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 0), 4, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 1), 5, EPSILON) ||
-                !ISCLOSE(FunctionValues()(3, 2), 6, EPSILON))
+            if (!ISCLOSE(Output()(0, 0), 1, EPSILON) ||
+                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Output()(0, 2), 3, EPSILON) ||
+                !ISCLOSE(Output()(3, 0), 4, EPSILON) ||
+                !ISCLOSE(Output()(3, 1), 5, EPSILON) ||
+                !ISCLOSE(Output()(3, 2), 6, EPSILON))
                 return false;
-            FunctionValues().TransferToDeviceIfNotThere(m_deviceId, true);
+            Output().TransferToDeviceIfNotThere(m_deviceId, true);
 
             GradientValues().Resize(nInput0 + nInput1, nT);
             GradientValues().SetValue(0);
-            Inputs(0)->GradientValues().Resize(nInput0, nT);
-            Inputs(1)->GradientValues().Resize(nInput1, nT);
-            Inputs(0)->GradientValues().SetValue(0);
-            Inputs(1)->GradientValues().SetValue(0);
+            Input(0)->GradientValues().Resize(nInput0, nT);
+            Input(1)->GradientValues().Resize(nInput1, nT);
+            Input(0)->GradientValues().SetValue(0);
+            Input(1)->GradientValues().SetValue(0);
             GradientValues()(0, 0) = 1;
             GradientValues()(0, 1) = 2;
             GradientValues()(0, 2) = 3;
@@ -167,20 +167,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(3, 1) = 5;
             GradientValues()(3, 2) = 6;
 
-            ComputeInputPartial(0, FrameRange(m_pMBLayout));
-            ComputeInputPartial(1, FrameRange(m_pMBLayout));
+            BackpropTo(0, FrameRange(m_pMBLayout));
+            BackpropTo(1, FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON)
-                || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 2, EPSILON)
-                || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 3, EPSILON)
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 0), 4, EPSILON)
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 5, EPSILON)
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 2), 6, EPSILON))
+            if (!ISCLOSE(Input(0)->GradientValues()(0, 0), 1, EPSILON)
+                || !ISCLOSE(Input(0)->GradientValues()(0, 1), 2, EPSILON)
+                || !ISCLOSE(Input(0)->GradientValues()(0, 2), 3, EPSILON)
+                || !ISCLOSE(Input(1)->GradientValues()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Input(1)->GradientValues()(0, 1), 5, EPSILON)
+                || !ISCLOSE(Input(1)->GradientValues()(0, 2), 6, EPSILON))
                 return false;
 
-            Inputs(0)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            Inputs(1)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(0)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(1)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
             return true;
         }
@@ -217,21 +217,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MarkComputed(const bool hasComputed)
         {
             m_hasComputed = hasComputed;
-            CreateMatrixIfNull(m_functionValues);
+            CreateMatrixIfNull(m_output);
         }
 
         virtual bool RequiresPreCompute() const override { return true; }
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << FunctionValues();   // TODO: why serialize if not yet computed?
+            fstream << Output();   // TODO: why serialize if not yet computed?
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
             LoadFunctionValues(fstream);
          }
@@ -253,13 +253,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (!Inputs(0)->HasMBLayout())
+            if (!Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-                SetDims(Inputs(0)->GetNumRows(), 1);
+                SetDims(Input(0)->GetNumRows(), 1);
             else
-                VerifyDims(Inputs(0)->GetNumRows(), 1);
+                VerifyDims(Input(0)->GetNumRows(), 1);
             InferImageDimsFromInputs();
         }
 
@@ -276,8 +276,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
         virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
         {
-            CreateMatrixIfNull(m_functionValues); 
-            m_functionValues->SetValue(value);
+            CreateMatrixIfNull(m_output);
+            m_output->SetValue(value);
             m_hasComputed = true; 
         }
     public:
@@ -302,9 +302,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples(SIZE_MAX)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             m_numSamples = SIZE_MAX;
         }
     
@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
         {
             //LogicError("Mean operation should not be involved in the gradient calculation.");
         }
@@ -382,14 +382,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed)     // initialize accumulation
             {
                 UpdateFunctionValuesSize();
-                FunctionValues().SetValue(0);
+                Output().SetValue(0);
             }
-            // no else branch because EvaluateThisNodeNonLooping() already leaves a valid mean in m_functionValues
+            // no else branch because ForwardPropNonLooping() already leaves a valid mean in m_output
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -397,15 +397,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
 
-            auto & samples = Inputs(0)->FunctionValues();
-            auto & avg = FunctionValues();
+            auto & samples = Input(0)->Output();
+            auto & avg = Output();
 
 #if 1//NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
-            size_t numNewSamples = Inputs(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
@@ -446,13 +446,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed) // initialize
             {
                 // reset accumulators
-                size_t inputDim = Inputs(0)->GetNumRows();
+                size_t inputDim = Input(0)->GetNumRows();
                 m_mean.Resize(inputDim, 1);
                 m_var.Resize(inputDim, 1);
                 m_mean.SetValue(0);
                 m_var.SetValue(0);
                 UpdateFunctionValuesSize();
-                FunctionValues().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
+                Output().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
             }
             else                // finalize
             {
@@ -471,13 +471,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
-                FunctionValues().SetValue(m_var);
+                Output().SetValue(m_var);
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            FrameRange frameRange(Input(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -485,14 +485,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
+            Input(0)->MaskMissingValuesColumnsToZero(frameRange);
 
-            auto & samples = Inputs(0)->FunctionValues();
+            auto & samples = Input(0)->Output();
 #if 1//NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
-            size_t numNewSamples = Inputs(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
@@ -552,21 +552,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
 #if DUMPOUTPUT
@@ -594,7 +594,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->RequiresPreCompute())
+            if (Input(0)->RequiresPreCompute())
             {
                 LogicError(
                     "PerDimMeanVarNormalizationNode criterion forbids first input from being a pre-compute node. "
@@ -602,10 +602,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            if (!(Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) &&
-                  Inputs(2)->OperationName() == OperationNameOf(LearnableParameter)) &&
-                !(Inputs(1)->OperationName() == OperationNameOf(MeanNode) &&
-                  Inputs(2)->OperationName() == OperationNameOf(InvStdDevNode)))
+            if (!(Input(1)->OperationName() == OperationNameOf(LearnableParameter) &&
+                  Input(2)->OperationName() == OperationNameOf(LearnableParameter)) &&
+                !(Input(1)->OperationName() == OperationNameOf(MeanNode) &&
+                  Input(2)->OperationName() == OperationNameOf(InvStdDevNode)))
             {
                 LogicError(
                     "PerDimMeanVarNormalizationNode criterion requires the last two inputs to be LearnableParameter "
@@ -613,32 +613,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             {
-                size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                ValidateInferChildDims(1, rows, 1);
+                size_t rows = (Input(1)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
+                ValidateInferInputDims(1, rows, 1);
             }
 
             {
-                size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                ValidateInferChildDims(2, rows, 1);
+                size_t rows = (Input(2)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(2)->GetNumRows();
+                ValidateInferInputDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)
             {
                 //match rows
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
+                    Input(2)->GetNumRows() == Input(1)->GetNumRows()))
                 {
                     LogicError("PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
                 }
 
-                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                if (!(Input(1)->GetNumCols() == 1 && Input(2)->GetNumCols() == 1))
                     LogicError("PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
             // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-            Inputs(1)->SetParameterUpdateRequired(false);
-            Inputs(2)->SetParameterUpdateRequired(false);  //prevent learning
-            SetDims(Inputs(0));
+            Input(1)->SetParameterUpdateRequired(false);
+            Input(2)->SetParameterUpdateRequired(false);  //prevent learning
+            SetDims(Input(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -662,22 +662,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
+        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
         }
 
         //(feature-mean).*InvStdDev
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = OutputFor(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Output(), Input(2)->Output());
         }
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -712,7 +712,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->RequiresPreCompute())
+            if (Input(0)->RequiresPreCompute())
             {
                 LogicError(
                     "PerDimMeanVarDeNormalizationNode criterion forbids first input from being a pre-compute node. "
@@ -720,10 +720,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            if (!(Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) &&
-                  Inputs(2)->OperationName() == OperationNameOf(LearnableParameter)) &&
-                !(Inputs(1)->OperationName() == OperationNameOf(MeanNode) &&
-                  Inputs(2)->OperationName() == OperationNameOf(InvStdDevNode)))
+            if (!(Input(1)->OperationName() == OperationNameOf(LearnableParameter) &&
+                  Input(2)->OperationName() == OperationNameOf(LearnableParameter)) &&
+                !(Input(1)->OperationName() == OperationNameOf(MeanNode) &&
+                  Input(2)->OperationName() == OperationNameOf(InvStdDevNode)))
             {
                 LogicError(
                     "PerDimMeanVarDeNormalizationNode criterion requires the last two inputs to be "
@@ -731,24 +731,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             {
-                size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                ValidateInferChildDims(1, rows, 1);
+                size_t rows = Input(1)->GetNumRows() == 0 ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
+                ValidateInferInputDims(1, rows, 1);
             }
 
             {
-                size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                ValidateInferChildDims(2, rows, 1);
+                size_t rows = Input(2)->GetNumRows() == 0? Input(0)->GetNumRows() : Input(2)->GetNumRows();
+                ValidateInferInputDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)
             {
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match rows
-                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&  //match rows
+                    Input(2)->GetNumRows() == Input(1)->GetNumRows()))
                 {
                     LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
                 }
 
-                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                if (!(Input(1)->GetNumCols() == 1 && Input(2)->GetNumCols() == 1))
                 {
                     LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
                 }
@@ -756,10 +756,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //prevent learning
             // TODO: Is this correct? Why not just skip propagating a gradient into these?
-            Inputs(1)->SetParameterUpdateRequired(false);
-            Inputs(2)->SetParameterUpdateRequired(false);
+            Input(1)->SetParameterUpdateRequired(false);
+            Input(2)->SetParameterUpdateRequired(false);
 
-            SetDims(Inputs(0));
+            SetDims(Input(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -795,16 +795,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
-        virtual void SaveToFile(File& fstream) const override
+        virtual void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_hasComputed;
-            fstream << FunctionValues();
+            fstream << Output();
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        virtual void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
             LoadFunctionValues(fstream);
         }
@@ -874,21 +874,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
 
-        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        virtual void BackpropToNonLooping(size_t inputIndex) override
         {
             assert(inputIndex == 0); inputIndex;
-            VerifyDims(Inputs(0));
+            VerifyDims(Input(0));
 
             size_t nT = GetNumTimeSteps();
             for (size_t t = 0; t < nT; t++)
             {
-                Matrix<ElemType>  g =            GradientSlice(FrameRange(GetMBLayout(), t));
-                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(Inputs(0)->GetMBLayout(), nT - 1 - t));
+                Matrix<ElemType>  g =           GradientFor(FrameRange(GetMBLayout(), t));
+                Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
                 ig += g;
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             // BUGBUG: We must flip the layout, too.
             if (GetNumParallelSequences() != 1)
@@ -896,24 +896,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed)
             {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
-                SetDims(Inputs(0));
+                SetDims(Input(0));
                 UpdateFunctionValuesSize();
 
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
                 {
-                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(Inputs(0)->GetMBLayout(), t));
-                    ValueSlice(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
+                    Matrix<ElemType> v = Input(0)->OutputFor(FrameRange(Input(0)->GetMBLayout(), t));
+                    OutputFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
                 }
 
 #if NANCHECK
-                FunctionValues().HasNan("TimeReverse");
+                Output().HasNan("TimeReverse");
 #endif
 #if DUMPOUTPUT
-                FunctionValues().Print("TimeReverseNode");
+                Output().Print("TimeReverseNode");
 #endif
 
-                m_memory.SetValue(FunctionValues());
+                m_memory.SetValue(Output());
             }
             // TODO: don't need to set m_hasCompute? Or what is it for?
         }
@@ -924,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
-            SetDims(Inputs(0));
+            SetDims(Input(0));
             InferImageDimsFromInput(0);
         }
 
@@ -937,32 +937,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// backup
             Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
 
-            f0 = Inputs(0)->FunctionValues();
-            func = FunctionValues();
+            f0 = Input(0)->Output();
+            func = Output();
 
-            Inputs(0)->SetDims(nInput, nT);
-            Inputs(0)->UpdateFunctionValuesSize();
-            Inputs(0)->FunctionValues().SetValue(0);
-            Inputs(0)->FunctionValues()(0, 0) = 1;
-            Inputs(0)->FunctionValues()(0, 1) = 2;
-            Inputs(0)->FunctionValues()(0, 2) = 3;
+            Input(0)->SetDims(nInput, nT);
+            Input(0)->UpdateFunctionValuesSize();
+            Input(0)->Output().SetValue(0);
+            Input(0)->Output()(0, 0) = 1;
+            Input(0)->Output()(0, 1) = 2;
+            Input(0)->Output()(0, 2) = 3;
             SetDims(nOutput, nT);
             UpdateFunctionValuesSize();
-            Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            EvaluateThisNode(FrameRange(m_pMBLayout));
+            Input(0)->Output().TransferToDeviceIfNotThere( m_deviceId, true);
+            ForwardProp(FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 2), 1, EPSILON))
+            if (!ISCLOSE(Output()(0, 0), 3, EPSILON) ||
+                !ISCLOSE(Output()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Output()(0, 2), 1, EPSILON))
             {
                 return false;
             }
 
-            FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
+            Output().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            Inputs(0)->GradientValues().Resize(nOutput, nT);
-            Inputs(0)->GradientValues().SetValue(1.0);
+            Input(0)->GradientValues().Resize(nOutput, nT);
+            Input(0)->GradientValues().SetValue(1.0);
             GradientValues().Resize(nOutput, nT);
             GradientValues().SetValue(0);
             GradientValues()(0, 0) = 1;
@@ -970,17 +970,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(0, 2) = 3;
             GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            ComputeInputPartial(0, FrameRange(m_pMBLayout));
+            BackpropTo(0, FrameRange(m_pMBLayout));
 
             /// check with expected values
-            if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON) ||
-                !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 3, EPSILON) ||
-                !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 2, EPSILON))
+            if (!ISCLOSE(Input(0)->GradientValues()(0, 0), 4, EPSILON) ||
+                !ISCLOSE(Input(0)->GradientValues()(0, 1), 3, EPSILON) ||
+                !ISCLOSE(Input(0)->GradientValues()(0, 2), 2, EPSILON))
             {
                 return false;
             }
 
-            Inputs(0)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
+            Input(0)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
             GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
 
             return true;

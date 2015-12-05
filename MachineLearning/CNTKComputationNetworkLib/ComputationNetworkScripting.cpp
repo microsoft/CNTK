@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // traverse children: append them to the end of the work list
-            let & children = node->GetChildren();
+            let & children = node->GetInputs();
             for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }

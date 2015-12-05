@@ -236,11 +236,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices, decoderInputMatrices;
             for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
-                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(encoderFeatureNodes[i])->FunctionValues();
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(encoderFeatureNodes[i])->Output();
             for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
-                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderFeatureNodes[i])->FunctionValues();
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderFeatureNodes[i])->Output();
             for (size_t i = 0; i<decoderLabelNodes.size(); i++)
-                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->FunctionValues();
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->Output();
 
             //initializing weights and gradient holder
             std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->FunctionValues().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Output().GetDeviceId()));
             }
 
             vector<double> epochCriterion;
@@ -286,8 +286,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// PreCompute(net, encoderTrainSetDataReader, encoderFeatureNodes, encoderlabelNodes, encoderInputMatrices) || 
                 startEpoch == 0)
             {
-                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(int(startEpoch) - 1));
-                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(int(startEpoch) - 1));
+                encoderNet->Save(GetEncoderModelNameForEpoch(int(startEpoch) - 1));
+                decoderNet->Save(GetDecoderModelNameForEpoch(int(startEpoch) - 1));
             }
 
             bool learnRateInitialized = false;
@@ -421,8 +421,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             else
                             {
-                                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(i, true));
-                                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(i, true));
+                                decoderNet->Save(GetDecoderModelNameForEpoch(i, true));
+                                encoderNet->Save(GetEncoderModelNameForEpoch(i, true));
                                 fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
                             }
@@ -456,8 +456,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //persist model and check-point info
-                decoderNet->SaveToFile(GetDecoderModelNameForEpoch(i));
-                encoderNet->SaveToFile(GetEncoderModelNameForEpoch(i));
+                decoderNet->Save(GetDecoderModelNameForEpoch(i));
+                encoderNet->Save(GetEncoderModelNameForEpoch(i));
 
                 size_t dummyMinibatchSize = 0;
                 this->LoadCheckPointInfo(i,
@@ -506,13 +506,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t j = 0; j < featPtr->size(); j++)
                 {
                     (*matrices)[(*featPtr)[j]->NodeName()] =
-                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*featPtr)[j])->FunctionValues());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*featPtr)[j])->Output());
                 }
                         
                 for (size_t j = 0; j<lablPtr->size(); j++)
                 {
                     (*matrices)[(*lablPtr)[j]->NodeName()] = 
-                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*lablPtr)[j])->FunctionValues());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*lablPtr)[j])->Output());
                 }
                 inputMatrices.push_back(matrices);
             }
@@ -559,7 +559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->FunctionValues().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Output().GetDeviceId()));
             }
 
             double epochCriterion, avgCriterion, prevCriterion;
@@ -599,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t k = 0; k < iNumNetworks; k++)
                 {
                     wstring tmpstr = msra::strfun::wstrprintf(L".%d", k);
-                    nets[k]->SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1, false, tmpstr));
+                    nets[k]->Save(GetModelNameForEpoch(int(startEpoch) - 1, false, tmpstr));
                 }
             }
 
@@ -749,7 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 //persist model and check-point info
                                 for (size_t k = 0; k < iNumNetworks; k++)
                                 {
-                                    nets[k]->SaveToFile(GetModelNameForEpoch(i, true, msra::strfun::wstrprintf(L".%d", k)));
+                                    nets[k]->Save(GetModelNameForEpoch(i, true, msra::strfun::wstrprintf(L".%d", k)));
                                 }
                                 fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
@@ -786,7 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //persist model and check-point info
                 for (size_t k = 0; k < iNumNetworks; k++)
                 {
-                    nets[k]->SaveToFile(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                    nets[k]->Save(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
                 }
 
                 this->SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, 0);
@@ -1032,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 
-                    for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
+                    for (size_t itry = 0; itry < min((size_t)10, node->Output().GetNumElements()); itry++)
                     {
 
                         int irow = (int)fmod(rand(), node->GetNumRows() - 1);
@@ -1041,17 +1041,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         icol = max(0, icol);
 
                         fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
-                        deviceId = node->FunctionValues().GetDeviceId();  // original device id
+                        deviceId = node->Output().GetDeviceId();  // original device id
 
-                        node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        double eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
-                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        double eOrg = node->Output()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
 
                         /// perturb parameter
                         double ePos = eOrg + EPSILON;
-                        node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, (ElemType)ePos);
-                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Output().SetValue(irow, icol, (ElemType)ePos);
+                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
 
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
@@ -1065,9 +1065,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         double score1 = localEpochCriterion.Get00Element();
 
                         double eNeg = eOrg - EPSILON;
-                        node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, (ElemType)eNeg);
-                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Output().SetValue(irow, icol, (ElemType)eNeg);
+                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
@@ -1081,9 +1081,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         double grdNum = (score1r - score1) / (eNeg - ePos);
 
-                        node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, (ElemType)eOrg);
-                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
+                        node->Output().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                        node->Output().SetValue(irow, icol, (ElemType)eOrg);
+                        node->Output().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
@@ -1163,7 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
             encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
-            encoderNet->Evaluate(encoderEvaluationNodes[0]);
+            encoderNet->ForwardProp(encoderEvaluationNodes[0]);
 
             //decoderNet->SetActualMiniBatchSizeFromFeatures();
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
@@ -1172,21 +1172,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {
-                decoderNet->Evaluate(decoderPairNodes[0]);
+                decoderNet->ForwardProp(decoderPairNodes[0]);
             }
             else
             {
-                decoderNet->Evaluate(decoderCriterionNodes[0]);
+                decoderNet->ForwardProp(decoderCriterionNodes[0]);
 
-                Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->Output(), 0, 0, localEpochCriterion, 0, 0);
 
                 size_t numEvalNodes = decoderEvaluationNodes.size();
                 std::vector<double>mbEvalErrors(numEvalNodes, 0);
 
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
-                    decoderNet->Evaluate(decoderEvaluationNodes[i]);
-                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    decoderNet->ForwardProp(decoderEvaluationNodes[i]);
+                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->Output(), 0, 0, localEpochEvalErrors, 0, i);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
@@ -1209,21 +1209,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < pairNodes.size(); i++)
             {
                 for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientForAllNodes(*ptr);
+                    networks[i]->ClearGradientOfAllNodes(*ptr);
             }
 
             for (size_t i = 0; i < criterionNodes.size(); i++)
             {
                 for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
-                    networks[i]->ClearGradientForAllNodes(*ptr);
+                    networks[i]->ClearGradientOfAllNodes(*ptr);
             }
 
             for (auto ptr = criterionNodes[inetworks - 1]->begin(); ptr != criterionNodes[inetworks - 1]->end(); ptr++)
             {
                 if (ptr == criterionNodes[inetworks - 1]->begin())
-                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr); 
+                {
+                    networks[inetworks - 1]->ForwardProp(*ptr);
+                    networks[inetworks - 1]->Backprop<ElemType>(*ptr);
+                }
                 else
-                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
+                {
+                    networks[inetworks - 1]->ForwardProp(*ptr);
+                    networks[inetworks - 1]->Backprop<ElemType>(*ptr, false, nullptr, false);
+                }
             }
 
             for (int i = inetworks - 2; i >= 0; i--)
@@ -1234,7 +1240,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no need to compute gradients from pairnodes, because the gradients are added from pair nodes already
                     for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient<ElemType>(*ptr, true, nullptr, false);
+                        networks[i]->ForwardProp(*ptr);
+                        networks[i]->Backprop<ElemType>(*ptr, true, nullptr, false);
                     }
                 }
                 else if (pairNodes[i]->size() > 0)
@@ -1242,7 +1249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no criterion, so use pair-node gradients
                     for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
+                        networks[i]->ForwardProp(*ptr);
+                        networks[i]->Backprop<ElemType>(*ptr, false, nullptr, false);
                     }
                 }
             }

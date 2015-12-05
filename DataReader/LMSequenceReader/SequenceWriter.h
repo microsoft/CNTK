@@ -52,7 +52,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         map<wstring, int> nBests;
         bool compare_val(const ElemType& first, const ElemType& second);
 
-        void SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest = 1);
+        void Save(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest = 1);
 
         void ReadLabelInfo(const wstring & vocfile,
             map<string, int> & word4idx,

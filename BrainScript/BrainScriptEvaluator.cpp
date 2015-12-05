@@ -234,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
     };
     // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
-    // TODO: rename to MagicOps
+    // TODO: we should have automagic up-casting of 'double' values to Constant() nodes, e.g. to allow to say "1 - P" where P is a node.
     static ConfigValuePtr NodeOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         // special cases/overloads:
@@ -276,6 +276,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         if (operationName == L"Scale")
         {
             // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
+            // TODO: apply this more generally to all operators
             auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
             let leftFailFn = leftVal.GetFailFn();   // report any error for this Constant object as belonging to the scalar factor's expression
             constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"Constant"), leftFailFn, exprPath));
@@ -316,8 +317,8 @@ namespace Microsoft { namespace MSR { namespace BS {
     // This lists all infix operators with lambdas for evaluating them.
     static map<wstring, InfixOps> infixOps =
     {
-        // PrettyName NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-        { L"with", InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, DictOp) },
+        // symbol  PrettyName      NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+        { L"with", InfixOps(L"With",     NumOp, BadOp, BadOp,  NodeOp, DictOp) },
         { L"*",    InfixOps(L"Times",    NumOp, BadOp, BadOp,  NodeOp, BadOp)  },
         { L"/",    InfixOps(L"Div",      NumOp, BadOp, BadOp,  BadOp,  BadOp)  },
         { L".*",   InfixOps(L"DotTimes", BadOp, BadOp, BadOp,  NodeOp, BadOp)  },
@@ -369,7 +370,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     //  - this is meant to be able to give ComputationNodes a name for later lookup that behaves the same as looking up an object directly
     //  - not all nodes get their own path, in particular nodes with only one child, e.g. "-x", that would not be useful to address
     // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
-    // TODO: change ConfigRecordPtr to IConfigRecordPtr if possible, throughout
+    // TODO: This implementation takes a lot of stack space. Should break into many sub-functions.
     static ConfigValuePtr Evaluate(const ExpressionPtr & e, const IConfigRecordPtr & scope, wstring exprPath, const wstring & exprId)
     {
         try // catch clause for this will catch error, inject this tree node's TextLocation, and rethrow
@@ -664,7 +665,6 @@ namespace Microsoft { namespace MSR { namespace BS {
                 else
                     InvalidInfixOpTypes(e);
             }
-            //LogicError("should not get here");
         }
         catch (ConfigException & err)
         {
@@ -680,7 +680,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     }
 
     // -----------------------------------------------------------------------
-    // external entry points
+    // external entry points to the evaluator module
     // -----------------------------------------------------------------------
 
     // top-level entry
@@ -692,14 +692,12 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
     {
-        //let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
-        //return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
         return RecordLookup(e, id, e->location, nullptr/*scope for evaluating 'e'*/, L"$");  // we evaluate the member 'do'
     }
 
     ConfigValuePtr Evaluate(ExpressionPtr e)
     {
-        return /*Evaluator().*/EvaluateParse(e);
+        return EvaluateParse(e);
     }
 
     // =======================================================================

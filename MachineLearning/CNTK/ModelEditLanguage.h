@@ -170,7 +170,7 @@ public:
                     auto nodePtr = builder.CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr.get());
                     ElemType val = ndlNode->GetScalar();
-                    nodePtr->FunctionValues().SetValue(val);
+                    nodePtr->Output().SetValue(val);
                 }
             }
         }
@@ -335,9 +335,9 @@ public:
             {
                 ComputationNodeBasePtr fromNode = nodeVal.first;
                 ComputationNodeBasePtr toNode = mapCopied[fromNode];
-                for (int i=0; i<fromNode->ChildrenSize(); i++)
+                for (int i=0; i<fromNode->GetNumInputs(); i++)
                 {
-                    auto found = mapCopied.find(fromNode->GetChildren()[i]);
+                    auto found = mapCopied.find(fromNode->GetInputs()[i]);
                     auto newNode = (found == mapCopied.end())?ComputationNodePtr():found->second;
                     toNode->SetInput(i, newNode);
                 }                     

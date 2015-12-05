@@ -1285,7 +1285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
-    // TODO: This should use DataSlice(). But for that, DataSlice() will have to move out from ComputationNode.
+    // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode.
     template<class ElemType>
         void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr,
                                                                    size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
