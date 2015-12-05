@@ -179,7 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void VerifySize(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                LogicError("VerifySize: expected m_output size %d x %d, but it is %d x %d",
                 (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
         }
         Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)

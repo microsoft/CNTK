@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), FunctionValues());
+            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -213,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), FunctionValues());
+            BackpropToS(*m_gradient, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -271,7 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->FunctionValues(), GradientValues());
+            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->FunctionValues(), GradientValues());
+            BackpropToS(*m_gradient, Input(0)->GradientValues(), Input(0)->Output(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -426,7 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, *m_diff, Input(0)->GradientValues(), GradientValues(), FunctionValues());
+            BackpropToS(*m_gradient, *m_diff, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -516,7 +516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradient, *m_softmax, Input(0)->GradientValues(), GradientValues(), FunctionValues());
+            BackpropToS(*m_gradient, *m_softmax, Input(0)->GradientValues(), GradientValues(), Output());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & frameRange) override
@@ -779,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
-            ForwardPropS(FunctionValues(), Input(0)->FunctionValues(), Input(1)->FunctionValues(), Input(2)->FunctionValues(), Input(3)->FunctionValues(),
+            ForwardPropS(Output(), Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), Input(3)->Output(),
                 *m_prior, *m_stddev, *m_normedDeviationVectors, *m_normedDeviation, *m_posterior, *m_temp);
         }
 
@@ -799,7 +799,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (colsPrior == 1)
             {
-                ForwardPropS(sliceOutputValue, Input(0)->FunctionValues(), Input(1)->FunctionValues(), Input(2)->FunctionValues(), sliceFeature,
+                ForwardPropS(sliceOutputValue, Input(0)->Output(), Input(1)->Output(), Input(2)->Output(), sliceFeature,
                     *m_prior, *m_stddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
             }
             else if (colsPrior == numSamples)
@@ -1040,7 +1040,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            ForwardPropS(m_dropoutRate, m_randomSeed, FunctionValues(), *m_maskOfDropout, Input(0)->FunctionValues());
+            ForwardPropS(m_dropoutRate, m_randomSeed, Output(), *m_maskOfDropout, Input(0)->Output());
         }
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
@@ -1077,25 +1077,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override FunctionValues() to return the input; which now breaks stuff.
+                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override Output() to return the input; which now breaks stuff.
                 functionValues.SetValue(inputFunctionValues);
             }
         }
 
-        //virtual const Matrix<ElemType>& FunctionValues() const override
+        //virtual const Matrix<ElemType>& Output() const override
         //{
         //    if (m_dropoutRate > 0)
-        //        return *m_functionValues;
+        //        return *m_output;
         //    else
-        //        return Input(0)->FunctionValues();
+        //        return Input(0)->Output();
         //}
         //
-        //virtual Matrix<ElemType>& FunctionValues() override
+        //virtual Matrix<ElemType>& Output() override
         //{
         //    if (m_dropoutRate > 0)
-        //        return *m_functionValues;
+        //        return *m_output;
         //    else
-        //        return Input(0)->FunctionValues();
+        //        return Input(0)->Output();
         //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

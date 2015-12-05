@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        ValidateInferBinaryChildrenDims();
+        ValidateInferBinaryInputDims();
 
         size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
         size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
@@ -101,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;              // this node does not hold mini-batch data
-        ValidateInferBinaryChildrenDims();
+        ValidateInferBinaryInputDims();
         if (isFinalValidationPass &&
             !(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
               (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(1)->GetNumCols()))))
@@ -113,7 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // In bad cases of convolution, dimensions are quite complex to know.
     // This is a feature that allows a node to help resizing its input node to the expected value.
     // TODO: This is shaky by design.
-    void ComputationNodeBase::ValidateInferBinaryChildrenDims()
+    void ComputationNodeBase::ValidateInferBinaryInputDims()
     {
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
@@ -127,22 +127,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // borrow any unset dimension on one input from the other input
             size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
             size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
-            ValidateInferChildDims(index, rows, cols);
+            ValidateInferInputDims(index, rows, cols);
         }
     }
     template<class ElemType>
-    void ComputationNode<ElemType>::ValidateInferChildDims(size_t i, size_t rows, size_t cols) //override final
+    void ComputationNode<ElemType>::ValidateInferInputDims(size_t i, size_t rows, size_t cols) //override final
     {
         if (Input(i)->OperationName() == OperationNameOf(LearnableParameter) && Input(i)->GetNumRows() == 0)
         {
             if (rows == 0 || cols == 0)
-                LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
+                LogicError("ValidateInferInputDims: Inferred matrix must not be empty.");
             Input(i)->SetDims(rows, cols);
             Input(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
-            Input(i)->FunctionValues().SetValue(0);
-            fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)rows, (int)cols);
+            Input(i)->Output().SetValue(0);
+            fprintf(stderr, "ValidateInferInputDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)rows, (int)cols);
         }
     }
 
@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!IsLeaf())
         {
             fstream << wstring(L"(");
-            for (size_t i = 0; i<ChildrenSize(); i++)
+            for (size_t i = 0; i<GetNumInputs(); i++)
             {
                 if (i > 0)
                     fstream << wstring(L",");

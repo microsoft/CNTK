@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: The reader does not always resize the input matrices to zero when 
             //       no data is read. When it does, 'wasDataRead' can be removed. Will go away with reader redesig.
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
-            // reader will have resized input node's m_functionValues directly. Nodes must be notified to do necessary internal state updates from that.
+            // reader will have resized input node's m_output directly. Nodes must be notified to do necessary internal state updates from that.
             net->NotifyInputNodesFunctionValuesMBSizeModified();
             size_t readMBSize = net->DetermineActualMBSizeFromFeatures();
             if (readMBSize == 0)
@@ -393,7 +393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         wstring nodeName = node->GetName();
                         shared_ptr<ComputationNode<ElemType>>  pLearnableNode = node;
-                        auto funvalue = pLearnableNode->FunctionValues();   // gradient may not be allocated when this function is first called 
+                        auto funvalue = pLearnableNode->Output();   // gradient may not be allocated when this function is first called 
                         size_t nrow = funvalue.GetNumRows();
                         size_t ncol = funvalue.GetNumCols();
                         if (m_CachedGraident.find(nodeName) == m_CachedGraident.end())
@@ -444,7 +444,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         pNode->ImportState(m_NetStates[name][iSubminibatch]);
                 }
             }
-            // TODO: encapsulate it into a destructor !!!   Note: Cannot throw exceptions in destructor.
+            // TODO: encapsulate it into a destructor? Note: Cannot throw exceptions in destructor.
             void DoneWithCurrentSubMinibatch(size_t iSubminibatch)
             {
                 // accumulate gradient here 
@@ -461,18 +461,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 // accumulate criterion value 
                 Matrix<ElemType>::AddElementToElement(
-                    m_NetCriterionNodes[0]->FunctionValues(), 0, 0,
+                    m_NetCriterionNodes[0]->Output(), 0, 0,
                     *m_NetCriterionAccumulator, 0, 0
                     );
-                m_NetCriterionNodes[0]->FunctionValues().SetValue((ElemType)0);
+                m_NetCriterionNodes[0]->Output().SetValue((ElemType)0);
                 // accumulate evaluation value 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
                     Matrix<ElemType>::AddElementToElement(
-                        m_NetEvaluationNodes[i]->FunctionValues(), 0, 0,
+                        m_NetEvaluationNodes[i]->Output(), 0, 0,
                         *m_NetEvaluationAccumulator, 0, i
                         );
-                    m_NetEvaluationNodes[i]->FunctionValues().SetValue((ElemType)0);
+                    m_NetEvaluationNodes[i]->Output().SetValue((ElemType)0);
                 }
 
                 // Export node state 
@@ -500,19 +500,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // also revert net.m_MBLayoutPtr
                 m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-                //m_NetCriterionNodes[0]->FunctionValues().SetValue((ElemType)0);
+                //m_NetCriterionNodes[0]->Output().SetValue((ElemType)0);
                 Matrix<ElemType>::AddElementToElement(
                     *m_NetCriterionAccumulator, 0, 0,
-                    m_NetCriterionNodes[0]->FunctionValues(), 0, 0
+                    m_NetCriterionNodes[0]->Output(), 0, 0
                     );
                 m_NetCriterionAccumulator->SetValue((ElemType)0);
 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
-                    //m_NetEvaluationNodes[i]->FunctionValues().SetValue((ElemType)0);
+                    //m_NetEvaluationNodes[i]->Output().SetValue((ElemType)0);
                     Matrix<ElemType>::AddElementToElement(
                         *m_NetEvaluationAccumulator, 0, i,
-                        m_NetEvaluationNodes[i]->FunctionValues(), 0, 0
+                        m_NetEvaluationNodes[i]->Output(), 0, 0
                         );
                 }
                 m_NetEvaluationAccumulator->SetValue((ElemType)0);

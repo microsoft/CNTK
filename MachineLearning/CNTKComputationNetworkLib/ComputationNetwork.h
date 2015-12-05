@@ -7,19 +7,12 @@
 #pragma once
 
 // TODOs:
-//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows) --> add stride to TensorShape
-//  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
-//    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
-//    -> solve by including a layout in the FrameRange directly; then DataSlice() can compare compatibility
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     ChildrenSize()               -> NumInputs()
-//     m_functionValues             -> m_output
-//     FunctionValues()             -> Output()             // or Out()?
 //     frameRange                   -> t                    // make it more lightweight
 //     DataSlice(frameRange)        -> DataFor(t)           // also more lightweight; 'slice' is an implementation detail
 //     ValueSlice(.)                -> OutputFor(t)
@@ -94,7 +87,7 @@ protected:
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
-        virtual bool IsFuncValueOlderThanInputs() const override;
+        virtual bool IsOutputOlderThanInputs() const override;
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
@@ -324,7 +317,7 @@ public:
         }
     }
 
-    // When external code (readers, namely) updates InputValue's m_functionValues,
+    // When external code (readers, namely) updates InputValue's m_output,
     // calling this function is required to make sure that any internal state gets updated correctly.
     // Only a change to the column dimension i sallowed
     void NotifyInputNodesFunctionValuesMBSizeModified()
@@ -864,7 +857,7 @@ public:
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
 
         for (auto &node : allNodes)
-            node->ClearGradientForChildren();
+            node->ClearGradientForInputs();
 
         //for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
         //    recInfo->m_completedGradient = false;

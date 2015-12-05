@@ -221,7 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
             fprintf(stderr, "(");
-            for (size_t i = 0; i < ChildrenSize(); i++)
+            for (size_t i = 0; i < GetNumInputs(); i++)
             {
                 ComputationNodePtr child = Input(i);
                 if (i > 0)
@@ -319,7 +319,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout || factor() == 1)
             {
-                FunctionValues().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
+                Output().Reshaped(newCols * m_numTargetRows, 1).SetValue(Input(0)->Output().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
@@ -329,9 +329,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!frameRange.IsAllFrames())
                     InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
                 if (weStack())
-                    Base::Stack(frameRange, m_pMBLayout, Input(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Stack(frameRange, m_pMBLayout, Input(0)->Output(), Output(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Unstack(frameRange.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Input(0)->Output(), Output(), factor(), false/*addTo*/);
             }
         }
 
@@ -591,7 +591,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            for (size_t inputIndex = 0; inputIndex < ChildrenSize(); inputIndex++)
+            for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
                 ValueSlice(frameRange).AssignToRowSliceValuesOf(Input(inputIndex)->ValueSlice(frameRange), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
         }
 
@@ -603,10 +603,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numCols = Input(0)->GetNumCols();
 
             // count totalRows and form m_startRowIndices[] array, which is the cumulative sum of matrix heights
-            m_startRowIndices.resize(ChildrenSize());
+            m_startRowIndices.resize(GetNumInputs());
             size_t totalRows = 0;
 
-            for (int i = 0; i < ChildrenSize(); i++)
+            for (int i = 0; i < GetNumInputs(); i++)
             {
                 if (isFinalValidationPass && Input(i)->GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Input(i)->NodeName().c_str());
@@ -695,7 +695,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!IsLeaf())
             {
                 fprintf(stderr, "(");
-                for (size_t i = 0; i<ChildrenSize(); i++)
+                for (size_t i = 0; i<GetNumInputs(); i++)
                 {
                     ComputationNodePtr child = Input(i);
                     if (i > 0)
@@ -729,7 +729,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & frameRange) override
         {
-            //if (!isNoop())    // if m_numRepeat == 1 then virtual FunctionValues() will return the child   --TODO: do this as an in-place optimization instead
+            //if (!isNoop())    // if m_numRepeat == 1 then virtual Output() will return the child   --TODO: do this as an in-place optimization instead
             ValueSlice(frameRange).AssignRepeatOf(Input(0)->ValueSlice(frameRange), m_numRepeat, 1);
         }
 

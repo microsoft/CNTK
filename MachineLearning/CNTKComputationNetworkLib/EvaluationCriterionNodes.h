@@ -43,12 +43,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(1)->ValueSlice(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
             MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
             MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-            FunctionValues().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
+            Output().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
         #if NANCHECK
-            FunctionValues().HasNan("ErrorPrediction");
+            Output().HasNan("ErrorPrediction");
         #endif
 #if DUMPOUTPUT
-            FunctionValues().Print("ErrorPredictionNode");
+            Output().Print("ErrorPredictionNode");
 #endif
         }
 

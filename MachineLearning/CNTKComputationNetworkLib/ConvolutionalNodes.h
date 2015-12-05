@@ -108,11 +108,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Input(1)->GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
-                BackpropToOverWeight(sliceOutputGrad, Input(0)->GradientValues(), Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
+                BackpropToOverWeight(sliceOutputGrad, Input(0)->GradientValues(), Input(0)->Output(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
             else if (inputIndex == 1)  // derivative with regard to the input feature
             {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
+                BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Input(0)->Output(), sliceInput1Value, *m_tempMatrix);
             }
         }
 
@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            ForwardPropS(sliceOutputValue, Input(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
+            ForwardPropS(sliceOutputValue, Input(0)->Output(), sliceInput1Value, *m_tempMatrix);
         }
 
     private:
@@ -313,15 +313,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputImageLayout.GetNumChannels();
 
-            if (Input(0)->FunctionValues().HasNoElements())
-                ValidateInferChildDims(0, m_sampleLayout.GetNumChannels(), weightCols);
+            if (Input(0)->Output().HasNoElements())
+                ValidateInferInputDims(0, m_sampleLayout.GetNumChannels(), weightCols);
 
             if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != m_sampleLayout.GetNumChannels()))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_inputs[0]->NodeName().c_str(), (int)m_sampleLayout.GetNumChannels(), (int)weightCols);
 
             size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();
             if (Input(1)->GetNumRows() == 0)
-                ValidateInferChildDims(1, inputDim, Input(1)->GetNumCols());
+                ValidateInferInputDims(1, inputDim, Input(1)->GetNumCols());
 
             if (isFinalValidationPass && Input(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)inputDim);
@@ -496,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputSizePerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
 
             if (Input(0)->GetNumRows() == 0)
-                ValidateInferChildDims(0, m_inputSizePerSample, Input(0)->GetNumCols());
+                ValidateInferInputDims(0, m_inputSizePerSample, Input(0)->GetNumCols());
 
             if (isFinalValidationPass && Input(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)m_inputSizePerSample);

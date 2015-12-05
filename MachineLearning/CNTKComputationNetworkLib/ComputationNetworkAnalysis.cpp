@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t j = 0; j < iter->m_nestedNodes.size(); j++)
             {
                 ComputationNodeBasePtr node = iter->m_nestedNodes[j];
-                for (size_t i = 0; i < node->ChildrenSize(); i++)
+                for (size_t i = 0; i < node->GetNumInputs(); i++)
                 {
                     if (node->Input(i)->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
@@ -188,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
         {
             // set m_lowLink to min over m_lowLinks of children
-            for (int i = 0; i < cur->ChildrenSize(); i++)
+            for (int i = 0; i < cur->GetNumInputs(); i++)
             {
                 if (!cur->Input(i)->m_visited)
                 {
@@ -253,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (cur->OperationName() != OperationNameOf(PastValueNode) &&   // recurrence stops at delays
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
-                for (size_t i = 0; i < cur->ChildrenSize(); i++)
+                for (size_t i = 0; i < cur->GetNumInputs(); i++)
                     if (cur->Input(i)->m_loopId == cur->m_loopId)
                         DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Input(i));
             }
@@ -277,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;                                 // do each node only once
         visited.insert(node);
 
-        for (int i = 0; i < node->ChildrenSize(); i++)
+        for (int i = 0; i < node->GetNumInputs(); i++)
             GatherLoopNodesR(node->Input(i), visited, recurrentResult, noRecurrentResult);
 
         if (node->m_loopId >= 0)

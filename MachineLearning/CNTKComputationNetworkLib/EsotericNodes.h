@@ -59,11 +59,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            FunctionValues().VerifySize(1, 1);
-            Input(0)->FunctionValues().VerifySize(1, 1);
-            FunctionValues().SetValue(Input(0)->FunctionValues());
+            Output().VerifySize(1, 1);
+            Input(0)->Output().VerifySize(1, 1);
+            Output().SetValue(Input(0)->Output());
 #if NANCHECK
-            FunctionValues().HasNan("DummyCriterionNode");
+            Output().HasNan("DummyCriterionNode");
 #endif
         }
 
@@ -165,9 +165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute posterior probability of label y at position t
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
-            DecideStartEndingOutputLab(Input(0)->FunctionValues(), mStartLab, mEndLab);
-            ForwardPropS(mAlpha, mBacktrace, FunctionValues(), Input(1)->FunctionValues(),
-                              Input(2)->FunctionValues(), mStartLab, mEndLab);
+            DecideStartEndingOutputLab(Input(0)->Output(), mStartLab, mEndLab);
+            ForwardPropS(mAlpha, mBacktrace, Output(), Input(1)->Output(),
+                              Input(2)->Output(), mStartLab, mEndLab);
         }
 
         // compute forward backward algorithm
@@ -372,7 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> sliceInput1Grad = Input(1)->GradientSlice(frameRange);
 
-                    //BackpropToRight(Input(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                    //BackpropToRight(Input(0)->Output(), sliceInput1Grad, sliceOutputGrad);
 
                     // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
@@ -382,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         Matrix<ElemType> mTmp1(r, T1, sliceOutputGrad.GetDeviceId());
                         for (size_t t = 0; t < T1; t++)
                         {
-                            mTmp1.ColumnSlice(t, 1).SetValue(Input(0)->FunctionValues().ColumnSlice(t*GetNumParallelSequences() + k, 1));
+                            mTmp1.ColumnSlice(t, 1).SetValue(Input(0)->Output().ColumnSlice(t*GetNumParallelSequences() + k, 1));
                         }
                         auto mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
                         auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
@@ -433,7 +433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t t = 0; t < T1; t++)
                         {
                             mTmp0.SetValue(0);
-                            mTmp0.AddWithRowSliceValuesOf(Input(0)->FunctionValues(), t * GetNumParallelSequences() + k, 1);
+                            mTmp0.AddWithRowSliceValuesOf(Input(0)->Output(), t * GetNumParallelSequences() + k, 1);
                             mTmp1.AssignToRowSliceValuesOf(mTmp0, t, 1);
                         }
                         Matrix<ElemType> mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
@@ -509,7 +509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // (TODO: these following assignments are leftovers of refactoring and can be short-circuited)
             Matrix<ElemType>& functionValues = sliceOutputValue;
-            const Matrix<ElemType>& input0 = Input(0)->FunctionValues();
+            const Matrix<ElemType>& input0 = Input(0)->Output();
             const Matrix<ElemType>& input1 = sliceInput1Value;
 
             /**
@@ -594,9 +594,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Input(2)->FunctionValues().GetNumElements() != 1)
+            if (Input(2)->Output().GetNumElements() != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
-            m_strideDim = (size_t) Input(2)->FunctionValues().Get00Element();
+            m_strideDim = (size_t) Input(2)->Output().Get00Element();
             if (m_strideDim != 0 && m_strideDim != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
             //if (Input(2)->m_needGradient)        // disabled because this is a flag that belongs to Network. Node should simply not propagate anything into it

@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         for (auto & node : m_nestedNodes)
         {
-            if (node->IsFuncValueOlderThanInputs())
+            if (node->IsOutputOlderThanInputs())
             {
                 auto recInfo = dynamic_pointer_cast<SEQTraversalFlowControlNode>(node);
                 if (recInfo)
@@ -299,13 +299,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nullptr;  // not part of a recurrent loop
     }
 
-    // check if any of the nodes in the recurrence IsFuncValueOlderThanInputs(), with exception of delay nodes for which this check would fail and can be skipped
+    // check if any of the nodes in the recurrence IsOutputOlderThanInputs(), with exception of delay nodes for which this check would fail and can be skipped
     // TODO: Would it be sufficient to check against our own time stamp, so that we can use a unified time-stamping mechanism? Then we'd not need this special check for delayed nodes; just check all inputs against our own time stamp.
-    bool ComputationNetwork::SEQTraversalFlowControlNode::IsFuncValueOlderThanInputs() const
+    bool ComputationNetwork::SEQTraversalFlowControlNode::IsOutputOlderThanInputs() const
     {
         for (auto & ptr : m_nestedNodes)
         {
-            if (ptr->IsFuncValueOlderThanInputs() &&
+            if (ptr->IsOutputOlderThanInputs() &&
                 ptr->OperationName() != OperationNameOf(PastValueNode) &&
                 ptr->OperationName() != OperationNameOf(FutureValueNode))
             {
@@ -628,7 +628,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         map<ComputationNodeBasePtr, int> parentCount;
         for (auto &n : allNodes)
         {
-            for (int i = 0; i < n->ChildrenSize(); i++)
+            for (int i = 0; i < n->GetNumInputs(); i++)
             {
                 ComputationNodeBasePtr pNode = n->GetInputs()[i];
                 parentCount[pNode]++;
@@ -673,7 +673,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount)
     {
-        for (int i = 0; i < n->ChildrenSize(); i++)
+        for (int i = 0; i < n->GetNumInputs(); i++)
         {
             ComputationNodeBasePtr pNode = n->GetInputs()[i];
             parentCount[pNode]--;
