@@ -320,42 +320,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::performInplaceFunction(int kind)    
+    void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const ElemType *src)    
     {        
         PrepareDevice();
         CUDA_LONG N= (CUDA_LONG) GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
+        PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         switch (kind)
         {
-        case 0:
-            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opSigmoid:
+            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 1:
-            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opTanh:
+            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 2:
-            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opSqrt:
+            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 3:
-            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opExp:
+            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 4:
-            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opLog:
+            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 5:
-            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opAbs:
+            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 6:
-            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opLinRectDerivative:
+            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 7:
-            _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opCos:
+            _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 8:
-            _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, m_pArray, N);
+        case ElementWiseOperator::opNegativeSin:
+            _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
+        case ElementWiseOperator::opSigmoidDerivative:
+            _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
+            break;
+
         } 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));       
@@ -632,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (CUDA_LONG)startIndex, (CUDA_LONG)GetNumRows(), (CUDA_LONG)a.GetNumRows());
+        _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, this->m_pArray, N, (CUDA_LONG)startIndex, (CUDA_LONG)GetNumRows(), (CUDA_LONG)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1933,32 +1938,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoid()
     {
-        performInplaceFunction(0);                    
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf (const GPUMatrix<ElemType>& a)
     {
-        Resize(a.GetNumRows(),a.GetNumCols());
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _elementWiseSigmoidOnCuda<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        /*SetValue(a);
-        InplaceSigmoid();*/
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoidDerivative()
     {
-        AssignSigmoidDerivativeOf(*this);                    
+        performElementWiseFunction(ElementWiseOperator::opSigmoidDerivative, this->m_pArray);
         return *this;
     }
 
@@ -1968,20 +1965,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             LogicError("AssignSigmoidDerivativeOf: Matrix a is empty.");
 
-        //auto& us=*this;
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        PrepareDevice();
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-
-        _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, m_pArray, N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        performElementWiseFunction(ElementWiseOperator::opSigmoidDerivative, a.m_pArray);
         return *this;
     }
 
@@ -2117,15 +2104,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTanh()
     {
-        performInplaceFunction(1);
+        performElementWiseFunction(ElementWiseOperator::opTanh, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanhOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceTanh();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opTanh, a.m_pArray);
         return *this;
     }
 
@@ -2218,105 +2206,112 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
     {
-        performInplaceFunction(2);        
+        performElementWiseFunction(ElementWiseOperator::opSqrt, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSqrtOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceSqrt();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opSqrt, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceExp()
     {
-        performInplaceFunction(3);        
+        performElementWiseFunction(ElementWiseOperator::opExp, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignExpOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceExp();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opExp, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLog()
     {
-        performInplaceFunction(4);        
+        performElementWiseFunction(ElementWiseOperator::opLog, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceLog();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opLog, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAbs()
     {
-        performInplaceFunction(5);        
+        performElementWiseFunction(ElementWiseOperator::opAbs, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAbsOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceAbs();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opAbs, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLinearRectifierDerivative()
     {
-        performInplaceFunction(6);                    
+        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLinearRectifierDerivativeOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceLinearRectifierDerivative();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceCosine()
     {
-        performInplaceFunction(7);        
+        performElementWiseFunction(ElementWiseOperator::opCos, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCosineOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceCosine();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opCos, a.m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceNegativeSine()
     {
-        performInplaceFunction(8);        
+        performElementWiseFunction(ElementWiseOperator::opNegativeSin, this->m_pArray);
         return *this;
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNegativeSineOf (const GPUMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceNegativeSine();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opNegativeSin, a.m_pArray);
         return *this;
     }
 
