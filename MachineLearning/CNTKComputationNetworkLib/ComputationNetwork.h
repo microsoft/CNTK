@@ -17,7 +17,6 @@
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
 //  - renaming:
-//     OnEvaluateBeginIteration()   -> BeginForwardProp()   // and similar functions likewise
 //     Inputs()                     -> Input()              // or In()? or GetInput()?
 //     Children()                   -> Inputs()
 //     ChildrenSize()               -> NumInputs()
@@ -85,12 +84,12 @@ protected:
         // next steps:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
-        virtual void OnEvaluateBeginIteration() override;
+        virtual void BeginForwardProp() override;
         virtual void ForwardProp(const FrameRange &) override;
-        virtual void OnEvaluateEndIteration() override;
-        virtual void OnComputeGradientBeginIteration() override;
+        virtual void EndForwardProp() override;
+        virtual void BeginBackprop() override;
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
-        virtual void OnComputeGradientEndIteration() override;
+        virtual void EndBackprop() override;
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
@@ -128,12 +127,12 @@ protected:
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         virtual const std::wstring OperationName() const override { return L"PARTraversalFlowControlNode"; }
-        virtual void OnEvaluateBeginIteration() override { }
+        virtual void BeginForwardProp() override { }
         virtual void ForwardProp(const FrameRange &) override;
-        virtual void OnEvaluateEndIteration() override { }
-        virtual void OnComputeGradientBeginIteration() override { }
+        virtual void EndForwardProp() override { }
+        virtual void BeginBackprop() override { }
         virtual void BackpropTo(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
-        virtual void OnComputeGradientEndIteration() override { }
+        virtual void EndBackprop() override { }
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);

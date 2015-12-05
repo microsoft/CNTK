@@ -253,13 +253,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void OnEvaluateBeginIteration() override      // called before first iteration step of ForwardProp()
+        virtual void BeginForwardProp() override      // called before first iteration step of ForwardProp()
         {
-            Base::OnEvaluateBeginIteration();
+            Base::BeginForwardProp();
             CacheMBLayout();
         }
 
-        virtual void OnEvaluateEndIteration() override        // called after last iteration step of ForwardProp()
+        virtual void EndForwardProp() override        // called after last iteration step of ForwardProp()
         {
             // In BPTT, we carry over left-to-right state across minibatches.
             // It is kept in m_delayedActivation, m_delayedActivationMBLayout.
@@ -277,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
             }
 
-            Base::OnEvaluateEndIteration();
+            Base::EndForwardProp();
         }
 
         // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.

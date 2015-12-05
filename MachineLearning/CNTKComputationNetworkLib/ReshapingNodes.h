@@ -277,10 +277,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDims(m_numTargetRows, newCols);
         }
 
-        // TODO: there seems to be semantic overlap between OnEvaluateBeginIteration() and UpdateFunctionMBSize()
-        virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override
+        // TODO: there seems to be semantic overlap between BeginForwardProp() and UpdateFunctionMBSize()
+        virtual void /*IComputationNode::*/BeginForwardProp() override
         {
-            Base::OnEvaluateBeginIteration();
+            Base::BeginForwardProp();
             // create the derived layout
             if (m_pMBLayout && factor() != 1)
             {
@@ -291,14 +291,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // going from many samples to one: layout entry will get no flags
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
-                        LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
+                        LogicError("ReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
                     // leave flags empty (single-frame 'utterances' come form frame randomization, hence no flags)
                 }
                 else
                 {
                     // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                     if (Inputs(0)->GetMBLayout()->GetNumTimeSteps() != 1)
-                        LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to add a nested time dimension only works when coming from a single frame per sequence.");
+                        LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
                         m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
                 }
