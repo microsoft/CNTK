@@ -322,7 +322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);
 
     private:
-        void performInplaceFunction(const int kind);
+        void performElementWiseFunction(const ElementWiseOperator kind, const ElemType *src);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);

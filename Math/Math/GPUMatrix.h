@@ -68,6 +68,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
 
+
+    // -----------------------------------------------------------------------
+    // ElementWiseOperator -- This enum represents which function to apply. It needs to be outside of GPUMatrix, because it is also used in GPUSparseMatrix
+    // -----------------------------------------------------------------------
+
+    enum ElementWiseOperator
+    {
+        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinRectDerivative, opCos, opNegativeSin, opSigmoidDerivative
+    };
+
+
     // -----------------------------------------------------------------------
     // GPUMatrix
     // -----------------------------------------------------------------------
@@ -106,7 +117,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace;
 
     private:
-        void performInplaceFunction(int kind);
+        
+        void performElementWiseFunction(const ElementWiseOperator kind, const ElemType *src);
         size_t LocateElement (const size_t i, const size_t j) const;
         size_t LocateColumn (const size_t j) const;        
         void Clear();

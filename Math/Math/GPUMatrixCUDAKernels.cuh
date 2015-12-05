@@ -87,7 +87,7 @@ __global__ void _elementWisePowerOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseSigmoidOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -132,7 +132,7 @@ __device__ __forceinline__ double _exp(double f)
 
 template<class ElemType>
 __global__ void _elementWiseLinRectDerivativeOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -142,7 +142,7 @@ __global__ void _elementWiseLinRectDerivativeOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseSigmoidDerivativeOnCuda( 
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,
     CUDA_LONG N)
 {
@@ -152,7 +152,7 @@ __global__ void _elementWiseSigmoidDerivativeOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseTanhOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -172,7 +172,7 @@ __global__ void _elementWiseTanhOnCuda(
 //this may, however, hide problems in the caller.
 template<class ElemType>
 __global__ void _elementWiseSqrtOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -189,7 +189,7 @@ __global__ void _elementWiseSqrtOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseExpOnCuda(  
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -206,7 +206,7 @@ __global__ void _elementWiseExpOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseLogOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -230,7 +230,7 @@ __global__ void _elementWiseLogOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseAbsOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -247,7 +247,7 @@ __global__ void _elementWiseAbsOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseCosineOnCuda(
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
@@ -264,7 +264,7 @@ __global__ void _elementWiseCosineOnCuda(
 
 template<class ElemType>
 __global__ void _elementWiseNegativeSineOnCuda(    
-    ElemType *a,
+    const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
