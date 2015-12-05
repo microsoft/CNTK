@@ -209,12 +209,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-        //SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
-
         if (requireValidation)
         {
             // validation needs some layout to work with
-            m_pMBLayout->Init(1, 0, false);
+            m_pMBLayout->Init(1, 0);
             ValidateNetwork();
         }
     }

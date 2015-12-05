@@ -7,7 +7,7 @@
 #pragma once
 
 // TODOs:
-//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
+//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows) --> add stride to ImageLayout
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 //    -> solve by including a layout in the FrameRange directly; then DataSlice() can compare compatibility
@@ -31,7 +31,8 @@
 //     GradientSlice(.)             -> GradientFor(t)
 //     LoadFromFile()               -> Load()               // keep it simpler (where else would one load from?)
 //     SaveToFile()                 -> Save()
-//     ImageLayout                  -> DataLayout           // general tensor descriptor
+//     ImageLayout                  -> TensorShape          // general tensor descriptor
+//     m_imageLayout                -> SampleLayout
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters

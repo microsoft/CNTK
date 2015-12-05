@@ -440,7 +440,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // In that case, the layout is empty. We set up a dummy layout to match the first InputValue.
             // TODO: This is a stop-gap. We need a better-controlled way of when what gets validated.
             if (m_pMBLayout->GetNumCols() == 0)
-                m_pMBLayout->Init(1, node->GetNumCols(), false);
+                m_pMBLayout->Init(1, node->GetNumCols());
         }
 
         // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
