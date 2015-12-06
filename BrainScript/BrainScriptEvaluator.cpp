@@ -27,9 +27,6 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     static bool trace = false;     // set to true to enable to get debug output
 
-    DefineBinaryComputationNode(ColumnElementTimes);
-        else if (classId == L"ColumnElementTimes")
-            return make_shared<ColumnElementTimesNode>(GetInputs(config, 2, L"ColumnElementTimes"), tag);
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
     // Evaluation converts a parse tree from ParseConfigDictFromString/File() into a graph of live C++ objects.
