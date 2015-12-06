@@ -558,7 +558,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)
                 InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
-            Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+            //Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+			if (inputIndex >= 2)
+				Input(inputIndex)->Gradient().AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+			else
+			    Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
         }
 
 #if 0   // TODO: delete this. Seems copy-paste leftover?
