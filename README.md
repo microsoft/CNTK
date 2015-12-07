@@ -2,8 +2,7 @@
 #                                    CNTK                                    #
 ##############################################################################
 
--------------------------------
-1. Documentation and Demos
+# 1. Documentation and Demos
 -------------------------------
 
 A detailed introduction to the Computational Network Toolkit (CNTK) and its
@@ -28,12 +27,11 @@ implementation as well as the user manual for CNTK can be found at
 
 To get started with examples see the Demos/ folder and the Readme therein.
 
-There are also four files in the Documentation/ directory of the source
+There are also four files in the Documentation/ directory of the source 
 that contain additional details.
 
 
--------------------------------
-2. Cloning the Source Code (Windows)
+# 2. Cloning the Source Code (Windows)
 -------------------------------
 
 The CNTK project uses Git as the source version control system.
@@ -52,20 +50,18 @@ CodePlex page and clone the CNTK source code with the command
     git clone https://git01.codeplex.com/cntk
 
 
--------------------------------
-3. Cloning Source Code (Linux/Mac)
+# 3. Cloning Source Code (Linux/Mac)
 -------------------------------
 
 Linux users should clone from this URL: https://git.codeplex.com/cntk
 
     git clone https://git.codeplex.com/cntk
 
-More detail you can follow this thread:
+More detail you can follow this thread: 
 http://codeplex.codeplex.com/workitem/26133
 
 
--------------------------------
-4. Windows Visual Studio Setup (64-bit OS only)
+# 4. Windows Visual Studio Setup (64-bit OS only)
 -------------------------------
 
 Install Visual Studio 2013. After installation make sure to
@@ -140,12 +136,11 @@ home directory) which contains settings for C++ editor. To
 import/export the settings, use Tools -> Import and Export
 Settings... Visual Studio menu option.
 
-Please do *not* auto-format existing code (Edit -> Advanced -> Format
-Document/Ctrl+E,D).
+Please do *not* auto-format existing code (Edit -> Advanced -> 
+Format Document/Ctrl+E,D).
 
 
--------------------------------
-5. Linux GCC Setup
+# 5. Linux GCC Setup
 -------------------------------
 
 Install needed libraries as indicated in the Windows section above on
