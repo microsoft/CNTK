@@ -17,7 +17,7 @@ apply.
 __By using the software you accept these terms.__
 __If you do not accept them, do not use the software.__
 
-------------------------------------------------------
+______________________________________________________
 
 __If you comply with these license terms, you have the rights below.__
 
@@ -53,13 +53,13 @@ and (ii) the date of any changes.
     
 a. alter any copyright, trademark or patent notice in the software;
 
-b. use Microsoft’s trademarks in your programs’ names or in a way that 
+b. use Microsoft's trademarks in your programs' names or in a way that 
 suggests your derivative works or modifications come from or are endorsed 
 by Microsoft;
 
 c. include the software in malicious, deceptive or unlawful programs;
  
-------------------------------------------------------
+______________________________________________________
 
 __In return, we simply require that you agree:__
 
@@ -140,9 +140,9 @@ do so.
 
 ### 12. DISCLAIMER OF WARRANTY. 
 
-__THE SOFTWARE IS LICENSED “AS-IS.” YOU BEAR THE RISK OF USING IT. MICROSOFT 
+THE SOFTWARE IS LICENSED "AS-IS". YOU BEAR THE RISK OF USING IT. MICROSOFT 
 GIVES NO EXPRESS WARRANTIES, GUARANTEES OR CONDITIONS. YOU MAY HAVE ADDITIONAL 
 CONSUMER RIGHTS OR STATUTORY GUARANTEES UNDER YOUR LOCAL LAWS WHICH THIS 
 AGREEMENT CANNOT CHANGE. TO THE EXTENT PERMITTED UNDER YOUR LOCAL LAWS, 
 MICROSOFT EXCLUDES THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
-PARTICULAR PURPOSE AND NON-INFRINGEMENT.__
+PARTICULAR PURPOSE AND NON-INFRINGEMENT.
