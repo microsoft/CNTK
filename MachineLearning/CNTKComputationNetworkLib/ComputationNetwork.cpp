@@ -203,23 +203,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             wstring opName, nodeName;
             fstream >> opName >> nodeName;
-            if (create)         // we are loading from scratch
-            {
-                auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
 
-                if (!newNode)
-                {
-                    fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
-                    InvalidArgument("Invalid node type.");
-                }
-                newNode->Load(fstream, modelVersion);
-                AddNodeToNet(newNode);
-            }
-            else                // we are reloading an existing model
-            {
-                ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
-                nodePtr->Load(fstream, modelVersion);
-            }
+            ComputationNodeBasePtr node;
+            if (create)         // loading from scratch
+                node = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+            else                // reloading existing
+                node = GetNodeFromName(nodeName);
+
+            node->Load(fstream, modelVersion);
+
+            if (create)         // loaded from scratch
+                AddNodeToNet(node);
+            else                // reloaded existing
+                node->Validate(true);   // nothing that propagates should have changed  --TODO: have a more rigid mechanism to prevent resizing; this should only reload the model parameters
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");

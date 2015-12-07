@@ -51,9 +51,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // log the device we are computing on
         if (net->GetDeviceId() < 0)
-            fprintf(stderr, "SGD using CPU.\n");
+            fprintf(stderr, "\nSGD using CPU.\n");
         else
-            fprintf(stderr, "SGD using GPU %d.\n", (int)net->GetDeviceId());
+            fprintf(stderr, "\nSGD using GPU %d.\n", (int)net->GetDeviceId());
 
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -133,24 +133,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto & labelNodes = net->LabelNodes();
         auto & criterionNodes = GetTrainCriterionNodes(net);
 
+        fprintf(stderr, "\nTraining criterion node(s):\n");
+        for (const auto & node : criterionNodes)
+            fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+
         // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
         std::vector<ComputationNodeBasePtr> evaluationNodes;
         {
             auto originalEvaluationNodes = GetEvalCriterionNodes(net);
             set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log criteria
-            for (const auto & crit : criterionNodes)
-                criteriaLogged.insert(crit);
-            for (const auto & eval : originalEvaluationNodes)
-                if (criteriaLogged.insert(eval).second)
-                    evaluationNodes.push_back(eval);
+            for (const auto & node : criterionNodes)
+                criteriaLogged.insert(node);
+            for (const auto & node : originalEvaluationNodes)
+                if (criteriaLogged.insert(node).second)
+                    evaluationNodes.push_back(node);
+
+            if (!evaluationNodes.empty())
+            {
+                fprintf(stderr, "\nEvaluation criterion node(s):\n");
+                for (const auto & node : evaluationNodes)
+                    fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+            }
         }
 
         // allocate memory for backward computation
+        // TODO: This should be done in CompileNetwork(). However, if I do it there, I get a double-free error from MatrixPool.
         fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
         for (int i = 0; i < criterionNodes.size(); i++)
             net->AllocateGradientMatrices(criterionNodes[i]);
-        // give the layout something to validate with (some code below validates the network before actually receiving data)
-        // Note: yak!
 
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -1294,13 +1304,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
     // So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
+    // TODO: merge them into one.
     static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
     // TODO: test this, then remove this comment
 
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
     {
-        fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
         {
             tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
@@ -1313,7 +1323,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
     {
-        fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
         {
             tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);

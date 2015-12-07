@@ -57,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);
         if (nodeFloat)
         {
+            nodeFloat->VerifyDims(1, 1);
             nodeFloat->Gradient().Resize(1, 1);
             nodeFloat->Gradient().SetValue(1.0f);
         }
@@ -65,6 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto nodeDouble = dynamic_pointer_cast<ComputationNode<double>>(rootNode);
             if (nodeDouble)
             {
+                nodeDouble->VerifyDims(1, 1);
                 nodeDouble->Gradient().Resize(1, 1);
                 nodeDouble->Gradient().SetValue(1.0);
             }
@@ -412,7 +414,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // STEP: Set up memory-sharing structure
         for (auto & node : m_allRoots)
+        {
             AllocateEvalMatrices(node);
+            //AllocateGradientMatrices(node);   // BUGBUG: This causes a double-free.
+        }
 
         // STEP: Some final details.
         FixupInputMinibatchSize();          // post-fix MB sizes in InputValues(). Will not be needed with next-gen reader.
