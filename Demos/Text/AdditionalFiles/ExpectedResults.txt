@@ -1,0 +1,34 @@
+grep -a --text Finish out_writeWordAndClassInfo_train_test.log | grep Train                                                                                                Finished Epoch[ 1 of 16]: [Training Set] TrainLossPerSample = 6.0079981; EvalErrPerSample = 6.0079981; Ave LearnRatePerSample = 0.1000000015; EpochTime=526.37068
+
+Finished Epoch[ 1 of 16]: [Training Set] TrainLossPerSample = 6.0079981; EvalErrPerSample = 6.0079981; Ave LearnRatePerSample = 0.1000000015; EpochTime=526.37068
+Finished Epoch[ 1 of 16]: [Validation Set] TrainLossPerSample = 5.2608677; EvalErrPerSample = 5.2608677
+Finished Epoch[ 2 of 16]: [Training Set] TrainLossPerSample = 5.7402078; EvalErrPerSample = 5.7402078; Ave LearnRatePerSample = 0.1000000015; EpochTime=524.32747
+Finished Epoch[ 2 of 16]: [Validation Set] TrainLossPerSample = 5.1654553; EvalErrPerSample = 5.1654553
+Finished Epoch[ 3 of 16]: [Training Set] TrainLossPerSample = 5.6351768; EvalErrPerSample = 5.6351768; Ave LearnRatePerSample = 0.1000000015; EpochTime=523.22191
+Finished Epoch[ 3 of 16]: [Validation Set] TrainLossPerSample = 5.1670102; EvalErrPerSample = 5.1670102
+Finished Epoch[ 4 of 16]: [Training Set] TrainLossPerSample = 5.4959185; EvalErrPerSample = 5.4959185; Ave LearnRatePerSample = 0.05000000075; EpochTime=523.13665
+Finished Epoch[ 4 of 16]: [Validation Set] TrainLossPerSample = 5.0243087; EvalErrPerSample = 5.0243087
+Finished Epoch[ 5 of 16]: [Training Set] TrainLossPerSample = 5.4229146; EvalErrPerSample = 5.4229146; Ave LearnRatePerSample = 0.05000000075; EpochTime=523.18586
+Finished Epoch[ 5 of 16]: [Validation Set] TrainLossPerSample = 5.0271486; EvalErrPerSample = 5.0271486
+Finished Epoch[ 6 of 16]: [Training Set] TrainLossPerSample = 5.3503015; EvalErrPerSample = 5.3503015; Ave LearnRatePerSample = 0.02500000037; EpochTime=523.16126
+Finished Epoch[ 6 of 16]: [Validation Set] TrainLossPerSample = 4.9837442; EvalErrPerSample = 4.9837442
+Finished Epoch[ 7 of 16]: [Training Set] TrainLossPerSample = 5.3054759; EvalErrPerSample = 5.3054759; Ave LearnRatePerSample = 0.02500000037; EpochTime=523.3014
+Finished Epoch[ 7 of 16]: [Validation Set] TrainLossPerSample = 5.0029935; EvalErrPerSample = 5.0029935
+Finished Epoch[ 8 of 16]: [Training Set] TrainLossPerSample = 5.2661186; EvalErrPerSample = 5.2661186; Ave LearnRatePerSample = 0.01250000019; EpochTime=523.09331
+Finished Epoch[ 8 of 16]: [Validation Set] TrainLossPerSample = 4.9786788; EvalErrPerSample = 4.9786788
+Finished Epoch[ 9 of 16]: [Training Set] TrainLossPerSample = 5.2451443; EvalErrPerSample = 5.2451443; Ave LearnRatePerSample = 0.01250000019; EpochTime=523.3242
+Finished Epoch[ 9 of 16]: [Validation Set] TrainLossPerSample = 5.0013123; EvalErrPerSample = 5.0013123
+Finished Epoch[10 of 16]: [Training Set] TrainLossPerSample = 5.2255983; EvalErrPerSample = 5.2255983; Ave LearnRatePerSample = 0.006250000093; EpochTime=523.2648
+Finished Epoch[10 of 16]: [Validation Set] TrainLossPerSample = 4.9819325; EvalErrPerSample = 4.9819325
+Finished Epoch[11 of 16]: [Training Set] TrainLossPerSample = 5.2196185; EvalErrPerSample = 5.2196185; Ave LearnRatePerSample = 0.003125000047; EpochTime=523.1522
+Finished Epoch[11 of 16]: [Validation Set] TrainLossPerSample = 4.9632342; EvalErrPerSample = 4.9632342
+Finished Epoch[12 of 16]: [Training Set] TrainLossPerSample = 5.209123; EvalErrPerSample = 5.209123; Ave LearnRatePerSample = 0.003125000047; EpochTime=523.10271
+Finished Epoch[12 of 16]: [Validation Set] TrainLossPerSample = 4.9688145; EvalErrPerSample = 4.9688145
+Finished Epoch[13 of 16]: [Training Set] TrainLossPerSample = 5.2053027; EvalErrPerSample = 5.2053027; Ave LearnRatePerSample = 0.001562500023; EpochTime=523.02754
+Finished Epoch[13 of 16]: [Validation Set] TrainLossPerSample = 4.9551311; EvalErrPerSample = 4.9551311
+Finished Epoch[14 of 16]: [Training Set] TrainLossPerSample = 5.2005106; EvalErrPerSample = 5.2005106; Ave LearnRatePerSample = 0.001562500023; EpochTime=523.18513
+Finished Epoch[14 of 16]: [Validation Set] TrainLossPerSample = 4.9582529; EvalErrPerSample = 4.9582529
+Finished Epoch[15 of 16]: [Training Set] TrainLossPerSample = 5.2022051; EvalErrPerSample = 5.2022051; Ave LearnRatePerSample = 0.0007812500116; EpochTime=523.25942
+Finished Epoch[15 of 16]: [Validation Set] TrainLossPerSample = 4.9491462; EvalErrPerSample = 4.9491462
+Finished Epoch[16 of 16]: [Training Set] TrainLossPerSample = 5.1958387; EvalErrPerSample = 5.1958387; Ave LearnRatePerSample = 0.0007812500116; EpochTime=523.21016
+Finished Epoch[16 of 16]: [Validation Set] TrainLossPerSample = 4.9504418; EvalErrPerSample = 4.9504418
