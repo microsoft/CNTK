@@ -80,12 +80,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux build files", "Linux 
 	ProjectSection(SolutionItems) = preProject
 		configure = configure
 		Makefile = Makefile
-		README = README
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{065AF55D-AF02-448B-BFCD-52619FDA4BD0}"
 	ProjectSection(SolutionItems) = preProject
-		README = README
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorial", "Tutorial", "{98D2C32B-0C1F-4E19-A626-65F7BA4600CF}"
@@ -95,7 +95,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorial", "Tutorial", "{98
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTK-TechReport", "CNTK-TechReport", "{EA67F51F-1FE8-462D-9F3E-01161685AD59}"
 	ProjectSection(SolutionItems) = preProject
-		Documentation\CNTK-TechReport\lyx\CNTKBook-20150518.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20150518.pdf
+		Documentation\CNTK-TechReport\lyx\CNTKBook-20151201.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20151201.pdf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58}"
@@ -113,7 +113,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "License", "License", "{6302
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lyx", "lyx", "{F9BEB27E-8AF5-464E-8D45-0000D5AFA2D3}"
 	ProjectSection(SolutionItems) = preProject
-		Documentation\CNTK-TechReport\lyx\#CNTKBook_CNTK_Programmer_Chapter.lyx# = Documentation\CNTK-TechReport\lyx\#CNTKBook_CNTK_Programmer_Chapter.lyx#
 		Documentation\CNTK-TechReport\lyx\CNTKBook-master.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook-master.lyx
 		Documentation\CNTK-TechReport\lyx\CNTKBook_Abstract.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook_Abstract.lyx
 		Documentation\CNTK-TechReport\lyx\CNTKBook_ASRDecoder_Chapter.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook_ASRDecoder_Chapter.lyx
@@ -268,8 +267,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader"
 		DataReader\KaldiReader\HTKMLFWriter.cpp = DataReader\KaldiReader\HTKMLFWriter.cpp
 		DataReader\KaldiReader\HTKMLFWriter.h = DataReader\KaldiReader\HTKMLFWriter.h
 		DataReader\KaldiReader\latticearchive.cpp = DataReader\KaldiReader\latticearchive.cpp
-		DataReader\KaldiReader\latticearchive.h = DataReader\KaldiReader\latticearchive.h
-		DataReader\KaldiReader\latticestorage.h = DataReader\KaldiReader\latticestorage.h
 		DataReader\KaldiReader\minibatchiterator.h = DataReader\KaldiReader\minibatchiterator.h
 		DataReader\KaldiReader\minibatchsourcehelpers.h = DataReader\KaldiReader\minibatchsourcehelpers.h
 		DataReader\KaldiReader\msra_mgram.h = DataReader\KaldiReader\msra_mgram.h
@@ -277,8 +274,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader"
 		DataReader\KaldiReader\pplhelpers.h = DataReader\KaldiReader\pplhelpers.h
 		DataReader\KaldiReader\readaheadsource.h = DataReader\KaldiReader\readaheadsource.h
 		DataReader\KaldiReader\rollingwindowsource.h = DataReader\KaldiReader\rollingwindowsource.h
-		DataReader\KaldiReader\simple_checked_arrays.h = DataReader\KaldiReader\simple_checked_arrays.h
-		DataReader\KaldiReader\simplesenonehmm.h = DataReader\KaldiReader\simplesenonehmm.h
 		DataReader\KaldiReader\simplethread.h = DataReader\KaldiReader\simplethread.h
 		DataReader\KaldiReader\ssefloat4.h = DataReader\KaldiReader\ssefloat4.h
 		DataReader\KaldiReader\ssematrix.h = DataReader\KaldiReader\ssematrix.h
@@ -310,8 +305,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reade
 		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp
 		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h
 		DataReader\Kaldi2Reader\latticearchive.cpp = DataReader\Kaldi2Reader\latticearchive.cpp
-		DataReader\Kaldi2Reader\latticearchive.h = DataReader\Kaldi2Reader\latticearchive.h
-		DataReader\Kaldi2Reader\latticestorage.h = DataReader\Kaldi2Reader\latticestorage.h
 		DataReader\Kaldi2Reader\minibatchiterator.h = DataReader\Kaldi2Reader\minibatchiterator.h
 		DataReader\Kaldi2Reader\minibatchsourcehelpers.h = DataReader\Kaldi2Reader\minibatchsourcehelpers.h
 		DataReader\Kaldi2Reader\msra_mgram.h = DataReader\Kaldi2Reader\msra_mgram.h
@@ -320,8 +313,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reade
 		DataReader\Kaldi2Reader\pplhelpers.h = DataReader\Kaldi2Reader\pplhelpers.h
 		DataReader\Kaldi2Reader\readaheadsource.h = DataReader\Kaldi2Reader\readaheadsource.h
 		DataReader\Kaldi2Reader\rollingwindowsource.h = DataReader\Kaldi2Reader\rollingwindowsource.h
-		DataReader\Kaldi2Reader\simple_checked_arrays.h = DataReader\Kaldi2Reader\simple_checked_arrays.h
-		DataReader\Kaldi2Reader\simplesenonehmm.h = DataReader\Kaldi2Reader\simplesenonehmm.h
 		DataReader\Kaldi2Reader\simplethread.h = DataReader\Kaldi2Reader\simplethread.h
 		DataReader\Kaldi2Reader\ssefloat4.h = DataReader\Kaldi2Reader\ssefloat4.h
 		DataReader\Kaldi2Reader\ssematrix.h = DataReader\Kaldi2Reader\ssematrix.h
@@ -394,14 +385,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DiscriminativePreTraining",
 		Tests\Speech\DNN\DiscriminativePreTraining\macros.txt = Tests\Speech\DNN\DiscriminativePreTraining\macros.txt
 		Tests\Speech\DNN\DiscriminativePreTraining\run-test = Tests\Speech\DNN\DiscriminativePreTraining\run-test
 		Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml = Tests\Speech\DNN\DiscriminativePreTraining\testcases.yml
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ndl", "ndl", "{09B8623A-BF5D-4499-B3B3-A9EFEA4C4B68}"
-	ProjectSection(SolutionItems) = preProject
-		Tests\Speech\Data\ndl\add_layer.mel = Tests\Speech\Data\ndl\add_layer.mel
-		Tests\Speech\Data\ndl\dnn.txt = Tests\Speech\Data\ndl\dnn.txt
-		Tests\Speech\Data\ndl\dnn_1layer.txt = Tests\Speech\Data\ndl\dnn_1layer.txt
-		Tests\Speech\Data\ndl\macros.txt = Tests\Speech\Data\ndl\macros.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{6F19321A-65E7-4829-B00C-3886CD6C6EDE}"
@@ -479,6 +462,83 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple", "Simple", "{81AE01
 		Tests\Speech\Simple\cntk.config = Tests\Speech\Simple\cntk.config
 		Tests\Speech\Simple\run-test = Tests\Speech\Simple\run-test
 		Tests\Speech\Simple\testcases.yml = Tests\Speech\Simple\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demos", "Demos", "{47755F2E-D674-4175-9E38-8EA053455072}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\README.md = Demos\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Image", "Image", "{9BDFA4BE-790E-408F-915B-5979BB5078C6}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Image\README.md = Demos\Image\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{C0677F34-0267-44C9-8460-6D3A9A277DF6}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Simple2d\README.md = Demos\Simple2d\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{3CE841C0-02E5-46DB-B401-6F8784880173}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Speech\README.md = Demos\Speech\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Text", "Text", "{97AAB0C8-D553-49CB-A539-004FCD7FD59F}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Text\README.md = Demos\Text\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{B478F99A-D37F-4169-9493-5A312019B1EF}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Simple2d\Data\SimpleDataTest.txt = Demos\Simple2d\Data\SimpleDataTest.txt
+		Demos\Simple2d\Data\SimpleDataTrain.txt = Demos\Simple2d\Data\SimpleDataTrain.txt
+		Demos\Simple2d\Data\SimpleMapping.txt = Demos\Simple2d\Data\SimpleMapping.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{4258EAB1-C16E-4EE7-9640-A41F53F5072D}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Simple2d\Config\Multigpu.config = Demos\Simple2d\Config\Multigpu.config
+		Demos\Simple2d\Config\Simple.config = Demos\Simple2d\Config\Simple.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "AdditionalFiles", "{88A27DB7-181B-4823-BEB3-B9A7E57024F9}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Simple2d\AdditionalFiles\MakeData.m = Demos\Simple2d\AdditionalFiles\MakeData.m
+		Demos\Simple2d\AdditionalFiles\SimpleDemoDataReference.png = Demos\Simple2d\AdditionalFiles\SimpleDemoDataReference.png
+		Demos\Simple2d\AdditionalFiles\SimpleDemoErrorRateReference.png = Demos\Simple2d\AdditionalFiles\SimpleDemoErrorRateReference.png
+		Demos\Simple2d\AdditionalFiles\SimpleDemoOutputReference.png = Demos\Simple2d\AdditionalFiles\SimpleDemoOutputReference.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{8BBD0355-B450-406B-814B-E58792C0F7FE}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Speech\Data\000000000.chunk = Demos\Speech\Data\000000000.chunk
+		Demos\Speech\Data\glob_0000.mlf = Demos\Speech\Data\glob_0000.mlf
+		Demos\Speech\Data\glob_0000.scp = Demos\Speech\Data\glob_0000.scp
+		Demos\Speech\Data\state.list = Demos\Speech\Data\state.list
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{C613F7AC-B729-43B9-BA31-9A943F96DA55}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Speech\Config\FeedForward.config = Demos\Speech\Config\FeedForward.config
+		Demos\Speech\Config\LSTM-NDL.config = Demos\Speech\Config\LSTM-NDL.config
+		Demos\Speech\Config\lstmp-3layer-opt.ndl = Demos\Speech\Config\lstmp-3layer-opt.ndl
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "AdditionalFiles", "{EDE295D1-37F6-48C2-A5AF-8FC66BF20E68}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Speech\AdditionalFiles\AN4.LICENSE.html = Demos\Speech\AdditionalFiles\AN4.LICENSE.html
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{A07A002C-A05C-477C-9DED-F01272724C6E}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Text\Config\rnn.config = Demos\Text\Config\rnn.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "AdditionalFiles", "{8EBD7E6F-415C-4B6A-927C-1AF82905B16C}"
+	ProjectSection(SolutionItems) = preProject
+		Demos\Text\AdditionalFiles\perplexity.class50.lr0.1.txt = Demos\Text\AdditionalFiles\perplexity.class50.lr0.1.txt
+		Demos\Text\AdditionalFiles\perplexity.nce100.lr0.1.txt = Demos\Text\AdditionalFiles\perplexity.nce100.lr0.1.txt
 	EndProjectSection
 EndProject
 Global
@@ -751,7 +811,6 @@ Global
 		{FD88A77E-A839-4513-AC5C-AD92447BE229} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{40F93928-5CA2-433A-A48C-C8E9A35D7079} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 		{39B9BB97-D0E8-439A-8A1B-8DB8E7CF73C3} = {6994C86D-A672-4254-824A-51F4DFEB807F}
-		{09B8623A-BF5D-4499-B3B3-A9EFEA4C4B68} = {5F733BBA-FE83-4668-8F83-8B0E78A36619}
 		{6F19321A-65E7-4829-B00C-3886CD6C6EDE} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{4701E678-5E6F-470D-B348-9CD1A2C095D1} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{EB2BE26F-6BD4-4274-971F-86D080779DD1} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
@@ -762,5 +821,18 @@ Global
 		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{669B6203-9675-4950-B526-7CD72D55E5E1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{47755F2E-D674-4175-9E38-8EA053455072} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{9BDFA4BE-790E-408F-915B-5979BB5078C6} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{C0677F34-0267-44C9-8460-6D3A9A277DF6} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{3CE841C0-02E5-46DB-B401-6F8784880173} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{97AAB0C8-D553-49CB-A539-004FCD7FD59F} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{B478F99A-D37F-4169-9493-5A312019B1EF} = {C0677F34-0267-44C9-8460-6D3A9A277DF6}
+		{4258EAB1-C16E-4EE7-9640-A41F53F5072D} = {C0677F34-0267-44C9-8460-6D3A9A277DF6}
+		{88A27DB7-181B-4823-BEB3-B9A7E57024F9} = {C0677F34-0267-44C9-8460-6D3A9A277DF6}
+		{8BBD0355-B450-406B-814B-E58792C0F7FE} = {3CE841C0-02E5-46DB-B401-6F8784880173}
+		{C613F7AC-B729-43B9-BA31-9A943F96DA55} = {3CE841C0-02E5-46DB-B401-6F8784880173}
+		{EDE295D1-37F6-48C2-A5AF-8FC66BF20E68} = {3CE841C0-02E5-46DB-B401-6F8784880173}
+		{A07A002C-A05C-477C-9DED-F01272724C6E} = {97AAB0C8-D553-49CB-A539-004FCD7FD59F}
+		{8EBD7E6F-415C-4B6A-927C-1AF82905B16C} = {97AAB0C8-D553-49CB-A539-004FCD7FD59F}
 	EndGlobalSection
 EndGlobal
