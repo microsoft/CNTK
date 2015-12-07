@@ -619,7 +619,7 @@ public:
     // Duplicate node names are rejected.
     ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& nodePtr)
     {
-        //found
+        // found
         // TODO: use .insert() and test result.second == false means not inserted since already exists
         if (m_nameToNodeMap.find(nodePtr->NodeName()) != m_nameToNodeMap.end())
             RuntimeError("Duplicated computation node name.");
