@@ -102,15 +102,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
+        // TODO: process "outputNodes" etc. arrays
 
-        ValidateNetwork();
+        // perform all necessary post-processing
+        CompileNetwork();
 #if 1
         wstring args = ToString();
         fprintf(stderr, "%ls\n", args.c_str());
 #endif
-        // these post-processing steps are done by the other network builders, but I don't know why they are necessary
-        FixupInputMinibatchSize();         // make sure dimensions are set up correctly
-        ResetEvalTimeStamp();              // (should not really be needed)
     }
 
 }}}

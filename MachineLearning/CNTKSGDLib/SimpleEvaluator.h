@@ -96,8 +96,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
                 // for now since we share the same label masking flag we call this on one node only
                 // Later, when we apply different labels on different nodes

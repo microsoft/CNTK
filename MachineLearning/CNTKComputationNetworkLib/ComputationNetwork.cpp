@@ -49,24 +49,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // construction
     // -----------------------------------------------------------------------
 
-    // TODO: why is this needed? Why is this not just construction?
-    void ComputationNetwork::ClearNet()
+    // clear the object to empty state; this is used in the destructor, and also when loading
+    // This is necessary to make sure we don't leave nodes hanging due to recurrent cyclic references.
+    void ComputationNetwork::ClearNetwork()
     {
+        // release all references to nodes
+        InvalidateCompiledNetwork();
+
         for (auto groupIter : GetAllNodeGroups())
-            (groupIter)->clear();
+            groupIter->clear();
 
-        m_recurrentInfo.clear();
+        // break cycles
+        // BUGBUG: This only works if nodes are not shared across networks.
+        //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
+        for (auto & iter : m_nameToNodeMap)
+            iter.second->DetachInputs();
 
-        m_built.clear();
+        m_nameToNodeMap.clear();
 
-        m_cacheEvalOrders.clear();
-        m_cacheGradientCalcOrders.clear();
-        m_cachedOuterLoopNodes.clear();
-
-        m_inputValues.clear();
-        m_learnableParameters.clear();
-
-        m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
+        m_pMBLayout->Init(1, 0);
     }
 
     // -----------------------------------------------------------------------
@@ -178,15 +179,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.Flush();
     }
 
-    void ComputationNetwork::LoadPersistableParametersFromFile(const wstring& fileName, const bool requireValidation,
-                                                               const FileOptions fileFormat)
+    // load the section of nodes that contain persistable parameters
+    // This is used for reloading a model without recreating it, e.g. during training.
+    // TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
+    template<class ElemType> void ComputationNetwork::LoadPersistableParameters(File & fstream, bool create)
     {
-        File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
-
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
-        //model version
-        size_t modelVersion = CNTK_MODEL_VERSION_1; //if version info is not there it is version 1
+        // model version
+        size_t modelVersion = CNTK_MODEL_VERSION_1; // if version info is not there it is version 1
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
         {
             fstream >> modelVersion;
@@ -196,36 +197,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numNodes;
         fstream >> numNodes;
 
-        //get all node info first
+        // get all node info first
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
         for (size_t i = 0; i < numNodes; i++)
         {
             wstring opName, nodeName;
             fstream >> opName >> nodeName;
-            ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
-            // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
-            nodePtr->Load(fstream, modelVersion);
+            if (create)         // we are loading from scratch
+            {
+                auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+
+                if (!newNode)
+                {
+                    fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
+                    InvalidArgument("Invalid node type.");
+                }
+                newNode->Load(fstream, modelVersion);
+                AddNodeToNet(newNode);
+            }
+            else                // we are reloading an existing model
+            {
+                ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
+                nodePtr->Load(fstream, modelVersion);
+            }
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
-
-        if (requireValidation)
-        {
-            // validation needs some layout to work with
-            m_pMBLayout->Init(1, 0);
-            ValidateNetwork();
-        }
     }
 
-    template<class ElemType> void ComputationNetwork::Load(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    template<class ElemType> void ComputationNetwork::Load(const wstring& fileName, const FileOptions fileFormat, const bool /*bAllowNoCriterionNode --unused*/, ComputationNetwork* anotherNetwork)
     {
-        ClearNet();
+        ClearNetwork();
 
         File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
 
+#if 1
+        LoadPersistableParameters<ElemType>(fstream, true);
+#else
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
-        //model version
+        // model version
         size_t modelVersion = CNTK_MODEL_VERSION_1; //if version info is not there it is version 1
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
         {
@@ -236,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numNodes;
         fstream >> numNodes;
 
-        //get all node info first
+        // get all node info first
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
         for (size_t i = 0; i < numNodes; i++)
         {
@@ -254,8 +265,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AddNodeToNet(newNode);
         }
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
+#endif
 
-        //put relationship
+        size_t numNodes = m_nameToNodeMap.size();
+
+        // get relationship
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
         for (size_t i = 0; i < numNodes; i++)
         {
@@ -278,39 +292,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int j = 0; j < numChildren; j++)
                     childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
 
-                if (nodePtr->OperationName() == OperationNameOf(RowStackNode))
-                {
-                    //allow for variable input nodes
+                //if (nodePtr->OperationName() == OperationNameOf(RowStackNode))
+                //{
+                    // allow for variable input nodes
                     nodePtr->AttachInputs(childrenNodes);
-                }
-                else
-                {
-                    //fixed input nodes
-                    // TODO: don't we have a variable-length AttachInputs() now?
-                    switch (numChildren)
-                    {
-                        case 1:
-                            nodePtr->AttachInputs(childrenNodes[0]);
-                            break;
-                        case 2:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
-                            break;
-                        case 3:
-                            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1], childrenNodes[2]);
-                            break;
-                        case 4:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
-                            break;
-                        case 5:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
-                            break;
-                        case 6:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
-                            break;
-                        default:
-                            LogicError("Invalid number of children.");
-                    }
-                }
+                //}
+                //else
+                //{
+                //    // fixed input nodes
+                //    // TODO: Use the variable-length AttachInputs() as well. This is a refactoring left-over.
+                //    switch (numChildren)
+                //    {
+                //        case 1:
+                //            nodePtr->AttachInputs(childrenNodes[0]);
+                //            break;
+                //        case 2:
+                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
+                //            break;
+                //        case 3:
+                //            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1], childrenNodes[2]);
+                //            break;
+                //        case 4:
+                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
+                //            break;
+                //        case 5:
+                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
+                //            break;
+                //        case 6:
+                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
+                //            break;
+                //        default:
+                //            LogicError("Invalid number of children.");
+                //    }
+                //}
             }
         }
 
@@ -410,9 +424,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
-        // some internal values in the nodes are computed during validation
-        ValidateNetwork(false, bAllowNoCriterionNode);
-        ResetEvalTimeStamp();
+        // perform all further post-processing, caching, etc.
+        CompileNetwork();
     }
 
     // -----------------------------------------------------------------------
@@ -546,22 +559,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
         GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
         return nodesRequiringX;
-    }
-
-    // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
-    // Basically, it invalidates all post-processing, reducing the network to the graph.
-    // TODO: This will go away once we validate/build/process the network in a non-lazy fashion.
-    void ComputationNetwork::ClearCalcOrderCaches()
-    {
-        for (auto & it : m_cacheEvalOrders)
-            for (auto & iter2 : m_cacheEvalOrders[it.first])
-                iter2->PurgeStateForFormingRecurrentLoops();
-        // TODO: ^^ Why is this done? This looks like an error (this function was called ClearCache() before, so maybe someone threw this call in for good measure)
-
-        // clear network Iterations cache
-        m_cacheEvalOrders.clear();
-        m_cacheGradientCalcOrders.clear();
-        m_cachedOuterLoopNodes.clear();
     }
 
     // lazily reate the m_inputValues[] and m_learnableParameters lists
@@ -1124,7 +1121,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ReplaceLeafNode(name, pTimes);
             }
         }
-        RebuildNetwork(m_finalCriteria[0]);
+
+        // redo necessary post-processing
+        CompileNetwork();
     }
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);

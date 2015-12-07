@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (ndlPass == ndlPassFinal)
             {
                 // make sure to clear the caches so we pick up the new nodes
-                m_net->ClearCaches();
+                m_net->InvalidateCompiledNetwork();
                 // validate the network
                 //m_net->SetFakeMBLayoutForValidation();  // fake an MB layout to match the initial values of Input
                 if (dumpFileName != L"")

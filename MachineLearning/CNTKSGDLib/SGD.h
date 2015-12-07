@@ -270,7 +270,7 @@ public:
         // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
         m_modelPath((const wstring &)configSGD(L"modelPath")),
         m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
-        m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
+        //m_validateAfterModelReloading(configSGD(L"validateAfterModelReloading", true)),
         m_trainCriterionNodeName((const wstring &)configSGD(L"trainCriterionNodeName", L"")),
         m_evalCriterionNodeName((const wstring &)configSGD(L"evalCriterionNodeName", L"")),
         m_prevChosenMinibatchSize(0),
@@ -484,7 +484,7 @@ public:
 protected:
     wstring m_modelPath;
     bool m_keepCheckPointFiles;
-    bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
+    //bool m_validateAfterModelReloading; // TODO: remove this. Why would one not validate a model?
 
     wstring m_trainCriterionNodeName;
     wstring m_evalCriterionNodeName;

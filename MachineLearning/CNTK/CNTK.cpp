@@ -816,7 +816,7 @@ public:
             net->Load<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
             m_net = net;
         }
-        m_net->ResetEvalTimeStamp();
+        m_net->ResetEvalTimeStamps();
         return m_net.get();
     }
 };
@@ -917,7 +917,6 @@ void DoTrain(const ConfigRecordType & config)
             if (!network)
                 RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
             // success
-            network->ResetEvalTimeStamp();
             return network;
         };
     }

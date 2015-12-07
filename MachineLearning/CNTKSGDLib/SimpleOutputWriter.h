@@ -73,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize;
             while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
                 //size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
                 //dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize;
             while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

@@ -104,8 +104,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // nodeNameNew - new node name
     void ComputationNetwork::RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew)
     {
-        //so that renamed node will not be referenced
-        ClearCaches();
+        // so that renamed node will not be referenced
+        InvalidateCompiledNetwork();
 
         ComputationNodeBasePtr nodeToRename = GetNodeFromName(nodeNameOrig);
 
@@ -129,8 +129,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::DeleteNode(const std::wstring & nodeName)
     {
-        //so that deleted node will not be referenced
-        ClearCaches();
+        // so that deleted node will not be referenced
+        InvalidateCompiledNetwork();
 
         ComputationNodeBasePtr nodeToDelete = GetNodeFromName(nodeName);
 
@@ -152,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //nodeToDelete is a parent
+        // nodeToDelete is a parent
         nodeToDelete->DetachInputs();       // deref all its inputs; if we don't do that, we might end up with a mem leak due to a circular reference
 
         // unlink from all node-group sets
@@ -163,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 groupIter->erase(search);
         }
 
-        // ? how to deal with m_recurrentInfo, when we delete a node.
+        // Note: the necessary update of m_allSEQNodes is hanlded by the InvalidateCompiledNetwork() call above
 
         //delete the node itself
         m_nameToNodeMap.erase(nodeName);    // this will deref the node and possibly deallocate it
@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!NodeNameExist(nodeName))
             RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
-        ClearCaches();
+        InvalidateCompiledNetwork();
 
         // Removes links.
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)

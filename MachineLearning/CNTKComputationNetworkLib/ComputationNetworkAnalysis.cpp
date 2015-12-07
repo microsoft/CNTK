@@ -27,27 +27,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // FormRecurrentLoops() -- MAIN ENTRY POINT for network recurrent-loop analysis. All other functions in this CPP are called only from this one.
     // This function analysis the networks for recurrent loops present in the computation of 'rootNode.'
     // This sets/updates:
-    //  - m_recurrentInfo
+    //  - m_allSEQNodes
     //  - ComputationNode::m_isPartOfLoop and m_loopId
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
     // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
-        // determine the strongly connected cliques -> m_recurrentInfo[]
+        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
+
+        // initialize the node state owned by us
+        for (auto & node : nodes)
+            node->PurgeStateForFormingRecurrentLoops();
+
+        // determine the strongly connected cliques -> m_allSEQNodes[]
         DetermineSCCs(rootNode);
         // now we have formed all loops, with all nodes assigned to a loop or none
 
-        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
         // recover m_visitedOrder
         size_t i = 1;       // BUGBUG: why not 0? (left-over of refactoring)
         for (auto & node : nodes)
             node->m_visitedOrder = i++;
 
-        // update m_visitedOrder of all nodes
-        // This was originally set by EnumerateNodes(), which gets called from GetEvalOrder().
+        // update m_visitedOrder of all nodes that participate in a loop
         // All nodes that participate in a loop get the same m_visitedOrder value.
-        for (auto & iter : m_recurrentInfo)
+        for (auto & iter : m_allSEQNodes)
         {
             size_t max_visitedOrderInLoop = 0;
             // TODO: I am sure there is an STL algorithm for this.
@@ -59,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // implant m_loopId in all nodes in all loops
-        for (auto & iter : m_recurrentInfo)
+        for (auto & iter : m_allSEQNodes)
         {
             for (auto & node : iter->m_nestedNodes)
             {
@@ -69,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        for (auto & iter : m_recurrentInfo)
+        for (auto & iter : m_allSEQNodes)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
             list<ComputationNodeBasePtr> result;
@@ -105,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             iter->m_nestedNodes.assign(result.begin(), result.end());
         }
 
-        if (m_recurrentInfo.size() > 0)
+        if (m_allSEQNodes.size() > 0)
         {
             unordered_set<ComputationNodeBasePtr> visited;
 
@@ -134,13 +138,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         DetermineLoopDirections();
 
+#if 0
         // done: clear up after ourselves
-        // TODO: don't we better do that at the start as well?
+        // TODO: don't we better do that at the start as well?    --done
         for (auto & node : nodes)
             node->PurgeStateForFormingRecurrentLoops();
+#endif
 
         // log the loops
-        for (auto & iter : m_recurrentInfo)
+        for (auto & iter : m_allSEQNodes)
         {
             fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_nestedNodes.size());
             size_t n = 0;
@@ -154,7 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // now turn this into a nested network, ready for evaluation
-        GetOuterLoopNode(rootNode);
+        FormNestedNetwork(rootNode);
     }
 
     // get the strongly connected components from the graph
@@ -178,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // set the index (in order of visitation)
         cur->m_index = index;
-        cur->m_lowLink = index; // also set m_lowLink
+        cur->m_minIndex = index; // also set m_minIndex
         index++;
 
         cur->m_visited = true;
@@ -187,23 +193,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
         {
-            // set m_lowLink to min over m_lowLinks of children
+            // set m_minIndex to min over m_lowLinks of children
             for (int i = 0; i < cur->GetNumInputs(); i++)
             {
                 if (!cur->Input(i)->m_visited)
                 {
                     DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
+                    cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
                 }
                 else if (cur->Input(i)->m_inStack)
                 {
-                    cur->m_lowLink = min(cur->m_lowLink, cur->Input(i)->m_lowLink);
+                    cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
                 }
             }
         }
 
-        // if we closed a loop then create an entry in m_recurrentInfo
-        if (cur->m_lowLink == cur->m_index)   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
+        // if we closed a loop then create an entry in m_allSEQNodes
+        if (cur->m_minIndex == cur->m_index)   // m_minIndex is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
             // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
             SEQTraversalFlowControlNode rInfo(loopId, cur);
@@ -221,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // only add to the array if the loop is not already there
                 // Since FormRecurrentLoops() is called multiple times, for multiple output nodes, we end up producing the same loop multiple times.
                 bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-                for (const auto & iter2 : m_recurrentInfo)
+                for (const auto & iter2 : m_allSEQNodes)
                 {
                     if (iter2->m_sourceNode == cur)
                     {
@@ -232,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!bFound)
                 {
                     // TODO: construct rInfo down here
-                    m_recurrentInfo.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
+                    m_allSEQNodes.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
                     loopId++;                           // and count it
                 }
             }
@@ -299,10 +305,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         list<ComputationNodeBasePtr> vTmp;
         list<ComputationNodeBasePtr> vRecurrentTmp;
-        vector<bool> accessed(m_recurrentInfo.size(), false);
+        vector<bool> accessed(m_allSEQNodes.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            const shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, *nodeIter);
+            const shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, *nodeIter);
             if (recInfo)
             {
                 int iId = recInfo->m_loopId;
@@ -336,7 +342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // set m_steppingDirection for all loops
     void ComputationNetwork::DetermineLoopDirections()
     {
-        for (auto & rInfo : m_recurrentInfo)
+        for (auto & rInfo : m_allSEQNodes)
         {
             assert(rInfo->m_nestedNodes.size() > 0);    // (this check was left over after refactoring; it should not be necessary)
 
