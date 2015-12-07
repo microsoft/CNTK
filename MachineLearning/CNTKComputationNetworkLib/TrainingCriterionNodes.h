@@ -1656,14 +1656,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     template class LogisticNode<float>;
-    template class LogisticNode<double>;
+    template class LogisticNode<double>;	
 
 	template<class ElemType>
 	class CTCwithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 	{
+
 		typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
 		static const std::wstring TypeName() { return L"CTCwithSoftmax"; }
 	public:
+		DeclareConstructorFromConfigWithNumInputs(CTCwithSoftmaxNode);
 		CTCwithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
 			Base(deviceId, name)
 		{

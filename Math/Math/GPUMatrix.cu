@@ -4376,6 +4376,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
 			size_t *gpuphoneseq;
 			size_t *gpuphonebound;
+			CUDA_CALL(cudaSetDevice(prob.m_computeDevice));
+			
 			CUDA_CALL(cudaMalloc((void **)&gpuphoneseq, phoneseq.size()*sizeof(size_t)));
 			CUDA_CALL(cudaMemcpy(gpuphoneseq, phoneseq.data(), phoneseq.size()*sizeof(size_t), cudaMemcpyHostToDevice));
 
@@ -4400,6 +4402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
 			_assignCTCScore << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, prob.m_pArray, alpha.m_pArray, beta.m_pArray, gpuphoneseq, N, M, phonenum);
 			CUDA_CALL(cudaFree(gpuphoneseq));
+			CUDA_CALL(cudaFree(gpuphonebound));
 			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
 			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
 			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));

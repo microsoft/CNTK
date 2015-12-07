@@ -43,11 +43,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(CrossEntropyNode))	                    return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))	    return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))	            return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+		else if (nodeType == OperationNameOf(CTCwithSoftmaxNode))	                return New<CTCwithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(DiagTimesNode))	                    return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(DropoutNode))	                    return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(DummyCriterionNode))	            return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ElementTimesNode))	                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ErrorPredictionNode))	            return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
+		else if (nodeType == OperationNameOf(PhoneErrorNode))	                    return New<PhoneErrorNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ExpNode))	                            return New<ExpNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(FutureValueNode))	                    return New<FutureValueNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))                 return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);

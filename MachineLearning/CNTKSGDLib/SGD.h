@@ -241,6 +241,7 @@ protected:
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
+	size_t m_blankNum;
 };
 
 template<class ElemType> class IDistGradAggregator;

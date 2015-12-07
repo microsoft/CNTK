@@ -141,6 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
 
         m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
+		m_blankNum = configSGD(L"blankNum", (size_t)1);
 
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
         double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);
@@ -771,6 +772,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
         }
+		ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum);
 
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
