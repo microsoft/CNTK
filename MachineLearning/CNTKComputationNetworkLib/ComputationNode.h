@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = 0;
             m_visited = false;
             m_index = -1;
-            m_lowLink = -1;
+            m_minIndex = -1;
             m_inStack = false;
         }
 
@@ -187,7 +187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_indexInLoop;
         // only used inside DetermineSCCs():
         int m_index;            // index denoting order in which nodes were visited in DetermineSCCs()
-        int m_lowLink;          // min of m_index over all nodes within a single loop
+        int m_minIndex;         // min of m_index over all nodes within a single loop
         bool m_inStack;
     };
 
@@ -204,7 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
 
         // create a new unique time stamp
-        void UpdateEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
+        void BumpEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
 
         // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
         bool IsOlderThan(const TimeStamp & other) const
@@ -394,6 +394,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
+
+        // casting helpers
+        template<typename N>
+        N * As()
+        {
+            auto p = dynamic_cast<N*>(this);
+            if (!p)
+                LogicError("Attempted to type-cast node %ls %ls to %s, which is not possible.", NodeName().c_str(), OperationName().c_str(), typeid(N).name());
+            return p;
+        }
+        template<typename N> bool Is() { return dynamic_cast<N*>(this) != nullptr; }
 
         /*HasName::*/void SetName(const std::wstring & newName) // also for use by ExperimentalNetworkBuilder
         {
@@ -1019,13 +1030,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        inline ComputationNodePtr Input(const size_t childIndex) const       // TODO: rename to Input
+        inline ComputationNodePtr Input(const size_t inputIndex) const
         {
-#ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
-            if (childIndex >= m_inputs.size())
-                LogicError("Inputs: childIndex is out of range.");
-#endif
-            return UpCast(m_inputs[childIndex]);
+            if (inputIndex >= m_inputs.size())
+                LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int)inputIndex, NodeName().c_str(), OperationName().c_str());
+            return UpCast(m_inputs[inputIndex]);
         }
 
         void /*ComputationNodeBase::*/SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override

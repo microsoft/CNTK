@@ -55,10 +55,11 @@ public:
 
     virtual ~ComputationNetwork()
     {
-        ClearNet();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
+        ClearNetwork();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
     }
 
-    void ClearNet();
+    void ClearNetwork();
+    void InvalidateCompiledNetwork();
 
     void SetDeviceId(DEVICEID_TYPE deviceId)
     {
@@ -79,8 +80,15 @@ private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
 
-    void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
-                                           const FileOptions fileFormat = FileOptions::fileOptionsBinary);
+    template<class ElemType>
+    void LoadPersistableParameters(File & fstream, bool create);
+    // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
+    template<class ElemType>
+    void ReloadPersistableParameters(const std::wstring& fileName)
+    {
+        File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+        LoadPersistableParameters<ElemType>(fstream, false);
+    }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<class ElemType>
@@ -115,8 +123,8 @@ public:
             ForwardProp(node);
     }
 
-    static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
-    void ResetEvalTimeStamp();
+    static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr> & nodes);
+    void ResetEvalTimeStamps();
 
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
@@ -127,7 +135,8 @@ public:
         AllocateEvalMatrices(rootNode);
 #endif
         // TODO: do we need to reset time stamps?
-        BuildAndValidateSubNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);   // TODO: This should go away with CompileNetwork()
+        ResetEvalTimeStamps();              // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
     }
     template<class NODESET>
     void StartEvaluateMinibatchLoop(const NODESET & nodes)  // (ugly name; meant to be unique so we can rename if needed)
@@ -146,6 +155,8 @@ public:
     // evaluation: preparation
     // -----------------------------------------------------------------------
 
+    void CompileNetwork();      // call this after creation, Load(), and any modification
+
     void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
     // prepares the network for computation
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
@@ -153,6 +164,7 @@ private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
 private:
+    void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
@@ -165,25 +177,15 @@ private:
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 public:
 
-    // called by TrainOrAdaptModel() for refNet, and from PerformSVDDecomposition()
-    // TODO: Is this function really needed?
-    void RebuildNetwork(const ComputationNodeBasePtr& rootNode)
-    {
-        ClearCaches();
-        BuildAndValidateSubNetwork(rootNode);
-    }
-
     // -----------------------------------------------------------------------
     // evaluation: execution plan and network recurrent-loop analysis
     // -----------------------------------------------------------------------
 
-    ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode);
+    ComputationNodeBasePtr FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class?
 private:
-
-    void ClearCalcOrderCaches();
 
     // This is part of the FormRecurrentLoops() process, and only called from there.
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
@@ -203,13 +205,15 @@ public:
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // skipPairNetwork == true is only used when called from FormRecurrentLoops()
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork)
+    // TODO: make this non-lazy; FormEvalOrder() forms it. GetEvalOrder() only retrieves it, verifying that it exists.
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
     {
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, skipPairNetwork);
     }
 
     // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
-    // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
+    // In the latest code version, this is identical to the reverse of GetEvalOrder().
+    // TODO: Remove this, because it is redundant with GetEvalOrder(). Instead, use reverse iterations.
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
     {
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*skipPairNetwork*/);
@@ -366,15 +370,6 @@ public:
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
-
-    // called by model editing operations, such as DeleteNode(); and by RebuildNetwork()
-    void ClearCaches()
-    {
-        m_built.clear();
-        m_inputValues.clear();
-        m_learnableParameters.clear();
-        ClearCalcOrderCaches();
-    }
 
     // -----------------------------------------------------------------------
     // node access
@@ -821,8 +816,6 @@ protected:
     public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
-        // next steps:
-        //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
         virtual void BeginForwardProp() override;
         virtual void ForwardProp(const FrameRange &) override;
@@ -840,7 +833,7 @@ protected:
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
-        int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
+        int m_loopId;                                                       // the loop id (index in m_allSEQNodes array)
         int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
@@ -900,7 +893,11 @@ protected:
     DEVICEID_TYPE m_deviceId;           // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
+    // main node holder
+    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+
     // node groups
+    // These are specified by the user by means of tags or explicitly listing the node groups.
     std::vector<ComputationNodeBasePtr> m_features;
     std::vector<ComputationNodeBasePtr> m_labels;
     std::vector<ComputationNodeBasePtr> m_finalCriteria;
@@ -912,16 +909,23 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes };
     }
 
-    std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfo;     // [loopId] cache of SEQTraversalFlowControlNodes to allow itempotence of FormRecurrentLoops()
-
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
+    // TODO: This will change once we allow for multiple inconsistent layouts.
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
 
-    // main node holder
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+private:
 
-private:    // TODO: make all private that can be made private
+    // -----------------------------------------------------------------------
+    // the following members are all result of post-processing by CompileNetwork()
+    // -----------------------------------------------------------------------
+
+    // list of all roots in this network
+    // A root is a node that can run as a target of ForwardProp(). See DetermineSetOfAllRoots().
+    std::vector<ComputationNodeBasePtr> m_allRoots;
+
+    std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_allSEQNodes;     // [loopId] cached set of SEQTraversalFlowControlNodes to allow sharing and idempotence of FormRecurrentLoops()
+
     // cache for evaluation ordering:
     std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
 
@@ -930,8 +934,11 @@ private:    // TODO: make all private that can be made private
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
     std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_cachedOuterLoopNodes;
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;                 // [out node] -> all input nodes feeding into out node
+    // cached quick-access list for inputs and parameters
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;            // [out node] -> all input nodes feeding into out node
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node
+
+private:
 
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?

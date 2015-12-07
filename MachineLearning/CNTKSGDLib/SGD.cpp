@@ -179,23 +179,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
+        // TODO: Should this be done in SGD::Adapt()?
+        // TODO: Redo this leveraging that we now have shared_ptrs. It is probably even OK if both networks share feature nodes.
+        // TODO: Then we can also share the MBLayout; which currently is copied by value.
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
+            // replace input nodes in ref network by input nodes of the main network
             refFeatureNodes.resize(featureNodes.size());
             for (size_t i = 0; i < featureNodes.size(); i++)
             {
-                //we need to keep this info to handle deletion
+                // we need to keep this info to undo this later
+                // TODO: After the change to shared_ptrs, this may no longer be necessary.
                 refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
-
-            refNet->RebuildNetwork(refNode);
+            refNet->CompileNetwork();
         }
 
-        //initializing weights and gradient holder
-        //only one criterion so far TODO: support multiple ones?
-        // BUGBUG: fails here in validation--MBLayout not set yet
+        // initializing weights and gradient holder
+        // only one criterion so far TODO: support multiple ones?
         auto & learnableNodes = net->LearnableNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
@@ -483,9 +486,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else
                         {
                             lrControlCriterion = vScore[0]; // the first one is the training criterion
+                        }
                     }
                 }
-            }
             }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
@@ -515,9 +518,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_loadBestModel)
                     {
                         auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
-                        fprintf(stderr, "Loaded previous model with best training criterion value: %ls.\n", bestModelPath.c_str());
-                        net->LoadPersistableParametersFromFile(bestModelPath, m_validateAfterModelReloading);
-                        net->ResetEvalTimeStamp();
+                        fprintf(stderr, "Loading previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
+                        net->ReloadPersistableParameters<ElemType>(bestModelPath);
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
                                            /*out*/ learnRatePerSample,
@@ -808,8 +810,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: We should do this right after the GetMinibatch() call, since that's where these changed.
             //       Need to check whether that would cause unintended side effects.
             // TODO: original code did not call this for actualMBSize == 0
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             if (actualMBSize > 0)
             {
@@ -848,8 +850,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (actualNumSubminibatches > 1)
                     {
                         smbDispatcher.GetSubMinibatchToNet(ismb);   // get sub-minibatch from full-size one
-                        ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                        ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                        ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                        ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                     }
 
                     // ===========================================================
@@ -1253,7 +1255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             replacedCriterionNodes.push_back(origCriterionNodes[0]);
             origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
-            origNet->ResetEvalTimeStamp();
+            origNet->ResetEvalTimeStamps();
         }
 
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
@@ -1365,8 +1367,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             net->ForwardProp(nodes);
         }
@@ -1419,13 +1421,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
         {
-            //largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
+            // largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
             learnRatePerSample = largestPrevLearnRatePerSample / 0.618f / 0.618f;
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
-        net->ResetEvalTimeStamp();
+        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double learnRate = learnRatePerSample;
         size_t dummyMinibatchSize = 0;
@@ -1585,8 +1586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
-        net->ResetEvalTimeStamp();
+        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double dummyLearnRate;
         double dummtPrevCriterion;
@@ -1599,6 +1599,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                            /*out*/ dummyMinibatchSize);
     }
 
+    // AdaptiveMinibatchSizing() -- choose the largest feasible minibatch size
+    // This is necessary for data-parallel operation. The aim is to minimize model updates, and hence bandwidth
+    // This implements
+    //    F. Seide, H. Fu, J. Droppo, G. Li, and D. Yu:
+    //    "On Parallelizability of Stochastic Gradient Descent for Speech DNNs"
+    //    In Proc. ICASSP 2014.
     template<class ElemType>
     size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                                   ComputationNetworkPtr refNet,
@@ -1819,7 +1825,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: use GetMinibatchIntoNetwork().
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
             auto & outputNodes = net->OutputNodes();
             if (outputNodes.empty())
@@ -2104,7 +2110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
                        needAveMultiplier);
-        node->UpdateEvalTimeStamp();
+        node->BumpEvalTimeStamp();
     }
 
     template<class ElemType>
@@ -2310,7 +2316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double eOrg = node->Value()(irow, icol);
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
 
                 net->ForwardProp(criterionNodes[npos]);
                 net->Backprop(criterionNodes[npos]);
@@ -2333,7 +2339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Value()(irow, icol) = (ElemType)ePos;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
                 //criterionNode should be a scalar
 
@@ -2342,7 +2348,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Value()(irow, icol) = (ElemType)eNeg;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
 
                 // criterionNode should be a scalar

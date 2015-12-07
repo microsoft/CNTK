@@ -22,47 +22,68 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
+    ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription()
+    {
+        ComputationNetworkPtr net;
+        switch (m_rnnType)
+        {
+        case SIMPLENET:
+            net = BuildSimpleDNN(); break;
+        case SIMPLERNN:
+            net = BuildSimpleRNN(1); break;
+        case LSTM:
+            net = BuildLSTMNetworkFromDescription(1); break;
+        case CLASSLSTM:
+            net = BuildCLASSLSTMNetworkFromDescription(1); break;
+        case NCELSTM:
+            net = BuildNCELSTMNetworkFromDescription(1); break;
+        case CLASSLM:
+            net = BuildClassEntropyNetwork(1); break;
+        case LBLM:
+            net = BuildLogBilinearNetworkFromDescription(1); break;
+        case NPLM:
+            net = BuildNeuralProbNetworkFromDescription(1); break;
+        case CLSTM:
+            net = BuildConditionalLSTMNetworkFromDescription(1); break;
+        case RCRF:
+            net = BuildSeqTrnLSTMNetworkFromDescription(1); break;
+        case LSTMENCODER:
+            net = BuildLSTMEncoderNetworkFromDescription(1); break;
+        case UNIDIRECTIONALLSTM:
+            net = BuildUnidirectionalLSTMNetworksFromDescription(1); break;
+        case BIDIRECTIONALLSTM:
+            net = BuildBiDirectionalLSTMNetworksFromDescription(1); break;
+        default:
+            LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int)m_rnnType);
+        }
+
+        // post-process the network
+#if 1
+        net->CompileNetwork();
+#else
+        net->ValidateNetwork(false/*allowFragment*/, true/*bAllowNoCriterion*/);	// no criterion possible because  ...TODO: what's the reason?
+#endif
+
+        return net;
+    }
+
+    // special version for a deprecated implementation of sequence-to-sequence models
+    template<class ElemType>
     ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork* encoderNet)
     {
-        size_t mbSize = 1;
         ComputationNetworkPtr net;
-
-        // TODO: this seems to call for a switch statement
-        if (m_rnnType == SIMPLENET)
-            net = BuildSimpleDNN();
-        else if (m_rnnType == SIMPLERNN)
-            net = BuildSimpleRNN(mbSize);
-        else if (m_rnnType == LSTM)
-            net = BuildLSTMNetworkFromDescription(mbSize);
-        else if (m_rnnType == CLASSLSTM)
-            net = BuildCLASSLSTMNetworkFromDescription(mbSize);
-        else if (m_rnnType == NCELSTM)
-            net = BuildNCELSTMNetworkFromDescription(mbSize);
-        else if (m_rnnType == CLASSLM)
-            net = BuildClassEntropyNetwork(mbSize);
-        else if (m_rnnType == LBLM)
-            net = BuildLogBilinearNetworkFromDescription(mbSize);
-        else if (m_rnnType == NPLM)
-            net = BuildNeuralProbNetworkFromDescription(mbSize);
-        else if (m_rnnType == CLSTM)
-            net = BuildConditionalLSTMNetworkFromDescription(mbSize);
-        else if (m_rnnType == RCRF)
-            net = BuildSeqTrnLSTMNetworkFromDescription(mbSize);
-        else if (m_rnnType == LSTMENCODER)
-            net = BuildLSTMEncoderNetworkFromDescription(mbSize);
-        else if (m_rnnType == UNIDIRECTIONALLSTM)
-            net = BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
-        else if (m_rnnType == BIDIRECTIONALLSTM)
-            net = BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
-        else if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
-            net = BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
-        else if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
-            net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
-        else
-            LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int)m_rnnType);
-
-        net->ValidateNetwork(false/*allowFragment*/, true/*bAllowNoCriterion*/);	// no criterion possible because  ...TODO: what's the reason?
-        return net;
+        switch (m_rnnType)
+        {
+        case ALIGNMENTSIMILARITYGENERATOR:
+            net = BuildAlignmentDecoderNetworkFromDescription(encoderNet, 1); 
+            net->CompileNetwork();
+            return net;
+        case ALIGNMENTSIMILARITYGFORWARDDECODER:
+            net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, 1);
+            net->CompileNetwork();
+            return net;
+        }
+        return BuildNetworkFromDescription();
     }
 
     template<class ElemType>
@@ -162,7 +183,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //m_net->OutputNodes().push_back(output);
         }
 
-        m_net->ResetEvalTimeStamp();
         return m_net;
     }
 
@@ -268,12 +288,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_needPrior)
                 prior = builder.Mean(label);
+        }
 
-            }
-
-            m_net->ResetEvalTimeStamp();
-
-            return m_net;
+        return m_net;
     }
 
     template<class ElemType>
@@ -391,8 +408,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            m_net->ResetEvalTimeStamp();
-
             return m_net;
     }
 
@@ -495,15 +510,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = builder.Softmax(output, L"PosteriorProb");
         }
 
-        m_net->ResetEvalTimeStamp();
-
         return m_net;
-            }
+    }
 
-            /**
-            this builds an alignment based LM generator
-            the aligment node takes a variable length input and relates each element to a variable length output
-            */
+    /**
+    this builds an alignment based LM generator
+    the aligment node takes a variable length input and relates each element to a variable length output
+    */
     template<class ElemType>
     ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize)
     {
@@ -627,8 +640,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //add softmax layer (if prob is needed or KL reg adaptation is needed)
                     output = builder.Softmax(output, L"PosteriorProb");
                 }
-
-                m_net->ResetEvalTimeStamp();
 
         return m_net;
     }
@@ -760,8 +771,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     output = builder.Softmax(output, L"PosteriorProb");
                 }
 
-                m_net->ResetEvalTimeStamp();
-
                 return m_net;
     }
 
@@ -879,9 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            m_net->ResetEvalTimeStamp();
-
-                return m_net;
+            return m_net;
     }
 
     template<class ElemType>
@@ -1022,8 +1029,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 prior = builder.Mean(label);
             }
         }
-
-        m_net->ResetEvalTimeStamp();
 
         return m_net;
     }
@@ -1327,8 +1332,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = builder.Softmax(input, L"PosteriorProb");
         }
 
-        m_net->ResetEvalTimeStamp();
-
         return m_net;
     }
 
@@ -1421,9 +1424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = builder.Softmax(output, L"PosteriorProb");
         }
 
-        m_net->ResetEvalTimeStamp();
-
-                return m_net;
+        return m_net;
     }
 
 #if 1
@@ -1596,8 +1597,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        m_net->ResetEvalTimeStamp();
-
         return m_net;
     }
 
@@ -1688,8 +1687,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        m_net->ResetEvalTimeStamp();
-                return m_net;
+        return m_net;
     }
 
 
@@ -1812,8 +1810,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 m_net->OutputNodes().push_back(output);
         }
-
-        m_net->ResetEvalTimeStamp();
 
         return m_net;
     }
@@ -2170,9 +2166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        m_net->ResetEvalTimeStamp();
-
-                return m_net;
+        return m_net;
     }
 
     template<class ElemType>
@@ -2285,11 +2279,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        m_net->ResetEvalTimeStamp();
-
-                return m_net;
+        return m_net;
     }
 
+    // load a model file from Frank Seide's Microsoft-internal legacy tool "DBN.exe"
     template<class ElemType>
     ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
     {
@@ -2485,10 +2478,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (!CheckDbnTag(fstream, "EDBN"))
             RuntimeError("Error reading DBN file - did not find expected tag ENET\n");
+
+        // perform necessary validation and post-processing
+        m_net->CompileNetwork();
+
         return m_net;
     }
 
-    //layer is 0 based
+    // layer is 0 based
     template<class ElemType>
     shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName)
     {

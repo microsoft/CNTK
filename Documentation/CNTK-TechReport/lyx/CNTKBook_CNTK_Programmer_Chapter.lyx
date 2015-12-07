@@ -4637,12 +4637,12 @@ while (trainSetDataReader->GetMinibatch(inputMatrices))
 
 \begin_layout Plain Layout
 
-	UpdateEvalTimeStamps(FeatureNodes);                 
+	BumpEvalTimeStamp(FeatureNodes);                 
 \end_layout
 
 \begin_layout Plain Layout
 
-	UpdateEvalTimeStamps(labelNodes);
+	BumpEvalTimeStamp(labelNodes);
 \end_layout
 
 \begin_layout Plain Layout

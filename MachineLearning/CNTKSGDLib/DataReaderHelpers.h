@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
 
         // Note: This will go away with the redesigned reader interface.
-        // TODO: callers of this often do ComputationNetwork::UpdateEvalTimeStamps(featureNodes) and also for labels; we should eliminate the need for this.
+        // TODO: callers of this often do ComputationNetwork::BumpEvalTimeStamp(featureNodes) and also for labels; we should eliminate the need for this.
         template<class ElemType>
         static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
             ComputationNetworkPtr net,

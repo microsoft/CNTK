@@ -51,7 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_autoLearnRateSearchType;
         using SGDBase::m_minLearnRate;
         using SGDBase::m_loadBestModel;
-        using SGDBase::m_validateAfterModelReloading;
+        //using SGDBase::m_validateAfterModelReloading;
         using SGDBase::m_continueReduce;
         using SGDBase::m_reduceLearnRateIfImproveLessThan;
         using SGDBase::m_epochSize;
@@ -392,12 +392,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (m_loadBestModel)
                         {
-                            encoderNet->LoadPersistableParametersFromFile(GetEncoderModelNameForEpoch(i - 1),
-                                false);
-                            decoderNet->LoadPersistableParametersFromFile(GetDecoderModelNameForEpoch(i - 1),
-                                m_validateAfterModelReloading);
-                            encoderNet->ResetEvalTimeStamp();
-                            decoderNet->ResetEvalTimeStamp();
+                            encoderNet->ReloadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
+                            decoderNet->ReloadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
 
                             size_t dummyMinibatchSize = 0;
                             this->LoadCheckPointInfo(i - 1,
@@ -725,8 +721,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             //persist model and check-point info
                             for (size_t k = 0; k < iNumNetworks; k++)
                             {
-                                nets[k]->LoadPersistableParametersFromFile(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)), false);
-                                nets[k]->ResetEvalTimeStamp();
+                                nets[k]->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                                nets[k]->ResetEvalTimeStamps();
                             }
 
                             size_t dummyLr = 0;
@@ -887,9 +883,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < iNumNetworks; i++)
                 {
-                    ComputationNetwork::UpdateEvalTimeStamps(*featureNodes[i]);
+                    ComputationNetwork::BumpEvalTimeStamp(*featureNodes[i]);
                     if (labelNodes[i]->size() > 0)
-                        ComputationNetwork::UpdateEvalTimeStamps(*labelNodes[i]);
+                        ComputationNetwork::BumpEvalTimeStamp(*labelNodes[i]);
                 }
 
                 endReadMBTime = clock();
@@ -1053,7 +1049,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().SetValue(irow, icol, (ElemType)ePos);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
 
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 
@@ -1068,7 +1064,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                         node->Value().SetValue(irow, icol, (ElemType)eNeg);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 
@@ -1084,7 +1080,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                         node->Value().SetValue(irow, icol, (ElemType)eOrg);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 
