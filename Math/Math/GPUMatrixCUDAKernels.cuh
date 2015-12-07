@@ -502,13 +502,14 @@ __global__ void _scaleAndAddScalar(
     ElemType* c,
     const CUDA_LONG N,
     const ElemType alpha,
-    const ElemType* a
+    const ElemType *a,
+    const ElemType *b
 )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id>=N)
         return;
-    c[id] += alpha*a[0];
+    c[id] += alpha*a[0] + b[id];
 };
 
 template<class ElemType>
@@ -2356,28 +2357,58 @@ __global__ void _vectorMin(
     minValues[id]=minVal;
 }
 
-//this implementation uses more threads but also more memory access
 template<class ElemType>
-__global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
-    const ElemType* a,
+__global__ void _matrixMatrixAddOnCuda(
+    const ElemType alpha,
+    const ElemType *a,
+    const ElemType *b,
+    ElemType *c,
+    const CUDA_LONG N
+    )
+{
+    CALCULATE_ELEMENTWISE_INDEX;
+    c[id] = alpha * a[id] + b[id];
+}
+
+template<class ElemType>
+__global__ void _matrixVectorRowWiseAddWithThreadPerElem(
+    const ElemType *a,
+    const ElemType *b,
     ElemType* us,
     ElemType alpha,
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*n)
-        return;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX macro
+    CALCULATE_ELEMENTWISE_INDEX;
+
+    CUDA_LONG col = id / m;
+
+    us[id] = alpha*a[col] + b[id];
+}
+
+//this implementation uses more threads but also more memory access
+template<class ElemType>
+__global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
+    const ElemType *a,
+    const ElemType *b,
+    ElemType* us,
+    ElemType alpha,
+    const CUDA_LONG m,  //number of rows
+    const CUDA_LONG n)  //number of cols     
+{
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX macro
+    CALCULATE_ELEMENTWISE_INDEX;
 
     CUDA_LONG col = id / m;
     CUDA_LONG row = id - col*m;
 
-    us[id] += alpha*a[row];
+    us[id] = alpha*a[row] + b[id];
 }
 
 template<class ElemType>
 __global__ void _matrixVectorColumnWiseAddWithThreadPerRow(
-    const ElemType* a,
+    const ElemType *a,
     ElemType* us,
     ElemType alpha,
     const CUDA_LONG m,  //number of rows
