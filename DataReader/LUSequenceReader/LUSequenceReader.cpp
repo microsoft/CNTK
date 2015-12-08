@@ -103,7 +103,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         this->nwords++;
     }
 
-    fwprintf(stderr, L"read total %d words\n", this->nwords);
+    fwprintf(stderr, L"\nread total %d words\n", this->nwords);
     fwprintf(stderr, L"test\n");
 
     if (readClass)
