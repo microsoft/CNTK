@@ -196,7 +196,7 @@ namespace Microsoft
                     foreach_coord(i, j, a)
                     {
                         BOOST_CHECK_GE(a(i, j), low);
-                        BOOST_CHECK_LE(a(i, j), high);
+                        BOOST_CHECK_LT(a(i, j), high);
                         if (a(i, j) < -3)
                         {
                             has_small = true;
@@ -218,7 +218,7 @@ namespace Microsoft
                     foreach_coord(i, j, a)
                     {
                         BOOST_CHECK_GE(a(i, j), low);
-                        BOOST_CHECK_LE(a(i, j), high);
+                        BOOST_CHECK_LT(a(i, j), high);
                     }
 
                     // SingleMatrix b = SingleMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, IncrementCounter());
