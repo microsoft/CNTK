@@ -181,7 +181,8 @@ public:
     // evaluation: execution plan and network recurrent-loop analysis
     // -----------------------------------------------------------------------
 
-    ComputationNodeBasePtr FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
+    void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
+    ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class?
@@ -207,17 +208,18 @@ public:
     // skipPairNetwork == true is only used when called from FormRecurrentLoops()
     void FormEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
     {
-        if (m_cacheEvalOrders.find(rootNode) != m_cacheEvalOrders.end())
-            fprintf(stderr, "FormEvalOrder: WARNING: Duplicate call to FormEvalOrder() for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        if (m_evalOrders.find(rootNode) != m_evalOrders.end())
+            fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_cacheEvalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
+        m_evalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
     }
 
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
     {
-        if (m_cacheEvalOrders.find(rootNode) == m_cacheEvalOrders.end())
+        if (m_evalOrders.find(rootNode) == m_evalOrders.end())
             LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
-        return m_cacheEvalOrders[rootNode];
+
+        return m_evalOrders[rootNode];
     }
 
 protected:
@@ -900,9 +902,8 @@ private:
     std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
 
     // cached network Iterations
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
-    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_cachedOuterLoopNodes;
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders;
+    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_nestedNetworks;
 
     // cached quick-access list for inputs and parameters
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;            // [out node] -> all input nodes feeding into out node

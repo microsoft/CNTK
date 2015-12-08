@@ -36,12 +36,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - these little nested networks are defined in the execution network in the form of nested sentinel nodes of type SEQTraversalFlowControlNode
     void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     {
-        // caller must call BuildAndValidateSubNetwork() before
-        if (!BuiltAndValidatedSubNetwork(rootNode))
-            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
-
         // traverse all nodes in the pre-determined evaluation order
-        FormNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+        GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+    }
+
+    // set the gradient matrix of a node to an 1x1 matrix containing 1.0
+    // Returns false if the node is not a ComputationNode<ElemType>.
+    template<class ElemType>
+    static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
+    {
+        auto node = dynamic_pointer_cast<ComputationNode<float>>(nodep);
+        bool hasMatchingType = node != nullptr;
+        if (hasMatchingType)
+        {
+            node->VerifyDims(1, 1);
+            node->Gradient().Resize(1, 1);
+            node->Gradient().SetValue((ElemType)1.0);
+        }
+        return hasMatchingType;
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
@@ -51,38 +63,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Backprop() for the training criterion
     void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode)    // training criterion to compute the gradients for
     {
-        ZeroGradients(rootNode);     // reset the flags that will trigger lazy resetting of gradients to zero
+        // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
+        ZeroGradients(rootNode);
 
-        // initialize root gradient with a scalar gradient value of 1.0
-        auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);
-        if (nodeFloat)
-        {
-            nodeFloat->VerifyDims(1, 1);
-            nodeFloat->Gradient().Resize(1, 1);
-            nodeFloat->Gradient().SetValue(1.0f);
-        }
-        else
-        {
-            auto nodeDouble = dynamic_pointer_cast<ComputationNode<double>>(rootNode);
-            if (nodeDouble)
-            {
-                nodeDouble->VerifyDims(1, 1);
-                nodeDouble->Gradient().Resize(1, 1);
-                nodeDouble->Gradient().SetValue(1.0);
-            }
-            else
-                LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
-        }
+        // initialize root gradient with a scalar value of 1.0
+        if (!SetGradientToScalarOne<float>(rootNode) && !SetGradientToScalarOne<double>(rootNode))
+            LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
 
         // backpropagate through the network
-        FormNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
+        GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
     }
 
-    ComputationNodeBasePtr ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
+    void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
     {
-        if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
-            m_cachedOuterLoopNodes[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode, false));
-        return m_cachedOuterLoopNodes[rootNode];
+        if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
+            fprintf(stderr, "FormNestedNetwork: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+
+        m_nestedNetworks[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode, false));
+    }
+
+    ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNodeBasePtr& rootNode)
+    {
+        if (m_nestedNetworks.find(rootNode) == m_nestedNetworks.end())
+            LogicError("GetNestedNetwork: Called without prior call to FormNestedNetwork() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return m_nestedNetworks[rootNode];
     }
 
     // -----------------------------------------------------------------------
@@ -353,9 +357,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void ComputationNetwork::InvalidateCompiledNetwork()
     {
         m_allSEQNodes.clear();
-        m_cacheEvalOrders.clear();
-        m_cacheGradientCalcOrders.clear();
-        m_cachedOuterLoopNodes.clear();
+        m_evalOrders.clear();
+        m_nestedNetworks.clear();
         m_built.clear();
         m_inputValues.clear();
         m_learnableParameters.clear();
