@@ -61,6 +61,9 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     if (!vin.good())
         LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
+    std::string tmpStr(vocfile.begin(), vocfile.end());
+    fprintf(stderr, "read vocabulary from file %s\n", tmpStr.c_str());
+
     wstring wstr = L" ";
     long b = 0;
     this->nwords = 0;
@@ -96,7 +99,8 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         }
         else
         {
-            fprintf(stderr, "read word %s with id %d\n", strtmp.c_str(), b);
+            std::string word(strtmp.begin(), strtmp.end());
+            fprintf(stderr, "read word %s with id %d\n", word.c_str(), b);
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
