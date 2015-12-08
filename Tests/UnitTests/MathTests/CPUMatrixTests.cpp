@@ -423,41 +423,6 @@ namespace Microsoft
                     BOOST_CHECK_CLOSE(m1.SumOfElements(), static_cast<double>(m1.GetNumElements()), 1);
                 }
 
-                BOOST_FIXTURE_TEST_CASE(CPUMatrixRandomUniformFloat, RandomSeedFixture)
-                {
-                    const float low = -0.035f, high = 0.035f;
-                    unsigned long numIterations = 1000UL;
-
-                    while (numIterations-- > 0) {
-                        auto m = CPUMatrix<float>::RandomUniform(768, 50, low, high, IncrementCounter());
-                        unique_ptr<float[]> result(m.CopyToArray());
-                        const int size = static_cast<int>(m.GetNumElements());
-
-                        for (int i = 0; i < size; ++i)
-                        {
-                            BOOST_CHECK_LT(result[i], high);
-                            BOOST_CHECK_GE(result[i], low);
-                        }
-                    }
-                }
-
-                BOOST_FIXTURE_TEST_CASE(CPUMatrixRandomUniformDouble, RandomSeedFixture)
-                {
-                    const double low = -0.035, high = 0.035;
-                    unsigned long numIterations = 1000UL;
-                    while (numIterations-- > 0) {
-                        auto m = CPUMatrix<double>::RandomUniform(768, 50, low, high, IncrementCounter());
-                        unique_ptr<double[]> result(m.CopyToArray());
-                        const int size = static_cast<int>(m.GetNumElements());
-
-                        for (int i = 0; i < size; ++i)
-                        {
-                            BOOST_CHECK_LT(result[i], high);
-                            BOOST_CHECK_GE(result[i], low);
-                        }
-                    }
-                }
-
                 BOOST_FIXTURE_TEST_CASE(CPUMatrixTranspose, RandomSeedFixture)
                 {
                     DMatrix m0(2, 3);

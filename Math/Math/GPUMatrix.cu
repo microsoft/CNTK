@@ -229,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             PrepareDevice();
             ElemType* pArray = new ElemType[numElements];                    
-            CUDA_CALL(cudaMemcpy(pArray, m_pArray, sizeof(ElemType) * numElements, cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(pArray,m_pArray,sizeof(ElemType)*m_numRows*m_numCols,cudaMemcpyDeviceToHost));
             return pArray;
         }
         else
@@ -1232,7 +1232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaEventDestroy(done));
 
         size_t N=GetNumElements();
-        size_t blocksPerGrid = (N + threadsPerBlock  - 1) / threadsPerBlock;
+        size_t blocksPerGrid = (size_t)ceil(N/(double)threadsPerBlock);
 
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _rescaleToRange<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N,low,high);

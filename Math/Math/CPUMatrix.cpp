@@ -19,11 +19,8 @@
 #include <chrono>
 #include <exception>
 #include <thread>
-#include <iostream>
+#include<iostream>
 #include <algorithm>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_real_distribution.hpp>
-#include <boost/random/normal_distribution.hpp>
 #ifdef     _WIN32
 #include <Windows.h>
 #else
@@ -1018,13 +1015,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             LogicError("SetUniformRandomValue: Matrix is empty.");
 
-        if (seed == USE_TIME_BASED_SEED)
-        {
-            seed = static_cast<unsigned long>(time(NULL));
-        }
-
-        boost::random::mt19937 generator(seed);
-        boost::random::uniform_real_distribution<ElemType> r(low, high);
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;   
+        generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
+        std::uniform_real_distribution<ElemType> r(low, high);
 
         long m=(long)GetNumElements();
         //four-way unrolling
@@ -1053,13 +1050,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        if (seed == USE_TIME_BASED_SEED)
-        {
-            seed = static_cast<unsigned long>(time(NULL));
-        }
-
-        boost::random::mt19937 generator(seed);
-        boost::random::normal_distribution<ElemType> r(mean, sigma);
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
+        generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
+        std::normal_distribution<ElemType> r(mean, sigma);
         //#pragma omp parallel for   //is it thread safe?
         foreach_coord(i,j,us)
         {
@@ -1077,13 +1074,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        if (seed == USE_TIME_BASED_SEED)
-        {
-            seed = static_cast<unsigned long>(time(NULL));
-        }
-
-        boost::random::mt19937 generator(seed);
-        boost::random::normal_distribution<ElemType> r(mean, sigma);
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
+        generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
+        std::normal_distribution<ElemType> r(mean, sigma);
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
         for (long j=0; j<n; j++)
@@ -1114,13 +1111,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        if (seed == USE_TIME_BASED_SEED)
-        {
-            seed = static_cast<unsigned long>(time(NULL));
-        }
-
-        boost::random::mt19937 generator(seed);
-        boost::random::uniform_real_distribution<ElemType> r(ElemType(0), ElemType(1));
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
+        generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#endif
+        std::uniform_real_distribution<ElemType> r(0, 1);
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
         ElemType v;
