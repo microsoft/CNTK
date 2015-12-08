@@ -378,6 +378,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
                 LogicError("LUSequence reader only supports category label");
 
             // if we have labels, we need a label Mapping file, it will be a file with one label per line
+
             if (m_labelInfo[index].type != labelNone)
             {
                 wstring mode = labelConfig(L"mode", L"plain");//plain, class
@@ -388,9 +389,15 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
                 if (mode == L"class")
                 {
                     m_labelInfo[index].readerMode = ReaderMode::Class;
+                    fprintf(stderr, "label mode is class\n");
+                }
+                else
+                {
+                    fprintf(stderr, "label mode is plain\n");
                 }
 
                 std::wstring wClassFile = labelConfig(L"token", L"");
+                fwprintf(stderr, L"token file is %s\n", wClassFile.c_str());
                 if (wClassFile != L"")
                 {
                     ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, 
@@ -403,6 +410,10 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
                 if (m_labelInfo[index].busewordmap)
                     ChangeMaping(mWordMapping, mUnkStr, m_labelInfo[index].word4idx);
                 m_labelInfo[index].dim = (long)m_labelInfo[index].idx4word.size();
+            }
+            else 
+            {
+                fprintf(stderr, "label type is none!!!\n");
             }
 
         }
