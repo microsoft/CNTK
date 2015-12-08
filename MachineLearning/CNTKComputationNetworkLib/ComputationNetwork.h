@@ -705,17 +705,10 @@ public:
         }
     }
 
-    //dump all nodes in the network to file
+    // dump all nodes in the network to file
     void DumpAllNodesToFile(const bool printValues,
-                            const std::wstring outputFile,
-                            const bool validateBeforeDump = true)
+                            const std::wstring outputFile)
     {
-        if (validateBeforeDump) 
-        {
-            //some internal values in the nodes are computed during validation
-            ValidateNetwork();
-        }
-
         File fstream(outputFile,
                      FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -730,8 +723,6 @@ public:
                             const bool printValues,
                             const std::wstring outputFile)
     {
-        ValidateNetwork(); //some internal values in the nodes are computed during validation
-
         File fstream(outputFile,
                      FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -743,8 +734,7 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    // topological plot [erw]
-    // TODO: Can this be a separate class? Can it be moved to a CPP?
+    // topological plot [1/13/2015 erw] plot network topology using dot language
     // -----------------------------------------------------------------------
 
 private:
@@ -752,11 +742,16 @@ private:
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
-    void PlotNetworkTopology(const std::wstring outputFile); //  [1/13/2015 erw] plot network topology using dot language
+    void PlotNetworkTopology(const std::wstring outputFile);
 
     // -----------------------------------------------------------------------
-    // BS integration
+    // scripting integration
     // -----------------------------------------------------------------------
+
+    // pretend to be a ConfigRecord
+    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const override;   // e.g. confRec[L"message"]
+    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const override;         // returns nullptr if not found
+    vector<wstring> /*IConfigRecord::*/GetMemberIds() const override;
 
     // create a somewhat readable representation, aimed at diagnostics/debugging
     wstring /*HasToString::*/ToString() const
@@ -770,20 +765,6 @@ public:
             args.append(node->ToString());
         }
         return TypeId<decltype(*this)>() + L" " + NestString(args, L'[', true, ']');
-    }
-
-    // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
-    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
-    {
-        id; RuntimeError("unknown class parameter");    // (for now)
-    }
-    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
-    {
-        id; return nullptr; // (for now)
-    }
-    vector<wstring> /*IConfigRecord::*/GetMemberIds() const
-    {
-        return vector<wstring>();
     }
 
 protected:
