@@ -603,17 +603,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool skipPairNetwork)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
             // get forward computation order
             EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
-
-            // if caller wants order for backprop then reverse it
-            if (!forForwardProp)
-                nodes.reverse();            // and go backwards
 
             return nodes;
         }

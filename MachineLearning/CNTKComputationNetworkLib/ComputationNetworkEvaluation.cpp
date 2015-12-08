@@ -326,29 +326,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                   const bool forwardCompute,
                                                   const bool printMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes;
+        auto nodes = GetEvalOrder(rootNode);    // note: don't take a reference, since we reverse() below
         if (forwardCompute)
         {
-            fprintf(stderr, "\n\nPrinting Forward Computation Node Order ... \n");
-            nodes = GetEvalOrder(rootNode, false);
+            fprintf(stderr, "\n\nPrinting forward-computation node order ... \n");
         }
         else
         {
-            fprintf(stderr, "\n\nPrinting Gradient Computation Node Order ... \n");
-            nodes = GetGradientCalcOrder(rootNode);
+            fprintf(stderr, "\n\nPrinting gradient-computation node order ... \n");
+            nodes.reverse();
         }
 
         if (nodes.size() == 0)
-        {
-            fprintf(stderr, "\n$$$$ EMPTY !!!!!\n");
-            return;
-        }
-
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = (*nodeIter);
-            node->PrintSelf(printMatrices);
-        }
+            fprintf(stderr, "\n(empty)\n");
+        else
+            for (const auto & node : nodes)
+                node->PrintSelf(printMatrices);
     }
 
     // -----------------------------------------------------------------------
@@ -380,12 +373,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
         DetermineSetOfAllRoots();
 
-        // form the m_inputValues and m_learnableParameters sets for this rootNode
-        for (const auto & root : m_allRoots)
-            CollectInputAndLearnableParameters(root);
-
         fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
-        for (const auto & root: m_allRoots)
+        for (const auto & root : m_allRoots)
             fprintf(stderr, "\t%ls = %ls\n", root->NodeName().c_str(), root->OperationName().c_str());
 
         // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
@@ -394,7 +383,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // STEP: Create a depth-first tree-traversal order through original graph for every root.
         // This is used wherever a nested structure is not relevant.
         for (auto & node : m_allRoots)
-            GetEvalOrder(node);
+            FormEvalOrder(node);
+
+        // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+        for (const auto & root : m_allRoots)
+            CollectInputAndLearnableParameters(root);
 
         // STEP: Discover nested loops.
         for (auto & node : m_allRoots)
@@ -801,16 +794,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         FormRecurrentLoops(rootNode);
 
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
         //now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
 
-        //we need to call it here since we always compute gradients for children and root node is not children of other node
+        // we need to call it here since we always compute gradients for children and root node is not children of other node
         rootNode->RequestMatricesBeforeBackprop(m_matrixPool);
 
-        for (auto &n : allNodes)
+        for (auto iter = allNodes.rbegin(); iter != allNodes.rend(); iter++)   // for gradient computation, traverse in reverse order
         {
+            auto n = *iter;
             if (n->IsPartOfLoop())
             {
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
