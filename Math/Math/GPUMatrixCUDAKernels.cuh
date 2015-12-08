@@ -1496,20 +1496,8 @@ __global__ void _rescaleToRange(
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id>=N)
-        return;
-
-    if (sizeof(ElemType) == sizeof(float)) 
-    {
-        a[id] = __fadd_rd(__fmul_rd(a[id], (low - high)), high);
-    }
-    else if (sizeof(ElemType) == sizeof(double))
-    {
-        a[id] = __dadd_rd(__dmul_rd(a[id], (low - high)), high);
-    }
-    else
-    {
-        a[id] = a[id] * (low - high) + high;
-    }
+        return;    
+    a[id]=a[id]*(high-low)+low;
 }
 
 template<class ElemType>
