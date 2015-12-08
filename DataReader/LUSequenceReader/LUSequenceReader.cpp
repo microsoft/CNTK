@@ -100,14 +100,14 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         else
         {
             std::string word(strtmp.begin(), strtmp.end());
-            fprintf(stderr, "read word %s with id %d\n", word.c_str(), b);
+            fprintf(stderr, "read word %s with id %ld\n", word.c_str(), b);
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
         this->nwords++;
     }
 
-    fprintf(stderr, "\nread total %d words\n", this->nwords);
+    fprintf(stderr, "\nread total %ld words\n", this->nwords);
     fprintf(stderr, "test\n");
 
     if (readClass)
