@@ -205,29 +205,19 @@ public:
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // skipPairNetwork == true is only used when called from FormRecurrentLoops()
-    // TODO: make this non-lazy; FormEvalOrder() forms it. GetEvalOrder() only retrieves it, verifying that it exists.
+    void FormEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
+    {
+        if (m_cacheEvalOrders.find(rootNode) != m_cacheEvalOrders.end())
+            fprintf(stderr, "FormEvalOrder: WARNING: Duplicate call to FormEvalOrder() for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+
+        m_cacheEvalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
+    }
+
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
     {
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, skipPairNetwork);
-    }
-
-    // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
-    // In the latest code version, this is identical to the reverse of GetEvalOrder().
-    // TODO: Remove this, because it is redundant with GetEvalOrder(). Instead, use reverse iterations.
-    std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
-    {
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*skipPairNetwork*/);
-    }
-
-private:
-
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr & rootNode,
-                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool skipPairNetwork)
-    {
-        if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, skipPairNetwork);
-        return orderMap[rootNode];
+        if (m_cacheEvalOrders.find(rootNode) == m_cacheEvalOrders.end())
+            LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return m_cacheEvalOrders[rootNode];
     }
 
 protected:
@@ -653,8 +643,7 @@ public:
     // (Note that inside the nodes this only really sets a flag to do it later when needed, but that's not our concern.)
     void ZeroGradients(const ComputationNodeBasePtr& rootNode)
     {
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
-        for (auto &node : allNodes)
+        for (auto &node : GetEvalOrder(rootNode))   // note: any order will do
             node->ZeroGradientsOfInputs();
     }
 
