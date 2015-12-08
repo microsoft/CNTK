@@ -122,10 +122,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);  // group nodes in loops together
 
-            m_cacheEvalOrders[rootNode] = nodes;
-            list<ComputationNodeBasePtr> nodesForGrad = nodes;
-            nodesForGrad.reverse();
-            m_cacheGradientCalcOrders[rootNode] = nodesForGrad;
+            m_evalOrders[rootNode] = nodes;
+            // TODO: Yikes! this ^^ should be under the control of FormEvalOrder() only.
+            //       Should not be needed anymore once all ops that require this just operate recursively on PAR and SEQ nodes.
 
 #ifdef DISPLAY_DEBUG
             fprintf(stderr, "Reordered nodes\n");
