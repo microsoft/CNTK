@@ -35,9 +35,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace Microsoft::MSR::ScriptableObjects;
 
-    // -------------------------------------------------------------------
+    // ===================================================================
     // construction from config
-    // -------------------------------------------------------------------
+    // ===================================================================
 
     // construct a ComputationNetwork from a ConfigRecord
     ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
@@ -110,6 +110,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         wstring args = ToString();
         fprintf(stderr, "%ls\n", args.c_str());
 #endif
+    }
+
+    // ===================================================================
+    // behave like a config
+    // This allows to access nodes inside a network as if it was an IConfigRecord.
+    // This is meant to be used by whatever we will replace MEL.
+    // TODO: implement this
+    // ===================================================================
+
+    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/ComputationNetwork::operator[](const wstring & id) const   // e.g. confRec[L"message"]
+    {
+        id; RuntimeError("unknown class parameter");    // (for now)
+    }
+    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/ComputationNetwork::Find(const wstring & id) const         // returns nullptr if not found
+    {
+        id; return nullptr;     // (for now)
+    }
+    vector<wstring> /*IConfigRecord::*/ComputationNetwork::GetMemberIds() const
+    {
+        return vector<wstring>();
     }
 
 }}}
