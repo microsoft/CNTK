@@ -45,8 +45,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
     {
-        auto node = dynamic_pointer_cast<ComputationNode<float>>(nodep);
-        bool hasMatchingType = node != nullptr;
+        auto node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
+        bool hasMatchingType = (node != nullptr);
         if (hasMatchingType)
         {
             node->VerifyDims(1, 1);
