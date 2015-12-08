@@ -400,32 +400,32 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
-        TestQuantization<float>(c_deviceIdZero, 25, 13, -1.0f, +1.0f, 2015, 5);
-        TestQuantization<float>(c_deviceIdZero, 25, 13, -0.005f, +0.005f, 2115, 5);
-        TestQuantization<float>(c_deviceIdZero, 13, 25, -0.00001f, +0.00001f, 2215, 5);
-        TestQuantization<float>(c_deviceIdZero, 13, 25, -10.0f, +10.0f, 2315, 5);
-        TestQuantization<float>(c_deviceIdZero, 25, 13, -1.0f, +2.05f, 2415, 5);
-        TestQuantization<float>(c_deviceIdZero, 489, 1, -0.5f, +0.5f, 2515, 5);
-        TestQuantization<float>(c_deviceIdZero, 1, 135, -0.5f, +0.5f, 2615, 5);
-        TestQuantization<float>(c_deviceIdZero, 89, 23, -0.5f, +0.5f, 2715, 5);
-        TestQuantization<float>(c_deviceIdZero, 15, 35, -0.5f, +0.5f, 2815, 5);
-        TestQuantization<float>(c_deviceIdZero, 100, 50, -0.5f, +0.5f, 2915, 5);
+        TestQuantization<float>(c_deviceIdZero, 25, 13, -1.0f, +1.0f, 102015, 50);
+        TestQuantization<float>(c_deviceIdZero, 25, 13, -0.005f, +0.005f, 102115, 50);
+        TestQuantization<float>(c_deviceIdZero, 13, 25, -0.00001f, +0.00001f, 102215, 50);
+        TestQuantization<float>(c_deviceIdZero, 13, 25, -10.0f, +10.0f, 102315, 50);
+        TestQuantization<float>(c_deviceIdZero, 25, 13, -1.0f, +2.05f, 102415, 50);
+        TestQuantization<float>(c_deviceIdZero, 489, 1, -0.5f, +0.5f, 102515, 50);
+        TestQuantization<float>(c_deviceIdZero, 1, 135, -0.5f, +0.5f, 102615, 50);
+        TestQuantization<float>(c_deviceIdZero, 89, 23, -0.5f, +0.5f, 102715, 50);
+        TestQuantization<float>(c_deviceIdZero, 15, 35, -0.5f, +0.5f, 102815, 50);
+        TestQuantization<float>(c_deviceIdZero, 100, 50, -0.5f, +0.5f, 102915, 50);
     }
 
     BOOST_FIXTURE_TEST_CASE(GPUMatrix1BitQuantizeDouble, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
-        TestQuantization<double>(c_deviceIdZero, 25, 13, -1.0f, +1.0f, 2015, 5);
-        TestQuantization<double>(c_deviceIdZero, 25, 13, -0.005f, +0.005f, 2115, 5);
-        TestQuantization<double>(c_deviceIdZero, 13, 25, -0.00001f, +0.00001f, 2215, 5);
-        TestQuantization<double>(c_deviceIdZero, 13, 25, -10.0f, +10.0f, 2315, 5);
-        TestQuantization<double>(c_deviceIdZero, 25, 13, -1.0f, +2.05f, 2415, 5);
-        TestQuantization<double>(c_deviceIdZero, 489, 1, -0.5f, +0.5f, 2515, 5);
-        TestQuantization<double>(c_deviceIdZero, 1, 135, -0.5f, +0.5f, 2615, 5);
-        TestQuantization<double>(c_deviceIdZero, 89, 23, -0.5f, +0.5f, 2715, 5);
-        TestQuantization<double>(c_deviceIdZero, 15, 35, -0.5f, +0.5f, 2815, 5);
-        TestQuantization<double>(c_deviceIdZero, 100, 50, -0.5f, +0.5f, 2915, 5);
+        TestQuantization<double>(c_deviceIdZero, 25, 13, -1.0f, +1.0f, 102015, 50);
+        TestQuantization<double>(c_deviceIdZero, 25, 13, -0.005f, +0.005f, 102115, 50);
+        TestQuantization<double>(c_deviceIdZero, 13, 25, -0.00001f, +0.00001f, 102215, 50);
+        TestQuantization<double>(c_deviceIdZero, 13, 25, -10.0f, +10.0f, 102315, 50);
+        TestQuantization<double>(c_deviceIdZero, 25, 13, -1.0f, +2.05f, 102415, 50);
+        TestQuantization<double>(c_deviceIdZero, 489, 1, -0.5f, +0.5f, 102515, 50);
+        TestQuantization<double>(c_deviceIdZero, 1, 135, -0.5f, +0.5f, 102615, 50);
+        TestQuantization<double>(c_deviceIdZero, 89, 23, -0.5f, +0.5f, 102715, 50);
+        TestQuantization<double>(c_deviceIdZero, 15, 35, -0.5f, +0.5f, 102815, 50);
+        TestQuantization<double>(c_deviceIdZero, 100, 50, -0.5f, +0.5f, 102915, 50);
     }
 
     BOOST_AUTO_TEST_SUITE_END()
@@ -436,47 +436,47 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
-        TestQuantization<float>(CPUDEVICE, 25, 13, -1.0f, +1.0f, 2015, 5);
-        TestQuantization<float>(CPUDEVICE, 25, 13, -0.005f, +0.005f, 2115, 5);
-        TestQuantization<float>(CPUDEVICE, 13, 25, -0.00001f, +0.00001f, 2215, 5);
-        TestQuantization<float>(CPUDEVICE, 13, 25, -10.0f, +10.0f, 2315, 5);
-        TestQuantization<float>(CPUDEVICE, 25, 13, -1.0f, +2.05f, 2415, 5);
-        TestQuantization<float>(CPUDEVICE, 489, 1, -0.5f, +0.5f, 2515, 5);
-        TestQuantization<float>(CPUDEVICE, 1, 135, -0.5f, +0.5f, 2615, 5);
-        TestQuantization<float>(CPUDEVICE, 89, 23, -0.5f, +0.5f, 2715, 5);
-        TestQuantization<float>(CPUDEVICE, 15, 35, -0.5f, +0.5f, 2815, 5);
-        TestQuantization<float>(CPUDEVICE, 100, 50, -0.5f, +0.5f, 2915, 5);
+        TestQuantization<float>(CPUDEVICE, 25, 13, -1.0f, +1.0f, 102015, 50);
+        TestQuantization<float>(CPUDEVICE, 25, 13, -0.005f, +0.005f, 102115, 50);
+        TestQuantization<float>(CPUDEVICE, 13, 25, -0.00001f, +0.00001f, 102215, 50);
+        TestQuantization<float>(CPUDEVICE, 13, 25, -10.0f, +10.0f, 102315, 50);
+        TestQuantization<float>(CPUDEVICE, 25, 13, -1.0f, +2.05f, 102415, 50);
+        TestQuantization<float>(CPUDEVICE, 489, 1, -0.5f, +0.5f, 102515, 50);
+        TestQuantization<float>(CPUDEVICE, 1, 135, -0.5f, +0.5f, 102615, 50);
+        TestQuantization<float>(CPUDEVICE, 89, 23, -0.5f, +0.5f, 102715, 50);
+        TestQuantization<float>(CPUDEVICE, 15, 35, -0.5f, +0.5f, 102815, 50);
+        TestQuantization<float>(CPUDEVICE, 100, 50, -0.5f, +0.5f, 102915, 50);
     }
 
     BOOST_FIXTURE_TEST_CASE(CPUMatrix1BitQuantizeDouble, RandomSeedFixture)
     {
         RedirectStdErrAndStdOut(createDebugOut);
 
-        TestQuantization<double>(CPUDEVICE, 25, 13, -1.0f, +1.0f, 2015, 5);
-        TestQuantization<double>(CPUDEVICE, 25, 13, -0.005f, +0.005f, 2115, 5);
-        TestQuantization<double>(CPUDEVICE, 13, 25, -0.00001f, +0.00001f, 2215, 5);
-        TestQuantization<double>(CPUDEVICE, 13, 25, -10.0f, +10.0f, 2315, 5);
-        TestQuantization<double>(CPUDEVICE, 25, 13, -1.0f, +2.05f, 2415, 5);
-        TestQuantization<double>(CPUDEVICE, 489, 1, -0.5f, +0.5f, 2515, 5);
-        TestQuantization<double>(CPUDEVICE, 1, 135, -0.5f, +0.5f, 2615, 5);
-        TestQuantization<double>(CPUDEVICE, 89, 23, -0.5f, +0.5f, 2715, 5);
-        TestQuantization<double>(CPUDEVICE, 15, 35, -0.5f, +0.5f, 2815, 5);
-        TestQuantization<double>(CPUDEVICE, 100, 50, -0.5f, +0.5f, 2915, 5);
+        TestQuantization<double>(CPUDEVICE, 25, 13, -1.0f, +1.0f, 102015, 50);
+        TestQuantization<double>(CPUDEVICE, 25, 13, -0.005f, +0.005f, 102115, 50);
+        TestQuantization<double>(CPUDEVICE, 13, 25, -0.00001f, +0.00001f, 102215, 50);
+        TestQuantization<double>(CPUDEVICE, 13, 25, -10.0f, +10.0f, 102315, 50);
+        TestQuantization<double>(CPUDEVICE, 25, 13, -1.0f, +2.05f, 102415, 50);
+        TestQuantization<double>(CPUDEVICE, 489, 1, -0.5f, +0.5f, 102515, 50);
+        TestQuantization<double>(CPUDEVICE, 1, 135, -0.5f, +0.5f, 102615, 50);
+        TestQuantization<double>(CPUDEVICE, 89, 23, -0.5f, +0.5f, 102715, 50);
+        TestQuantization<double>(CPUDEVICE, 15, 35, -0.5f, +0.5f, 102815, 50);
+        TestQuantization<double>(CPUDEVICE, 100, 50, -0.5f, +0.5f, 102915, 50);
     }
 
         /*
         Original test cases were using these parameter:
 
-        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -1.0f, +1.0f, 2015, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -0.005f, +0.005f, 2115, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -0.00001f, +0.00001f, 2215, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -10.0f, +10.0f, 2315, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -1.0f, +2.05f, 2415, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 489, 1, -0.5f, +0.5f, 2515, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 1, 135, -0.5f, +0.5f, 2615, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 89, 23, -0.5f, +0.5f, 2715, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 15, 135, -0.5f, +0.5f, 2815, 5);
-        TestQuantization<'float or double'>('CPU or GPU', 737, 373, -0.5f, +0.5f, 2915, 5);
+        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -1.0f, +1.0f, 102015, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -0.005f, +0.005f, 102115, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -0.00001f, +0.00001f, 102215, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -10.0f, +10.0f, 102315, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 256, 135, -1.0f, +2.05f, 102415, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 489, 1, -0.5f, +0.5f, 102515, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 1, 135, -0.5f, +0.5f, 102615, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 89, 23, -0.5f, +0.5f, 102715, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 15, 135, -0.5f, +0.5f, 102815, 50);
+        TestQuantization<'float or double'>('CPU or GPU', 737, 373, -0.5f, +0.5f, 102915, 50);
         */
 
     BOOST_AUTO_TEST_SUITE_END()
