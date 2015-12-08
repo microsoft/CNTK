@@ -96,15 +96,15 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         }
         else
         {
-            fwprintf(stderr, L"read word %s with id %d\n", strtmp.c_str(), b);
+            fprintf(stderr, "read word %s with id %d\n", strtmp.c_str(), b);
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
         this->nwords++;
     }
 
-    fwprintf(stderr, L"\nread total %d words\n", this->nwords);
-    fwprintf(stderr, L"test\n");
+    fprintf(stderr, "\nread total %d words\n", this->nwords);
+    fprintf(stderr, "test\n");
 
     if (readClass)
         mNbrCls++;
@@ -397,7 +397,8 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType & re
                 }
 
                 std::wstring wClassFile = labelConfig(L"token", L"");
-                fwprintf(stderr, L"token file is %s\n", wClassFile.c_str());
+                std::string tempFile(wClassFile.begin(), wClassFile.end());
+                fprintf(stderr, "token file is %s\n", tempFile.c_str());
                 if (wClassFile != L"")
                 {
                     ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, 
