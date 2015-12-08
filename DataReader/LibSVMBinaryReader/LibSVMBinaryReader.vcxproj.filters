@@ -32,9 +32,7 @@
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="LibSVMBinaryReader.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">

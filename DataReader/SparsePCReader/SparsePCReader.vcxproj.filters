@@ -48,8 +48,8 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
+    <ClCompile Include="..\..\Common\Config.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

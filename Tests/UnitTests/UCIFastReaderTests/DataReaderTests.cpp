@@ -109,7 +109,7 @@ namespace Microsoft
 
                 BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, F)
 
-                    BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
+                BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
                 {
                     const size_t epochSize = 500;
                     const size_t mbSize = 250;

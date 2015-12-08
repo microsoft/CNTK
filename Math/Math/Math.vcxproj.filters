@@ -64,6 +64,7 @@
     <ClInclude Include="CUDAPageLockedMemAllocator.h">
       <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

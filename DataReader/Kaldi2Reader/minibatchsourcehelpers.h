@@ -175,10 +175,17 @@ template<class MATRIX> static void augmentneighbors(const std::vector<std::vecto
 // RandomOrdering -- class to help manage randomization of input data
 // ---------------------------------------------------------------------------
 
-static inline size_t rand (const size_t begin, const size_t end)
+static boost::random::mt19937_64 s_rng;
+
+static void srand(size_t seed)
 {
-    const size_t randno = ::rand() * RAND_MAX + ::rand();   // BUGBUG: still only covers 32-bit range
-    return begin + randno % (end - begin);
+    s_rng.seed(seed);
+}
+
+static size_t rand(const size_t begin, const size_t end)
+{
+    boost::random::uniform_int_distribution<size_t> dist(begin, end - 1);
+    return dist(s_rng);
 }
 
 class RandomOrdering                // note: NOT thread-safe at all
@@ -223,7 +230,7 @@ public:
     #if 1       // change to 0 to disable randomizing
                 if (map.size() > RAND_MAX * (size_t) RAND_MAX)
                     throw std::runtime_error ("RandomOrdering: too large training set: need to change to different random generator!");
-                srand ((unsigned int) seed);
+                srand (seed);
                 size_t retries = 0;
                 foreach_index (t, map)
                 {

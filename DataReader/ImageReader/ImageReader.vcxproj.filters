@@ -14,12 +14,10 @@
     </ClCompile>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="ImageReader.cpp" />
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

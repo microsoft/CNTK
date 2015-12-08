@@ -16,8 +16,10 @@
 #include <vld.h> // leak detection
 #endif
 #include <fstream>
-#include <random>       // std::default_random_engine
+
 #include "fileutil.h"
+
+#include <boost/random/mersenne_twister.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -670,7 +672,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             if (mRandomize)
             {
                 unsigned seed = this->m_seed; 
-                std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), std::default_random_engine(seed));
+                boost::random::mt19937_64 rng(seed);
+                std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), rng);
                 this->m_seed++;
             }
 #endif

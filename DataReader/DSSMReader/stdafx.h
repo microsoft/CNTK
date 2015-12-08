@@ -11,6 +11,6 @@
 // Windows Header Files:
 #include <windows.h>
 
-
+#define _SCL_SECURE_NO_WARNINGS // otherwise, boost triggers C4996
 
 // TODO: reference additional headers your program requires here

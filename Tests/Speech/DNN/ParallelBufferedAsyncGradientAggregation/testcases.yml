@@ -27,7 +27,7 @@ testCases:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
       - TrainLossPerSample = {{float,tolerance=0%}}
-      - EvalErr[0]PerSample = {{float,tolerance=0%}}
+      - EvalErr[0]PerSample = {{float,tolerance=.00001%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:

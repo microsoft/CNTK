@@ -20,7 +20,6 @@
 #include "fileutil.h"
 #include "Config.h"
 #include <chrono> 
-#include <random>
 #include "TimerUtility.h"
 #include "SGD.h"
 

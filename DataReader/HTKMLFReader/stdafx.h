@@ -13,6 +13,8 @@
 #include "Platform.h"
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 
+#define _SCL_SECURE_NO_WARNINGS // otherwise, boost triggers C4996
+
 #ifndef __unix__
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers

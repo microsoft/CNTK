@@ -607,7 +607,7 @@ private:
     {
         if (v.size() > RAND_MAX * (size_t) RAND_MAX)
             RuntimeError("randomshuffle: too large set: need to change to different random generator!");
-        srand ((unsigned int) randomseed);
+        srand (randomseed);
         foreach_index (i, v)
         {
             // pick a random location
@@ -796,7 +796,7 @@ private:
             // check we got those setup right
 
             // we now randomly shuffle randomizedutterancerefs[pos], while considering the constraints of what chunk range needs to be in memory
-            srand ((unsigned int) sweep + 1);
+            srand (sweep + 1);
             for (size_t i = 0; i < randomizedutterancerefs.size(); i++)
             {
                 // get valid randomization range, expressed in chunks
@@ -871,7 +871,7 @@ private:
             if (randomizedframerefs.size() != _totalframes)
                 randomizedframerefs.resize(_totalframes);
 
-            srand ((unsigned int) sweep + 1);
+            srand (sweep + 1);
             // An original timeline is established by the randomized chunks, denoted by 't'.
             // Returned frames are indexed by frame position j = (globalt - sweept), which have an associated underlying 't'.
             // It is guaranteed that uttterance frame position j maps to an underlying frame within the corresponding chunk window.

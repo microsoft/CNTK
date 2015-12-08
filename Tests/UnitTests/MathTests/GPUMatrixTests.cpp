@@ -278,17 +278,38 @@ namespace Microsoft
                     BOOST_CHECK_EQUAL(5, b.MatrixNorm0());
                 }
 
-                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniform, RandomSeedFixture)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniformFloat, RandomSeedFixture)
                 {
-                    const float low = -0.035f;
-                    const float high = 0.035f;
-                    auto m = GPUMatrix<float>::RandomUniform(768, 50, c_deviceIdZero, low, high, IncrementCounter());
-                    unique_ptr<float[]> result(m.CopyToArray());
+                    const float low = -0.035f, high = 0.035f;
+                    unsigned long numIterations = 10UL;
+                    
+                    while (numIterations-- > 0) {
+                        auto m = GPUMatrix<float>::RandomUniform(768, 50, c_deviceIdZero, low, high, IncrementCounter());
+                        unique_ptr<float[]> result(m.CopyToArray());
+                        const int size = static_cast<int>(m.GetNumElements());
 
-                    for (int i = 0; i < 768 * 50; ++i)
-                    {
-                        BOOST_CHECK_LE(result[i], high);
-                        BOOST_CHECK_GT(result[i], low);
+                        for (int i = 0; i < size; ++i)
+                        {
+                            BOOST_CHECK_LT(result[i], high);
+                            BOOST_CHECK_GE(result[i], low);
+                        }
+                    }
+                }
+
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniformDouble, RandomSeedFixture)
+                {
+                    const double low = -0.035, high = 0.035;
+                    unsigned long numIterations = 10UL;
+                    while (numIterations-- > 0) {
+                        auto m = GPUMatrix<double>::RandomUniform(768, 50, c_deviceIdZero, low, high, IncrementCounter());
+                        unique_ptr<double[]> result(m.CopyToArray());
+                        const int size = static_cast<int>(m.GetNumElements());
+
+                        for (int i = 0; i < size; ++i)
+                        {
+                            BOOST_CHECK_LT(result[i], high);
+                            BOOST_CHECK_GE(result[i], low);
+                        }
                     }
                 }
 

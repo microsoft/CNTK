@@ -13,17 +13,14 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // ---------------------------------------------------------------------------
 // RandomOrdering -- class to help manage randomization of input data
 // ---------------------------------------------------------------------------
-
-static inline size_t rand (const size_t begin, const size_t end)
-{
-    const size_t randno = ::rand() * RAND_MAX + ::rand();   // BUGBUG: still only covers 32-bit range
-    return begin + randno % (end - begin);
-}
 
 class RandomOrdering                // note: NOT thread-safe at all
 {
@@ -35,7 +32,16 @@ class RandomOrdering                // note: NOT thread-safe at all
     size_t currentseed;             // seed for current sequence
     size_t randomizationrange;      // t - randomizationrange/2 <= t' < t + randomizationrange/2 (we support this to enable swapping)
                                     // special values (randomizeDisable)
+    boost::random::mt19937_64 rng;
     void Invalidate() { currentseed = (size_t) -1; }
+    void srand(size_t seed) { rng.seed(seed); }
+
+    size_t rand(const size_t begin, const size_t end)
+    {
+        boost::random::uniform_int_distribution<size_t> dist(begin, end - 1);
+        return dist(rng);
+    }
+
 public:
     RandomOrdering() { Invalidate(); randomizationrange = randomizeDisable;}
 
@@ -63,7 +69,7 @@ public:
 
             if (map.size() > RAND_MAX * (size_t) RAND_MAX)
                 RuntimeError("RandomOrdering: too large training set: need to change to different random generator!");
-            srand ((unsigned int) seed);
+            srand (seed);
             size_t retries = 0;
             foreach_index (t, map)
             {

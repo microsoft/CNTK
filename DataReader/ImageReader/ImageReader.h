@@ -8,8 +8,9 @@
 
 #include "Basics.h"
 #include "DataReader.h"
-#include <random>
 #include <memory>
+
+#include <boost/random/mersenne_twister.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -48,7 +49,7 @@ public:
 
 private:
     unsigned int m_seed;
-    std::mt19937 m_rng;
+    boost::random::mt19937_64 m_rng;
 
     std::vector<std::unique_ptr<ITransform>> m_transforms;
 

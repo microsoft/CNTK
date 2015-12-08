@@ -15,7 +15,6 @@
 #include <math.h>
 #include "CPUMatrix.h"
 #include "CPUSparseMatrix.h"
-#include <random>
 #include <chrono>
 #include <iostream>
 #ifdef LEAKDETECT

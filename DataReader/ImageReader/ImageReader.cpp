@@ -16,6 +16,9 @@
 #include <sstream>  // TODO: this should go away once we update the parameter parsing
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+#include <boost/random/bernoulli_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -89,7 +92,7 @@ public:
     void Apply(cv::Mat& mat)
     {
         auto seed = m_seed;
-        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<boost::random::mt19937_64>(seed); });
 
         double ratio = 1;
         switch (m_jitterType)
@@ -105,15 +108,15 @@ public:
             RuntimeError("Jitter type currently not implemented.");
         }
         mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio, *rng));
-        if (m_hFlip && std::bernoulli_distribution()(*rng))
+        if (m_hFlip && boost::bernoulli_distribution<>()(*rng))
             cv::flip(mat, mat, 1);
         
         m_rngs.push(std::move(rng));
     }
 
 private:
-    using UniRealT = std::uniform_real_distribution<double>;
-    using UniIntT = std::uniform_int_distribution<int>;
+    using UniRealT = boost::random::uniform_real_distribution<double>;
+    using UniIntT = boost::random::uniform_int_distribution<int>;
 
     enum class CropType { Center = 0, Random = 1 };
     enum class RatioJitterType
@@ -148,7 +151,7 @@ private:
         RuntimeError("Invalid jitter type: %s.", src.c_str());
     }
 
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio, std::mt19937& rng)
+    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio, boost::random::mt19937_64& rng)
     {
         assert(crow > 0);
         assert(ccol > 0);
@@ -178,7 +181,7 @@ private:
 
 private:
     unsigned int m_seed;
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    conc_stack<std::unique_ptr<boost::random::mt19937_64>> m_rngs;
 
     CropType m_cropType;
     double m_cropRatioMin;
@@ -234,7 +237,7 @@ public:
             mat.convertTo(mat, m_dataType);
 
         auto seed = m_seed;
-        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<boost::random::mt19937_64>(seed); });
 
         assert(m_interp.size() > 0);
         cv::resize(mat, mat, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, 
@@ -244,10 +247,10 @@ public:
     }
 
 private:
-    using UniIntT = std::uniform_int_distribution<int>;
+    using UniIntT = boost::random::uniform_int_distribution<int>;
 
     unsigned int m_seed;
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    conc_stack<std::unique_ptr<boost::random::mt19937_64>> m_rngs;
 
     int m_dataType;
 

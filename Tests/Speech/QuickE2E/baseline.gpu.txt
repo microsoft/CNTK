@@ -1,293 +1,397 @@
-=== Running /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E DeviceId=0
-running on localhost at 2015/10/24 12:49:00
+=== Running /home/alrezni/src/cntk/build/release/bin/cntk configFile=/home/alrezni/src/cntk/Tests/Speech/QuickE2E/cntk.config currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk/Tests/Speech/Data ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E DeviceId=0
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Dec 10 2015 14:48:57
+		Last modified date: Tue Dec  8 10:08:43 2015
+		Build type: release
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		Build Branch: master
+		Build SHA1: 5e0017ac9c55c23d53cb524c8acb7d6d9bfd0269
+-------------------------------------------------------------------
+running on localhost at 2015/12/10 15:58:46
 command line: 
-/home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E DeviceId=0 
+/home/alrezni/src/cntk/build/release/bin/cntk configFile=/home/alrezni/src/cntk/Tests/Speech/QuickE2E/cntk.config currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk/Tests/Speech/Data ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E DeviceId=0 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-precision=float
-command=speechTrain
-deviceId=$DeviceId$
-parallelTrain=false
-speechTrain=[
-    action=train
-    modelPath=$RunDir$/models/cntkSpeech.dnn
-    deviceId=$DeviceId$
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+precision = "float"
+command = speechTrain
+deviceId = $DeviceId$
+parallelTrain = false
+makeMode = false
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    deviceId = $DeviceId$
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=$DataDir$/glob_0000.mlf
-          labelMappingFile=$DataDir$/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
-RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
-DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
-ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
+currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
 DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-precision=float
-command=speechTrain
-deviceId=0
-parallelTrain=false
-speechTrain=[
-    action=train
-    modelPath=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
-    deviceId=0
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+precision = "float"
+command = speechTrain
+deviceId = 0
+parallelTrain = false
+makeMode = false
+speechTrain = [
+    action = "train"
+    modelPath = "/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "/home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf"
+            labelMappingFile = "/home/alrezni/src/cntk/Tests/Speech/Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
-RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
-DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
-ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
+currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
 DeviceId=0
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
-configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+configparameters: cntk.config:ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
+configparameters: cntk.config:currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+configparameters: cntk.config:DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
 configparameters: cntk.config:deviceId=0
+configparameters: cntk.config:makeMode=false
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
 configparameters: cntk.config:speechTrain=[
-    action=train
-    modelPath=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
-    deviceId=0
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+    action = "train"
+    modelPath = "/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "/home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf"
+            labelMappingFile = "/home/alrezni/src/cntk/Tests/Speech/Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
 
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-CNTKModelPath: /tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
+CNTKModelPath: /tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn
 CNTKCommandTrainInfo: speechTrain : 3
 CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 CNTKCommandTrainBegin: speechTrain
 SimpleNetworkBuilder Using GPU 0
 reading script file glob_0000.scp ... 948 entries
-trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
-total 132 state names in state list /home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list /home/alrezni/src/cntk/Tests/Speech/Data/state.list
+htkmlfreader: reading MLF file /home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-SetUniformRandomValue (GPU): creating curand object with seed 1
-GetTrainCriterionNodes  ...
-GetEvalCriterionNodes  ...
+SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+
+Post-processing network...
+
+7 roots:
+	MeanOfFeatures = Mean
+	InvStdOfFeatures = InvStdDev
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+	EvalErrorPrediction = ErrorPrediction
+	Prior = Mean
+	ScaledLogLikelihood = Minus
+	PosteriorProb = Softmax
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+
+
+Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node MeanOfFeatures. 1 nodes to process in pass 2.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node MeanOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node MeanOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+
+
+Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node InvStdOfFeatures. 1 nodes to process in pass 2.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node InvStdOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+
+Validating for node InvStdOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
 
 
 Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
@@ -302,18 +406,18 @@ Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
 Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
 Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
-Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
 
-Validating for node CrossEntropyWithSoftmax. 12 nodes to process in pass 2.
+Validating for node CrossEntropyWithSoftmax. 10 nodes to process in pass 2.
 
 Validating --> labels = InputValue -> [132, MBSize 3]
 Validating --> W2 = LearnableParameter -> [132, 512]
@@ -325,16 +429,16 @@ Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
 Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
 Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
-Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
 
 Validating for node CrossEntropyWithSoftmax, final verification.
 
@@ -348,55 +452,236 @@ Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
 Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
 Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
-Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
 
-Precomputing --> 3 PreCompute nodes found.
+Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
 
-	NodeName: InvStdOfFeatures
-	NodeName: MeanOfFeatures
-	NodeName: Prior
-minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-
-
-Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
-
-Validating --> features = InputValue -> [363, MBSize 3]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
-
-Validating for node InvStdOfFeatures, final verification.
-
-Validating --> features = InputValue -> [363, MBSize 3]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
-
-1 out of 2 nodes do not share the minibatch layout with the input data.
-
-
-
-Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
-
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
 Validating --> features = InputValue -> [363, MBSize 3]
 Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
 
-Validating for node MeanOfFeatures, final verification.
+Validating for node CrossEntropyWithSoftmax. 9 nodes to process in pass 2.
 
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
 Validating --> features = InputValue -> [363, MBSize 3]
 Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
 
-1 out of 2 nodes do not share the minibatch layout with the input data.
+Validating for node CrossEntropyWithSoftmax, final verification.
 
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+9 out of 20 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
+
+
+Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+9 out of 20 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 3], HLast[132, MBSize 0]) -> [1, 1]
+
+9 out of 20 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
 
 
 Validating for node Prior. 2 nodes to process in pass 1.
@@ -416,458 +701,742 @@ Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
 
 1 out of 2 nodes do not share the minibatch layout with the input data.
 
-EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
+
+Validating for node Prior. 2 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+
+Validating for node Prior, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
+
+
+Validating for node ScaledLogLikelihood. 22 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+Validating for node ScaledLogLikelihood. 10 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+Validating for node ScaledLogLikelihood, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+10 out of 22 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node ScaledLogLikelihood. 22 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+Validating for node ScaledLogLikelihood. 9 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+Validating for node ScaledLogLikelihood, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> labels = InputValue -> [132, MBSize 3]
+Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
+Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
+
+10 out of 22 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+
+
+Validating for node PosteriorProb. 19 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb. 9 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+8 out of 19 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node PosteriorProb. 19 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb. 9 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 3]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+8 out of 19 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+
+Post-processing network complete.
+
+SGD using GPU 0.
+
+Training criterion node(s):
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+Evaluation criterion node(s):
+	EvalErrorPrediction = ErrorPrediction
+
+
+Allocating matrices for gradient computing
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
+
+Precomputing --> 3 PreCompute nodes found.
+
+	NodeName: InvStdOfFeatures
+	NodeName: MeanOfFeatures
+	NodeName: Prior
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Precomputing --> Completed.
 
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000 
+Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-
-Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [132, MBSize 62]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 62]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
-
-Validating for node EvalErrorPrediction. 10 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [132, MBSize 62]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 62]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
-
-Validating for node EvalErrorPrediction, final verification.
-
-Validating --> labels = InputValue -> [132, MBSize 62]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 62]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
-
-9 out of 20 nodes do not share the minibatch layout with the input data.
-
-
 Starting minibatch loop.
- Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135277; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.05742s; TotalTimePerSample = 0.08972ms; SamplesPerSecond = 11145
- Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070992; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.05557s; TotalTimePerSample = 0.08682ms; SamplesPerSecond = 11517
- Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901123; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.05549s; TotalTimePerSample = 0.08671ms; SamplesPerSecond = 11532
- Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945953; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.05588s; TotalTimePerSample = 0.08732ms; SamplesPerSecond = 11452
- Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219574; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.05549s; TotalTimePerSample = 0.08670ms; SamplesPerSecond = 11534
- Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890930; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.05552s; TotalTimePerSample = 0.08675ms; SamplesPerSecond = 11526
- Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56186981; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.05571s; TotalTimePerSample = 0.08705ms; SamplesPerSecond = 11488
- Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790527; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.05550s; TotalTimePerSample = 0.08672ms; SamplesPerSecond = 11531
- Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928528; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.05557s; TotalTimePerSample = 0.08683ms; SamplesPerSecond = 11517
- Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398926; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.05550s; TotalTimePerSample = 0.08671ms; SamplesPerSecond = 11532
+ Epoch[ 1 of 3]-Minibatch[   1-  10, 3.1250%]: SamplesSeen = 640; TrainLossPerSample =  5.16634445; EvalErr[0]PerSample = 0.91562500; TotalTime = 0.0857s; SamplesPerSecond = 7465.7
+ Epoch[ 1 of 3]-Minibatch[  11-  20, 6.2500%]: SamplesSeen = 640; TrainLossPerSample =  4.18909760; EvalErr[0]PerSample = 0.89375000; TotalTime = 0.0838s; SamplesPerSecond = 7637.0
+ Epoch[ 1 of 3]-Minibatch[  21-  30, 9.3750%]: SamplesSeen = 640; TrainLossPerSample =  4.10229721; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.0839s; SamplesPerSecond = 7629.2
+ Epoch[ 1 of 3]-Minibatch[  31-  40, 12.5000%]: SamplesSeen = 640; TrainLossPerSample =  3.88792419; EvalErr[0]PerSample = 0.85468750; TotalTime = 0.0839s; SamplesPerSecond = 7626.5
+ Epoch[ 1 of 3]-Minibatch[  41-  50, 15.6250%]: SamplesSeen = 640; TrainLossPerSample =  3.84326935; EvalErr[0]PerSample = 0.88906250; TotalTime = 0.0839s; SamplesPerSecond = 7630.5
+ Epoch[ 1 of 3]-Minibatch[  51-  60, 18.7500%]: SamplesSeen = 640; TrainLossPerSample =  3.65512695; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.0838s; SamplesPerSecond = 7639.7
+ Epoch[ 1 of 3]-Minibatch[  61-  70, 21.8750%]: SamplesSeen = 640; TrainLossPerSample =  3.66288605; EvalErr[0]PerSample = 0.88125000; TotalTime = 0.0838s; SamplesPerSecond = 7638.1
+ Epoch[ 1 of 3]-Minibatch[  71-  80, 25.0000%]: SamplesSeen = 640; TrainLossPerSample =  3.63086243; EvalErr[0]PerSample = 0.85156250; TotalTime = 0.0839s; SamplesPerSecond = 7627.1
+ Epoch[ 1 of 3]-Minibatch[  81-  90, 28.1250%]: SamplesSeen = 640; TrainLossPerSample =  3.50006714; EvalErr[0]PerSample = 0.82031250; TotalTime = 0.0839s; SamplesPerSecond = 7627.0
+ Epoch[ 1 of 3]-Minibatch[  91- 100, 31.2500%]: SamplesSeen = 640; TrainLossPerSample =  3.43137207; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.0843s; SamplesPerSecond = 7590.6
 WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223450; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.05582s; TotalTimePerSample = 0.08723ms; SamplesPerSecond = 11464
- Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265259; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.05591s; TotalTimePerSample = 0.08736ms; SamplesPerSecond = 11446
- Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14082031; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.05556s; TotalTimePerSample = 0.08680ms; SamplesPerSecond = 11520
- Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00689697; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.05566s; TotalTimePerSample = 0.08696ms; SamplesPerSecond = 11499
- Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496216; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.05562s; TotalTimePerSample = 0.08690ms; SamplesPerSecond = 11506
- Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97858887; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.05559s; TotalTimePerSample = 0.08687ms; SamplesPerSecond = 11512
- Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686035; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.05570s; TotalTimePerSample = 0.08703ms; SamplesPerSecond = 11490
- Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053345; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.05565s; TotalTimePerSample = 0.08695ms; SamplesPerSecond = 11501
- Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653564; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.05552s; TotalTimePerSample = 0.08674ms; SamplesPerSecond = 11528
- Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702026; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.05548s; TotalTimePerSample = 0.08669ms; SamplesPerSecond = 11535
- Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61571655; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.05545s; TotalTimePerSample = 0.08663ms; SamplesPerSecond = 11542
- Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55236206; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.05567s; TotalTimePerSample = 0.08698ms; SamplesPerSecond = 11496
- Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211670; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.05560s; TotalTimePerSample = 0.08688ms; SamplesPerSecond = 11510
- Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778687; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.05546s; TotalTimePerSample = 0.08666ms; SamplesPerSecond = 11539
- Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900635; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.05560s; TotalTimePerSample = 0.08687ms; SamplesPerSecond = 11511
- Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967285; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.05553s; TotalTimePerSample = 0.08677ms; SamplesPerSecond = 11524
- Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281982; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.05553s; TotalTimePerSample = 0.08677ms; SamplesPerSecond = 11525
- Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19668579; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.05553s; TotalTimePerSample = 0.08677ms; SamplesPerSecond = 11525
- Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28980103; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.05551s; TotalTimePerSample = 0.08674ms; SamplesPerSecond = 11529
- Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750854; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.05574s; TotalTimePerSample = 0.08709ms; SamplesPerSecond = 11482
- Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26263428; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.05555s; TotalTimePerSample = 0.08679ms; SamplesPerSecond = 11521
- Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15072632; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.05427s; TotalTimePerSample = 0.08479ms; SamplesPerSecond = 11793
-Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799573; EvalErrPerSample = 0.72216797; AvgLearningRatePerSample = 0.015625; EpochTime=1.785537
-Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
+ Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.3750%]: SamplesSeen = 640; TrainLossPerSample =  3.38499451; EvalErr[0]PerSample = 0.80937500; TotalTime = 0.0841s; SamplesPerSecond = 7606.2
+ Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.5000%]: SamplesSeen = 640; TrainLossPerSample =  3.45500488; EvalErr[0]PerSample = 0.83125000; TotalTime = 0.0839s; SamplesPerSecond = 7631.7
+ Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.6250%]: SamplesSeen = 640; TrainLossPerSample =  3.32340698; EvalErr[0]PerSample = 0.80468750; TotalTime = 0.0838s; SamplesPerSecond = 7634.3
+ Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.7500%]: SamplesSeen = 640; TrainLossPerSample =  3.36535034; EvalErr[0]PerSample = 0.81562500; TotalTime = 0.0839s; SamplesPerSecond = 7625.4
+ Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.8750%]: SamplesSeen = 640; TrainLossPerSample =  3.22035522; EvalErr[0]PerSample = 0.76718750; TotalTime = 0.0838s; SamplesPerSecond = 7637.0
+ Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.0000%]: SamplesSeen = 640; TrainLossPerSample =  3.10438843; EvalErr[0]PerSample = 0.75000000; TotalTime = 0.0838s; SamplesPerSecond = 7636.4
+ Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.1250%]: SamplesSeen = 640; TrainLossPerSample =  3.06422119; EvalErr[0]PerSample = 0.73437500; TotalTime = 0.0838s; SamplesPerSecond = 7639.1
+ Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.2500%]: SamplesSeen = 640; TrainLossPerSample =  3.09909668; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.0837s; SamplesPerSecond = 7643.6
+ Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.3750%]: SamplesSeen = 640; TrainLossPerSample =  2.91560669; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.0838s; SamplesPerSecond = 7639.6
+ Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.5000%]: SamplesSeen = 640; TrainLossPerSample =  3.13019409; EvalErr[0]PerSample = 0.77968750; TotalTime = 0.0839s; SamplesPerSecond = 7625.0
+ Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.6250%]: SamplesSeen = 640; TrainLossPerSample =  3.04265747; EvalErr[0]PerSample = 0.72187500; TotalTime = 0.0838s; SamplesPerSecond = 7636.6
+ Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.7500%]: SamplesSeen = 640; TrainLossPerSample =  2.81445312; EvalErr[0]PerSample = 0.67343750; TotalTime = 0.0838s; SamplesPerSecond = 7635.8
+ Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.8750%]: SamplesSeen = 640; TrainLossPerSample =  2.79508667; EvalErr[0]PerSample = 0.68281250; TotalTime = 0.0838s; SamplesPerSecond = 7634.8
+ Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.0000%]: SamplesSeen = 640; TrainLossPerSample =  2.83717041; EvalErr[0]PerSample = 0.72656250; TotalTime = 0.0838s; SamplesPerSecond = 7634.0
+ Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.1250%]: SamplesSeen = 640; TrainLossPerSample =  2.69631958; EvalErr[0]PerSample = 0.68750000; TotalTime = 0.0839s; SamplesPerSecond = 7632.5
+ Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.2500%]: SamplesSeen = 640; TrainLossPerSample =  2.72491455; EvalErr[0]PerSample = 0.70000000; TotalTime = 0.0839s; SamplesPerSecond = 7630.6
+ Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.3750%]: SamplesSeen = 640; TrainLossPerSample =  2.60649414; EvalErr[0]PerSample = 0.65625000; TotalTime = 0.0846s; SamplesPerSecond = 7566.3
+ Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.5000%]: SamplesSeen = 640; TrainLossPerSample =  2.71916504; EvalErr[0]PerSample = 0.66562500; TotalTime = 0.0838s; SamplesPerSecond = 7635.9
+ Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.6250%]: SamplesSeen = 640; TrainLossPerSample =  2.49329834; EvalErr[0]PerSample = 0.64687500; TotalTime = 0.0838s; SamplesPerSecond = 7635.8
+ Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.7500%]: SamplesSeen = 640; TrainLossPerSample =  2.45024414; EvalErr[0]PerSample = 0.63125000; TotalTime = 0.0839s; SamplesPerSecond = 7631.2
+ Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.8750%]: SamplesSeen = 640; TrainLossPerSample =  2.32502441; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.0839s; SamplesPerSecond = 7623.9
+ Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.0000%]: SamplesSeen = 640; TrainLossPerSample =  2.40317383; EvalErr[0]PerSample = 0.64375000; TotalTime = 0.0838s; SamplesPerSecond = 7636.5
+Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 3.219996; EvalErrPerSample = 0.76367188; AvgLearningRatePerSample = 0.015625; EpochTime=2.68796
+Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598530; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.09354s; TotalTimePerSample = 0.03654ms; SamplesPerSecond = 27367
- Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818569; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.09083s; TotalTimePerSample = 0.03548ms; SamplesPerSecond = 28184
- Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698120; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.09109s; TotalTimePerSample = 0.03558ms; SamplesPerSecond = 28103
- Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126144; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.09077s; TotalTimePerSample = 0.03546ms; SamplesPerSecond = 28203
- Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067749; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.09081s; TotalTimePerSample = 0.03547ms; SamplesPerSecond = 28191
- Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115784; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.09085s; TotalTimePerSample = 0.03549ms; SamplesPerSecond = 28179
- Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518127; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.09092s; TotalTimePerSample = 0.03552ms; SamplesPerSecond = 28155
- Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450592; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.08529s; TotalTimePerSample = 0.03332ms; SamplesPerSecond = 30014
-Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; AvgLearningRatePerSample = 0.001953125; EpochTime=0.732528
-Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
+ Epoch[ 2 of 3]-Minibatch[   1-  10, 12.5000%]: SamplesSeen = 2560; TrainLossPerSample =  2.33009853; EvalErr[0]PerSample = 0.61210937; TotalTime = 0.1162s; SamplesPerSecond = 22023.4
+ Epoch[ 2 of 3]-Minibatch[  11-  20, 25.0000%]: SamplesSeen = 2560; TrainLossPerSample =  2.25602169; EvalErr[0]PerSample = 0.58398438; TotalTime = 0.1143s; SamplesPerSecond = 22403.5
+ Epoch[ 2 of 3]-Minibatch[  21-  30, 37.5000%]: SamplesSeen = 2560; TrainLossPerSample =  2.22374535; EvalErr[0]PerSample = 0.59414062; TotalTime = 0.1142s; SamplesPerSecond = 22418.2
+ Epoch[ 2 of 3]-Minibatch[  31-  40, 50.0000%]: SamplesSeen = 2560; TrainLossPerSample =  2.14311752; EvalErr[0]PerSample = 0.56757813; TotalTime = 0.1142s; SamplesPerSecond = 22422.5
+ Epoch[ 2 of 3]-Minibatch[  41-  50, 62.5000%]: SamplesSeen = 2560; TrainLossPerSample =  2.16481323; EvalErr[0]PerSample = 0.57500000; TotalTime = 0.1141s; SamplesPerSecond = 22429.0
+ Epoch[ 2 of 3]-Minibatch[  51-  60, 75.0000%]: SamplesSeen = 2560; TrainLossPerSample =  2.14065857; EvalErr[0]PerSample = 0.56562500; TotalTime = 0.1140s; SamplesPerSecond = 22448.9
+ Epoch[ 2 of 3]-Minibatch[  61-  70, 87.5000%]: SamplesSeen = 2560; TrainLossPerSample =  2.17895813; EvalErr[0]PerSample = 0.57773438; TotalTime = 0.1141s; SamplesPerSecond = 22435.3
+ Epoch[ 2 of 3]-Minibatch[  71-  80, 100.0000%]: SamplesSeen = 2560; TrainLossPerSample =  2.17199554; EvalErr[0]PerSample = 0.56679687; TotalTime = 0.1140s; SamplesPerSecond = 22456.7
+Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 2.2011762; EvalErrPerSample = 0.58037108; AvgLearningRatePerSample = 0.001953125; EpochTime=0.916413
+Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359848; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.24564s; TotalTimePerSample = 0.02399ms; SamplesPerSecond = 41687
- Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21814s; TotalTimePerSample = 0.02130ms; SamplesPerSecond = 46943
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=0.493964
+ Epoch[ 3 of 3]-Minibatch[   1-  10, 50.0000%]: SamplesSeen = 10240; TrainLossPerSample =  2.14296265; EvalErr[0]PerSample = 0.57080078; TotalTime = 0.3394s; SamplesPerSecond = 30173.9
+ Epoch[ 3 of 3]-Minibatch[  11-  20, 100.0000%]: SamplesSeen = 10240; TrainLossPerSample =  2.11047173; EvalErr[0]PerSample = 0.56679687; TotalTime = 0.3342s; SamplesPerSecond = 30643.4
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 2.1267173; EvalErrPerSample = 0.56879884; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=0.676071
 CNTKCommandTrainEnd: speechTrain
 COMPLETED
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E DeviceId=0
-running on localhost at 2015/10/24 12:49:11
+=== Running /home/alrezni/src/cntk/build/release/bin/cntk configFile=/home/alrezni/src/cntk/Tests/Speech/QuickE2E/cntk.config currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk/Tests/Speech/Data ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E DeviceId=0 makeMode=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Dec 10 2015 14:48:57
+		Last modified date: Tue Dec  8 10:08:43 2015
+		Build type: release
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.0
+		CUB_PATH: /usr/local/cub-1.4.1
+		Build Branch: master
+		Build SHA1: 5e0017ac9c55c23d53cb524c8acb7d6d9bfd0269
+-------------------------------------------------------------------
+running on localhost at 2015/12/10 15:58:52
 command line: 
-/home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E DeviceId=0 
+/home/alrezni/src/cntk/build/release/bin/cntk configFile=/home/alrezni/src/cntk/Tests/Speech/QuickE2E/cntk.config currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu DataDir=/home/alrezni/src/cntk/Tests/Speech/Data ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E DeviceId=0 makeMode=true 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-precision=float
-command=speechTrain
-deviceId=$DeviceId$
-parallelTrain=false
-speechTrain=[
-    action=train
-    modelPath=$RunDir$/models/cntkSpeech.dnn
-    deviceId=$DeviceId$
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+precision = "float"
+command = speechTrain
+deviceId = $DeviceId$
+parallelTrain = false
+makeMode = false
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    deviceId = $DeviceId$
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=$DataDir$/glob_0000.mlf
-          labelMappingFile=$DataDir$/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
-RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
-DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
-ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
+currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
 DeviceId=0
+makeMode=true
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-precision=float
-command=speechTrain
-deviceId=0
-parallelTrain=false
-speechTrain=[
-    action=train
-    modelPath=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
-    deviceId=0
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+precision = "float"
+command = speechTrain
+deviceId = 0
+parallelTrain = false
+makeMode = false
+speechTrain = [
+    action = "train"
+    modelPath = "/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "/home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf"
+            labelMappingFile = "/home/alrezni/src/cntk/Tests/Speech/Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
-RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
-DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
-ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
+currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
+DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
+ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
 DeviceId=0
+makeMode=true
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/QuickE2E
-configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+configparameters: cntk.config:ConfigDir=/home/alrezni/src/cntk/Tests/Speech/QuickE2E
+configparameters: cntk.config:currentDirectory=/home/alrezni/src/cntk/Tests/Speech/Data
+configparameters: cntk.config:DataDir=/home/alrezni/src/cntk/Tests/Speech/Data
 configparameters: cntk.config:deviceId=0
+configparameters: cntk.config:makeMode=true
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu
 configparameters: cntk.config:speechTrain=[
-    action=train
-    modelPath=/tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
-    deviceId=0
-    traceLevel=1
-    SimpleNetworkBuilder=[
-        layerSizes=363:512:512:132
+    action = "train"
+    modelPath = "/tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn"
+    deviceId = 0
+    traceLevel = 1
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ErrorPrediction"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        initValueScale = 1.0
+        uniformInit = true
+        needPrior = true
+    ]
+    ExperimentalNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+        layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
         evalCriterion=ErrorPrediction
-        layerTypes=Sigmoid
+        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
+        applyMeanVarNorm=true
         initValueScale=1.0
-        applyMeanVarNorm=true
         uniformInit=true
-        needPrior=true
-    ]
-    ExperimentalNetworkBuilder=[    // the same as above but with BS
-        layerSizes=363:512:512:132
-        trainingCriterion='CE'
-        evalCriterion='Err'
-        applyMeanVarNorm=true
+        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
+        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
         L = Length(layerSizes)-1    // number of model layers
         features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
-                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
         outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
         outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
-        CE = if trainingCriterion == 'CE'
-             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
-             else Fail('unknown trainingCriterion ' + trainingCriterion)
-        Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='eval')
-              else Fail('unknown evalCriterion ' + evalCriterion)
+        CE = trainingCriterion(labels, outZ, tag='criterion')
+        Err = evalCriterion(labels, outZ, tag='eval')
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
         ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
     ]
-    SGD=[
-        epochSize=20480
-        minibatchSize=64:256:1024:
-        learningRatesPerMB=1.0:0.5:0.1
-        numMBsToShowResult=10
-        momentumPerMB=0.9:0.656119
-        dropoutRate=0.0
-        maxEpochs=3
-        keepCheckPointFiles=true       
-        AutoAdjust=[
-            reduceLearnRateIfImproveLessThan=0
-            loadBestModel=true
-            increaseLearnRateIfImproveMoreThan=1000000000
-            learnRateDecreaseFactor=0.5
-            learnRateIncreaseFactor=1.382
-            autoAdjustLR=AdjustAfterEpoch
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024:
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
         ]
-        clippingThresholdPerSample=1#INF
+        clippingThresholdPerSample = 1#INF
     ]
-    reader=[
-      readerType=HTKMLFReader
-      readMethod=blockRandomize
-      miniBatchMode=Partial
-      randomize=Auto
-      verbosity=0
-      features=[
-          dim=363
-          type=Real
-          scpFile=glob_0000.scp
-      ]
-      labels=[
-          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-          labelDim=132
-          labelType=Category
-      ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "/home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf"
+            labelMappingFile = "/home/alrezni/src/cntk/Tests/Speech/Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
     ]
 ]
 
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-CNTKModelPath: /tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn
+CNTKModelPath: /tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn
 CNTKCommandTrainInfo: speechTrain : 3
 CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 CNTKCommandTrainBegin: speechTrain
 SimpleNetworkBuilder Using GPU 0
 reading script file glob_0000.scp ... 948 entries
-trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
-total 132 state names in state list /home/mluser/src/cplx_master/Tests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list /home/alrezni/src/cntk/Tests/Speech/Data/state.list
+htkmlfreader: reading MLF file /home/alrezni/src/cntk/Tests/Speech/Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-Starting from checkpoint. Load Network From File /tmp/cntk-test-20151024124900.548963/Speech_QuickE2E@debug_gpu/models/cntkSpeech.dnn.2.
+Starting from checkpoint. Load Network From File /tmp/cntk-test-20151210155756.754205/Speech_QuickE2E@release_gpu/models/cntkSpeech.dnn.2.
 
+Post-processing network...
 
-Printing Gradient Computation Node Order ... 
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+	EvalErrorPrediction = ErrorPrediction
+	InvStdOfFeatures = InvStdDev
+	MeanOfFeatures = Mean
+	PosteriorProb = Softmax
+	Prior = Mean
+	ScaledLogLikelihood = Minus
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
 
-CrossEntropyWithSoftmax[0, 0] = CrossEntropyWithSoftmax(labels[132, 0], HLast[0, 0])
-HLast[0, 0] = Plus(W2*H1[0, 0], B2[132, 1])
-B2[132, 1] = LearnableParameter
-W2*H1[0, 0] = Times(W2[132, 512], H2[0, 0])
-H2[0, 0] = Sigmoid(W1*H1+B1[0, 0])
-W1*H1+B1[0, 0] = Plus(W1*H1[0, 0], B1[512, 1])
-B1[512, 1] = LearnableParameter
-W1*H1[0, 0] = Times(W1[512, 512], H1[0, 0])
-H1[0, 0] = Sigmoid(W0*features+B0[0, 0])
-W0*features+B0[0, 0] = Plus(W0*features[0, 0], B0[512, 1])
-B0[512, 1] = LearnableParameter
-W0*features[0, 0] = Times(W0[512, 363], MVNormalizedFeatures[0, 0])
-MVNormalizedFeatures[0, 0] = PerDimMeanVarNormalization(features[363, 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1])
-InvStdOfFeatures[363, 1] = InvStdDev(features[363, 0])
-MeanOfFeatures[363, 1] = Mean(features[363, 0])
-features[363, 0] = InputValue
-W0[512, 363] = LearnableParameter
-W1[512, 512] = LearnableParameter
-W2[132, 512] = LearnableParameter
-labels[132, 0] = InputValue
 
 Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
 
@@ -939,7 +1508,6 @@ Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
-
 
 
 Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
@@ -1012,7 +1580,377 @@ Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
 
+
+Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+9 out of 20 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+Validating for node EvalErrorPrediction, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
+
+9 out of 20 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+
+
+Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+
+Validating for node InvStdOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+
+Validating for node InvStdOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+
+
+Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+
+Validating for node MeanOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+
+Validating for node MeanOfFeatures, final verification.
+
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+
+
+Validating for node PosteriorProb. 19 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb. 9 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+8 out of 19 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node PosteriorProb. 19 nodes to process in pass 1.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb. 9 nodes to process in pass 2.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+Validating for node PosteriorProb, final verification.
+
+Validating --> W2 = LearnableParameter -> [132, 512]
+Validating --> W1 = LearnableParameter -> [512, 512]
+Validating --> W0 = LearnableParameter -> [512, 363]
+Validating --> features = InputValue -> [363, MBSize 0]
+Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
+Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
+Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
+Validating --> B0 = LearnableParameter -> [512, 1]
+Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
+Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> B1 = LearnableParameter -> [512, 1]
+Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
+Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
+Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
+Validating --> B2 = LearnableParameter -> [132, 1]
+Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
+Validating --> PosteriorProb = Softmax(HLast[132, MBSize 0]) -> [132, MBSize 0]
+
+8 out of 19 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
+
+
+Validating for node Prior. 2 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
+
+Validating for node Prior. 1 nodes to process in pass 2.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
+
+Validating for node Prior, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+
+
+Validating for node Prior. 2 nodes to process in pass 1.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
+
+Validating for node Prior, final verification.
+
+Validating --> labels = InputValue -> [132, MBSize 0]
+Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
+
+1 out of 2 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
 
 
 Validating for node ScaledLogLikelihood. 22 nodes to process in pass 1.
@@ -1040,7 +1978,7 @@ Validating --> Prior = Mean(labels[132, MBSize 0]) -> [132, 1]
 Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
 Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
 
-Validating for node ScaledLogLikelihood. 11 nodes to process in pass 2.
+Validating for node ScaledLogLikelihood. 10 nodes to process in pass 2.
 
 Validating --> W2 = LearnableParameter -> [132, 512]
 Validating --> W1 = LearnableParameter -> [512, 512]
@@ -1091,7 +2029,6 @@ Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
 Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
 
 10 out of 22 nodes do not share the minibatch layout with the input data.
-
 
 
 Validating for node ScaledLogLikelihood. 22 nodes to process in pass 1.
@@ -1170,165 +2107,36 @@ Validating --> LogOfPrior = Log(Prior[132, 1]) -> [132, 1]
 Validating --> ScaledLogLikelihood = Minus(HLast[132, MBSize 0], LogOfPrior[132, 1]) -> [132, MBSize 0]
 
 10 out of 22 nodes do not share the minibatch layout with the input data.
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
+FormNestedNetwork: WARNING: Was called twice for EvalErrorPrediction ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for InvStdOfFeatures InvStdDev operation
+FormNestedNetwork: WARNING: Was called twice for MeanOfFeatures Mean operation
+FormNestedNetwork: WARNING: Was called twice for PosteriorProb Softmax operation
+FormNestedNetwork: WARNING: Was called twice for Prior Mean operation
+FormNestedNetwork: WARNING: Was called twice for ScaledLogLikelihood Minus operation
+
+Post-processing network complete.
+
+SGD using GPU 0.
+
+Training criterion node(s):
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+
+Evaluation criterion node(s):
+	EvalErrorPrediction = ErrorPrediction
 
 
-
-Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-Validating for node EvalErrorPrediction, final verification.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-9 out of 20 nodes do not share the minibatch layout with the input data.
-
-
-
-Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-Validating for node EvalErrorPrediction. 9 nodes to process in pass 2.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-Validating for node EvalErrorPrediction, final verification.
-
-Validating --> labels = InputValue -> [132, MBSize 0]
-Validating --> W2 = LearnableParameter -> [132, 512]
-Validating --> W1 = LearnableParameter -> [512, 512]
-Validating --> W0 = LearnableParameter -> [512, 363]
-Validating --> features = InputValue -> [363, MBSize 0]
-Validating --> MeanOfFeatures = Mean(features[363, MBSize 0]) -> [363, 1]
-Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 0]) -> [363, 1]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 0], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 0]
-Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 0]) -> [512, MBSize 0]
-Validating --> B0 = LearnableParameter -> [512, 1]
-Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 0], B0[512, 1]) -> [512, MBSize 0]
-Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> B1 = LearnableParameter -> [512, 1]
-Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 0], B1[512, 1]) -> [512, MBSize 0]
-Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 0]) -> [512, MBSize 0]
-Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 0]) -> [132, MBSize 0]
-Validating --> B2 = LearnableParameter -> [132, 1]
-Validating --> HLast = Plus(W2*H1[132, MBSize 0], B2[132, 1]) -> [132, MBSize 0]
-Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 0], HLast[132, MBSize 0]) -> [1, 1]
-
-9 out of 20 nodes do not share the minibatch layout with the input data.
-
-GetTrainCriterionNodes  ...
-GetEvalCriterionNodes  ...
+Allocating matrices for gradient computing
+FormNestedNetwork: WARNING: Was called twice for CrossEntropyWithSoftmax CrossEntropyWithSoftmax operation
 No PreCompute nodes found, skipping PreCompute step
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
+Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Starting minibatch loop.
-EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
- Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359848; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.32305s; TotalTimePerSample = 0.03155ms; SamplesPerSecond = 31698
- Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656265; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.21717s; TotalTimePerSample = 0.02121ms; SamplesPerSecond = 47152
-Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; AvgLearningRatePerSample = 9.765625146e-05; EpochTime=1.439589
+ Epoch[ 3 of 3]-Minibatch[   1-  10, 50.0000%]: SamplesSeen = 10240; TrainLossPerSample =  2.14296265; EvalErr[0]PerSample = 0.57080078; TotalTime = 0.4213s; SamplesPerSecond = 24304.1
+ Epoch[ 3 of 3]-Minibatch[  11-  20, 100.0000%]: SamplesSeen = 10240; TrainLossPerSample =  2.11047173; EvalErr[0]PerSample = 0.56679687; TotalTime = 0.3359s; SamplesPerSecond = 30489.2
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 2.1267173; EvalErrPerSample = 0.56879884; AvgLearningRatePerSample = 9.7656251e-05; EpochTime=0.842715
 CNTKCommandTrainEnd: speechTrain
 COMPLETED
