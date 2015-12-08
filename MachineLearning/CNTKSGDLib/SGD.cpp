@@ -209,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // initializing weights and gradient holder
         // only one criterion so far TODO: support multiple ones?
-        auto & learnableNodes = net->LearnableNodes(criterionNodes[0]);
+        auto & learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -1249,7 +1249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
             for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
             {
-                if (!origNet->NodeNameExist(sequenceFeatureNodes[i]->NodeName()))
+                if (!origNet->NodeNameExists(sequenceFeatureNodes[i]->NodeName()))
                 {
                     addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
                     origNet->AddFeatureNode(sequenceFeatureNodes[i]);

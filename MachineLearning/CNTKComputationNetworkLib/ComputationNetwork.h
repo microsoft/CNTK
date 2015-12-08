@@ -44,6 +44,7 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
+        m_isCompiled(false),
         m_pMBLayout(make_shared<MBLayout>())
     { }
     ComputationNetwork(DEVICEID_TYPE deviceId) :
@@ -134,8 +135,7 @@ public:
         // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
         AllocateEvalMatrices(rootNode);
 #endif
-        // TODO: do we need to reset time stamps?
-        BuildAndValidateSubNetwork(rootNode);   // TODO: This should go away with CompileNetwork()
+        VerifyIsCompiled("StartEvaluateMinibatchLoop");
         ResetEvalTimeStamps();              // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
     }
     template<class NODESET>
@@ -157,16 +157,17 @@ public:
 
     void CompileNetwork();      // call this after creation, Load(), and any modification
 
-    void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
+    //void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
     // prepares the network for computation
-    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+    //void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
-    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
+    void VerifyIsCompiled(const char * where) const;
+    //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
 
     void AllocateGradientMatrices(ComputationNodeBasePtr rootNode); // public since this is called by SGD
@@ -367,7 +368,7 @@ public:
     // node access
     // -----------------------------------------------------------------------
 
-    bool NodeNameExist(const std::wstring& name) const
+    bool NodeNameExists(const std::wstring& name) const
     {
         auto iter = m_nameToNodeMap.find(name);
         return (iter != m_nameToNodeMap.end());
@@ -401,7 +402,7 @@ public:
         size_t found = name.find_first_of(L'*');
         if (found == std::wstring::npos)
         {
-            if (NodeNameExist(name))
+            if (NodeNameExists(name))
                 nodes.push_back(GetNodeFromName(name));
             }
         else
@@ -436,19 +437,25 @@ public:
     // node-group access
     // -----------------------------------------------------------------------
 
-    std::list<ComputationNodeBasePtr>& InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
+    // these two groups are determined from the network to be executed
+    // They depend on the root node that is being evaluated.
+    const std::list<ComputationNodeBasePtr>& InputNodes(const ComputationNodeBasePtr& rootNode/*, bool bNoBuild = false*/)
     {
-        if (bNoBuild == false)
-            BuildAndValidateSubNetwork(rootNode);
-        return m_inputValues[rootNode];
+        auto iter = m_inputValues.find(rootNode);
+        if (iter == m_inputValues.end())
+            LogicError("InputNodes() called for root %ls %ls operation for the set of inputs has not (yet?) been determined.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return iter->second;
     }
 
-    std::list<ComputationNodeBasePtr>& LearnableNodes(const ComputationNodeBasePtr& rootNode)
+    const std::list<ComputationNodeBasePtr>& LearnableParameterNodes(const ComputationNodeBasePtr& rootNode)
     {
-        BuildAndValidateSubNetwork(rootNode);
-        return m_learnableParameters[rootNode];
+        auto iter = m_learnableParameters.find(rootNode);
+        if (iter == m_learnableParameters.end())
+            LogicError("LearnableParameterNodes() called for root %ls %ls operation for which the set of learnable parameters has not (yet?) been determined.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return iter->second;
     }
 
+    // these are specified as such by the user
     inline       std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
     inline const std::vector<ComputationNodeBasePtr> & FeatureNodes() const  { return m_features; }
     inline       std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
@@ -663,14 +670,13 @@ public:
 
     // if node name is not found, dump all nodes
     // otherwise dump just that node
+    // This function is called from MEL, i.e. must be prepared to operate on an uncompiled network (only m_nameToNodeMap is valid).
     void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile, const std::wstring& nodeNameInRegEx = L"")
     {
         if (nodeNameInRegEx.empty())
         {
-            if (NodeNameExist(nodeName))
+            if (NodeNameExists(nodeName))
             {
-                ValidateNetwork(true); //some internal values in the nodes are computed during validation
-
                 File fstream(outputFile,
                              FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -899,7 +905,7 @@ private:
     std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_allSEQNodes;     // [loopId] cached set of SEQTraversalFlowControlNodes to allow sharing and idempotence of FormRecurrentLoops()
 
     // cache for evaluation ordering:
-    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
+    bool m_isCompiled;      // CompileNetwork has been called
 
     // cached network Iterations
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders;
