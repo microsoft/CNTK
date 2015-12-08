@@ -36,6 +36,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - these little nested networks are defined in the execution network in the form of nested sentinel nodes of type SEQTraversalFlowControlNode
     void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     {
+        VerifyIsCompiled("ForwardProp");
+
         // traverse all nodes in the pre-determined evaluation order
         GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
     }
@@ -356,12 +358,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // These invalidates any post-processed structures. If they are accessed, we will fail.
     void ComputationNetwork::InvalidateCompiledNetwork()
     {
+        m_isCompiled = false;
         m_allSEQNodes.clear();
         m_evalOrders.clear();
         m_nestedNetworks.clear();
-        m_built.clear();
         m_inputValues.clear();
         m_learnableParameters.clear();
+    }
+
+    // verify that network has undergone CompileNetwork()
+    void ComputationNetwork::VerifyIsCompiled(const char * where) const
+    {
+        if (!m_isCompiled)
+            LogicError("%s: A compiled network was expected.", where);
     }
 
     // CompileNetwork() -- bring network into executable state
@@ -420,6 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ResetEvalTimeStamps();              // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
         fprintf(stderr, "\nPost-processing network complete.\n");
+        m_isCompiled = true;
     }
 
     // determine the set of all root nodes
@@ -476,6 +486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // validation
     // -----------------------------------------------------------------------
 
+#if 0
     // ValidateNetwork() - Validate the entire network
     // This calls ValidateNetowrk(Node) for all output nodes.
     // This is used after loading or for dumping the network.
@@ -535,6 +546,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
+#endif
 
     // validate sub-network needed to evalute a specific output node
     // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
@@ -676,6 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+#if 0
     // prepare to compute with the subnetwork that this rootNode depends on, including
     //  - auto-detecting recurrent loops
     //  - collect input and learnable nodes
@@ -704,6 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return m_built.find(rootNode) != m_built.end();
     }
+#endif
 
     // -----------------------------------------------------------------------
     // memory allocation

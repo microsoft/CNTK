@@ -557,59 +557,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nodesRequiringX;
     }
 
-    // lazily reate the m_inputValues[] and m_learnableParameters lists
-    // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
+    // create the m_inputValues[] and m_learnableParameters[] lists
     void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode)
     {
-        //not found
-        if (m_inputValues.find(rootNode) == m_inputValues.end())
+        assert(m_inputValues.find(rootNode) == m_inputValues.end());        // this function must only be called once
+        assert(m_learnableParameters.find(rootNode) == m_learnableParameters.end());
+
+        const list<ComputationNodeBasePtr> & nodes = GetEvalOrder(rootNode, false);
+
+        // collect input values for given root
+        list<ComputationNodeBasePtr> inputs;
+        for (const auto & node : nodes)
         {
-            list<ComputationNodeBasePtr> inputs;
-
-            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
+                node->OperationName() == OperationNameOf(SparseInputValue) /*L"SparseInputValue"*/)
             {
-                ComputationNodeBasePtr node = *nodeIter;
-                if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
-                    node->OperationName() == OperationNameOf(SparseInputValue) /*L"SparseInputValue"*/)
-                {
-                    inputs.push_back(node);
-                }
+                inputs.push_back(node);
             }
-            m_inputValues[rootNode] = inputs;
         }
+        m_inputValues[rootNode] = inputs;
 
-        //not found
-        if (m_learnableParameters.find(rootNode) == m_learnableParameters.end())
+        // instead of collecting the nodes themselves, collect the names (they will be sorted below)
+        list<wstring> learnableParameterNames;
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            list<wstring> learnableParameterNames;
-            list<ComputationNodeBasePtr> learnableParameters;
-
-            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-
-            // instead of collecting the nodes themselves, collect the names (they will be sorted below)
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            ComputationNodeBasePtr node = *nodeIter;
+            if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
+                //|| (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired())
+                )
             {
-                ComputationNodeBasePtr node = *nodeIter;
-                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
-                    //|| (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired())
-                    )
-                {
-                    learnableParameterNames.push_back(node->NodeName());
-                }
+                learnableParameterNames.push_back(node->NodeName());
             }
-
-            // we need to sort it so that we get consistent order when load it from saved file
-            learnableParameterNames.sort();
-
-            // now collect the actual nodes in the sort order of their node names
-            for (auto nodeNameIter = learnableParameterNames.begin(); nodeNameIter != learnableParameterNames.end(); nodeNameIter++)
-            {
-                learnableParameters.push_back(GetNodeFromName((*nodeNameIter)));
-            }
-
-            m_learnableParameters[rootNode] = learnableParameters;
         }
+        // sort names so that we get consistent order when load it from saved file
+        learnableParameterNames.sort();
+
+        // now collect the actual nodes in the sort order of their node names
+        list<ComputationNodeBasePtr> learnableParameters;
+        for (const auto & nodeNameIter : learnableParameterNames)
+            learnableParameters.push_back(GetNodeFromName(nodeNameIter));
+        m_learnableParameters[rootNode] = move(learnableParameters);
     }
 
     template<class ElemType>
@@ -930,7 +917,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
     {
-        ValidateNetwork(false, true);
+        VerifyIsCompiled("PlotNetworkTopology");
+        //ValidateNetwork(false, true);
 
         //////////////////////////////////////////////////////////////////////////
         //    step 1.        get all the arcs in the network
@@ -957,15 +945,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // specialized operations
     // -----------------------------------------------------------------------
 
-    // TODO: lift this into config language, move underlying code to math lib
+    // TODO: Lift this into config language, move underlying code to math lib. This should be a model-editing operation.
 
-    //========================================
+    // ========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
     // we perform SVD decomposition such that
     //  A \approx B*C, where rank(B)=rank(C)=r < rank(A)
     // After SVD decomposition, the node A will become an intermediate node whose children are B,C ;
     // B and C are two learnable parameters
-    //========================================
+    // ========================================
     // BUGBUG: this only currently works for one ElemType, not both
     template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize)
     {
