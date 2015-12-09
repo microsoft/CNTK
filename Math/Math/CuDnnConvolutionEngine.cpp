@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ConvolutionFilter(w, h, c, k), m_filter(nullptr)
         {
             CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filter));
-            CUDNN_CALL(cudnnSetFilter4dDescriptor_v4(m_filter, dataType, FILTER_FORMAT,
+            CUDNN_CALL(cudnnSetFilter4dDescriptor(m_filter, dataType,
                 static_cast<int>(k), static_cast<int>(c), static_cast<int>(h), static_cast<int>(w)));
         }
     public:
@@ -263,8 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_backDataAlgo.memory > 0)
                 workspace.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, f(filterT), ptr(filter), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backDataAlgo.algo,
-                ptr(workspace), m_backDataAlgo.memory, &C::One, t(gradT), ptr(grad)));
+            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, f(filterT), ptr(filter), t(srcGradT), ptr(srcGrad), cd(convDesc), &C::One, t(gradT), ptr(grad)));
         }
 
         void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
@@ -284,8 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_backFiltAlgo.memory > 0)
                 workspace.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backFiltAlgo.algo,
-                ptr(workspace), m_backFiltAlgo.memory, &C::One, f(filterT), ptr(filter)));
+            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), &C::One, f(filterT), ptr(filter)));
         }
 
         void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
@@ -297,8 +295,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
             assert(outT.n() == out.GetNumCols());
 
-            CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(outT), ptr(out), &C::Zero, t(outT), ptr(dst)));
-            CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(biasT), ptr(bias), &C::One, t(outT), ptr(dst)));
+            CUDNN_CALL(cudnnAddTensor(m_cudnn, CUDNN_ADD_FULL_TENSOR, &C::One, t(outT), ptr(out), &C::Zero, t(outT), ptr(dst)));
+            CUDNN_CALL(cudnnAddTensor(m_cudnn, CUDNN_ADD_SAME_C, &C::One, t(biasT), ptr(bias), &C::One, t(outT), ptr(dst)));
         }
 
         void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
@@ -331,13 +329,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(crowIn == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
 
-            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-            runMean.Resize(spatial ? inT.c() : crowIn, 1);
-            runInvStdDev.Resize(runMean.GetNumRows(), 1);
-            saveMean.Resize(runMean.GetNumRows(), 1);
-            saveInvStdDev.Resize(runMean.GetNumRows(), 1);
-            CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
-                t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+            UNUSED(crowIn);
+            UNUSED(inT);
+            UNUSED(in);
+            UNUSED(scaleBiasT);
+            UNUSED(scale);
+            UNUSED(bias);
+            UNUSED(spatial);
+            UNUSED(expAvgFactor);
+            UNUSED(runMean);
+            UNUSED(runInvStdDev);
+            UNUSED(out);
+            UNUSED(saveMean);
+            UNUSED(saveInvStdDev);
+            RuntimeError("Not implemented.");
         }
 
         void NormalizeBatchInference(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias,
@@ -368,9 +373,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(runInvStdDev.GetNumCols() == 1);
             UNUSED(crowIn);
 
-            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-            CUDNN_CALL(cudnnBatchNormalizationForwardInference(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
-                t(scaleBiasT), ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON));
+            UNUSED(inT);
+            UNUSED(in);
+            UNUSED(scaleBiasT);
+            UNUSED(scale);
+            UNUSED(bias);
+            UNUSED(spatial);
+            UNUSED(runMean);
+            UNUSED(runInvStdDev);
+            UNUSED(out);
+            RuntimeError("Not implemented.");
         }
 
         void BackwardNormalizeBatch(const Tensor4D& inT, const Mat& in, const Mat& srcGrad, Mat& grad, 
@@ -401,9 +413,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(biasGrad.GetNumCols() == scale.GetNumCols());
             UNUSED(crowIn);
 
-            cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-            CUDNN_CALL(cudnnBatchNormalizationBackward(m_cudnn, mode, &C::One, &C::One, t(inT), ptr(in), t(inT), ptr(srcGrad), t(inT), ptr(grad),
-                t(scaleBiasT), ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
+            UNUSED(inT);
+            UNUSED(in);
+            UNUSED(srcGrad);
+            UNUSED(grad);
+            UNUSED(scaleBiasT);
+            UNUSED(scale);
+            UNUSED(spatial);
+            UNUSED(saveMean);
+            UNUSED(saveInvStdDev);
+            UNUSED(scaleGrad);
+            UNUSED(biasGrad);
+            RuntimeError("Not implemented.");
         }
 
     private:
