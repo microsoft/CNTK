@@ -241,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // create all the cached fast-lookup information
             if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
                 Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
-            if (endTime < m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
+            if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
                 Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
             size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
             size_t e = min(endTime, m_numTimeSteps);
