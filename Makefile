@@ -327,6 +327,25 @@ $(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# GPRNNSequenceReader plugin
+########################################
+
+GPRNNSEQUENCEREADER_SRC =\
+	DataReader/GPRNNSequenceReader/Exports.cpp \
+	DataReader/GPRNNSequenceReader/GPRNNSequenceParser.cpp \
+	DataReader/GPRNNSequenceReader/GPRNNSequenceReader.cpp \
+
+GPRNNSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(GPRNNSEQUENCEREADER_SRC))
+
+GPRNNSEQUENCEREADER:=$(LIBDIR)/GPRNNSequenceReader.so
+ALL+=$(GPRNNSEQUENCEREADER)
+SRC+=$(GPRNNSEQUENCEREADER_SRC)
+
+$(GPRNNSEQUENCEREADER): $(GPRNNSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
 # UCIFastReader plugin
 ########################################
 
