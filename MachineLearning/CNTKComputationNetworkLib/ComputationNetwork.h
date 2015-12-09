@@ -302,7 +302,7 @@ public:
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
         if (m_pMBLayout)
-            return m_pMBLayout->GetNumSamplesWithLabel();
+            return m_pMBLayout->DetermineActualNumSamples();
         else
             return numAllSamples;
     }

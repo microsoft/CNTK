@@ -47,6 +47,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Forward declarations
     class FrameRange;
 
+    typedef size_t UniqueSequenceId;
+#define GAP_SEQUENCE_ID SIZE_MAX            // indicates no data
+#define MAKE_SEQUENCE_ID (SIZE_MAX-1)       // let SetSequence() assign a unique id; for old readers. Don't mix with actual reader-assigned ids.
+
     // -----------------------------------------------------------------------
     // MBLayout -- layout information of minibatch
     //
@@ -207,31 +211,58 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlags[t] |= f;
         }
 
-        // mark a range of frames in a parallel sequence as one sentence
-        // Note that endTime is the last frame +1. Think of begin/end as used in STL containers.
-        void SetAsSentence(size_t s, size_t beginTime, size_t endTime)
+    private:
+        // information stored about sequences
+        struct SequenceDesc
         {
-            Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
-            Set(s, endTime-1, MinibatchPackingFlags::SequenceEnd);
-            // Note: It is assumed that this is being constructed after Init().
+            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
+            ptrdiff_t tBegin;       // may be negative
+            size_t tEnd;            // end = first frame index after final frame; may be beyond the minibatch
+        };
+    public:
+
+        // mark a range of frames in a parallel sequence as one sentence
+        // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
+        void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
+        {
+            if (beginTime >= (ptrdiff_t)m_numTimeSteps)         // no need to test endTime since it is always non-negative (size_t)
+                LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
+
+            if (seqId == MAKE_SEQUENCE_ID)  // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
+            {
+                static UniqueSequenceId makeSeqIdCounter = 0;
+                seqId = makeSeqIdCounter++;
+                if (seqId == GAP_SEQUENCE_ID) LogicError("AddSequence: ran out of bits...");    // (will never happen anyway)
+            }
+
+            // remember it
+            m_sequences.push_back(SequenceDesc{ seqId, beginTime, endTime });
+
+            // create all the cached fast-lookup information
+            if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
+                Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
+            if (endTime < m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
+                Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
+            size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
+            size_t e = min(endTime, m_numTimeSteps);
+            if (seqId == GAP_SEQUENCE_ID)
+            {
+                for (size_t t = b; t < e; t++)
+                    Set(s, t, MinibatchPackingFlags::NoInput);
+            }
 #ifdef _DEBUG
-            for (size_t t = beginTime; t < endTime; t++)
+            else for (size_t t = b; t < e; t++)
             {
                 assert(!Is(s, t, MinibatchPackingFlags::NoInput));
-                assert(t == beginTime || !Is(s, t, MinibatchPackingFlags::SequenceStart));
-                assert(t == endTime-1 || !Is(s, t, MinibatchPackingFlags::SequenceEnd));
+                assert(t == (size_t)beginTime || !Is(s, t, MinibatchPackingFlags::SequenceStart));
+                assert(t == endTime - 1 || !Is(s, t, MinibatchPackingFlags::SequenceEnd));
             }
 #endif
-            AddSequence(beginTime, endTime, true);
         }
 
         // mark a range of frames in a parallel sequence as invalid
-        void SetAsNoInput(size_t s, size_t beginTime, size_t endTime)
-        {
-            for (size_t t = beginTime; t < endTime; t++)
-                Set(s, t, MinibatchPackingFlags::NoInput);
-            AddSequence(beginTime, endTime, false);
-        }
+        // I'd love to start with all-gaps, but that would require to set flags upfront, and then clearing them.
+        void AddGap(size_t s, size_t beginTime, size_t endTime) { AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
 
         // compute the number of actual samples in this layout (not counting NoLabel ones)
         // This is used by MeanNode and InvStdDevNode.
@@ -242,40 +273,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t t = 0; t < GetNumTimeSteps(); t++)
                 {
-                    if (Is(t, MinibatchPackingFlags::NoInput)) for (size_t s = 0; s < GetNumParallelSequences(); s++)
+                    if (Is(t, MinibatchPackingFlags::NoInput))
                     {
-                        if (Is(s, t, MinibatchPackingFlags::NoInput))
-                            n--;
-                    }
-                }
-            }
-            return n;
-        }
-
-        // count the number of samples in the minibatch that are not gaps
-        // TODO: We should compute this during building, to avoid having to scan the entire dense matrix.
-        size_t GetNumSamplesWithLabel() const
-        {
-            size_t numTimeSteps = GetNumTimeSteps();
-            size_t numSequences = GetNumParallelSequences();
-
-            size_t numSamplesWithoutLabel = 0;
-            if (!IsAllNone())       // count gaps by scanning the flags
-            {
-                for (size_t t = 0; t < numTimeSteps; t++)
-                {
-                    if (Is(t, MinibatchPackingFlags::NoLabel))
-                    {
-                        for (int id = 0; id < numSequences; id++)
+                        for (size_t s = 0; s < GetNumParallelSequences(); s++)
                         {
-                            if (Is(id, t, MinibatchPackingFlags::NoLabel))
-                                numSamplesWithoutLabel++;
+                            if (Is(s, t, MinibatchPackingFlags::NoInput))
+                                n--;
                         }
                     }
                 }
             }
-
-            return numTimeSteps * numSequences - numSamplesWithoutLabel;
+            return n;
         }
 
         // test function for those pieces of the code that cannot handle gaps
@@ -290,8 +298,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
+
+        // Ensure that the MBLayout allows writes
+        void CheckWritable() const
+        {
+            if (!m_writable)
+                LogicError("Modification attempted on a MBLayout that is no longer writable.");
+        }
+
+        // Freeze the MBLayout disallowing further modifications through set operations
+        void Lock() const
+        {
+            m_writable = false;
+        }
+
+    private:
+
+        // dimensions
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
+
+        // all sequences that live inside this minibatch
+        mutable vector<SequenceDesc> m_sequences;
 
         // TODO: rename the following two variables, or even implement it with a very different structure
 
@@ -318,32 +346,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
         // If the matrix is empty it means all columns are valid
         mutable std::shared_ptr<Matrix<char>> m_columnsValidityMask;
-
-        // Ensure that the MBLayout allows writes
-        void CheckWritable() const
-        {
-            if (!m_writable)
-                LogicError("Modification attempted on a MBLayout that is no longer writable.");
-        }
-
-        // Freeze the MBLayout disallowing further modifications through set operations
-        void Lock() const
-        {
-            m_writable = false;
-        }
-
-        // explicit list of sequences
-        // Currently this is for diagnostics only, but in the future this will include utterance ids etc, meant for lining up inconsistent MB layouts.
-        struct SequenceDesc
-        {
-            size_t tBegin, tEnd;
-            bool hasData;           // false means it's a gap
-        };
-        mutable vector<SequenceDesc> m_sequences;
-        void AddSequence(size_t b, size_t e, bool d)
-        {
-            m_sequences.push_back(SequenceDesc{ b, e, d });
-        }
 
     public:
         // specialized functions to replicate old behavior that shouldn't be there but I cannot test
