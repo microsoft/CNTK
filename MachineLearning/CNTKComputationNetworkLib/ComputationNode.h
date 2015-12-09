@@ -154,21 +154,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             other.m_needsGradient = m_needsGradient;
         }
 
-        static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
-        {
-            return lhs->m_visitedOrder < rhs->m_visitedOrder;
-        }
-
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    protected:  // TODO: should be fully encapsulated here
+
+        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     private:
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
-    protected:  // TODO: should be fully encapsulated here
-        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
-
     protected:
+
         // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
         void PurgeStateForFormingRecurrentLoops()
         {
@@ -181,7 +178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        int m_loopId;           // index into recurrent info array (TODO: verify this)
+        int m_loopId;           // index into m_allSEQNodes array, for use by reordering operation only
         int m_visitedOrder;     // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
         bool m_visited;         // note: also used by ValidateSubNetwork()
         int m_indexInLoop;
@@ -574,11 +571,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void InferMBLayoutFromInputsForStandardCase();
 
     public:
-
-        static bool ByVisitedOrder(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)    // sorting predicate
-        {
-            return ComputationNetworkOwnedNodeState::ByVisitedOrder(lhs.get(), rhs.get());
-        }
 
         bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
         {

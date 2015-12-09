@@ -240,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStateFulNode>>& statefulnode)
             {
-                std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root, false);
+                const std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root);
                 for (auto& x : evalorder)
                 {
                     wstring name = x->GetName();
@@ -252,6 +252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
+
             std::map<wstring, shared_ptr<IStateFulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                 const std::vector<ComputationNodeBasePtr>& criterionNode,
                 const std::vector<ComputationNodeBasePtr>& evaluationNode)

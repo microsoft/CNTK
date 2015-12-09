@@ -63,9 +63,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // In the special case of frame randomization, every frame is stored as a single-frame sequence.
     //
     // If we describe this in terms of tensors, a data matrix with sample layout (I,J,K) and
-    // MBLayout (S,T) can be interpreted as TensorShape(I,J,K,T,S) (note that S is last, not T).
+    // MBLayout (S,T) can be interpreted as TensorShape(I,J,K,S,T).
     //
-    // Sequences can also be concatenated, to fill the space better. For this case,
+    // Sequences can also be concatenated to fill the space better. For this case,
     // this object stores about every frame whether it is at the start or end of a sequence.
     // Hence, we distinguish between "sequences" (logical units) and "parallel sequences"
     // (where one "parallel sequence" may consist of multiple concatenated "sequences").
@@ -74,6 +74,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Gaps are identified by the MBLayouyt as well. Currently, these gaps only occur at the end.
     //
     // Gaps may also arise due to invalid input data (e.g. a speech utterance for which no alignment could be generated).
+    //
+    // An MBLayout provides the following functions:
+    //  - (building:) add a new sequence (or gap range) to the MBLayout
+    //  - inquire the set of sequences (sequence ids) that intersect with this minibatch
+    //  - inquire whether any time step t has any flags across all sequences
+    //  - inquire the flags at (s,t)
+    //
+    // Truncated BPTT support (partial sequences):
+    //  - in truncated BPTT, minibatches only contain partial sequences, e.g. a range of 20 time steps
+    //  - the flags are stored for every sequence that intersects with this minibatch
+    //  - that is also true for flags that fall outside the time-step range of the minibatch
     //
     // An MBLayout object stores:
     //  - for every sequence in the minibatch the n-tuple (global sequence id, s, first t, last t)
@@ -151,20 +162,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (this == &other)
                 return true;
             return          m_numTimeSteps == other.m_numTimeSteps &&
-                    m_numParallelSequences == other.m_numParallelSequences &&
-                   m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
-            m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
+                m_numParallelSequences == other.m_numParallelSequences &&
+                m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
+                m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
         // get boundary flags
         MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
         MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
+        MinibatchPackingFlags Get(const FrameRange & fr) const;
 
         // test boundary flags for a specific condition
+        // TODO: swap s and t for all of these functions; t is the more important parameter
         bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
         bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
-        // TODO: swap s and t for all of these functions; t is the more important parameter
+        // FrameRange version allows to test with time offset
+        bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
 
         // tests if Is() is false for every frame and sequence
         // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
@@ -378,8 +392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - CRFNode does not support > 1 parallel sequence
     class FrameRange
     {
-    public: // TODO: fix this (currently used from masking and DataFor)
+    public: // TODO: make private (currently used from masking and DataFor) ; TODO: rename all members with m_ prefix
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
+        ptrdiff_t m_timeOffset;             // this is added to timeIdxInSeq wherever it is used
         size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
         MBLayoutPtr m_pMBLayout;            // layout associated with this
         bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range)
@@ -387,7 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         // can construct from a single size_t -> a single-frame range
-        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), m_timeOffset(0), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
         //FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
@@ -424,6 +439,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ret;
         }
 
+        // create a FrameRange with a time offset
+        // Note: This currently does not work in conjunction with IsAllFrames(). This would be a nice-to have, but tricky w.r.t. out-of-bounds accesses.
+        FrameRange WithTimeOffset(ptrdiff_t offset) const
+        {
+            FrameRange ret = *this;
+            ret.m_timeOffset += offset;
+            return ret;
+        }
+        // check a FrameRange with time offset
+        // Returns 0 if time index with offset is inside the layout; -1 if left of it, and +1 if right of it.
+        int LocateTimeOffset() const
+        {
+            EnsureNotAllFrames();
+            if (!m_pMBLayout)
+                InvalidArgument("FrameRange::LocateTimeOffset(): Time offset requires an MBLayout.");
+            ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
+            if (t < 0)
+                return -1;
+            else if ((size_t)t >= m_pMBLayout->GetNumTimeSteps())
+                return +1;
+            else
+                return 0;
+        }
+
         class IndexIteration    // range for range-based for over sequences
         {
             size_t m_beginIndex, m_endIndex;
@@ -435,9 +474,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         IndexIteration GetSequenceRange(const shared_ptr<MBLayout> & pMBLayout) const { return IndexIteration(seqIndex == SIZE_MAX ? 0 : seqIndex, seqIndex == SIZE_MAX ? pMBLayout->GetNumParallelSequences() : seqIndex + 1); }
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
+        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed.
         // Really only used in RecurrentNodes(), where it will be replaced by FrameRange::WithDelay() which allows to access delayed frames through the FrameRange object.
-        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
+        size_t t() const
+        {
+            EnsureNotAllFrames();
+            ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
+            if (LocateTimeOffset() != 0)
+                InvalidArgument("FrameRange::t(): Time offset caused time index to be out of range.");
+            return (size_t)t;
+        }
 
         bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead (PAR mode)
 
@@ -448,6 +494,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
         }
     };
+
+    // -----------------------------------------------------------------------
+    // MBLayout functions that require FrameRange
+    // -----------------------------------------------------------------------
+
+    // get packing flags from a frame range
+    // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
+    inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
+    {
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
+#if 1
+        auto t = fr.t();
+        return fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
+#else
+        // This specifically supports time offsets (e.g. pass fr.WithTimeOffset(-1)), and more specifically,
+        // time offsets may refer to frames outside the sequence, which will be returned as NoLabel.
+        // to account for time offsets, we linearly scan from center position to to the offset position
+        ptrdiff_t step = fr.m_timeOffset < 0 ? -1 : +1;
+        ptrdiff_t tend = fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq;
+        for (ptrdiff_t t = fr.timeIdxInSeq; ; t += step)
+        {
+            if (t < 0 || t >= GetNumTimeSteps())
+                break;
+            // get flag at time t
+            auto flags = fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
+            if (t == tend)
+                return flags;
+            else if (step < 0 && (flags & MinibatchPackingFlags::SequenceStart))   // we are about to skip over sentence start -> we are in a gap
+                return MinibatchPackingFlags::NoInput;
+            else if (step > 0 && (flags & MinibatchPackingFlags::SequenceEnd))     // likewise for end
+                return MinibatchPackingFlags::NoInput;
+            else if (flags != MinibatchPackingFlags::None)                         // we hit an unexpected flag, e.g. running backwards into an End
+                LogicError("MBLayout::Get() unexpectedly found a gap or boundary frame where there should be none (flag value 0x%1x).", (int)flags);
+        }
+        // we get here if the time offset is not inside the currently allocated flag matrices
+        LogicError("MBLayout::Get: attempting to retrieve a flag outside the current range");
+#endif
+    }
 
     inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const
     {
