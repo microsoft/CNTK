@@ -81,7 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
             fprintf(stderr, "FormNestedNetwork: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_nestedNetworks[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode, false));
+        m_nestedNetworks[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode));
     }
 
     ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // concurrent computation in bulk CUDA launches.
     // -----------------------------------------------------------------------
 
-    ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
+    ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
     {
         // traverse the network in evaluation order and create a new list that replaces all recurrence by a SEQTraversalFlowControlNode
         set<shared_ptr<IComputationNode>> loopsSeen;  // for consistency check only
@@ -288,7 +288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
-    /*static*/ shared_ptr<ComputationNetwork::SEQTraversalFlowControlNode> ComputationNetwork::FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node)
+    /*static*/ shared_ptr<ComputationNetwork::SEQTraversalFlowControlNode> ComputationNetwork::FindInRecurrentLoops(const std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node)
     {
         // look in all recurrent loops of the network
         // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
@@ -552,9 +552,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
     // This is called lazily but once only per node until next ClearCache().
     // This also sets up MBLayout links.
-    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
-    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
-    // TODO: ^^ is this really needed? Can we just call it inside?
     void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNode)
     {
         // reset to a well-defined MBLayout (any meaningful layout should do here)
@@ -569,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
         // A problem is that recurrent loops may require partial validation.
         // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
-        const auto & nodes = GetEvalOrder(rootNode, false);
+        const auto & nodes = GetEvalOrder(rootNode);
 
         for (auto & node : nodes)
         {
@@ -747,7 +744,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         FormRecurrentLoops(rootNode);
 
-        list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
+        const list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
         //determine parent size
         map<ComputationNodeBasePtr, int> parentCount;
