@@ -300,7 +300,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
-                        m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
+                        m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
+                    // BUGBUG: In the future, MAKE_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
                 }
             }
         }
