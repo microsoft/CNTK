@@ -21,9 +21,7 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
         // Fixture specific for the TIMIT data
         struct TIMITReaderFixture : ReaderFixture
         {
-            //TIMITReaderFixture() : ReaderFixture("%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/ASR")
-            //TIMITReaderFixture() : ReaderFixture("\\\\speech-data\\CNTKExampleSetups\\ASR")
-            TIMITReaderFixture() : ReaderFixture("/Data")
+            TIMITReaderFixture() : ReaderFixture("%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/ASR")
             {}
         };
 
