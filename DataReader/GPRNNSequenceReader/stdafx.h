@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include "Platform.h"
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
-
-
+#ifdef __WINDOWS__
+#include "windows.h"
+#endif
+#include <stdio.h>
+#include <math.h>
 
 // TODO: reference additional headers your program requires here
