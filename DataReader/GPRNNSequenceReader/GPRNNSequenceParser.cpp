@@ -153,7 +153,7 @@ long BatchGPRNNSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested
         prvat = (int)ptr->labelPos;
     }
 
-    fprintf(stderr, "BatchGPRNNSequenceParser: parse %d lines\n", lineCount);
+    fprintf(stderr, "BatchGPRNNSequenceParser: parse %ld lines\n", lineCount);
     return lineCount;
 }
 

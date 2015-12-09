@@ -785,9 +785,9 @@ namespace Microsoft {
                 }
 
                 if (m_auxfeatureData.size() != m_featureData.size()){
-                    fprintf(stderr, "size of auxiliary feature %d", m_auxfeatureData.size());
-                    fprintf(stderr, "size of word %d", m_featureData.size());
-                    fprintf(stderr, "size of context word %d", m_featureWordContext.size());
+                    fprintf(stderr, "size of auxiliary feature %ld", m_auxfeatureData.size());
+                    fprintf(stderr, "size of word %ld", m_featureData.size());
+                    fprintf(stderr, "size of context word %ld", m_featureWordContext.size());
                     LogicError("Error, the size of auxiliary feature should equal the context feature!!!");
                 }
 
@@ -839,7 +839,7 @@ namespace Microsoft {
                 // figure out the size of the next sequence
                 actualmbsize = m_labelIdData.size();
                 if (actualmbsize > m_mbSize * mToProcess.size()){
-                    RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+                    RuntimeError("specified minibatch size %ld is smaller than the actual minibatch size %ld. memory can crash!", m_mbSize, actualmbsize);
                 }
 
                 // now get the labels

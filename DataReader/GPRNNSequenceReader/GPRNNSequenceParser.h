@@ -143,6 +143,8 @@ public:
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
+    using GPRNNSequenceParser<NumType, LabelType>::LabelIdType;
+    using GPRNNSequenceParser<NumType, LabelType>::LabelIdType;
     using GPRNNSequenceParser<NumType, LabelType>::m_dimFeatures;
     using GPRNNSequenceParser<NumType, LabelType>::m_dimLabelsIn;
     using GPRNNSequenceParser<NumType, LabelType>::m_beginSequenceIn;
