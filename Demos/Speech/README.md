@@ -13,7 +13,7 @@ This modified version of dataset is distributed under the terms of a AN4 license
 Data:     |Speech data from the CMU Audio Database aka AN4 (http://www.speech.cs.cmu.edu/databases/an4)
 Purpose:  |Showcase how to train feed forward and LSTM networks for speech data
 Network:  |SimpleNetworkBuilder for 2-layer FF, NdlNetworkBuilder for 3-layer LSTM network
-Training: |Data-parallel 1-Bit SGD with adjusted learning rate
+Training: |Data-parallel 1-Bit SGD with automatic mini batch rescaling (FF)
 Comments: |There are two config files: FeedForward.config and LSTM-NDL.config for FF and LSTM training respectively
 
 ## Running the example
