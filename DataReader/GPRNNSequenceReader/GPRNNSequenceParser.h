@@ -12,7 +12,6 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <memory>
 #include <stdint.h>
 #include "Platform.h"
 #include "DataReader.h"
@@ -143,8 +142,8 @@ public:
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
-    using GPRNNSequenceParser<NumType, LabelType>::LabelIdType;
-    using GPRNNSequenceParser<NumType, LabelType>::LabelIdType;
+    using LabelType = wstring;
+    using LabelIdType = long;
     using GPRNNSequenceParser<NumType, LabelType>::m_dimFeatures;
     using GPRNNSequenceParser<NumType, LabelType>::m_dimLabelsIn;
     using GPRNNSequenceParser<NumType, LabelType>::m_beginSequenceIn;
