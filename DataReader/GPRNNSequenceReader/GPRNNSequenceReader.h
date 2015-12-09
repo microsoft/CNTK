@@ -204,6 +204,8 @@ class BatchGPRNNSequenceReader : public GPRNNSequenceReader<ElemType>
 public:
     using LabelType = wstring;
     using LabelIdType = long;
+    using GPRNNSequenceReader<ElemType>::m_auxfeaturesName;
+    using GPRNNSequenceReader<ElemType>::m_auxfeatureData;
     using GPRNNSequenceReader<ElemType>::mWordMappingFn;
     using GPRNNSequenceReader<ElemType>::m_cachingReader;
     using GPRNNSequenceReader<ElemType>::mWordMapping;

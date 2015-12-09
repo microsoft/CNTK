@@ -741,7 +741,7 @@ namespace Microsoft {
                                 std::vector<std::pair<LabelIdType, LabelIdType> >& auxFeat = m_featureTemp[lineIdx].second;
 
                                 if (contexWord.size() != m_wordContext.size()){
-                                    fprintf(stderr, "real context size: %ld specified context size",
+                                    fprintf(stderr, "real context size: %ld specified context size %ld",
                                         contexWord.size(), m_wordContext.size());
                                     LogicError("Error, provide context word size do not equal to context word size specified");
                                 }
