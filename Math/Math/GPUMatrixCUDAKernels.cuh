@@ -4841,7 +4841,29 @@ __global__ void _assignAlphaScore(
 				}
 				else
 				{
-					for (i = 1; i <= blanknum; i++)
+					i = 1;
+					while (phoneseq[id - i] >= (phonenum - blanknum) && id > i)
+					{
+						//if (id > i)
+						{
+							y = Alphascore[(t - 1)*M + id - i];
+							x = logadd(x, y);
+						}
+						i++;
+					}
+					if (phoneseq[id - i] < (phonenum - blanknum))
+					{
+						y = Alphascore[(t - 1)*M + id - i];
+						x = logadd(x, y);
+					}
+					i = 1;
+					while (phoneseq[id + i] >= (phonenum - blanknum) && id < M - i - 1)
+					{
+						y = Alphascore[(t - 1)*M + id + i];
+						x = logadd(x, y);
+						i++;
+					}
+					/*for (i = 1; i <= blanknum; i++)
 					{
 						if (id > i && phoneseq[id - i] < (phonenum - blanknum))
 						{
@@ -4849,7 +4871,7 @@ __global__ void _assignAlphaScore(
 							x = logadd(x, y);
 							//break;
 						}
-					}
+					}*/
 
 				}
 				
@@ -4932,7 +4954,30 @@ __global__ void _assignBetaScore(
 				}
 				else
 				{
-					for (i = 1; i <= blanknum; i++)
+					i = 1;
+					while (phoneseq[id - i] >= (phonenum - blanknum) && id > i)
+					{
+						//if (id > i)
+						{
+							y = Betascore[(t + 1)*M + id - i];
+							x = logadd(x, y);
+						}
+						i++;
+					}
+					
+					i = 1;
+					while (phoneseq[id + i] >= (phonenum - blanknum) && id < M - i - 1)
+					{
+						y = Betascore[(t + 1)*M + id + i];
+						x = logadd(x, y);
+						i++;
+					}
+					if (phoneseq[id + i] < (phonenum - blanknum))
+					{
+						y = Betascore[(t + 1)*M + id + i];
+						x = logadd(x, y);
+					}
+					/*for (i = 1; i <= blanknum; i++)
 					{
 						if (id < M - i - 1 && phoneseq[id + i] < (phonenum - blanknum))
 						{
@@ -4941,7 +4986,7 @@ __global__ void _assignBetaScore(
 						}
 						else
 							printf("not in this\n");
-					}
+					}*/
 				}
 			}
 			s2 = id;
