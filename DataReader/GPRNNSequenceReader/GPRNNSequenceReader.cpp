@@ -60,7 +60,7 @@ namespace Microsoft {
                 map<long, long>& idx4class,
                 int & mNbrCls)
             {
-                fprintf(stderr, "GPRNNSequenceReader should not read token from file");
+                fprintf(stderr, "load token from file %ls", vocfile.c_str());
                 wifstream vin;
 #ifdef _MSC_VER
                 vin.open(vocfile, wifstream::in);
@@ -937,9 +937,17 @@ namespace Microsoft {
                     }
 
                     if (features != nullptr)
+                    {
+                        locObs.SetPreferredDeviceId(features->GetDeviceId());
                         features->SetValue(locObs);
+
+                    }
+
                     if (auxfeatures != nullptr)
+                    {
+                        auxlocObs.SetPreferredDeviceId(auxfeatures->GetDeviceId());
                         auxfeatures->SetValue(auxlocObs);
+                    }
 
                     GetLabelOutput(matrices, m_labelInfo[labelInfoOut], actualmbsize);
 
