@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
-        // Returns false if no data is read
+        // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
         // Sets actualMBSize to the number of matrix columns. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
         // -------------------------------------------------------------------
 
@@ -41,21 +41,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
-            // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
-            // TODO: The reader does not always resize the input matrices to zero when 
-            //       no data is read. When it does, 'wasDataRead' can be removed. Will go away with reader redesig.
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
+            // If this returns false, the matrices may contain garbage or not sized to 0 columns.
+            // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
+
             // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
             net->NotifyInputNodesFunctionValuesMBSizeModified();
-            size_t readMBSize = net->DetermineActualMBSizeFromFeatures();
-            if (readMBSize == 0)
+
+            if (wasDataRead)
+                trainSetDataReader.CopyMBLayoutTo(pMBLayout);                       // get layout meta-data
+
+#if 0       // (this test is wrong... I think)
+            if (net->DetermineActualMBSizeFromFeatures() == 0)
                 wasDataRead = false;
+#endif
 
-            trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
-
-            // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
-            net->VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
-
+            // get some additional information when doing sequence training
+            // TODO: This should not need to be called in case of wasDataRead == false, since in that case, returned values are invalid.
             if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNode);
@@ -67,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
             }
 
+            // if no data read then we are done
             if (!wasDataRead)
                 return false;
 
@@ -74,13 +77,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!useDistributedMBReading && useParallelTrain)
             {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
-                net->NotifyInputNodesFunctionValuesMBSizeModified(); // need to tell'm again since we modified it again
+                net->NotifyInputNodesFunctionValuesMBSizeModified();    // #matrix columns changes
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
-            // Note: Decimation may have reduced this to 0 frames, in which case we must return 'true'.
-            actualMBSize = 0;
-                actualMBSize = net->DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
+            // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
+            actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
             return true;
         }
