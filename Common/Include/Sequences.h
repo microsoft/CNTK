@@ -225,6 +225,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
         void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
         {
+            if ((ptrdiff_t)endTime <= beginTime)
+                LogicError("AddSequence: Sequences must be a least one frame long.");
             if (beginTime >= (ptrdiff_t)m_numTimeSteps)         // no need to test endTime since it is always non-negative (size_t)
                 LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
@@ -262,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // mark a range of frames in a parallel sequence as invalid
         // I'd love to start with all-gaps, but that would require to set flags upfront, and then clearing them.
-        void AddGap(size_t s, size_t beginTime, size_t endTime) { AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
+        void AddGap(size_t s, ptrdiff_t beginTime, size_t endTime) { if ((ptrdiff_t)endTime > beginTime) AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
 
         // compute the number of actual samples in this layout (not counting NoLabel ones)
         // This is used by MeanNode and InvStdDevNode.
@@ -335,6 +337,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // a short-hand vector or-ing the above flags over all parallel sequences
         mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+
+        // a short-hand for determining whether any sequence at time t is a boundary or gap, which means that sequences have to be n
+        // xxx
 
         // A boolean flag indicating whether the MBLayout can be further modified
         // When it's value is false, no set operations are allowed on the MBLayout
