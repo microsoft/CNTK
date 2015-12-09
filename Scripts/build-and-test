@@ -141,7 +141,7 @@ fi
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
-    cp Demos/Simple/Simple.config $CONF_FILE || exit $?
+    cp Demos/Simple2d/Config/Simple.config $CONF_FILE || exit $?
 
     # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
     # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
@@ -197,17 +197,17 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
-    echo "============ cp Demos/Simple/Simple.config $CONF_FILE  ============"
-    echo "============ cd $CNTK_ROOT/Demos  ============"
+    echo "============ cp Demos/Simple2d/Config/Simple.config $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Demos/Simple2d/Data  ============"
 
     for TARGET in "${targetArray[@]}"
     do
         # These sed scripts are simply toggling DeviceNumber argument in the config file
         # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
         if [[ $TARGET == CPU ]]; then
-            sed -i -e 's/^DeviceNumber.*/DeviceNumber=-1/g' $CONF_FILE || exit $?
+            sed -i -e 's/^deviceId.*/deviceId=-1/g' $CONF_FILE || exit $?
         else
-            sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $CONF_FILE || exit $?
+            sed -i -e 's/^deviceId.*/deviceId=Auto/g' $CONF_FILE || exit $?
         fi
 
         for FLAVOR in "${flavorArray[@]}"
@@ -232,7 +232,7 @@ if [[ $RUN == 1 ]]; then
                 echo "============ Running $BIN_PATH configFile=$CONF_FILE for ($FLAVOR) ($TARGET) ============"
             fi
             echo "============ output in ($OUT_FILE) ============"
-            cd $CNTK_ROOT/Demos
+            cd $CNTK_ROOT/Demos/Simple2d/Data
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
