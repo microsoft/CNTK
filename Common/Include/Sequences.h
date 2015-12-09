@@ -270,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is used by MeanNode and InvStdDevNode.
         size_t DetermineActualNumSamples() const
         {
-            size_t n = GetNumTimeSteps() * GetNumParallelSequences();
+            size_t n = GetNumCols();
             if (!IsAllNone())
             {
                 for (size_t t = 0; t < GetNumTimeSteps(); t++)
