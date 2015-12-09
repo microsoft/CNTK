@@ -263,7 +263,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_backDataAlgo.memory > 0)
                 workspace.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, f(filterT), ptr(filter), t(srcGradT), ptr(srcGrad), cd(convDesc), &C::One, t(gradT), ptr(grad)));
+            CUDNN_CALL(cudnnConvolutionBackwardData_v3(m_cudnn, &C::One, f(filterT), ptr(filter), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backDataAlgo.algo,
+                ptr(workspace), m_backDataAlgo.memory, &C::One, t(gradT), ptr(grad)));
         }
 
         void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
@@ -283,7 +284,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_backFiltAlgo.memory > 0)
                 workspace.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), &C::One, f(filterT), ptr(filter)));
+            CUDNN_CALL(cudnnConvolutionBackwardFilter_v3(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backFiltAlgo.algo,
+                ptr(workspace), m_backFiltAlgo.memory, &C::One, f(filterT), ptr(filter)));
         }
 
         void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
