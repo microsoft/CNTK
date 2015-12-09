@@ -298,31 +298,11 @@ public:
             nodeIter->NotifyFunctionValuesMBSizeModified();
     }
 
-    // this coulds the actual number of frames in a minibatch, excluding gaps in parallel sequences
-    // TODO: Move to MBLayout class. Also should not need 'numAllSamples' anymore.
-    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
-        {
-            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
-            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
-
-            size_t numSamplesWithoutLabel = 0;
-
-            for (size_t t = 0; t < numTimeSteps; t++)
-            {
-                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
-                {
-                    for (int id = 0; id < numSequences; id++)
-                    {
-                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                            numSamplesWithoutLabel++;
-                    }
-                }
-            }
-
-            return numTimeSteps*numSequences - numSamplesWithoutLabel;
-        }
+        if (m_pMBLayout)
+            return m_pMBLayout->GetNumSamplesWithLabel();
         else
             return numAllSamples;
     }

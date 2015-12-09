@@ -169,12 +169,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
         // get boundary flags
+    private:
         MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
-        MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
         MinibatchPackingFlags Get(const FrameRange & fr) const;
+    public:
+        // This version is used by the minibatch-decimation function.
+        MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
 
         // test boundary flags for a specific condition
-        // TODO: swap s and t for all of these functions; t is the more important parameter
+        // TODO: Remove the direct-index versions in lieu of FrameRange version.
+        //       Direct-index versions are currently used here:
+        //        - LUSequenceReader.cpp: a sanity check
+        //        - ClassBasedCrossEntropyWithSoftmaxNode (where the correct FrameRange object is already available)
+        //        - RecurrentNode (which will be rewritten after MBLayout can handle tests outside its time range)
         bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
         bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
         // FrameRange version allows to test with time offset
@@ -245,8 +252,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return n;
         }
 
+        // count the number of samples in the minibatch that are not gaps
+        // TODO: We should compute this during building, to avoid having to scan the entire dense matrix.
+        size_t GetNumSamplesWithLabel() const
+        {
+            size_t numTimeSteps = GetNumTimeSteps();
+            size_t numSequences = GetNumParallelSequences();
+
+            size_t numSamplesWithoutLabel = 0;
+            if (!IsAllNone())       // count gaps by scanning the flags
+            {
+                for (size_t t = 0; t < numTimeSteps; t++)
+                {
+                    if (Is(t, MinibatchPackingFlags::NoLabel))
+                    {
+                        for (int id = 0; id < numSequences; id++)
+                        {
+                            if (Is(id, t, MinibatchPackingFlags::NoLabel))
+                                numSamplesWithoutLabel++;
+                        }
+                    }
+                }
+            }
+
+            return numTimeSteps * numSequences - numSamplesWithoutLabel;
+        }
+
         // test function for those pieces of the code that cannot handle gaps
-        // TODO: Not efficient (linear scan). Use a global OR of all values.
+        // TODO: Not efficient (linear scan). Once GetNumSamplesWithLabel() above is efficient (computed during building), we should just leverage that.
         bool HasGaps() const
         {
             if (!IsAllNone())
