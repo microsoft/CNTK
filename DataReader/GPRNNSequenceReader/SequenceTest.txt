@@ -1,0 +1,15 @@
+<s> O
+a m_name
+list m_name
+of m_name
+all m_name
+the movies.post
+movie movies.post
+titles movies.post
+</s> O
+
+<s> O
+a m_name 130:1 145:1 281:1 292:1 299:1 322:1 323:1 330:1 340:1 355:1
+wonderful m_name 30:1 31:1 37:1 78:1 106:1 142:1 150:1 172:1 180:1 208:1 223:1 235:1
+life m_name
+</s> O

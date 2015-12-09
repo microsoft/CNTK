@@ -61,6 +61,10 @@ DataWriter<ElemType>::DataWriter(const ConfigRecordType & config)
     {
         writerType = L"LUSequenceReader";
     }
+    else if (writerType == L"GPRNNSequenceWriter" || writerType == L"GPRNNSequenceReader")
+    {
+        writerType = L"GPRNNSequenceReader";
+    }
     else if (writerType == L"LMSequenceWriter" || writerType == L"LMSequenceReader")
     {
         writerType = L"LMSequenceReader";

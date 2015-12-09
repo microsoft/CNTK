@@ -17,7 +17,6 @@
 #endif
 #include <fstream>
 #include <random>       // std::default_random_engine
-#include <codecvt>
 #include "fileutil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -63,7 +62,6 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     if (!vin.good())
         LogicError("LUSequenceReader cannot open %ls\n", vocfile.c_str());
 
-    vin.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
 
     fprintf(stderr, "read vocabulary from file %ls\n", vocfile.c_str());
 
@@ -103,7 +101,6 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         else
         {
             std::string word(strtmp.begin(), strtmp.end());
-            fprintf(stderr, "read word %s with id %ld\n", word.c_str(), b);
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
