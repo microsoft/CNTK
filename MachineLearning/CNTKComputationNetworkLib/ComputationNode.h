@@ -603,19 +603,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork)
+        static std::list<ComputationNodeBasePtr> EnumerateNodes(const std::vector<ComputationNodeBasePtr> & allRoots, bool skipPairNetwork = false/*legacy*/)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
-            // get forward computation order
-            EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
+            for (const auto & root : allRoots)
+                root->EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
 
             return nodes;
         }
+
+        // and a version that does it for only one root 'this'
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork) /*const*/ { return EnumerateNodes(std::vector<ComputationNodeBasePtr> { shared_from_this() }, skipPairNetwork); }
+
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork)
+        void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork) /*const*/ // const not working due to shared_from_this()
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {

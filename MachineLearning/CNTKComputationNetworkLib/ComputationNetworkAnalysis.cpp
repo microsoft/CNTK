@@ -32,7 +32,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
     // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
-    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
+    // TODO: In the future, this function will not take a rootNode parameter anymore.
+    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode/*or nullptr for all*/)
     {
         list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
 
@@ -116,7 +117,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get set of all nodes in and outside loops hanging off rootNode
             map<int, list<ComputationNodeBasePtr>> recurrentNodes;
             list<ComputationNodeBasePtr> noRecurrentNodes;
-            GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+#if 1       // will soon no longer be allowed
+            if (rootNode)
+                GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            else
+#endif
+            for (const auto & rootNode : m_allRoots)
+                GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
 
             nodes.sort(ComputationNodeBase::ByVisitedOrder);        // sorts by m_visitedOrder
 
@@ -158,8 +165,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "\n");
         }
 
+#if 1
         // now turn this into a nested network, ready for evaluation
-        FormNestedNetwork(rootNode);
+        if (rootNode)       // note: current master branch already has this call removed
+            FormNestedNetwork(rootNode);
+#endif
     }
 
     // get the strongly connected components from the graph
@@ -170,8 +180,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
-        if (!rootNode->m_visited)
-            DetermineSCCsR(rootNode, sccStack, index, loopId);
+#if 1
+        if (rootNode)
+        {
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
+            return;
+        }
+#endif
+        // traverse all root nodes (as if they were all children of a master root)
+        for (auto & rootNode : m_allRoots)
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
     }
 
     // (recursive part of DetermineSCCs())
@@ -211,7 +231,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (cur->m_minIndex == cur->m_index)   // m_minIndex is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
             // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
+#if 1
+            SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size()/*loopId*/, cur);
+            // Note: Don't fix anything here, latest master has changes here already except needs to add 'size_t loopId = m_allSEQNodes.size()'
+#else       // BUGBUG: loopId must be shared across multiple invocations of this from different roots. The above accomplishes this.
             SEQTraversalFlowControlNode rInfo(loopId, cur);
+#endif
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();

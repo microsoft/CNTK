@@ -378,6 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This method sets up all members that are cleared in InvalidateCompiledNetwork();
     // TODO: This should be the only entry point, subsuming all other Validate, Build, etc. functions.
     // TODO: Related functions today do lots of stuff lazily. There are redundant calls. That will all be removed.
+    // TODO: This is in a somewhat partial state in that we now have a global eval order (keyed by a nullptr), but don't use it yet.
     void ComputationNetwork::CompileNetwork()
     {
         fprintf(stderr, "\nPost-processing network...\n");
@@ -394,6 +395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // STEP: Create a depth-first tree-traversal order through original graph for every root.
         // This is used wherever a nested structure is not relevant.
+        FormEvalOrder(nullptr);     // form the global one
         for (auto & node : m_allRoots)
             FormEvalOrder(node);
 
@@ -402,6 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CollectInputAndLearnableParameters(root);
 
         // STEP: Discover nested loops.
+        FormRecurrentLoops(nullptr);        // form the global one
         for (auto & node : m_allRoots)
             FormRecurrentLoops(node);
 
