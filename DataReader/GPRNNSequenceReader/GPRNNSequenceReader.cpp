@@ -588,12 +588,12 @@ namespace Microsoft {
                                 if (previousLn == -1)
                                     mLastProcessedSentenceId = seq + 1;  /// update index for the next retrieval
                                 previousLn = ln;
+                                inbrReader++; // only read enough training samples or to the end of corpus.
                             }
                         }
 
                         if (mToProcess.size() == mRequestedNumParallelSequences)
                             break;
-                        inbrReader++;
                     }
                     else
                     {
