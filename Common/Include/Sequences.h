@@ -142,6 +142,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_writable = true;
         }
     private:
+        // test whether we have not allocated anything (will also return true if the minibatch is empty)
+        bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
         // call this before ever writing anything--this will create the matrix/vector upon first use
         void LazyAlloc() const
         {
@@ -165,9 +167,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // how many columns the MB should be allocated for
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
-    private:
-        // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
+        // information stored about sequences
+        // TODO: to be completed, e.g. a constructor
+        struct SequenceDesc
+        {
+            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
+            size_t s;               // index of parallel sequence
+            ptrdiff_t tBegin;       // may be negative
+            size_t tEnd;            // end = first frame index after final frame; may be beyond the minibatch
+        };
+        const vector<SequenceDesc> & GetAllSequences() const { return m_sequences; }
+
     public:
 
         // compare whether two layouts are the same
@@ -235,14 +245,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlags[t] |= f;
         }
 
-    private:
-        // information stored about sequences
-        struct SequenceDesc
-        {
-            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
-            ptrdiff_t tBegin;       // may be negative
-            size_t tEnd;            // end = first frame index after final frame; may be beyond the minibatch
-        };
     public:
 
         // mark a range of frames in a parallel sequence as one sentence
@@ -263,7 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // remember it
-            m_sequences.push_back(SequenceDesc{ seqId, beginTime, endTime });
+            m_sequences.push_back(SequenceDesc{ seqId, s, beginTime, endTime });
 
             // create all the cached fast-lookup information
             LazyAlloc();
