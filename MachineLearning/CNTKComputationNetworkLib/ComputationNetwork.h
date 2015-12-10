@@ -212,7 +212,10 @@ public:
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
             fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_evalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
+        if (rootNode)
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
+        else
+            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
 
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
