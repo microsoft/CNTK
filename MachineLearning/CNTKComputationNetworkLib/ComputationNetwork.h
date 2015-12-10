@@ -321,6 +321,11 @@ public:
                 }
             }
 
+            size_t n = m_pMBLayout->DetermineActualNumSamples();
+            if (n != numTimeSteps*numSequences - numSamplesWithoutLabel)
+                fprintf(stderr, "WARNING: GetNumSamplesWithLabel mismatch between MBLayout version (%d) and this version (%d) for MB dims %d x %d",
+                (int)n, (int)(numTimeSteps*numSequences - numSamplesWithoutLabel), (int)numTimeSteps, (int)numSequences);
+
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }
         else if (m_pMBLayout && m_pMBLayout->IsAllNone())
