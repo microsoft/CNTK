@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            printf("EVALERR: %.2f%%\n", err);
+            printf("EVALERR: %.7f%%\n", err);
         }
     };
 
