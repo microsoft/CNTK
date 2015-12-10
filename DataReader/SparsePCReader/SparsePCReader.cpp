@@ -82,6 +82,7 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType & readerCon
     m_returnDense = readerConfig(L"returnDense", false);
     m_sparsenessFactor = readerConfig(L"sparsenessFactor", (size_t)50); // We don't expect more than one in 50 input positions to have non-zero values
     m_verificationCode = (int32_t)readerConfig(L"verificationCode", (size_t)0);
+    m_reshapeInputToRowSize = readerConfig(L"reshapeInputToRowSize", (size_t)0);
 
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -230,7 +231,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
             currIndex[i] += nnz;
         }
-        
+
         ElemType label = *(ElemType*)((char*)m_dataBuffer + m_currOffset);
         m_labelsBuffer[j] = label;
         m_currOffset += sizeof(ElemType);
@@ -249,24 +250,31 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }
 
-    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize);
-
     for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
-
         Matrix<ElemType>& features = *matrices[m_featureNames[i]];
-        
+
         if (features.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
             features.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
 
         features.SetMatrixFromCSCFormat(m_colIndices[i], m_rowIndices[i], m_values[i], currIndex[i], m_dims[i], j);
     }
 
+    if (m_reshapeInputToRowSize != 0)
+    {
+        for (int i = 0; i < m_featureCount; i++)
+        {
+            (*matrices[m_featureNames[i]]).Reshape(m_reshapeInputToRowSize, m_dims[i] * j / m_reshapeInputToRowSize);
+        }
+    }
+
     if (m_returnDense || m_doGradientCheck)
     {
-        (*matrices[m_featureNames[0]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-        (*matrices[m_featureNames[1]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+        for (int i = 0; i < m_featureCount; i++)
+        {
+            (*matrices[m_featureNames[i]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+        }
     }
 
     if (labels)
@@ -275,6 +283,8 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         labels->SetValue((ElemType)0);
         labels->SetValue(1, j, labels->GetDeviceId(), m_labelsBuffer, 0);
     }
+
+    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize);
 
     return true;
 }
