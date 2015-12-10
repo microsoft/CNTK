@@ -413,6 +413,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else if (m_targetImageLayout.GetNumChannels() > 0)
                     RuntimeError("At least two image dimensions must be specified.");
+                else
+                    m_targetImageLayout = ImageLayoutWHC(m_numTargetRows, 1, 1);
             }
         }
     };
