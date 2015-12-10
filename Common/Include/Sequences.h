@@ -168,15 +168,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
         // information stored about sequences
-        // TODO: to be completed, e.g. a constructor
-        struct SequenceDesc
+        struct SequenceInfo
         {
             UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
             size_t s;               // index of parallel sequence
-            ptrdiff_t tBegin;       // may be negative
-            size_t tEnd;            // end = first frame index after final frame; may be beyond the minibatch
+            ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
+            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
         };
-        const vector<SequenceDesc> & GetAllSequences() const { return m_sequences; }
+        // return all sequences stored in this minibatch
+        const vector<SequenceInfo> & GetAllSequences() const { return m_sequences; }
 
     public:
 
@@ -251,24 +251,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
         void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
         {
-            CheckWritable();
-            if ((ptrdiff_t)endTime <= beginTime)
-                LogicError("AddSequence: Sequences must be a least one frame long.");
-            if (beginTime >= (ptrdiff_t)m_numTimeSteps)         // no need to test endTime since it is always non-negative (size_t)
-                LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
-
-            if (seqId == MAKE_SEQUENCE_ID)  // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
+            // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
+            if (seqId == MAKE_SEQUENCE_ID)
             {
                 static UniqueSequenceId makeSeqIdCounter = 0;
                 seqId = makeSeqIdCounter++;
                 if (seqId == GAP_SEQUENCE_ID) LogicError("AddSequence: ran out of bits...");    // (will never happen anyway)
             }
 
+            AddSequence(SequenceInfo { seqId, s, beginTime, endTime });
+        }
+
+        // version that passes a SequenceInfo record directly
+        void AddSequence(const SequenceInfo & seqDesc)
+        {
+            const auto beginTime = seqDesc.tBegin;
+            const auto endTime = seqDesc.tEnd;
+
+            CheckWritable();
+            if ((ptrdiff_t)endTime <= beginTime)
+                LogicError("AddSequence: Sequences must be a least one frame long.");
+            if (beginTime >= (ptrdiff_t)m_numTimeSteps)         // no need to test endTime since it is always non-negative (size_t)
+                LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
+
             // remember it
-            m_sequences.push_back(SequenceDesc{ seqId, s, beginTime, endTime });
+            m_sequences.push_back(seqDesc);
 
             // create all the cached fast-lookup information
             LazyAlloc();
+            const auto seqId = seqDesc.seqId;
+            const auto s = seqDesc.s;
             if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
                 Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
             if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
@@ -368,7 +380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numParallelSequences;
 
         // all sequences that live inside this minibatch
-        mutable vector<SequenceDesc> m_sequences;
+        mutable vector<SequenceInfo> m_sequences;
 
         // TODO: rename the following two variables, or even implement it with a very different structure
 
