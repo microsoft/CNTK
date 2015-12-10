@@ -943,7 +943,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // TODO: should frame mode set sequence boundaries outside, e.g. -1..1?
                                 if (m_frameMode)
-                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, 1);    // frame mode: sequence duration is 1
+                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, -1, 2);    // frame mode  --this is a test
+                                    //m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, 1);    // frame mode: sequence duration is 1
                                 else
                                     m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
 

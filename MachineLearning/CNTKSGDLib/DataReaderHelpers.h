@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decide start column and end column 
             size_t st = numParallelSequences * (size_t)rank / numWorker;
             size_t en = numParallelSequences * (size_t)(rank + 1) / numWorker;
-            en = en > numParallelSequences ? numParallelSequences : en;
+            en = en > numParallelSequences ? numParallelSequences : en; // TODO: why are these two tests necessary?
             en = (rank == numWorker - 1) ? numParallelSequences : en;
             size_t numNewParallelSequence = en - st;
 
@@ -136,11 +136,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimate MBLayout as well 
             pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
 #if 1
-            LogicError("DecimateMinibatch: Temporarily disabled until MBLayout rewrite has been completed.");
-            // TODO: iterate over sequences of pMBLayout, readd one-by-one those that are within the sequence range
+            // now copy over all sequence info records that are inside the range, with adjusted 's'
+            const auto & sequences = pMBLayout->GetAllSequences();
+            for (const auto & seq : sequences)
+            {
+                if (seq.s >= st && seq.s < en)
+                {
+                    auto shiftedSeq = seq;
+                    shiftedSeq.s -= st;     // these sequences have shifted up by 'st' sequences
+                    pDecimateMBLayout->AddSequence(shiftedSeq);
+                }
+            }
 #else
-            for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
-                pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
+            for (size_t t = 0; t < nT; t++) for (size_t s = 0; s < numNewParallelSequence; s++)
+                pDecimateMBLayout->Set(s, t, pMBLayout->Get(s + st, t));
 #endif
         }
 
