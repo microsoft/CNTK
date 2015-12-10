@@ -1709,7 +1709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
 			Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
-			inputGradientValues.Print("CTCwithSoftmaxNode Partial-Left-out");
+			//inputGradientValues.Print("CTCwithSoftmaxNode Partial-Left-out");
 #if DUMPOUTPUT
 			inputGradientValues.Print("CTCwithSoftmaxNode Partial-Left-out");
 #endif
@@ -1726,7 +1726,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right-in");
 #endif  
 			Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
-			inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
+			//inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
 
 #if DUMPOUTPUT
 			inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
