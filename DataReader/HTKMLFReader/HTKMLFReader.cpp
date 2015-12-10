@@ -891,8 +891,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             do 
             {
-                if (!m_truncated)       // frame mode or whole utterances
+                if (!m_truncated)
                 {
+                    // -------------------------------------------------------
+                    // frame mode or whole utterances
+                    // -------------------------------------------------------
+
                     m_extraLatticeBufferMultiUtt.clear();
                     m_extraLabelsIDBufferMultiUtt.clear();
                     m_extraPhoneboundaryIDBufferMultiUtt.clear();
@@ -909,6 +913,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // The number of columns is determined by the longest utterance amongst the desired set.
                     // I.e. whatever is user-specified as the MB size, will be ignored here (that value is, however, passed down to the underlying reader).  BUGBUG: That is even more wrong.
                     // BUGBUG: We should honor the mbSize parameter and fill up to the requested number of samples, using the requested #parallel sequences.
+                    // m_mbNumTimeSteps  = max (m_numFramesToProcess[.])
                     m_mbNumTimeSteps = m_numFramesToProcess[0];
                     for (size_t i = 1; i < m_numSeqsPerMB; i++)
                     {
@@ -918,16 +923,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (m_frameMode)
                     {
-                        assert(m_numSeqsPerMB == 1);
-                        m_pMBLayout->Init(m_mbNumTimeSteps, 1);
+                        assert(m_numSeqsPerMB == 1);            // user must not request parallel sequences
+                        m_pMBLayout->Init(m_mbNumTimeSteps, 1); // but we return frames as parallel sequences of length 1
                     }
                     else
                     {
                         m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps);
                     }
 
-                    // create a MB with the desired utterance
-                    // Each utterance become a separate parallel sequence.
+                    // create a MB with the desired utterances
+                    // First fill each parallel sequence with one utterance. No packing yet.
                     skip = (m_frameMode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbNumTimeSteps) && (m_frameSource->totalframes() > m_mbNumTimeSteps));
                     for (size_t i = 0; i < m_numSeqsPerMB; i++)
                     {
@@ -936,7 +941,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_numValidFrames[i] = m_numFramesToProcess[i];
                             if (m_numValidFrames[i] > 0)
                             {
-                                if (!m_frameMode)       // in framemode we leave the flags empty
+                                // TODO: should frame mode set sequence boundaries outside, e.g. -1..1?
+                                if (m_frameMode)
+                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, 1);    // frame mode: sequence duration is 1
+                                else
                                     m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
 
                                 m_extraSeqsPerMB.push_back(i);
@@ -997,18 +1005,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                         }
 
+                        // and declare the remaining gaps to be gaps
                         if (!m_frameMode)
                         {
                             for (size_t i = 0; i < m_numSeqsPerMB; i++)
-                            {
                                 m_pMBLayout->AddGap(i, m_numValidFrames[i], m_mbNumTimeSteps);
-                            }
-
-                            // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
                         }
 
-                        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-                        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+                        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
@@ -1028,49 +1032,61 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                 }
-                else    // m_truncated
+                else    // if m_truncated
                 {
+                    // -------------------------------------------------------
+                    // truncated BPTT
+                    // -------------------------------------------------------
+
                     // In truncated BPTT mode, a minibatch only consists of the truncation length, e.g. 20 frames.
                     // The reader maintains a set of current utterances, and each next minibatch contains the next 20 frames.
                     // When the end of an utterance is reached, the next available utterance is begin in the same slot.
-                    if (m_noData)
+                    if (m_noData)               // we are returning the last utterances for this epoch
                     {
+                        // return false if all cursors for all parallel sequences have reached the end
                         bool endEpoch = true;
                         for (size_t i = 0; i < m_numSeqsPerMB; i++)
                         {
                             if (m_processedFrame[i] != m_numFramesToProcess[i])
                                 endEpoch = false;
                         }
-                        if(endEpoch)
+                        if (endEpoch)
                             return false;
                     }
+
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
+                    // create the feature matrix
                     m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps);
 
                     vector<size_t> actualmbsize(m_numSeqsPerMB,0);
                     for (size_t i = 0; i < m_numSeqsPerMB; i++)
                     {
-                        size_t startFr = m_processedFrame[i];
-                        size_t endFr = 0;
-                        if ((m_processedFrame[i] + m_mbNumTimeSteps) < m_numFramesToProcess[i])
+                        // fill one parallel-sequence slot
+                        const size_t startFr = m_processedFrame[i];             // start frame (cursor) inside the utterance that corresponds to time step [0]
+
+                        // add utterance to MBLayout
+                        assert(m_numFramesToProcess[i] > startFr || (m_noData && m_numFramesToProcess[i] == startFr));
+                        if (m_numFramesToProcess[i] > startFr)                  // in an edge case (m_noData), startFr is at end
+                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, -(ptrdiff_t)startFr, m_numFramesToProcess[i] - startFr);
+
+                        if (startFr + m_mbNumTimeSteps < m_numFramesToProcess[i])   // end of this minibatch does not reach until end of utterance
                         {
-                            if (m_processedFrame[i] > 0)
+                            // we return the next 'm_mbNumTimeSteps' frames, filling all time steps
+                            if (startFr > 0)                                    // not the beginning of the utterance
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbNumTimeSteps+1;
                             }
-                            else
+                            else                                                // beginning of the utterance
                             {
                                 m_sentenceEnd[i] = true;
                                 m_switchFrame[i] = 0;
-                                m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceStart);
                             }
                             actualmbsize[i] = m_mbNumTimeSteps;
-                            endFr = startFr + actualmbsize[i];
-                            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-                            for (iter = matrices.begin();iter!=matrices.end(); iter++)
+                            const size_t endFr = startFr + actualmbsize[i];                  // actual end frame index of this segment
+                            for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
@@ -1096,9 +1112,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
-                                    else
+                                    else        // double: must type-cast, cannot memcpy()
                                     {
-                                        for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
+                                        for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
                                                 m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
@@ -1125,13 +1141,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             m_processedFrame[i] += m_mbNumTimeSteps;
                         }
-                        else
+                        else  // if (startFr + m_mbNumTimeSteps < m_numFramesToProcess[i])   (in this else branch, utterance ends inside this minibatch)
                         {
-                            actualmbsize[i] = m_numFramesToProcess[i] - m_processedFrame[i];
-                            endFr = startFr + actualmbsize[i];
+                            // utterance ends: first copy this segment (later, we will pack more utterances in)
+                            assert(startFr == m_processedFrame[i]);
+                            actualmbsize[i] = m_numFramesToProcess[i] - startFr;    // parallel sequence is used up to this point
+                            const size_t endFr = startFr + actualmbsize[i];         // end frame in sequence
+                            assert(endFr == m_numFramesToProcess[i]);               // we are at the end
 
-                            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-                            for (iter = matrices.begin();iter!=matrices.end(); iter++)
+                            // fill frames for the tail of this utterance
+                            for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
@@ -1159,7 +1178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     }
                                     else
                                     {
-                                        for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
+                                        for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
@@ -1185,22 +1204,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     }
                                 }
                             }
-                            m_processedFrame[i] += (endFr-startFr);
+                            m_processedFrame[i] += (endFr - startFr);               // advance the cursor
+                            assert(m_processedFrame[i] == m_numFramesToProcess[i]); // we must be at the end
                             m_switchFrame[i] = actualmbsize[i];
-                            if (actualmbsize[i] != 0)
-                                m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
+                            //if (actualmbsize[i] != 0)
+                            //    m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
+                            // at this point, we completed an utterance--fill the rest with the next utterance
 
-                            // TODO: We should fill in a loop until we fill the minibatch for the case where just one ReNew is not sufficient
+                            // BUGBUG: We should fill in a loop until we fill the minibatch for the case where just one ReNew is not sufficient
                             // to fill up the remaining slots in the minibatch
                             bool reNewSucc = ReNewBufferForMultiIO(i);
-                            if (actualmbsize[i] < m_mbNumTimeSteps)
+                            if (actualmbsize[i] < m_mbNumTimeSteps)         // we actually have space
                             {
-                                if (reNewSucc)
+                                if (reNewSucc)                              // we actually have another utterance to start here
                                 {
-                                    m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart);
-                                    startFr = m_switchFrame[i];
-                                    endFr = m_mbNumTimeSteps;
-                                    for (iter = matrices.begin(); iter != matrices.end(); iter++)
+                                    const size_t startT = m_switchFrame[i];
+                                    const size_t endT = m_mbNumTimeSteps;
+                                    // Note: Don't confuse startT/endT with startFr/endFr above.
+
+                                    // add sequence to MBLayout
+                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, startT, startT + m_numFramesToProcess[i]);
+
+                                    // copy the data
+                                    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                                     {
                                         // dereference matrix that corresponds to key (input/output name) and 
                                         // populate based on whether its a feature or a label
@@ -1212,18 +1238,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             dim = m_featureNameToDimMap[iter->first];
                                             if (sizeof(ElemType) == sizeof(float))
                                             {
-                                                for (size_t j = startFr, k = 0; j < endFr; j++, k++) // column major, so iterate columns
+                                                for (size_t t = startT, fr = 0; t < endT; t++, fr++) // column major, so iterate columns
                                                 {
                                                     // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns (for SSE alignment)
-                                                    memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                                    memcpy_s(&m_featuresBufferMultiIO[id].get()[(t * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[fr * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                                 }
                                             }
                                             else
                                             {
-                                                for (size_t j = startFr, k = 0; j < endFr; j++, k++) // column major, so iterate columns in outside loop
+                                                for (size_t t = startT, fr = 0; t < endT; t++, fr++) // column major, so iterate columns in outside loop
                                                 {
                                                     for (int d = 0; d < dim; d++)
-                                                        m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                        m_featuresBufferMultiIO[id].get()[(t * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[fr * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                                 }
                                             }
                                         }
@@ -1231,26 +1257,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             id = m_labelNameToIdMap[iter->first];
                                             dim = m_labelNameToDimMap[iter->first];
-                                            for (size_t j = startFr, k = 0; j < endFr; j++, k++)
+                                            for (size_t t = startT, fr = 0; t < endT; t++, fr++)
                                             {
                                                 for (int d = 0; d < dim; d++)
-                                                    m_labelsBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                                    m_labelsBufferMultiIO[id].get()[(t * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[fr * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                             }
                                         }
                                     }
 
-                                    m_processedFrame[i] += (endFr - startFr);
-                                }
-                                else
-                                {
-                                    // Mark gaps with NoInput
-                                    m_pMBLayout->AddGap(i, actualmbsize[i], m_mbNumTimeSteps);
+                                    m_processedFrame[i] += (endT - startT);
 
-                                    // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
+                                    // BUGBUG: since we currently cannot fill >1 utterances, at least let's check
+                                    size_t a = actualmbsize[i] + (endT - startT);
+                                    // actualmbsize[i] += (endT - startT);          // BUGBUG: don't we need something like this?
+                                    if (a < m_mbNumTimeSteps)
+                                    {
+                                        fprintf(stderr, "GetMinibatchToTrainOrTest(): WARNING: Packing a second utterance did still not fill all time slots; filling slots from %d on as gaps.\n", (int)a);
+                                        // declare the rest as a gap
+                                        m_pMBLayout->AddGap(i, a, m_mbNumTimeSteps);
+                                    }
                                 }
-                            }
+                                else    // we did have space for more, but no more data is available. BUGBUG: we should update actualmbsize[i] above and re-test here
+                                {
+                                    // declare the rest as a gap
+                                    m_pMBLayout->AddGap(i, actualmbsize[i], m_mbNumTimeSteps);
+                                }
+                            } // if (actualmbsize[i] < m_mbNumTimeSteps)         // we actually have space
                         }
-                    }
+                    } // for (size_t i = 0; i < m_numSeqsPerMB; i++)
+                    // we are done filling all parallel sequences
+
                     for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
@@ -1270,7 +1306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                     skip = false;
-                }
+                } // if truncated then else
             }
             while(skip); // keep going if we didn't get the right size minibatch
 
@@ -1413,18 +1449,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // dereference matrix that corresponds to key (input/output name) and 
                     // populate based on whether its a feature or a label
 
-                    if (m_nameToTypeMap.find(iter->first)!=m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                    if (m_nameToTypeMap.find(iter->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                     {
-                        Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                        Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
                         size_t id = m_featureNameToIdMap[iter->first];
                         size_t dim = m_featureNameToDimMap[iter->first];
 
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
+
+                        // update the MBLayout
                         if (first)
                         {
                             m_pMBLayout->Init(1, feat.cols());
-                            m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                            m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, 0, 0, feat.cols());  // feat.cols() == number of time steps here since we only have one parallel sequence
+                            //m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                            //m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
                         }
 
@@ -1440,7 +1479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         if (sizeof(ElemType) == sizeof(float))
                         {
-                            for (int j=0; j < feat.cols(); j++) // column major, so iterate columns
+                            for (int j = 0; j < feat.cols(); j++) // column major, so iterate columns
                             {
                                 // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
                                 memcpy_s(&m_featuresBufferMultiIO[id].get()[j * feat.rows()], sizeof(ElemType) * feat.rows(), &feat(0, j), sizeof(ElemType) * feat.rows());
@@ -1448,7 +1487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                         else
                         {
-                            for (int j=0; j < feat.cols(); j++) // column major, so iterate columns in outside loop
+                            for (int j = 0; j < feat.cols(); j++) // column major, so iterate columns in outside loop
                             {
                                 for (int i = 0; i < feat.rows(); i++)
                                 {

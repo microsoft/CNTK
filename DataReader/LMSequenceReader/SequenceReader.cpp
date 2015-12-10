@@ -1153,12 +1153,13 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         return false; 
 
     // figure which sweep of the randomization we are on
-    size_t recordStart = m_totalSamples?m_mbStartSample%m_totalSamples:m_mbStartSample;
+    size_t recordStart = m_totalSamples ? (m_mbStartSample % m_totalSamples) : m_mbStartSample;
 
     // actual size is the size of the next seqence
     size_t actualmbsize = 0;
 
     // figure out the size of the next sequence
+    // All sequences are concatenated into one long vector; length is computed as the difference of two consecutive start indices.
     if (m_seqIndex > 0 && m_seqIndex < m_sequence.size() && m_sequence.size() > 1)
     {
         actualmbsize = m_sequence[m_seqIndex] - m_sequence[m_seqIndex-1];   
@@ -1195,10 +1196,9 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
     if (actualmbsize > 0)
     {
-
         memset(m_featuresBuffer, 0, sizeof(ElemType)*actualmbsize*labelInfo.dim);
 
-        //loop through all the samples
+        // loop through all the samples
         int j = 0;
         Matrix<ElemType>& features = *matrices[m_featuresName];
         if (matrices.find(m_featuresName) != matrices.end())
@@ -1218,8 +1218,8 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired
-            size_t jRand = jSample;
-         
+            const size_t jRand = jSample;     // TODO: This seems unfinished.
+
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[jRand];
             m_featuresBuffer[j*labelInfo.dim + idx] = (ElemType)1; 
@@ -1831,6 +1831,7 @@ template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
+    // TODO: Why not fail here?
     if (m_mbSize == 0)
         return false;
 
@@ -1844,7 +1845,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     size_t actualmbsize = 0;
 
     // figure out the size of the next sequence
-    actualmbsize = m_labelIdData.size() ; 
+    actualmbsize = m_labelIdData.size();
     if (actualmbsize > m_mbSize * mToProcess.size())
         RuntimeError("Specified minibatch size %d is smaller than the actual minibatch size %d.", (int)m_mbSize, (int)actualmbsize);
 
@@ -1853,10 +1854,9 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     if (actualmbsize > 0)
     {
-
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
-      
+
         // copy m_featureData to matrix
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
@@ -1875,21 +1875,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.Reset();
         }
 
-        size_t timeIdx = 0;
-        for (size_t j = 0; j < actualmbsize; ++j)
+        for (size_t j = 0; j < actualmbsize; ++j)   // note: this is a loop over matrix columns, not time steps or parallel sequences
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[j];
 
             /// actual time position
-            timeIdx = (size_t)j / mToProcess.size();
-            size_t uttIdx = (size_t)fmod(j, mToProcess.size());
+            size_t timeIdx = (size_t)j / mToProcess.size();
+            size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
 
             features.SetValue(idx, j, (ElemType)1);
-            SetSentenceBegin(idx, uttIdx, timeIdx);
 
+            SetSentenceBegin(idx, uttIdx, timeIdx);
         }
-        
+
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
@@ -1907,7 +1906,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         return false; 
 
     // now transfer to the GPU as needed
-    try{
+    try
+    {
         // get the features array
         if (matrices.find(m_featuresName) == matrices.end())
         {
@@ -1953,6 +1953,7 @@ void BatchSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actualM
 timePos: the time position. for example, 100 actual minibatch with 10 streams,
 timePosition = [0,..,9] for each actual tiem
 */
+// This function was only called from BatchSequenceReader::GetMinibatch(), but no longer.
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int timePos)
 {
@@ -1965,7 +1966,10 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            m_pMBLayout->SetWithoutOr(uttPos, timePos, MinibatchPackingFlags::SequenceStart);   // TODO: can we use Set() (with OR)?
+            // BUGBUG: This is currently not functional. Nothing in here marks gaps, nor sets any end flags.
+            uttPos;
+            LogicError("BatchSequenceReader::SetSentenceBegin(): Disabled because this implementation seems out of date w.r.t. setting end and gap flags.");
+            //m_pMBLayout->SetWithoutOr(uttPos, timePos, MinibatchPackingFlags::SequenceStart);   // TODO: can we use Set() (with OR)?
         }
     }
 }
