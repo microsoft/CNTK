@@ -1061,36 +1061,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // progress tracing for compute cluster management
                     double mbProg = 0.0;
+                    int mbProgNumPrecision = 2;
                     if (m_maxComputedEpochSize != 0)
                     {
                         mbProg = (double)numMBsRun / ((double)m_maxComputedEpochSize / (double)tunedMBSize);
-                    }                    
+                        mbProgNumPrecision = (int)ceil(log10((double)m_maxComputedEpochSize / (double)m_numMBsToShowResult));
+                        mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
+                    }
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
 
                     // progress tracing for regular log
-#if 1
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2.4f%%]: SamplesSeen = %d; TrainLossPerSample = " +
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2." + std::to_string(mbProgNumPrecision) + "f%%]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                    SGDTrace(stderr, formatString.c_str(),
-                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                             numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
-#endif
                 }
                 else
                 {
-#if 1
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#endif
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, numSamplesLastMBs, trainLossPerSample);
@@ -1105,17 +1095,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
-#if 1
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
                 SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
-#else
-                double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
-                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
-                                      GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
-                SGDTrace(stderr, formatString.c_str(),
-                         totalTimeInMBs, totalTimePerSample,
-                         (int)(numSamplesLastMBs / totalTimeInMBs));
-#endif
 
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
@@ -1153,7 +1134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(EndDataType::endDataSentence);
 
-            // Attemps to compute the error signal for the whole utterance, which will
+            // Attempts to compute the error signal for the whole utterance, which will
             // be fed to the neural network as features. Currently it is a workaround
             // for the two-forward-pass sequence and ctc training, which allows
             // processing more utterances at the same time. Only used in Kaldi2Reader.
