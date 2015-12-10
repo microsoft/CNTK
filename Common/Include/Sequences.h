@@ -626,6 +626,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
     }
 
+    // only called from MaskMissingColumnsTo()
+    // TODO: can this be changed to get a reference to the whole matrix, to which one would then apply DataWithMBLayoutFor()?
+    //       And assume that this is called only if !IsAllNone() and no gaps (we will have a flag for that, too), tested outside (otherwise we'd waste time creating a trivial matrix).
+    //       Then we don't need all the logic to return a nullptr here.
     inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const
     {
         // lazily compute the validity mask
@@ -823,7 +827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
-        if (pMBLayout && !pMBLayout->IsAllNone())   // TODO: This should check whether there are any gaps.
+        if (pMBLayout && !pMBLayout->IsAllNone())   // TODO: This should check whether there are any gaps in 'fr'. Add a method to MBLayout.
         {
             size_t nT = pMBLayout->GetNumTimeSteps();
             size_t nS = pMBLayout->GetNumParallelSequences();
@@ -831,6 +835,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (matrixToBeMasked.GetNumCols() != nT * nS)
                 LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
+            // TODO: Here we should just get a reference to the whole mask, then apply DataWithMBLayoutFor() to it.
+            //       This will make it consistent with future nested looping etc.
             shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(fr, matrixToBeMasked.GetDeviceId());
             if (columnsValidityMask != nullptr)
             {
