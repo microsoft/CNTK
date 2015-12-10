@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
-        virtual void Save(File& fstream) const override
+        void Save(File& fstream) const override
         {
             Base::Save(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
         }
 
-        virtual void Load(File& fstream, size_t modelVersion) override
+        void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
@@ -104,12 +104,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
-
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Inputs(1)->GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
@@ -117,13 +115,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_convEng != nullptr);
             if (inputIndex == 0)  //derivative with respect to the weight matrix
             {
-                Matrix<ElemType>& grad = Inputs(0)->GradientValues();
-                m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, frameRange.IsAllFrames(), *m_tempMatrix);
+                Matrix<ElemType>& grad = Input(0)->Gradient();
+                m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
             }
             else if (inputIndex == 1)  // derivative with respect to the input feature
             {
-                const Matrix<ElemType>& input0 = Inputs(0)->FunctionValues();
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                const Matrix<ElemType>& input0 = Input(0)->Value();
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
             }
         }
@@ -135,14 +133,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-    public:
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        void ForwardProp(const FrameRange & fr) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            const Matrix<ElemType>& input0 = Input(0)->Value();
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            const Matrix<ElemType>& input0 = Inputs(0)->FunctionValues();
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
@@ -211,15 +207,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const int kernelWidthCenter = m_kernelWidth % 2;
                 const int kernelHeightCenter = m_kernelHeight % 2;
-                m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
-                                                     (m_inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
-                                                     m_sampleLayout.GetNumChannels());
+                m_sampleLayout = ImageLayoutWHC(
+                    (m_inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+                    (m_inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
+                    m_sampleLayout.GetNumChannels());
             }
             else
             {
-                m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
-                                                     (m_inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
-                                                     m_sampleLayout.GetNumChannels());
+                m_sampleLayout = ImageLayoutWHC(
+                    (m_inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
+                    (m_inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
+                    m_sampleLayout.GetNumChannels());
             }    
 
             // REVIEW alexeyk: is there a better place to create engines?
@@ -228,16 +226,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = m_factory->CreateConvEngine(m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputImageLayout.GetNumChannels(), 1);
+                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
             if (m_filterT == nullptr)
-                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputImageLayout.GetNumChannels(), m_imageLayout.GetNumChannels());
+                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputSampleLayout.GetNumChannels(), m_sampleLayout.GetNumChannels());
             if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(), 1);
+                m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
             if (m_convDesc == nullptr)
                 m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
             // REVIEW alexeyk: create per-channel (shared) bias. Consider adding other types of biases.
             if (m_biasT == nullptr)
-                m_biasT = m_factory->CreateTensor(1, 1, m_imageLayout.GetNumChannels(), 1);
+                m_biasT = m_factory->CreateTensor(1, 1, m_sampleLayout.GetNumChannels(), 1);
         }
 
         void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -261,14 +259,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+        void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
         {
             Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_tempMatrix, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+        void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
         {
             Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_tempMatrix, matrixPool);
@@ -326,19 +324,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
-        virtual void Save(File& fstream) const override
+        void Save(File& fstream) const override
         {
             Base::Save(fstream);
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
-        virtual void Load(File& fstream, size_t modelVersion) override
+        void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         }
 
-        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -356,7 +354,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
+        void BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
@@ -372,11 +370,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_poolEng->Backward(*m_outT, sliceOutputValue, sliceOutputGrad, *m_poolDesc, *m_inT, sliceInput0Value, sliceInput0Grad);
         }
 
-        virtual void EvaluateThisNode(const FrameRange & frameRange) override
+        void ForwardProp(const FrameRange & fr) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
@@ -386,7 +383,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_poolEng->Forward(*m_inT, sliceInput0Value, *m_poolDesc, *m_outT, sliceOutputValue);
         }
 
-        virtual void Validate(bool isFinalValidationPass) override
+        void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
@@ -408,16 +405,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(m_outputSizePerSample, Input(0)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs() override
+        void InferImageDimsFromInputs() override
         {
             InferImageDimsFromInput(0, false);
 
             if (m_inputSampleLayout.GetWidth() < m_windowWidth || m_inputSampleLayout.GetHeight() < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
-            m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
-                                                 (m_inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample   + 1,
-                                                 m_inputSampleLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(
+                (m_inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
+                (m_inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample + 1,
+                m_inputSampleLayout.GetNumChannels());
 
             // REVIEW alexeyk: is there a better place to create engines?
             if (m_factory == nullptr)
@@ -425,12 +423,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_poolEng == nullptr)
                 m_poolEng = m_factory->CreatePoolEngine();
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputImageLayout.GetNumChannels(), 1);
+                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
             if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(), 1);
+                m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+        void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -562,9 +560,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
-        void SaveToFile(File& fstream) const override
+        void Save(File& fstream) const override
         {
-            Base::SaveToFile(fstream);
+            Base::Save(fstream);
             fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
 
             fstream << m_eval;
@@ -572,9 +570,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_expAvgFactor;
         }
 
-        void LoadFromFile(File& fstream, size_t modelVersion) override
+        void Load(File& fstream, size_t modelVersion) override
         {
-            Base::LoadFromFile(fstream, modelVersion);
+            Base::Load(fstream, modelVersion);
 
             // Read and check version.
             // REVIEW alexeyk: extract version checking so it can be re-used in other places.
@@ -608,23 +606,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             if (m_eval)
                 LogicError("BatchNormalization does not compute derivatives in inference mode.");
 
             if (inputIndex == 0) // derivative with respect to the input.
             {
-                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Inputs(0)->GetNumParallelSequences(), m_pMBLayout));
-                const Matrix<ElemType>& scale = Inputs(1)->FunctionValues();
-                const Matrix<ElemType>& bias = Inputs(2)->FunctionValues();
+                Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+                Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& scale = Input(1)->Value();
+                const Matrix<ElemType>& bias = Input(2)->Value();
 
                 size_t batchSize = m_pMBLayout->GetNumParallelSequences();
                 m_inT->setN(batchSize);
                 assert(m_convEng != nullptr);
 
-                Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
                 m_dScale->Resize(scale.GetNumRows(), scale.GetNumCols());
                 m_dBias->Resize(bias.GetNumRows(), bias.GetNumCols());
                 // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
@@ -634,26 +632,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1) // derivative with respect to the scale
             {
                 // Derivative with respect to the scale was precomputed during input derivative computation.
-                Matrix<ElemType>& grad = Inputs(1)->GradientValues();
+                Matrix<ElemType>& grad = Input(1)->Gradient();
                 grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->BufferPointer());
             }
             else if (inputIndex == 2) // derivative with respect to the bias
             {
                 // Derivative with respect to the bias was precomputed during input derivative computation.
-                Matrix<ElemType>& grad = Inputs(2)->GradientValues();
+                Matrix<ElemType>& grad = Input(2)->Gradient();
                 grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
             }
             // No derivatives with respect to running mean and InvStdDev.
         }
 
-        void EvaluateThisNode(const FrameRange & frameRange) override
+        void ForwardProp(const FrameRange & fr) override
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            const Matrix<ElemType>& scale = Inputs(1)->FunctionValues();
-            const Matrix<ElemType>& bias = Inputs(2)->FunctionValues();
-            Matrix<ElemType>& runMean = Inputs(3)->FunctionValues();
-            Matrix<ElemType>& runInvStdDev = Inputs(4)->FunctionValues();
+            const Matrix<ElemType>& scale = Input(1)->Value();
+            const Matrix<ElemType>& bias = Input(2)->Value();
+            Matrix<ElemType>& runMean = Input(3)->Value();
+            Matrix<ElemType>& runInvStdDev = Input(4)->Value();
             assert(scale.GetNumRows() == bias.GetNumRows());
             assert(scale.GetNumCols() == bias.GetNumCols());
             assert(runMean.GetNumRows() == scale.GetNumRows());
@@ -661,7 +659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
             assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
 
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
@@ -688,7 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            SetDims(m_imageLayout.GetWidth() * m_imageLayout.GetHeight() * m_imageLayout.GetNumChannels(), Inputs(0)->GetNumCols());
+            SetDims(m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels(), Input(0)->GetNumCols());
         }
 
         void InferImageDimsFromInputs() override
@@ -700,19 +698,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = m_factory->CreateConvEngine(0);
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(), 1);
+                m_inT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
             if (m_scaleBiasT == nullptr)
             {
                 if (m_spatial)
-                    m_scaleBiasT = m_factory->CreateTensor(1, 1, m_imageLayout.GetNumChannels(), 1);
+                    m_scaleBiasT = m_factory->CreateTensor(1, 1, m_sampleLayout.GetNumChannels(), 1);
                 else
-                    m_scaleBiasT = m_factory->CreateTensor(m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(), 1);
+                    m_scaleBiasT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
             }
         }
 
-        void RequestMatricesBeforeEval(MatrixPool& matrixPool) override
+        void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
         {
-            Base::RequestMatricesBeforeEval(matrixPool);
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
             if (!m_eval)
             {
                 RequestMatrixFromPool(m_saveMean, matrixPool);
@@ -720,9 +718,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) override
+        void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
         {
-            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            Base::RequestMatricesBeforeBackprop(matrixPool);
             if (!m_eval)
             {
                 RequestMatrixFromPool(m_dScale, matrixPool);
@@ -730,9 +728,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) override
+        void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
         {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
             if (!m_eval)
             {
                 ReleaseMatrixToPool(m_saveMean, matrixPool);

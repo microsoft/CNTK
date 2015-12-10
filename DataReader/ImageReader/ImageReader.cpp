@@ -451,7 +451,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     Matrix<ElemType>& labels = *matrices[m_labName];
     labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf[m_idxBuf].data(), matrixFlagNormal);
 
-    m_pMBLayout->Init(mbSize, 1, false);
+    m_pMBLayout->Init(mbSize, 1);
 
     m_mbStart += mbSize;
     m_idxBuf ^= 1;
@@ -507,7 +507,7 @@ size_t ImageReader<ElemType>::ReadImages()
         const auto& p = m_files[i + m_mbStart];
         cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
         if (!img.data)
-            RuntimeError("Cannot read image file " + p.first);
+            RuntimeError("Cannot read image file %s", p.first);
         for (auto& t: m_transforms)
             t->Apply(img);
        
