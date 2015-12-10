@@ -428,6 +428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // node construction
     // -----------------------------------------------------------------------
 
+#if 0   // This function is not used. Is there value to keep it?
     ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
     {
         ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
@@ -457,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return pNode;
     }
-
+#endif
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there

@@ -128,15 +128,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
         void Init(size_t numParallelSequences, size_t numTimeSteps)
         {
-            // remember the dimensions..
+            // remember the dimensions...
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
             // ...but don't actually allocate anything
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
+            m_distanceToNearestStart.clear();
+            m_distanceToNearestEnd.clear();
             m_sequences.clear();
             m_writable = true;
         }
+    private:
+        // call this before ever writing anything--this will create the matrix/vector upon first use
+        void LazyAlloc() const
+        {
+            if (!IsEmpty() || m_numTimeSteps == 0)
+                return;
+            // this is where the actual allocation happens
+            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX); // PTRDIFF_MAX indicates not initialized
+            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
+        }
+    public:
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
         size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
@@ -147,16 +163,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         // test whether we have not allocated anything (will also return true if the minibatch is empty)
         bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
-        // call this before ever writing anything--this will create the matrix/vector upon first use
-        void LazyAlloc() const
-        {
-            if (!IsEmpty() || m_numTimeSteps == 0)
-                return;
-            // this is where the actual allocation happens
-            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-        }
     public:
 
         // compare whether two layouts are the same
@@ -204,8 +210,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
                 return;
-            //if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
-            //    LogicError("MBLayout::Set: attempted to set SequenceStart or -End in a layout with !m_dataIsSequential");
             LazyAlloc();
             m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
             m_minibatchPackingFlags[t] |= f;
@@ -225,6 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
         void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
         {
+            CheckWritable();
             if ((ptrdiff_t)endTime <= beginTime)
                 LogicError("AddSequence: Sequences must be a least one frame long.");
             if (beginTime >= (ptrdiff_t)m_numTimeSteps)         // no need to test endTime since it is always non-negative (size_t)
@@ -241,6 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sequences.push_back(SequenceDesc{ seqId, beginTime, endTime });
 
             // create all the cached fast-lookup information
+            LazyAlloc();
             if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
                 Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
             if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
@@ -250,16 +256,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (seqId == GAP_SEQUENCE_ID)
             {
                 for (size_t t = b; t < e; t++)
+                {
                     Set(s, t, MinibatchPackingFlags::NoInput);
+                    m_distanceToNearestStart[t] = -1;    // we have at least one gap in this frame
+                    m_distanceToNearestEnd[t]   = -1;
+                }
             }
-#ifdef _DEBUG
             else for (size_t t = b; t < e; t++)
             {
+                // update the nearest sentence boundaries, minimum over all parallel sequences
+                // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
+                // -1 stands for at least one gap at this time step.
+                ptrdiff_t distanceToStart = t - beginTime;
+                if (m_distanceToNearestStart[t] > distanceToStart)
+                    m_distanceToNearestStart[t] = distanceToStart;
+                ptrdiff_t distanceToEnd = endTime-1 - t;
+                if (m_distanceToNearestEnd[t] > distanceToEnd)
+                    m_distanceToNearestEnd[t] = distanceToEnd;
                 assert(!Is(s, t, MinibatchPackingFlags::NoInput));
                 assert(t == (size_t)beginTime || !Is(s, t, MinibatchPackingFlags::SequenceStart));
                 assert(t == endTime - 1 || !Is(s, t, MinibatchPackingFlags::SequenceEnd));
             }
-#endif
         }
 
         // mark a range of frames in a parallel sequence as invalid
@@ -338,8 +355,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // a short-hand vector or-ing the above flags over all parallel sequences
         mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
 
-        // a short-hand for determining whether any sequence at time t is a boundary or gap, which means that sequences have to be n
-        // xxx
+        // a short-hand for determining whether any sequence at time t is a boundary or gap
+        // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
+        mutable vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;
 
         // A boolean flag indicating whether the MBLayout can be further modified
         // When it's value is false, no set operations are allowed on the MBLayout

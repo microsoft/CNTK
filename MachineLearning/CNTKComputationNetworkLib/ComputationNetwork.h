@@ -299,51 +299,20 @@ public:
     }
 
     // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
+    // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-#if 1
-        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
-        {
-            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
-            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
-
-            size_t numSamplesWithoutLabel = 0;
-
-            for (size_t t = 0; t < numTimeSteps; t++)
-            {
-                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
-                {
-                    for (int id = 0; id < numSequences; id++)
-                    {
-                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                            numSamplesWithoutLabel++;
-                    }
-                }
-            }
-
-            size_t n = m_pMBLayout->DetermineActualNumSamples();
-            if (n != numTimeSteps*numSequences - numSamplesWithoutLabel)
-                fprintf(stderr, "WARNING: GetNumSamplesWithLabel mismatch between MBLayout version (%d) and this version (%d) for MB dims %d x %d",
-                (int)n, (int)(numTimeSteps*numSequences - numSamplesWithoutLabel), (int)numTimeSteps, (int)numSequences);
-
-            return numTimeSteps*numSequences - numSamplesWithoutLabel;
-        }
-        else if (m_pMBLayout && m_pMBLayout->IsAllNone())
-        {
-            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
-            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
-            size_t n = m_pMBLayout->DetermineActualNumSamples();
-            if (n != numAllSamples)
-                fprintf(stderr, "WARNING: GetNumSamplesWithLabel mismatch between MBLayout version (%d) and numAllSamples (%d) for MB dims %d x %d",
-                (int)n, (int)numAllSamples, (int)numTimeSteps, (int)numSequences);
+#if 1   // BUGBUG: This is a workaround for a bug in SGD where this function is called after GetMinibatchIntoNetwork()
+        //         returned false. In that case, its return values, including the MBLayout, are invalid, and what we'd get from
+        //         it differs from allNumSamples (which is 0).
+        if (m_pMBLayout && m_pMBLayout->IsAllNone())
             return numAllSamples;
-        }
-#else
+        else
+#endif
         if (m_pMBLayout)
             return m_pMBLayout->DetermineActualNumSamples();
-#endif
         else
-            return numAllSamples;
+            return numAllSamples;   // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }
 
     // -----------------------------------------------------------------------
@@ -369,9 +338,6 @@ public:
     {
         return AsNodePtr<N>(inode) != nullptr;
     }
-
-    // TODO: comment what this function does. Seems to either initialize LearnableParameters or precompute nodes.
-    ComputationNodeBasePtr SetNodeValue(const std::wstring & nodeName, const double value);
 
     // -----------------------------------------------------------------------
     // network editing
