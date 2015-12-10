@@ -136,6 +136,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlags.clear();
             m_distanceToNearestStart.clear();
             m_distanceToNearestEnd.clear();
+            m_distanceToStart.Resize(0, 0);
+            m_distanceToEnd.Resize(0, 0);
             m_sequences.clear();
             m_writable = true;
         }
@@ -149,7 +151,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
             m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
             m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX); // PTRDIFF_MAX indicates not initialized
+            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
+            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
+            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
             m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
         }
     public:
@@ -258,6 +263,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t t = b; t < e; t++)
                 {
                     Set(s, t, MinibatchPackingFlags::NoInput);
+                    m_distanceToStart(s, t) = -1;        // gap
+                    m_distanceToEnd(s, t)   = -1;
                     m_distanceToNearestStart[t] = -1;    // we have at least one gap in this frame
                     m_distanceToNearestEnd[t]   = -1;
                 }
@@ -268,9 +275,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
                 // -1 stands for at least one gap at this time step.
                 ptrdiff_t distanceToStart = t - beginTime;
+                if (m_distanceToStart(s, t) > (float)distanceToStart)
+                    m_distanceToStart(s, t) = (float)distanceToStart;
                 if (m_distanceToNearestStart[t] > distanceToStart)
                     m_distanceToNearestStart[t] = distanceToStart;
-                ptrdiff_t distanceToEnd = endTime-1 - t;
+                ptrdiff_t distanceToEnd = endTime - 1 - t;
+                if (m_distanceToEnd(s, t) > (float) distanceToEnd)
+                    m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
                 assert(!Is(s, t, MinibatchPackingFlags::NoInput));
@@ -349,7 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //   S . . . E
         //   S . E G G          // (last two time steps have no content)
         // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
-        mutable Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
+        mutable Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
         // TODO: we should change to a Matrix<char>.
 
         // a short-hand vector or-ing the above flags over all parallel sequences
@@ -357,7 +368,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // a short-hand for determining whether any sequence at time t is a boundary or gap
         // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
-        mutable vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;
+        // PTRDIFF_MAX stands for 'not initialized'.
+        // TODO: We need a guard against callers not calling AddGaps() for all frames. That will leave m_distanceToNearestStart in a bad state. May need a separate gaps flag.
+        mutable vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;     // [t]
+        mutable Matrix<float> m_distanceToStart, m_distanceToEnd;                       // (s,t)
 
         // A boolean flag indicating whether the MBLayout can be further modified
         // When it's value is false, no set operations are allowed on the MBLayout
