@@ -287,7 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
-                if (weStack() || factor() == 1)
+                if (weStack())
                 {
                     // going from many samples to one: layout entry will get no flags
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
@@ -360,6 +360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool weStack() const { return m_numTargetRows > Input(0)->GetNumRows(); }        // do we stack (multiple frames into one)
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
+
 
         void InferImageDimensions()
         {
