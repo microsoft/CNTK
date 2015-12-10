@@ -33,7 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
     // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
-    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
+    // TODO: In the future, this function will not take a rootNode parameter anymore.
+    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode/*or nullptr for all*/)
     {
         // get the depth-first traversal order
         // Note: This is only used for resetting the state and resetting m_visitedOrder. I think we only need the set, not the order.
@@ -117,7 +118,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get set of all nodes in and outside loops hanging off rootNode
             map<int, list<ComputationNodeBasePtr>> recurrentNodes;
             list<ComputationNodeBasePtr> noRecurrentNodes;
-            GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+#if 1       // will soon no longer be allowed
+            if (rootNode)
+                GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            else
+#endif
+            {
+                for (const auto & rootNode : m_allRoots)
+                    GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            }
 
             auto reorderedNodes = nodes;
 
@@ -136,6 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 #endif
         }
+        
 
         // log the loops
         for (auto & iter : m_allSEQNodes)
@@ -150,10 +160,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             fprintf(stderr, "\n");
         }
+
+#if 1
+        // now turn this into a nested network, ready for evaluation
+        if (rootNode)
+            FormNestedNetwork(rootNode);
+#endif
     }
 
     static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes);
-
     // get the strongly connected components from the graph
     // This sets index, lowLink, m_visited, and m_inStack.
     void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
@@ -162,20 +177,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;  // BUGBUG: I think this is currently buggy in an edge case, and not needed (use m_allSEQNodes.size() instead).
-        if (!rootNode->m_visited)
-            DetermineSCCsR(rootNode, sccStack, index, loopId);
+#if 1
+        if (rootNode)
+        {
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
+            return;
+        }
+#endif
+        // traverse all root nodes (as if they were all children of a master root)
+        for (auto & rootNode : m_allRoots)
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
     }
 
     // (recursive part of DetermineSCCs())
     void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
-                                                    list<ComputationNodeBasePtr>& sccStack,
-                                                    size_t& index, size_t& loopId)
+                                            list<ComputationNodeBasePtr>& sccStack,
+                                            size_t& index, size_t& loopId)
     {
         assert(!cur->m_visited);
 
         // set the index (in order of visitation)
         cur->m_index = index;       // TODO: can this be used as m_visitedOrder?
-        cur->m_minIndex = index;    // also set m_minIndex
+        cur->m_minIndex = index; // also set m_minIndex
         index++;
 
         cur->m_visited = true;
@@ -204,6 +229,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // gather the list of all nodes in this loop
             vector<ComputationNodeBasePtr> nestedNodes;
+            // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
+#if 1
+            SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size()/*loopId*/, cur);
+            // Note: Don't fix anything here, latest master has changes here already except needs to add 'size_t loopId = m_allSEQNodes.size()'
+#else       // BUGBUG: loopId must be shared across multiple invocations of this from different roots. The above accomplishes this.
+            SEQTraversalFlowControlNode rInfo(loopId, cur);
+#endif
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
@@ -348,25 +380,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Move this up to where it is used (in a separate commit since git cannot track moving and changing at the same time).
     static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes)
     {
-        bool hasPastValueNode = false;
-        bool hasFutureValueNode = false;
+
+            bool hasPastValueNode = false;
+            bool hasFutureValueNode = false;
 
         for (auto & node : nestedNodes)
-        {
-            if (node->OperationName() == OperationNameOf(PastValueNode))
-                hasPastValueNode = true;
-            else if (node->OperationName() == OperationNameOf(FutureValueNode))
-                hasFutureValueNode = true;
-        }
+            {
+                if (node->OperationName() == OperationNameOf(PastValueNode))
+                    hasPastValueNode = true;
+                else if (node->OperationName() == OperationNameOf(FutureValueNode))
+                    hasFutureValueNode = true;
+            }
 
-        if (hasPastValueNode && !hasFutureValueNode)
+            if (hasPastValueNode && !hasFutureValueNode)
             return +1;
-        else if (hasFutureValueNode && !hasPastValueNode)
+            else if (hasFutureValueNode && !hasPastValueNode)
             return -1;
-        else if (hasPastValueNode && hasFutureValueNode)
-            InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
-        else
-            LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
+            else if (hasPastValueNode && hasFutureValueNode)
+                InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
+            else
+                LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
     }
 
 }}}

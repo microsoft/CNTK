@@ -211,7 +211,10 @@ public:
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
             fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        if (rootNode)
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        else
+            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
 
     // replace an existing eval order with an updated one
@@ -338,6 +341,7 @@ public:
     {
         return AsNodePtr<N>(inode) != nullptr;
     }
+
 
     // -----------------------------------------------------------------------
     // network editing
