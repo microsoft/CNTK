@@ -175,13 +175,32 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        pMBLayout->Init(1, m_mbSize);   // TODO: not sure if this is always sequential
+        pMBLayout->Init(1, m_mbSize);
 
-        if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
+        // BUGBUG: The following code is somewhat broken in that the structure of this module only keeps track of new sentence starts,
+        //         but not of ends. But end markers are now required by the MBLayout. So we must fake the end markers.
+        //         That will fail if the previous sentence end fell on the boundary; then we will miss the end flag.
+        //         This still works for a left-to-right model since for eval we only really look at the start flag.
+        //         So we get lucky, sort of. Not nice.
+        //         The correct solution is to rewrite this entire module to be more direct; no Reader needed, we can call ForwardProp() directly.
+        // BUGBUG: The module also does not keep track of the actual start in the past. So we fake the start, too.
+        //         There are boundary cases where this will be incorrect for models with a delay of >1 step.
+        if (m_switchFrame[0] < m_mbSize)    /* there is a switch frame within the minibatch */
         {
-            pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
-            if (m_switchFrame[0] > 0)
-                pMBLayout->SetWithoutOr(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
+            // finish the current sequence
+            if (m_switchFrame[0] > 0)       // BUGBUG: gonna miss the previous end flag if starting on frame [0], see above.
+                pMBLayout->AddSequence(0, 0, -1, m_switchFrame[0] - 1);
+            // start the new sequence
+            // We use a fake end of 1 frame beyond the actual end of the minibatch.
+            pMBLayout->AddSequence(0, 0, m_switchFrame[0], m_mbSize + 1);
+            //pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
+            //if (m_switchFrame[0] > 0)
+            //    pMBLayout->Set(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
+        }
+        else                                // all frames in this MB belong to the same utterance
+        {
+            // no boundary inide the MB: fake a sequence that spans 1 frame on each side.  BUGBUG: That's wrong for delays of > 1 step, see above.
+            pMBLayout->AddSequence(0, 0, -1, m_mbSize + 1); // BUGBUG: gonna miss the end flag if it ends at end of this MB, see above
         }
     }
 

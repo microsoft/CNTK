@@ -206,9 +206,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
         // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
         // This is currently the case for frame randomization.
+        // BUGBUG: With the AddSequence() change, this can never be true. Need to check the performance impact, or implement it differently.
+        //         Should frame mode set boundaries at [-1, 2)? And keep AllNone if no flags set INSIDE the minibatch?
         bool IsAllNone() const { return IsEmpty(); }
-
+    private:
+        // TODO: Set() should be private. Instead, use AddSequence().
+        // Places where it is currently used:
+        //  - BatchLUSequenceReader::EnsureDataAvailable( )
+        //  - LSTMNode::UnitTest()
+        //  - DelayedValueNodeBase::CacheMBLayout() --> this will go away (it is what we are trying to address here)
+        //  - HTKMLFReader::GetMinibatchToTrainOrTest()
+        //  - EvalReader::CopyMBLayoutTo()  --> ugly
+        //  - DecimateMinibatch()  --> need to do differently (get sentence array and rebuild)
         // set a boundary flag (OR it on top of the existing layout)
+        // Currently not yet updated/disabled:
+        //  - decimation
+        //  - RecurrentNode for m_timeStep > 1 (this will be fixed differently)
+        // Currently marginally broken:
+        //  - EvalReader.h
         void Set(size_t s, size_t t, MinibatchPackingFlags f)
         {
             CheckWritable();
@@ -327,6 +342,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
+        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const;
+
     private:
 
         // Ensure that the MBLayout allows writes
@@ -396,6 +413,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
         }
 
+#if 0
         // same as Set() but not ORing  --TODO: is this distinction needed?
         void SetWithoutOr(size_t id, size_t t, MinibatchPackingFlags f)
         {
@@ -405,6 +423,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
             m_minibatchPackingFlags[t] |= f;
         }
+
         // needed in DelayedValueNodeBase
         // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
         void Mask(size_t id, size_t t, MinibatchPackingFlags f)
@@ -414,9 +433,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
             //m_minibatchPackingFlags[t] &= f;
         }
+#endif
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
         Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
 
+#if 0
         // TODO: this function is only used in Kaldi2Reader for the moment, and
         //       we plan to remove it in the future. It copies the current
         //       MBLayout from an existing object but only copies <numTimeSteps>
@@ -432,8 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 other->m_minibatchPackingFlags.begin() + startTimeStep,
                 other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
         }
-
-        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const;
+#endif
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
