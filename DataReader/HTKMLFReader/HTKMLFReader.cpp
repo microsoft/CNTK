@@ -937,7 +937,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (m_numValidFrames[i] > 0)
                             {
                                 if (!m_frameMode)       // in framemode we leave the flags empty
-                                    m_pMBLayout->SetAsSentence(i, 0, m_numValidFrames[i]);
+                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
 
                                 m_extraSeqsPerMB.push_back(i);
                                 fillOneUttDataforParallelmode(matrices, 0, m_numValidFrames[i], i, i);
@@ -980,7 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             }
                                             fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
                                             assert(!m_frameMode);
-                                            m_pMBLayout->SetAsSentence(j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
+                                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
 
                                             ReNewBufferForMultiIO(i);
                                             m_numValidFrames[j] += framenum;
@@ -1001,7 +1001,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             for (size_t i = 0; i < m_numSeqsPerMB; i++)
                             {
-                                m_pMBLayout->SetAsNoInput(i, m_numValidFrames[i], m_mbNumTimeSteps);
+                                m_pMBLayout->AddGap(i, m_numValidFrames[i], m_mbNumTimeSteps);
                             }
 
                             // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
@@ -1197,7 +1197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 if (reNewSucc)
                                 {
-                                    m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
+                                    m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart);
                                     startFr = m_switchFrame[i];
                                     endFr = m_mbNumTimeSteps;
                                     for (iter = matrices.begin(); iter != matrices.end(); iter++)
@@ -1214,7 +1214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             {
                                                 for (size_t j = startFr, k = 0; j < endFr; j++, k++) // column major, so iterate columns
                                                 {
-                                                    // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
+                                                    // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns (for SSE alignment)
                                                     memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                                 }
                                             }
@@ -1244,7 +1244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 else
                                 {
                                     // Mark gaps with NoInput
-                                    m_pMBLayout->SetAsNoInput(i, actualmbsize[i], m_mbNumTimeSteps);
+                                    m_pMBLayout->AddGap(i, actualmbsize[i], m_mbNumTimeSteps);
 
                                     // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
                                 }

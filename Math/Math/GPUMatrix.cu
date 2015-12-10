@@ -1214,7 +1214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__);
+        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
@@ -1245,7 +1245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__);
+        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -1264,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__);
+        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
@@ -4071,6 +4071,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
         {
+            // Note: this might be slow.
             CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed));
             CURAND_CALL(curandSetGeneratorOffset(((curandGenerator_t*)s_curandGenerator)[0], 0));
         }

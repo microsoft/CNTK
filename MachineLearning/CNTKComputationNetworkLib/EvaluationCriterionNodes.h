@@ -64,6 +64,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
                 m_topK = static_cast<int>(Input(2)->Get00Element());
             }
+        }
+
+        virtual void UpdateFunctionMBSize() override
+        {
+            Base::UpdateFunctionMBSize();
 
             // resize the temporaries to their proper size
             size_t cols = Input(0)->GetNumCols();

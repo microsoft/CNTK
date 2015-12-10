@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net->NodeNameExist(name))
+                if (m_net->NodeNameExists(name))
                     nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateInputNode(name, rows, cols);
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net->NodeNameExist(name))
+                if (m_net->NodeNameExists(name))
                     nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateSparseInputNode(name, rows, cols);

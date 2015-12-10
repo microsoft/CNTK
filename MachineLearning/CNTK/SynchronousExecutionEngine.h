@@ -105,7 +105,7 @@ public:
             }
 
             // fully qualified names can be looked up in the model
-            if (m_net->NodeNameExist(wname))
+            if (m_net->NodeNameExists(wname))
             {
                 void* np = (void*)m_net->GetNodeFromName(wname);
                 nodeParam->SetEvalValue(np);
@@ -170,7 +170,7 @@ public:
                     // check for the fully quantified name in the computation network
                     // this is needed for MEL processing, since CN nodes names can be used as parameters in MEL
                     std::wstring wname = msra::strfun::utf16(name);
-                    if (m_net->NodeNameExist(wname))
+                    if (m_net->NodeNameExists(wname))
                     {
                         void* np = (void*)m_net->GetNodeFromName(wname).get();
                         // if we don't have a resolve node, it's because the name didn't exist in NDL
@@ -321,7 +321,7 @@ public:
     // returns - pointer to the matching EvalValue for that node, of NULL if not found
     virtual void* FindSymbol(const wstring& symbol)
     {
-        if (m_net->NodeNameExist(symbol))
+        if (m_net->NodeNameExists(symbol))
             return m_net->GetNodeFromName(symbol).get();
         return nullptr;
     }

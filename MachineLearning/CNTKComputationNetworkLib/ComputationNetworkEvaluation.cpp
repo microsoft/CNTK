@@ -14,6 +14,7 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <algorithm>
 
 using namespace std;
 
@@ -35,12 +36,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - these little nested networks are defined in the execution network in the form of nested sentinel nodes of type SEQTraversalFlowControlNode
     void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     {
-        // caller must call BuildAndValidateSubNetwork() before
-        if (!BuiltAndValidatedSubNetwork(rootNode))
-            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        VerifyIsCompiled("ForwardProp");
 
         // traverse all nodes in the pre-determined evaluation order
-        GetOuterLoopNode(rootNode)->ForwardProp(FrameRange(nullptr));
+        GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
+    }
+
+    // set the gradient matrix of a node to an 1x1 matrix containing 1.0
+    // Returns false if the node is not a ComputationNode<ElemType>.
+    template<class ElemType>
+    static bool SetGradientToScalarOne(ComputationNodeBasePtr nodep)
+    {
+        auto node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
+        bool hasMatchingType = (node != nullptr);
+        if (hasMatchingType)
+        {
+            node->VerifyDims(1, 1);
+            node->Gradient().Resize(1, 1);
+            node->Gradient().SetValue((ElemType)1.0);
+        }
+        return hasMatchingType;
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
@@ -50,36 +65,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Backprop() for the training criterion
     void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode)    // training criterion to compute the gradients for
     {
-        ZeroGradients(rootNode);     // reset the flags that will trigger lazy resetting of gradients to zero
+        // reset all gradients to zero (actually, internally, this is lazy, but we don't care here)
+        ZeroGradients(rootNode);
 
-        // initialize root gradient with a scalar gradient value of 1.0
-        auto nodeFloat = dynamic_pointer_cast<ComputationNode<float>>(rootNode);
-        if (nodeFloat)
-        {
-            nodeFloat->Gradient().Resize(1, 1);
-            nodeFloat->Gradient().SetValue(1.0f);
-        }
-        else
-        {
-            auto nodeDouble = dynamic_pointer_cast<ComputationNode<double>>(rootNode);
-            if (nodeDouble)
-            {
-                nodeDouble->Gradient().Resize(1, 1);
-                nodeDouble->Gradient().SetValue(1.0);
-            }
-            else
-                LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
-        }
+        // initialize root gradient with a scalar value of 1.0
+        if (!SetGradientToScalarOne<float>(rootNode) && !SetGradientToScalarOne<double>(rootNode))
+            LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
 
         // backpropagate through the network
-        GetOuterLoopNode(rootNode)->Backprop(FrameRange(nullptr), true, true);
+        GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
     }
 
-    ComputationNodeBasePtr ComputationNetwork::GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
+    void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
     {
-        if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
-            m_cachedOuterLoopNodes[rootNode] = make_shared<PARTraversalFlowControlNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
-        return m_cachedOuterLoopNodes[rootNode];
+        if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
+            fprintf(stderr, "FormNestedNetwork: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+
+        m_nestedNetworks[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode));
+    }
+
+    ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNodeBasePtr& rootNode)
+    {
+        if (m_nestedNetworks.find(rootNode) == m_nestedNetworks.end())
+            LogicError("GetNestedNetwork: Called without prior call to FormNestedNetwork() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return m_nestedNetworks[rootNode];
     }
 
     // -----------------------------------------------------------------------
@@ -90,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // concurrent computation in bulk CUDA launches.
     // -----------------------------------------------------------------------
 
-    ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
+    ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
     {
         // traverse the network in evaluation order and create a new list that replaces all recurrence by a SEQTraversalFlowControlNode
         set<shared_ptr<IComputationNode>> loopsSeen;  // for consistency check only
@@ -129,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
                 node->EndForwardProp();
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
             }
 #ifdef _DEBUG
             else if (node)
@@ -200,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto & node : m_nestedNodes)
             {
                 node->ForwardProp(t);
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
             }
         } 
     }
@@ -279,7 +288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
-    /*static*/ shared_ptr<ComputationNetwork::SEQTraversalFlowControlNode> ComputationNetwork::FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node)
+    /*static*/ shared_ptr<ComputationNetwork::SEQTraversalFlowControlNode> ComputationNetwork::FindInRecurrentLoops(const std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node)
     {
         // look in all recurrent loops of the network
         // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
@@ -306,16 +315,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // TODO: do this on PARTraversalFlowControlNode
-    void ComputationNetwork::ResetEvalTimeStamp()
+    void ComputationNetwork::ResetEvalTimeStamps()
     {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             nodeIter->second->ResetEvalTimeStamp();
     }
 
-    /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const vector<ComputationNodeBasePtr> & nodes)
+    /*static*/void ComputationNetwork::BumpEvalTimeStamp(const vector<ComputationNodeBasePtr> & nodes)
     {
         for (size_t i = 0; i<nodes.size(); i++)
-            nodes[i]->UpdateEvalTimeStamp();
+            nodes[i]->BumpEvalTimeStamp();
     }
 
     // for debugging
@@ -323,35 +332,161 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                   const bool forwardCompute,
                                                   const bool printMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes;
+        auto nodes = GetEvalOrder(rootNode);    // note: don't take a reference, since we reverse() below
         if (forwardCompute)
         {
-            fprintf(stderr, "\n\nPrinting Forward Computation Node Order ... \n");
-            nodes = GetEvalOrder(rootNode, false);
+            fprintf(stderr, "\n\nPrinting forward-computation node order ... \n");
         }
         else
         {
-            fprintf(stderr, "\n\nPrinting Gradient Computation Node Order ... \n");
-            nodes = GetGradientCalcOrder(rootNode);
+            fprintf(stderr, "\n\nPrinting gradient-computation node order ... \n");
+            nodes.reverse();
         }
 
         if (nodes.size() == 0)
+            fprintf(stderr, "\n(empty)\n");
+        else
+            for (const auto & node : nodes)
+                node->PrintSelf(printMatrices);
+    }
+
+    // -----------------------------------------------------------------------
+    // preparation of network
+    // -----------------------------------------------------------------------
+
+    // called by model editing operations, such as DeleteNode(); and by RebuildNetwork()
+    // These invalidates any post-processed structures. If they are accessed, we will fail.
+    void ComputationNetwork::InvalidateCompiledNetwork()
+    {
+        m_isCompiled = false;
+        m_allSEQNodes.clear();
+        m_evalOrders.clear();
+        m_nestedNetworks.clear();
+        m_inputValues.clear();
+        m_learnableParameters.clear();
+    }
+
+    // verify that network has undergone CompileNetwork()
+    void ComputationNetwork::VerifyIsCompiled(const char * where) const
+    {
+        if (!m_isCompiled)
+            LogicError("%s: A compiled network was expected.", where);
+    }
+
+    // CompileNetwork() -- bring network into executable state
+    // Call this after creation, load, and any modification.
+    // This method sets up all members that are cleared in InvalidateCompiledNetwork();
+    // TODO: This should be the only entry point, subsuming all other Validate, Build, etc. functions.
+    // TODO: Related functions today do lots of stuff lazily. There are redundant calls. That will all be removed.
+    void ComputationNetwork::CompileNetwork()
+    {
+        fprintf(stderr, "\nPost-processing network...\n");
+
+        // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
+        DetermineSetOfAllRoots();
+
+        fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
+        for (const auto & root : m_allRoots)
+            fprintf(stderr, "\t%ls = %ls\n", root->NodeName().c_str(), root->OperationName().c_str());
+
+        // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
+        //       to reduce redundant operation on shared portions of the network.
+
+        // STEP: Create a depth-first tree-traversal order through original graph for every root.
+        // This is used wherever a nested structure is not relevant.
+        for (auto & node : m_allRoots)
+            FormEvalOrder(node);
+
+        // STEP: form the m_inputValues and m_learnableParameters sets for this rootNode
+        for (const auto & root : m_allRoots)
+            CollectInputAndLearnableParameters(root);
+
+        // STEP: Discover nested loops.
+        for (auto & node : m_allRoots)
+            FormRecurrentLoops(node);
+
+        // STEP: Form nested structure of PAR and SEQ traversal nodes.
+        for (auto & node : m_allRoots)
+            FormNestedNetwork(node);
+
+        // STEP: Infer node dimensions.
+        // This leverages the nested structure.  TODO: ... one day
+        for (auto & node : m_allRoots)
+            ValidateSubNetwork(node);
+
+        // STEP: Optimize the network.
+        // :)
+
+        // STEP: Set up memory-sharing structure
+        for (auto & node : m_allRoots)
         {
-            fprintf(stderr, "\n$$$$ EMPTY !!!!!\n");
-            return;
+            AllocateEvalMatrices(node);
+            //AllocateGradientMatrices(node);   // BUGBUG: This causes a double-free.
         }
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        // STEP: Some final details.
+        FixupInputMinibatchSize();          // post-fix MB sizes in InputValues(). Will not be needed with next-gen reader.
+        ResetEvalTimeStamps();              // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
+
+        fprintf(stderr, "\nPost-processing network complete.\n");
+        m_isCompiled = true;
+    }
+
+    // determine the set of all root nodes
+    // Roots are nodes that ForwardProp() may be called for.
+    //  - training criterion, eval criteria
+    //  - outputs
+    //  - PreComputeNodes
+    // Result is stored in m_allRoots.
+    // BUGBUG: In the current implementation, outputs that are also inputs to others must be specified explicitly e.g. by a tag.
+    void ComputationNetwork::DetermineSetOfAllRoots()
+    {
+        // start with all non-referenced nodes
+        set<ComputationNodeBasePtr> allNodes, referencedNodes;
+        for (const auto & iter : m_nameToNodeMap)
         {
-            ComputationNodeBasePtr node = (*nodeIter);
-            node->PrintSelf(printMatrices);
+            auto node = iter.second;
+            allNodes.insert(node);
+            for (size_t i = 0; i < node->GetNumInputs(); i++)
+            {
+                auto input = node->Input(i);
+                if (!input)     // this may be the result of an incorrect MEL operation
+                {
+                    InvalidArgument("DetermineSetOfAllRoots: Input %d of %ls %ls operation if not connected, network is malformed.",
+                                    (int)i, node->NodeName().c_str(), node->OperationName().c_str());
+                }
+                referencedNodes.insert(input);
+            }
         }
+        set<ComputationNodeBasePtr> unreferencedNodes;
+        set_difference(allNodes.begin(), allNodes.end(), referencedNodes.begin(), referencedNodes.end(), inserter(unreferencedNodes, unreferencedNodes.end()));
+
+        // add in all explicitly specified nodes.
+        // TODO: This is not ideal. We will also need on-demand compilation, to allow any node to be used as an output after the fact.
+        set<ComputationNodeBasePtr> allKnownRoots;
+        for (const auto & node : FinalCriterionNodes())
+            allKnownRoots.insert(node);
+        for (const auto & node : EvaluationNodes())
+            allKnownRoots.insert(node);
+        for (const auto & node : OutputNodes())
+            allKnownRoots.insert(node);
+        for (const auto & iter : m_nameToNodeMap)       // PreComputeNodes
+        {
+            auto node = iter.second;
+            if (node->RequiresPreCompute())
+                allKnownRoots.insert(node);
+        }
+
+        // set m_allRoots to include both non-referenced nodes and also all explicitly specified roots
+        m_allRoots.clear();
+        set_union(unreferencedNodes.begin(), unreferencedNodes.end(), allKnownRoots.begin(), allKnownRoots.end(), inserter(m_allRoots, m_allRoots.end()));
     }
 
     // -----------------------------------------------------------------------
     // validation
     // -----------------------------------------------------------------------
 
+#if 0
     // ValidateNetwork() - Validate the entire network
     // This calls ValidateNetowrk(Node) for all output nodes.
     // This is used after loading or for dumping the network.
@@ -411,32 +546,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
+#endif
 
     // validate sub-network needed to evalute a specific output node
     // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
     // This is called lazily but once only per node until next ClearCache().
     // This also sets up MBLayout links.
-    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
-    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
-    // TODO: ^^ is this really needed? Can we just call it inside?
     void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNode)
     {
+        // reset to a well-defined MBLayout (any meaningful layout should do here)
+        // Note that Validate is never called during operation. Any actual computation will lead to MBLayout to be set.
+        m_pMBLayout->Init(1, 0);
+
         // set up MBLayout links of inputs (all others get propagated upwards through Validate())
         // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
         for (auto node : InputNodes(rootNode))
-        {
             node->LinkToMBLayout(m_pMBLayout);
-            // handle the special case of being validated before reading a minibatch
-            // In that case, the layout is empty. We set up a dummy layout to match the first InputValue.
-            // TODO: This is a stop-gap. We need a better-controlled way of when what gets validated.
-            if (m_pMBLayout->GetNumCols() == 0)
-                m_pMBLayout->Init(1, node->GetNumCols());
-        }
 
         // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
         // A problem is that recurrent loops may require partial validation.
         // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
-        const auto & nodes = GetEvalOrder(rootNode, false);
+        const auto & nodes = GetEvalOrder(rootNode);
 
         for (auto & node : nodes)
         {
@@ -465,7 +595,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // propagate some info to SEQTraversalFlowControlNode
         // TODO: In the future we should validate not on the flat list but the PARTraversalFlowControlNode structure. Then this will be unnecessary.
-        for (auto & recInfo : m_recurrentInfo)
+        for (auto & recInfo : m_allSEQNodes)
         {
             auto & node = recInfo->m_sourceNode;
             recInfo->m_needsGradient = node->m_needsGradient;
@@ -489,7 +619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (!nonDefaultNodes.empty())
         {
-            fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n\n", (int)nonDefaultNodes.size(), (int)nodes.size());
+            fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
             //for (auto node : nonDefaultNodes)
             //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
             //fprintf(stderr, "\n\n");
@@ -555,6 +685,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+#if 0
     // prepare to compute with the subnetwork that this rootNode depends on, including
     //  - auto-detecting recurrent loops
     //  - collect input and learnable nodes
@@ -583,6 +714,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return m_built.find(rootNode) != m_built.end();
     }
+#endif
 
     // -----------------------------------------------------------------------
     // memory allocation
@@ -612,7 +744,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         FormRecurrentLoops(rootNode);
 
-        list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
+        const list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
         //determine parent size
         map<ComputationNodeBasePtr, int> parentCount;
@@ -631,8 +763,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (nodeIter->IsPartOfLoop())
             {
-                // TODO: use GetOuterLoopNode() here to avoid completedEvaluate[] check
-                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, nodeIter);
+                // TODO: use FormNestedNetwork() here to avoid completedEvaluate[] check
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, nodeIter);
                 assert(recInfo != nullptr);
                 if (completedEvaluate.insert(recInfo).second)
                 {
@@ -676,20 +808,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         FormRecurrentLoops(rootNode);
 
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
         //now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
 
-        //we need to call it here since we always compute gradients for children and root node is not children of other node
+        // we need to call it here since we always compute gradients for children and root node is not children of other node
         rootNode->RequestMatricesBeforeBackprop(m_matrixPool);
 
-        for (auto &n : allNodes)
+        for (auto iter = allNodes.rbegin(); iter != allNodes.rend(); iter++)   // for gradient computation, traverse in reverse order
         {
+            auto n = *iter;
             if (n->IsPartOfLoop())
             {
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
-                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, n);
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
                 if (completedGradient.insert(recInfo).second)
                 {
                     // SEQ mode: allocate all in loop first, then deallocate again

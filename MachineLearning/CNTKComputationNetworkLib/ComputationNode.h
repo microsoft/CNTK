@@ -154,21 +154,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             other.m_needsGradient = m_needsGradient;
         }
 
-        static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
-        {
-            return lhs->m_visitedOrder < rhs->m_visitedOrder;
-        }
-
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    protected:  // TODO: should be fully encapsulated here
+
+        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     private:
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
-    protected:  // TODO: should be fully encapsulated here
-        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
-
     protected:
+
         // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
         void PurgeStateForFormingRecurrentLoops()
         {
@@ -177,17 +174,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = 0;
             m_visited = false;
             m_index = -1;
-            m_lowLink = -1;
+            m_minIndex = -1;
             m_inStack = false;
         }
 
-        int m_loopId;           // index into recurrent info array (TODO: verify this)
+        int m_loopId;           // index into m_allSEQNodes array, for use by reordering operation only
         int m_visitedOrder;     // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
         bool m_visited;         // note: also used by ValidateSubNetwork()
         int m_indexInLoop;
         // only used inside DetermineSCCs():
         int m_index;            // index denoting order in which nodes were visited in DetermineSCCs()
-        int m_lowLink;          // min of m_index over all nodes within a single loop
+        int m_minIndex;         // min of m_index over all nodes within a single loop
         bool m_inStack;
     };
 
@@ -204,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
 
         // create a new unique time stamp
-        void UpdateEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
+        void BumpEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
 
         // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
         bool IsOlderThan(const TimeStamp & other) const
@@ -395,6 +392,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
 
+        // casting helpers
+        template<typename N>
+        N * As()
+        {
+            auto p = dynamic_cast<N*>(this);
+            if (!p)
+                LogicError("Attempted to type-cast node %ls %ls to %s, which is not possible.", NodeName().c_str(), OperationName().c_str(), typeid(N).name());
+            return p;
+        }
+        template<typename N> bool Is() { return dynamic_cast<N*>(this) != nullptr; }
+
         /*HasName::*/void SetName(const std::wstring & newName) // also for use by ExperimentalNetworkBuilder
         {
             m_nodeName = newName;
@@ -564,11 +572,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        static bool ByVisitedOrder(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)    // sorting predicate
-        {
-            return ComputationNetworkOwnedNodeState::ByVisitedOrder(lhs.get(), rhs.get());
-        }
-
         bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
         {
             if (OperationName() != other->OperationName() || m_inputs.size() != other->m_inputs.size())
@@ -592,17 +595,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool skipPairNetwork)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
             // get forward computation order
             EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
-
-            // if caller wants order for backprop then reverse it
-            if (!forForwardProp)
-                nodes.reverse();            // and go backwards
 
             return nodes;
         }
@@ -1019,13 +1018,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        inline ComputationNodePtr Input(const size_t childIndex) const       // TODO: rename to Input
+        inline ComputationNodePtr Input(const size_t inputIndex) const
         {
-#ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
-            if (childIndex >= m_inputs.size())
-                LogicError("Inputs: childIndex is out of range.");
-#endif
-            return UpCast(m_inputs[childIndex]);
+            if (inputIndex >= m_inputs.size())
+                LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int)inputIndex, NodeName().c_str(), OperationName().c_str());
+            return UpCast(m_inputs[inputIndex]);
         }
 
         void /*ComputationNodeBase::*/SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
