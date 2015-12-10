@@ -2,6 +2,19 @@
 #                                    CNTK                                    #
 ##############################################################################
 
+CNTK, the Computational Network Toolkit by Microsoft Research, is a unified
+deep-learning toolkit that describes neural networks as a series of
+computational steps via a directed graph. In this directed graph, leaf nodes
+represent input values or network parameters, while other nodes represent
+matrix operations upon their inputs. CNTK allows to easily realize and combine
+popular model types such as feed-forward DNNs, convolutional nets (CNNs), and
+recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent
+(SGD, error backpropagation) learning with automatic differentiation and
+parallelization across multiple GPUs and servers. CNTK has been available under
+an open-source license since April 2015. It is our hope that the community will
+take advantage of CNTK to share ideas more quickly through the exchange of open
+source working code.
+
 # 1. Documentation and Demos
 -------------------------------
 
@@ -27,7 +40,7 @@ implementation as well as the user manual for CNTK can be found at
 
 To get started with examples see the Demos/ folder and the Readme therein.
 
-There are also four files in the Documentation/ directory of the source 
+There are also four files in the Documentation/ directory of the source
 that contain additional details.
 
 
@@ -57,7 +70,7 @@ Linux users should clone from this URL: https://git.codeplex.com/cntk
 
     git clone https://git.codeplex.com/cntk
 
-More detail you can follow this thread: 
+More detail you can follow this thread:
 http://codeplex.codeplex.com/workitem/26133
 
 
@@ -123,8 +136,8 @@ Set environment variable OPENCV_PATH to the OpenCV build folder, e.g.
 Make sure the following CUDA environment variables are set to the correct path
 
     CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-    CUDA_PATH_V7_0=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0 
-    
+    CUDA_PATH_V7_0=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+
 Open the CNTKSolution and build the CNTK project.
 
 Note: If you make modifications to the code, please first disable the
@@ -136,7 +149,7 @@ home directory) which contains settings for C++ editor. To
 import/export the settings, use Tools -> Import and Export
 Settings... Visual Studio menu option.
 
-Please do *not* auto-format existing code (Edit -> Advanced -> 
+Please do *not* auto-format existing code (Edit -> Advanced ->
 Format Document/Ctrl+E,D).
 
 
@@ -171,13 +184,13 @@ not be built)
 
   * OPENCV_PATH= path to OpenCV 3.0.0 installation, such that the
 directory $(OPENCV_PATH) exists (defaults to /usr/local/opencv-3.0.0)
- 
+
 Build the clean version using the following commands from the cntk folder
 
     mkdir -p build/release && cd build/release && ../../configure --with-buildtype=release
 
-then 
-    
+then
+
     make -j all
 
 Note: If you make modifications to the code, please first disable the

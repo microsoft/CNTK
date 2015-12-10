@@ -95,12 +95,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (ndlPass == ndlPassFinal)
             {
                 // make sure to clear the caches so we pick up the new nodes
-                m_net->ClearCaches();
-                // validate the network
-                //m_net->SetFakeMBLayoutForValidation();  // fake an MB layout to match the initial values of Input
+                m_net->InvalidateCompiledNetwork();
+                // if requested then dump the nodes
+                // Note: This happens on the invalidated network.
                 if (dumpFileName != L"")
-                    m_net->DumpAllNodesToFile(false, dumpFileName, false);
-                m_net->ValidateNetwork(!fullValidate);
+                    m_net->DumpAllNodesToFile(false, dumpFileName);
             }
             SynchronousNodeEvaluator<ElemType> ndlEvaluator(m_net);
             NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);

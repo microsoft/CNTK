@@ -2,6 +2,7 @@
 
 ## Overview
 
+| | |
 |:--------|:---|
 Data:     |The MNIST database (http://yann.lecun.com/exdb/mnist/) of handwritten digits.
 Purpose:  |This example demonstrates usage of NDL to train neural networks on MNIST dataset.

@@ -2,12 +2,13 @@
 
 ## Overview
 
+| | |
 |:--------|:---|
-Data:     |Two dimensional synthetic data
-Purpose:  |Showcase how to train a simple CNTK network (CPU and GPU) and how to use it for scoring (decoding)
-Network:  |SimpleNetworkBuilder, 2 hidden layers with 50 sigmoid nodes each, cross entropy with softmax
-Training: |Stochastic gradient descent with momentum
-Comments: |There are two config files: Simple.config uses a single CPU or GPU, Multigpu.config uses data-parallel SGD for training on multiple GPUs
+Data     |Two dimensional synthetic data
+Purpose  |Showcase how to train a simple CNTK network (CPU and GPU) and how to use it for scoring (decoding)
+Network  |SimpleNetworkBuilder, 2 hidden layers with 50 sigmoid nodes each, cross entropy with softmax
+Training |Stochastic gradient descent with momentum
+Comments |There are two config files: Simple.config uses a single CPU or GPU, Multigpu.config uses data-parallel SGD for training on multiple GPUs
 
 ## Running the example
 
@@ -68,13 +69,12 @@ training and test data as well as the plots that are provided in the folder.
 The data is synthetic 2d data representing two classes that are separated by a sinusoidal boundary. 
 SimpleDemoDataReference.png shows a plot of the training data.
 
-![training data plot](AdditionalFiles/SimpleDemoDataReference.png)
-
 ## Using a trained model
 
 The Test (e.g. Simple_Demo_Test) and the Output (e.g. Simple_Demo_Output) commands 
 specified in the config files use the trained model to compute labels for data specified in the SimpleDataTest.txt file. 
 The Test command computes prediction error, cross entropy and perplexity for the test set and outputs them to the console. 
 The Output command writes for each test instance the likelihood per label to a file `outputPath = $OutputDir$/SimpleOutput`. 
+To use the Output command either set `command=Simple_Demo_Output` in the config file or add it to the command line.
 The model that is used to compute the labels in these commands is defined 
 in the modelPath variable at the beginning of the file `modelPath=$modelDir$/simple.dnn`.

@@ -157,10 +157,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetworkPtr LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
         {
-            if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
+            if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) // not built or force load
                 LoadFromConfig(configFilePaths);
-
-            m_net->ResetEvalTimeStamp();
+            else
+                m_net->ResetEvalTimeStamps();
             return m_net;
         }
 
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // filePaths - A "+" separated list of files to load (full path if needed)
         void LoadFromConfig(const std::wstring& filePaths)
         {
-            m_net->ClearNet();
+            m_net->ClearNetwork();
 
             // Process all the config files in order, and then add on the inital config, 
             // which will override run and load if they exist
@@ -192,6 +192,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             NDLUtil<ElemType> ndlUtil(m_net);
             ndlUtil.ProcessNDLScript(&m_script, ndlPassAll, nullptr, true, m_dumpFileName);
+
+            // perform necessary post-processing steps
+            m_net->CompileNetwork();
         }
 
         // SetFromConfig - Set the NDL script from a configuration string value
@@ -200,20 +203,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             NDLUtil<ElemType> ndlUtil(m_net);
             ndlUtil.ProcessNDLConfig(config, true);
+
+            // perform necessary post-processing steps
+            m_net->CompileNetwork();
         }
 
         virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            {
                 LoadNetworkFromConfig(m_networkConfig);
-            }
-
-            m_net->ResetEvalTimeStamp();
+            else
+                m_net->ResetEvalTimeStamps();
             return m_net;
         }
 
     private:
+
         ComputationNetworkPtr m_net;
         IExecutionEngine<ElemType>* m_executionEngine;
         std::wstring m_networkConfig;
@@ -221,7 +226,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::string m_initialConfig;
 
         DEVICEID_TYPE m_deviceId;
-
     };
 
     template class NDLBuilder<float>;
