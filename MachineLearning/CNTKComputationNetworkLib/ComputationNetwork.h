@@ -301,8 +301,42 @@ public:
     // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
+#if 1
+        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
+        {
+            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
+            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
+
+            size_t numSamplesWithoutLabel = 0;
+
+            for (size_t t = 0; t < numTimeSteps; t++)
+            {
+                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
+                {
+                    for (int id = 0; id < numSequences; id++)
+                    {
+                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
+                            numSamplesWithoutLabel++;
+                    }
+                }
+            }
+
+            return numTimeSteps*numSequences - numSamplesWithoutLabel;
+        }
+        else if (m_pMBLayout && m_pMBLayout->IsAllNone())
+        {
+            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
+            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
+            size_t n = m_pMBLayout->DetermineActualNumSamples();
+            if (n != numAllSamples)
+                fprintf(stderr, "WARNING: GetNumSamplesWithLabel mismatch between MBLayout version (%d) and numAllSamples (%d) for MB dims %d x %d",
+                (int)n, (int)numAllSamples, (int)numTimeSteps, (int)numSequences);
+            return numAllSamples;
+        }
+#else
         if (m_pMBLayout)
             return m_pMBLayout->DetermineActualNumSamples();
+#endif
         else
             return numAllSamples;
     }
