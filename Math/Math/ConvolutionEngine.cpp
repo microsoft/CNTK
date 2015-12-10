@@ -89,8 +89,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         LogicError("Kernel width and weight matrix dimensions don't match.");
 
                     Mat outputSubBatch = out.ColumnSlice(startSampleId, smallBatchSize);
-                    Mat::ConvolveAndWeightedAdd(1, filter, inputSubBatch, 0, outputSubBatch,
-                        convDesc.wStride() * inT.c(), convDesc.padding());
+                    Mat::ConvolveAndWeightedAdd(1, filter, false, inputSubBatch, false, 0, outputSubBatch,
+                        static_cast<int>(inT.c()), convDesc.wStride(), convDesc.padding(), true);
                 }
                 else
                 {

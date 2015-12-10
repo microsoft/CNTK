@@ -70,10 +70,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsc == 1 && colsp != 1)                      // child is a broadcasting column vector
             {
-                MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
+                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
                 // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
-                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
-                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
                     convNode->BackwardBias(gradientValues, inputGradientValues);
                 else
                 {
@@ -145,8 +145,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // REVIEW alexeyk: this hack is required to handle bias in convolution node which may
                 // use a format (e.g. NCHW) where bias addition cannot be represented as adding column/row vector to matrix.
                 // Bias does NOT have to be a vector of size equal to number of output feature map (though it's a common case).
-                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
-                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
                 {
                     convNode->AddBias(cols0 == 1 ? inputFunctionValues1 : inputFunctionValues0, 
                         cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1, functionValues);
@@ -196,7 +196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            if (IsChildAnImage(0))
+            if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
             else
                 InferImageDimsFromInput(1);
@@ -312,7 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            if (IsChildAnImage(0))
+            if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
             else
                 InferImageDimsFromInput(1);

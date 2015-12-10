@@ -1192,7 +1192,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            m_maskOfDropout->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
         }
 
         void SetDropoutRate(const double val)
