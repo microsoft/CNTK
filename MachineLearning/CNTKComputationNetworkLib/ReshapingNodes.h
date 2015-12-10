@@ -362,7 +362,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
-
         void InferImageDimensions()
         {
             if (m_targetImageLayout.GetWidth() > 0)
