@@ -2,12 +2,13 @@
 
 ## Overview
 
+| | |
 |:--------|:---|
-Data:     |Two dimensional synthetic data
-Purpose:  |Showcase how to train a simple CNTK network (CPU and GPU) and how to use it for scoring (decoding)
-Network:  |SimpleNetworkBuilder, 2 hidden layers with 50 sigmoid nodes each, cross entropy with softmax
-Training: |Stochastic gradient descent with momentum
-Comments: |There are two config files: Simple.config uses a single CPU or GPU, Multigpu.config uses data-parallel SGD for training on multiple GPUs
+Data     |Two dimensional synthetic data
+Purpose  |Showcase how to train a simple CNTK network (CPU and GPU) and how to use it for scoring (decoding)
+Network  |SimpleNetworkBuilder, 2 hidden layers with 50 sigmoid nodes each, cross entropy with softmax
+Training |Stochastic gradient descent with momentum
+Comments |There are two config files: Simple.config uses a single CPU or GPU, Multigpu.config uses data-parallel SGD for training on multiple GPUs
 
 ## Running the example
 
