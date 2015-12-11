@@ -6,6 +6,7 @@ Note: The data is not checked into the repository currently since a license is r
 
 ## Overview
 
+| | |
 |:--------|:---|
 Data:     |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
 Purpose:  |Showcase how to train a recurrent network for text data.

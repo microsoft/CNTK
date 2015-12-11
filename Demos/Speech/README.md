@@ -9,6 +9,7 @@ This modified version of dataset is distributed under the terms of a AN4 license
 
 ## Overview
 
+| | |
 |:--------|:---|
 Data:     |Speech data from the CMU Audio Database aka AN4 (http://www.speech.cs.cmu.edu/databases/an4)
 Purpose:  |Showcase how to train feed forward and LSTM networks for speech data
