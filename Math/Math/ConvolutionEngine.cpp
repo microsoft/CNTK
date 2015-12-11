@@ -376,14 +376,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using typename Base::ConvEnginePtr;
         using typename Base::PoolEnginePtr;
 
-        using Base::m_deviceId;
-
-    public:
-        DefaultConvolutionEngineFactory(DEVICEID_TYPE deviceId)
-            : ConvolutionEngineFactory<ElemType>(deviceId)
-        {
-        }
-
     public:
         Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
         {
@@ -406,12 +398,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
         }
 
-        ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) override
+        ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override
         {
-            return std::make_unique<DefaultConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
+            return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
         }
 
-        PoolEnginePtr CreatePoolEngine() override
+        PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE /*deviceId*/) override
         {
             return std::make_unique<DefaultPoolingEngine<ElemType>>();
         }
@@ -422,8 +414,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
         if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
-            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
-        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
+            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
+        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
     }
 
     template class ConvolutionEngineFactory<float>;

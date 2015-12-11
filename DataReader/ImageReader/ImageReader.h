@@ -73,10 +73,10 @@ private:
     size_t m_epochStart;
     size_t m_mbStart;
 
-    std::future<size_t> m_mbFut;
-    int m_idxBuf;
-    std::array<std::vector<ElemType>, 2> m_featBuf;
-    std::array<std::vector<ElemType>, 2> m_labBuf;
+    bool m_prefetch;
+    std::future<size_t> m_mbPrefetchFut;
+    std::vector<ElemType> m_featBuf;
+    std::vector<ElemType> m_labBuf;
 
     bool m_imgListRand;
 

@@ -27,14 +27,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using typename Base::ConvEnginePtr;
         using typename Base::PoolEnginePtr;
 
-        using Base::m_deviceId;
-
-    public:
-        CuDnnConvolutionEngineFactory(DEVICEID_TYPE deviceId)
-            : ConvolutionEngineFactory<ElemType>(deviceId)
-        {
-        }
-
     public:
         Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
         FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override;
@@ -42,8 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t wStride, size_t hStride, bool padding) override;
         PoolDescPtr CreatePoolDescriptor(typename PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override;
 
-        ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) override;
-        PoolEnginePtr CreatePoolEngine() override;
+        ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override;
+        PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) override;
 
         static bool IsSupported();
     };

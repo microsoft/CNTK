@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using typename Base::Filter;
         using typename Base::ConvDesc;
 
-        CuDnnConvolutionEngine(DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples)
+        CuDnnConvolutionEngine(size_t maxTempMemSizeInSamples)
             : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_curMBSize(0)
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
@@ -598,13 +598,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
-        size_t maxTempMemSizeInSamples)
+        DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples)
     {
-        return std::make_unique<CuDnnConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
+        return std::make_unique<CuDnnConvolutionEngine<ElemType>>(maxTempMemSizeInSamples);
     }
 
     template<class ElemType>
-    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine()
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(
+        DEVICEID_TYPE /*deviceId*/)
     {
         return std::make_unique<CuDnnPoolingEngine<ElemType>>();
     }
@@ -632,19 +633,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
-        PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
+        typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
     {
         RuntimeError("The code is compiled without USE_CUDNN macro.");
     }
 
     template<class ElemType>
-    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(size_t)
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
     {
         RuntimeError("The code is compiled without USE_CUDNN macro.");
     }
 
     template<class ElemType>
-    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine()
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
     {
         RuntimeError("The code is compiled without USE_CUDNN macro.");
     }

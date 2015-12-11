@@ -320,6 +320,11 @@ private:
 template<class ElemType>
 static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose);
 
+static std::launch GetLaunchPolicy(bool prefetch)
+{
+    return prefetch ? std::launch::async : std::launch::deferred;
+}
+
 template<class ElemType>
 ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>()), m_mbFmt(DataFormat::NCHW)
 {
@@ -393,6 +398,8 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     else if (!AreEqual(rand, "auto"))
         RuntimeError("Only Auto and None are currently supported.");
 
+    m_prefetch = config(L"prefetch", true);
+
     m_epochStart = 0;
     m_mbStart = 0;
 }
@@ -425,12 +432,9 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
         m_mbStart = 0;
     }
 
-    for (auto& b : m_featBuf)
-        b.resize(m_mbSize * m_featDim);
-    for (auto& b : m_labBuf)
-        b.resize(m_mbSize * m_labDim);
-    m_idxBuf = 0;
-    m_mbFut = std::async(std::launch::async, [this]() { return ReadImages(); });
+    m_featBuf.resize(m_mbSize * m_featDim);
+    m_labBuf.resize(m_mbSize * m_labDim);
+    m_mbPrefetchFut = std::async(GetLaunchPolicy(m_prefetch), [this]() { return ReadImages(); });
 }
 
 template<class ElemType>
@@ -440,22 +444,22 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     assert(matrices.find(m_featName) != matrices.end());
     assert(m_mbSize > 0);
 
-    size_t mbSize = m_mbFut.valid() ? m_mbFut.get() : 0;
+    size_t mbSize = m_mbPrefetchFut.valid() ? m_mbPrefetchFut.get() : 0;
 
     if (mbSize == 0)
         return false;
 
     Matrix<ElemType>& features = *matrices[m_featName];
-    features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf[m_idxBuf].data(), matrixFlagNormal);
+    features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf.data(), matrixFlagNormal);
 
     Matrix<ElemType>& labels = *matrices[m_labName];
-    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf[m_idxBuf].data(), matrixFlagNormal);
+    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf.data(), matrixFlagNormal);
 
     m_pMBLayout->Init(mbSize, 1);
 
     m_mbStart += mbSize;
-    m_idxBuf ^= 1;
-    m_mbFut = std::async(std::launch::async, [this]() { return ReadImages(); });
+    // It is safe to run prefetching with just one buffer as SetValue is synchronous so there will be no race.
+    m_mbPrefetchFut = std::async(GetLaunchPolicy(m_prefetch), [this]() { return ReadImages(); });
 
     return true;
 }
@@ -499,7 +503,7 @@ size_t ImageReader<ElemType>::ReadImages()
     if (mbLim > m_files.size())
         mbLim = m_files.size();
     
-    std::fill(m_labBuf[m_idxBuf].begin(), m_labBuf[m_idxBuf].end(), static_cast<ElemType>(0));
+    std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
 
 #pragma omp parallel for ordered schedule(dynamic)
     for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
@@ -514,8 +518,8 @@ size_t ImageReader<ElemType>::ReadImages()
         assert(img.rows * img.cols * img.channels() == m_featDim);
         // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
         // Transpose is required if requested mini-batch format is NCHW.
-        CopyFromImage(img, m_featBuf[m_idxBuf], m_featDim * i, m_mbFmt == DataFormat::NCHW);
-        m_labBuf[m_idxBuf][m_labDim * i + p.second] = 1;
+        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::NCHW);
+        m_labBuf[m_labDim * i + p.second] = 1;
     }
 
     return mbLim - m_mbStart;
