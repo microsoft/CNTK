@@ -286,22 +286,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
-                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
                 if (weStack())
                 {
                     // going from many samples to one: layout entry will get no flags
-                    if (m_pMBLayout->GetNumTimeSteps() != 1)
+                    if (Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
-                    // leave flags empty (single-frame 'utterances' come form frame randomization, hence no flags)
+                    // we are in frame mode now
+                    m_pMBLayout->InitAsFrameMode(Input(0)->GetNumParallelSequences());
                 }
                 else
                 {
                     // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                     if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
+                    m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
-                        m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
-                    // BUGBUG: In the future, MAKE_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
+                    // BUGBUG: In the future, NEW_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
                 }
             }
         }

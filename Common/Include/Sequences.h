@@ -57,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef size_t UniqueSequenceId;
 #define GAP_SEQUENCE_ID SIZE_MAX            // indicates no data
-#define MAKE_SEQUENCE_ID (SIZE_MAX-1)       // let SetSequence() assign a unique id; for old readers. Don't mix with actual reader-assigned ids.
+#define NEW_SEQUENCE_ID (SIZE_MAX-1)       // let SetSequence() assign a unique id; for old readers. Don't mix with actual reader-assigned ids.
 
     // -----------------------------------------------------------------------
     // MBLayout -- layout information of minibatch
@@ -280,7 +280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
         {
             // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
-            if (seqId == MAKE_SEQUENCE_ID)
+            if (seqId == NEW_SEQUENCE_ID)
             {
                 static UniqueSequenceId makeSeqIdCounter = 0;
                 seqId = makeSeqIdCounter++;
