@@ -140,10 +140,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->BumpEvalTimeStamp();
             }
-#ifdef _DEBUG
-            else if (node)
-                node->EndForwardProp();  // HACK: performs NaN check, but does nothing else
-#endif
         }
     }
 
@@ -420,12 +416,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // STEP: Optimize the network.
         // :)
 
-        // STEP: Set up memory-sharing structure
-        for (auto & node : m_allRoots)
-        {
-            AllocateEvalMatrices(node);
-            //AllocateGradientMatrices(node);   // BUGBUG: This causes a double-free.
-        }
 
         // STEP: Some final details.
         FixupInputMinibatchSize();          // post-fix MB sizes in InputValues(). Will not be needed with next-gen reader.
@@ -727,43 +717,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // predetermine how to share matrices to reduce memory usage.
     // TODO: find a simple topological order and allocateEvalMatrices on that order directly
     // without passing in eval, out, and train nodes.
-    void ComputationNetwork::AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes,
-                                                     std::vector<ComputationNodeBasePtr>& outValueRootNodes,
-                                                     std::vector<ComputationNodeBasePtr>& trainRootNodes)
+    void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                                 const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                                 ComputationNodeBasePtr trainRootNode)
     {
-        //allocate memory for forward computation
-        fprintf(stderr, "\n\nAllocating matrices for forward propagation.\n");
-        for (int i = 0; i < evalRootNodes.size(); i++)
-            AllocateEvalMatrices(evalRootNodes[i]);
-        for (int i = 0; i < outValueRootNodes.size(); i++)
-            AllocateEvalMatrices(outValueRootNodes[i]);
-        for (int i = 0; i < trainRootNodes.size(); i++)
-            AllocateEvalMatrices(trainRootNodes[i]);
+        // Allocate memory for forward/backward computation
+        fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
-    }
+        VerifyIsCompiled("AllocateAllMatrices");
 
-    // TODO: use the same loop mechanism as Evaluate()
-    void ComputationNetwork::AllocateEvalMatrices(ComputationNodeBasePtr rootNode)
-    {
-        FormRecurrentLoops(rootNode);
+        bool performingBackPropagation = (trainRootNode != nullptr);
 
-        const list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
+        // Create a composite Eval order with the specfied nodes as roots
+        std::vector<ComputationNodeBasePtr> forwardPropRoots;
+        forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
+        forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
+        if (trainRootNode != nullptr)
+            forwardPropRoots.push_back(trainRootNode);
 
-        //determine parent size
-        map<ComputationNodeBasePtr, int> parentCount;
-        for (auto &n : allNodes)
+        // For each node determine parents and whether the output of the
+        // node is needed during back propagation
+        std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
+        std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
+        for (auto& rootNode : forwardPropRoots)
         {
-            for (int i = 0; i < n->GetNumInputs(); i++)
+            list<ComputationNodeBasePtr>& currentRootEvalNodes = GetEvalOrder(rootNode);
+            for (auto& currentNode : currentRootEvalNodes)
             {
-                ComputationNodeBasePtr pNode = n->GetInputs()[i];
-                parentCount[pNode]++;
+                for (int i = 0; i < currentNode->GetNumInputs(); i++)
+                {
+                    ComputationNodeBasePtr pNode = currentNode->GetInputs()[i];
+                    parentsMap[pNode].insert(currentNode);
+
+                    if (performingBackPropagation)
+                    {
+                        if (outputValueNeededDuringBackProp.find(pNode) == outputValueNeededDuringBackProp.end())
+                            outputValueNeededDuringBackProp[pNode] = pNode->OutputUsedInComputingInputNodesGradients();
+
+                        outputValueNeededDuringBackProp[pNode] |= currentNode->InputUsedInComputingInputNodesGradients(i);
+                    }
+                    else
+                    {
+                        outputValueNeededDuringBackProp[pNode]  = false;
+                    }
+                }
+            }
+        }
+
+        std::unordered_map<ComputationNodeBasePtr, int> parentCount;
+        for (auto& keyValue : parentsMap)
+        {
+            parentCount[keyValue.first] = keyValue.second.size();
+        }
+
+        // Construct the composite forward prop eval order by enumerating the
+        // nodes corresponding to each of our roots and then arranging them in the 
+        // relative order that they appear in the global evaluation order
+        const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+        std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
+        std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
+        for (auto& node : allNodesEvalOrder)
+        {
+            if (std::find(nodesForForwardPropRoots.cbegin(), nodesForForwardPropRoots.cend(), node) != nodesForForwardPropRoots.cend())
+            {
+                compositeForwardPropEvalOrder.push_back(node);
             }
         }
 
         set<ComputationNodeBasePtr> completedEvaluate;
-
-        for (auto &nodeIter : allNodes)
+        for (auto &nodeIter : compositeForwardPropEvalOrder)
         {
+            nodeIter->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[nodeIter]);
+
             if (nodeIter->IsPartOfLoop())
             {
                 // TODO: use FormNestedNetwork() here to avoid completedEvaluate[] check
@@ -771,14 +796,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(recInfo != nullptr);
                 if (completedEvaluate.insert(recInfo).second)
                 {
-#if 1
                     recInfo->RequestMatricesBeforeForwardProp(m_matrixPool);
-#else
-                    for (auto &nodeLoopIter : recInfo->m_nestedNodes)
-                    {
-                        nodeLoopIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-                    }
-#endif
 
                     for (auto &nodeLoopIter : recInfo->m_nestedNodes)
                     {
@@ -794,9 +812,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
             }
         }
+
+        if (trainRootNode != nullptr)
+        {
+            std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
+
+            //now, simulate the gradient computation order to determine how to allocate matrices
+            set<ComputationNodeBasePtr> completedGradient;
+
+            // we need to call it here since we always compute gradients for children and root node is not children of other node
+            trainRootNode->RequestMatricesBeforeBackprop(m_matrixPool);
+
+            for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++)   // for gradient computation, traverse in reverse order
+            {
+                auto n = *iter;
+                if (n->IsPartOfLoop())
+                {
+                    std::vector<ComputationNodeBasePtr> recurrentNodes;
+                    shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
+                    if (completedGradient.insert(recInfo).second)
+                    {
+                        // SEQ mode: allocate all in loop first, then deallocate again
+                            // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForInputs() and ReleaseMatricesAfterBackprop()...
+                        // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
+                        recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
+                            // Loops are computed sample by sample so we have to allocate them all 
+                        recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
+                    }
+                }
+                else
+                {
+                    // PAR mode: we can allocate and immediately deallocate one by one
+                    n->AllocateGradientMatricesForInputs(m_matrixPool);
+                        // Root node's information will be used and should not be shared with others, also it's small (1x1)
+                        if ((n != trainRootNode) && n->NeedGradient())  
+                        n->ReleaseMatricesAfterBackprop(m_matrixPool);
+                }
+            }
+        }
     }
 
-    void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount)
+    void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
     {
         for (int i = 0; i < n->GetNumInputs(); i++)
         {
@@ -804,61 +860,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             parentCount[pNode]--;
             if (parentCount[pNode] == 0)
                 pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
-        }
-    }
-
-    void ComputationNetwork::AllocateGradientMatrices(ComputationNodeBasePtr rootNode)
-    {
-        FormRecurrentLoops(rootNode);
-
-        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
-
-        //now, simulate the gradient computation order to determine how to allocate matrices
-        set<ComputationNodeBasePtr> completedGradient;
-
-        // we need to call it here since we always compute gradients for children and root node is not children of other node
-        rootNode->RequestMatricesBeforeBackprop(m_matrixPool);
-
-        for (auto iter = allNodes.rbegin(); iter != allNodes.rend(); iter++)   // for gradient computation, traverse in reverse order
-        {
-            auto n = *iter;
-            if (n->IsPartOfLoop())
-            {
-                std::vector<ComputationNodeBasePtr> recurrentNodes;
-                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
-                if (completedGradient.insert(recInfo).second)
-                {
-                    // SEQ mode: allocate all in loop first, then deallocate again
-#if 1               // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForInputs() and ReleaseMatricesAfterBackprop()...
-                    // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
-                    recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
-                    //loops are computed sample by sample so we have to allocate them all 
-                    recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
-#else
-                    const auto & recurrentNodes = recInfo->m_nestedNodes;
-                    //loops are computed sample by sample so we have to allocate them all 
-                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                    {
-                        (*nodeIter)->AllocateGradientMatricesForInputs(m_matrixPool);
-                    }
-                    recInfo->m_completedGradient = true;
-                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                    {
-                        if ((*nodeIter)->NeedGradient())
-                        {
-                            (*nodeIter)->ReleaseMatricesAfterBackprop(m_matrixPool);
-                        }
-                    }
-#endif
-                }
-            }
-            else
-            {
-                // PAR mode: we can allocate and immediately deallocate one by one
-                n->AllocateGradientMatricesForInputs(m_matrixPool);
-                if ((n != rootNode) && n->NeedGradient())  //root node's information will be used and should not be shared with others, also it's small (1x1)
-                    n->ReleaseMatricesAfterBackprop(m_matrixPool);
-            }
         }
     }
 

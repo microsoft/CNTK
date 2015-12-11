@@ -45,13 +45,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> gradientValues = GradientFor(fr);
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
-            Matrix<ElemType> inputFunctionValues = Input(inputIndex)->ValueFor(fr.AllowBroadcast());
 
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
 #endif
-            size_t rowsc = inputFunctionValues.GetNumRows(), colsc = inputFunctionValues.GetNumCols();
-            size_t rowsp = functionValues.GetNumRows(),      colsp = functionValues.GetNumCols();
+            size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
+            size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
 #if DUMPOUTPUT
             fprintf(stderr, "input dimensions %lld x %lld,  this node dimensions %lld x %lld\n", rowsc, colsc, rowsp, colsp);
             gradientValues.Print("Gradient-in");
@@ -98,6 +97,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+#if DUMPOUTPUT
+            return true;
+#else
+            // The PlusNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+#endif
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The PlusNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
@@ -193,13 +211,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Matrix<ElemType> gradientValues = GradientFor(fr);
-            Matrix<ElemType> functionValues = ValueFor(fr);
 
             Matrix<ElemType> childGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
-            Matrix<ElemType> childFunctionValues = Input(inputIndex)->ValueFor(fr.AllowBroadcast());
 
-            size_t rowsc = childFunctionValues.GetNumRows(), colsc = childFunctionValues.GetNumCols();
-            size_t rowsp = functionValues.GetNumRows(),      colsp = functionValues.GetNumCols();
+            size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
+            size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
 
             ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
             if (colsc == colsp && rowsc == rowsp)                   // matching dimensions
@@ -230,6 +246,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The MinusNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The MinusNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
@@ -316,6 +347,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ScaleNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
             ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
@@ -362,6 +400,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             Input(0)->GradientFor(fr) -= GradientFor(fr);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The NegateNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The NegateNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override 
@@ -417,6 +470,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 Matrix<ElemType>::MultiplyAndAdd(Input(0)->Value(), true, sliceOutputGrad, false, sliceInput1Grad);
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The TimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
@@ -533,6 +593,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The TransposeTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         /*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
@@ -639,6 +706,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ElementTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
@@ -712,6 +786,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 BackpropToRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowElementTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
 
         //left (input 0) is a matrix
@@ -856,6 +937,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ColumnElementTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         //left (input 0) is a matrix
         /*TODO: merge with call site*/void BackpropToLeftS(Matrix<ElemType>& input1FunctionValues,
             Matrix<ElemType>& input0GradientValues,
@@ -991,6 +1079,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The DiagTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         ///*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         //{
         //    temp.AssignInnerProductOf(gradientValues, inputFunctionValues, false);
@@ -1097,6 +1192,21 @@ private:
             Input(0)->GradientFor(fr) += Gradient(); // here the assumption is that gradientValues are 1x1 matrix
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The SumElementsNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The SumElementsNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             Value().AssignSumOfElements(Input(0)->MaskedValueFor(fr));  // since we are reducing over frames, we must first mask gaps in input to zero
@@ -1144,6 +1254,21 @@ private:
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
             sliceInputGrad += sliceOutputGrad; // here the assumption is that gradientValues is a row vector
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The SumColumnElementsNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The SumColumnElementsNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
@@ -1205,6 +1330,25 @@ private:
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+#if DUMPOUTPUT
+            return true;
+#else
+            // The TransposeNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+#endif
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The TransposeNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -1348,6 +1492,22 @@ private:
             // BUGBUG: Must *add* to gradient!
             inputGradientValues.SetDiagonalValue(diag);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The DiagonalNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The DiagonalNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
     };
 
     template class DiagonalNode<float>;
@@ -1392,7 +1552,6 @@ private:
             m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
             Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
         }
-
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override 
         {
@@ -1519,6 +1678,13 @@ private:
 
                 sliceInput1Grad.AddColumnReshapeProductOf(sliceOutputGrad, sliceInput0Value, true);
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The KhatriRaoProductNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  

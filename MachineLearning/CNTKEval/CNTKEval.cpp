@@ -21,6 +21,11 @@
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
+// TODO: Temporary mechanism to enable memory sharing for
+// node output value matrices. This will go away when the 
+// sharing is ready to be enabled by default
+bool g_shareNodeValueMatrices = false;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
@@ -50,6 +55,8 @@ void CNTKEval<ElemType>::Init(const std::string& config)
     }
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
+
+    g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
 }
 
 // Destroy - cleanup and remove this class
