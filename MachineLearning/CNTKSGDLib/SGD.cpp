@@ -816,9 +816,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
-                                                                              useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+                                                                          useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
                 break;  // end of epoch
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+
+            if (!wasDataRead)
+                actualMBSize = 0;   // (undefined if !wasDataRead)
 
             nSamplesSinceLastModelSync += actualMBSize;
 
@@ -832,6 +838,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (actualMBSize > 0)
             {
+                assert(wasDataRead);
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
                     LogicError("cannot pass gradient checker");
@@ -901,8 +908,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             } // if (actualMBSize > 0)
 
             // for progress and statistics, we should only count frames that are not gaps
-            size_t numSamplesWithLabel = net->GetNumSamplesWithLabel(actualMBSize);
-
+            size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
@@ -913,6 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // accumulate criterion values (objective, eval)
                 if (actualMBSize != 0)
                 {
+                    assert(wasDataRead);
                     // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->Value(),
                                                           0, 0, localEpochCriterion, 0, 0);
@@ -925,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                //distributed gradient aggregation
+                // distributed gradient aggregation
                 if (learnParamsGradients.size() == 0)
                 {
                     learnParamsGradients.reserve(learnableNodes.size());
@@ -949,7 +956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                //prepare the header
+                // prepare the header
                 m_gradHeader->numEvalNode = evaluationNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
