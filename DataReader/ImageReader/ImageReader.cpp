@@ -383,7 +383,7 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
         std::string imgPath;
         std::string clsId;
         if (!std::getline(ss, imgPath, '\t') || !std::getline(ss, clsId, '\t'))
-            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.", mapPath.c_str(), cline);
+            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.", mapPath.c_str(), static_cast<int>(cline));
         m_files.push_back({ imgPath, std::stoi(clsId) });
     }
 
@@ -396,7 +396,7 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     m_epochStart = 0;
     m_mbStart = 0;
 }
-template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
+//template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
 //template<class ElemType> virtual void ImageReader<ElemType>::Init(const ScriptableObjects::IConfigRecord & config);
 
 template<class ElemType>
@@ -507,7 +507,7 @@ size_t ImageReader<ElemType>::ReadImages()
         const auto& p = m_files[i + m_mbStart];
         cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
         if (!img.data)
-            RuntimeError("Cannot read image file %s", p.first);
+            RuntimeError("Cannot read image file %s", p.first.c_str());
         for (auto& t: m_transforms)
             t->Apply(img);
        
