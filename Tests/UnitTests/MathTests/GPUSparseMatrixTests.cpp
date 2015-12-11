@@ -494,16 +494,6 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit, RandomSeedFixtu
 }
 
 #if 0 // Temporarily disabling
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixLargeIsEqual, RandomSeedFixture)
-{
-    const int rows = 33553921;
-    const int cols = 1;
-
-    Matrix<float> m0 = Matrix<float>::Zeros(rows, cols, c_deviceIdZero);
-    Matrix<float> m1 = Matrix<float>::Ones(rows, cols, c_deviceIdZero);
-
-    BOOST_CHECK(!m1.IsEqualTo(m0, c_epsilonFloatE5));
-}
 
 BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture)
 {
@@ -573,6 +563,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture
 
     BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE5));
 }
+
 #endif
 
 BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
@@ -595,7 +586,9 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
 }
+
 #if 0
+
 BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 {
     size_t D = 10, S = 10, M = 10, K = 10, T = 10;
@@ -612,7 +605,9 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
 }
+
 #endif
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
 
