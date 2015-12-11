@@ -287,7 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
-                if (weStack() || factor() == 1)
+                if (weStack())
                 {
                     // going from many samples to one: layout entry will get no flags
                     if (m_pMBLayout->GetNumTimeSteps() != 1)
@@ -412,6 +412,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else if (m_targetImageLayout.GetNumChannels() > 0)
                     RuntimeError("At least two image dimensions must be specified.");
+                else
+                    m_targetImageLayout = ImageLayoutWHC(m_numTargetRows, 1, 1);
             }
         }
     };
