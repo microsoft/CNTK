@@ -1,10 +1,10 @@
-RootDir=.
-DataDir=$RootDir$
+RootDir = .
+DataDir = $RootDir$
 
-# deviceId=-1 for CPU, >=0 for GPU devices
-deviceId=-1
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
 
-precision=double
+precision = "double"
 
 Simple_Test = [
     reader = [
