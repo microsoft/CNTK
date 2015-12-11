@@ -70,6 +70,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = 0; i < evalNodes.size(); i++)
                 evalResults.push_back((double)0);
 
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
+
             // prepare features and labels
             auto & featureNodes = m_net->FeatureNodes();
             auto & labelNodes = m_net->LabelNodes();

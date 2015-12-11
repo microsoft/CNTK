@@ -356,6 +356,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ReshapeNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The ReshapeNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
     private:
         size_t m_numTargetRows;
         bool weStack() const { return m_numTargetRows > Input(0)->GetNumRows(); }        // do we stack (multiple frames into one)
@@ -525,6 +540,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(0)->GradientFor(fr).AddToRowSliceValuesOf(GradientFor(fr), m_startIndex, m_sliceHeight);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowSliceNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowSliceNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             ValueFor(fr).AssignRowSliceValuesOf(Input(0)->ValueFor(fr), m_startIndex, m_sliceHeight);
@@ -588,6 +618,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowStackNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowStackNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
@@ -736,6 +781,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowRepeatNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowRepeatNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
     private:

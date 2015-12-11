@@ -116,7 +116,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
                 rows, cols, GetNumRows(), GetNumCols());
         }
-        void SetMatrixName(const wchar_t* s) 
+        void VerifySizeEqualOrGreater(size_t rows, size_t cols)
+        {
+            if (rows > GetNumRows() || cols > GetNumCols())
+                LogicError("VerifySizeEqualOrGreater: expected matrix size equal or greater than %lu x %lu, but it is %lu x %lu",
+                rows, cols, GetNumRows(), GetNumCols());
+        }
+        void SetMatrixName(const wchar_t* s)
         { 
             Clear();
             if (s!=nullptr)

@@ -116,6 +116,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ConvolutionNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
     private:
         void BackpropToOverWeight(Matrix<ElemType> &gradientValues,
             Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop)
@@ -596,6 +603,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                           m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
                                                           m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
                                                           m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The AveragePoolingNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The AveragePoolingNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override

@@ -64,6 +64,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(tmpMat, child->Gradient());
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ParallelNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The ParallelNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
@@ -887,6 +902,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
                 ig += g;
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The TimeReverseNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The TimeReverseNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
