@@ -1064,8 +1064,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     int mbProgNumPrecision = 2;
                     if (m_maxComputedEpochSize != 0)
                     {
-                        mbProg = (double)numMBsRun / ((double)m_maxComputedEpochSize / (double)tunedMBSize);
-                        mbProgNumPrecision = (int)ceil(log10((double)m_maxComputedEpochSize / (double)m_numMBsToShowResult));
+                        double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
+                        mbProg = (double)numMBsRun / numMBPerEpoch;
+                        mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
                         mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
                     }
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
