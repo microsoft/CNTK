@@ -24,12 +24,19 @@ namespace Microsoft {  namespace MSR {  namespace CNTK
                 BOOST_TEST_MESSAGE("Setup fixture");
                 m_initialWorkingPath = boost::filesystem::current_path().generic_string();
                 BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);
+                fprintf(stderr, "Current working directory: %s\n", m_initialWorkingPath.c_str());
 
                 boost::filesystem::path path(boost::unit_test::framework::master_test_suite().argv[0]);
-                m_parentPath = path.parent_path().generic_string();
+                m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
+                fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
+
                 m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
-                
+                boost::filesystem::path absTestPath(m_testDataPath);
+                absTestPath = boost::filesystem::canonical(absTestPath);
+                m_testDataPath = absTestPath.generic_string();
+
                 BOOST_TEST_MESSAGE("Setting test data path to: " + m_testDataPath);
+                fprintf(stderr, "Test path: %s\n", m_testDataPath.c_str());
 
                 string newCurrentPath;
                 
@@ -44,6 +51,7 @@ namespace Microsoft {  namespace MSR {  namespace CNTK
                         string environmentVariable = subPath.substr(1, end - 1);
 
                         BOOST_TEST_MESSAGE("Retrieving environment variable: " + environmentVariable);
+                        fprintf(stderr, "Retrieving environment variable: %s\n", environmentVariable.c_str());
 
                         const char* p = std::getenv(environmentVariable.c_str());
                         if (p)
@@ -67,15 +75,19 @@ namespace Microsoft {  namespace MSR {  namespace CNTK
                 }
 
                 BOOST_TEST_MESSAGE("Setting current path to: " + newCurrentPath);
-
+                fprintf(stderr, "Set current path to: %s\n", newCurrentPath.c_str());
                 boost::filesystem::current_path(newCurrentPath);
 
                 BOOST_TEST_MESSAGE("Current working directory is now: " + boost::filesystem::current_path().generic_string());
+                fprintf(stderr, "Current working directory is now: %s\n", boost::filesystem::current_path().generic_string().c_str());
             }
 
             ~ReaderFixture()
             {
                 BOOST_TEST_MESSAGE("Teardown fixture");
+                BOOST_TEST_MESSAGE("Reverting current path to: " + m_initialWorkingPath);
+                fprintf(stderr, "Set current path to: %s\n", m_initialWorkingPath.c_str());
+                boost::filesystem::current_path(m_initialWorkingPath );
             }
             
             // Limits the number of minibatches to read, to reduce time and data file size
