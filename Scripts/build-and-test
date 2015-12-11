@@ -261,7 +261,7 @@ if [[ $RUN == 1 ]]; then
             chmod a+r $RUN_FILE.*
 
             # Check if execution was successful
-            grep -q "Using $TARGET" "$OUT_FILE" || {
+            grep -q "Using ${TARGET^^}" "$OUT_FILE" || {
                 echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET) ============"
                 exit 1
             }
