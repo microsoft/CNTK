@@ -933,6 +933,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // create a MB with the desired utterances
                     // First fill each parallel sequence with one utterance. No packing yet.
+                    // Note that the code below is a little misleading for frame mode.
+                    // In frame mode, this reader thinks it has only one parallel sequence (m_numSeqsPerMB == 1),
+                    // but it reports it to the outside as N parallel sequences of one frame each.
                     skip = (m_frameMode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbNumTimeSteps) && (m_frameSource->totalframes() > m_mbNumTimeSteps));
                     for (size_t i = 0; i < m_numSeqsPerMB; i++)
                     {
@@ -941,10 +944,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_numValidFrames[i] = m_numFramesToProcess[i];
                             if (m_numValidFrames[i] > 0)
                             {
-                                // TODO: should frame mode set sequence boundaries outside, e.g. -1..1?
                                 if (m_frameMode)
-                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, -1, 2);    // frame mode  --this is a test
-                                    //m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, 1);    // frame mode: sequence duration is 1
+                                {
+                                    assert(i == 0);     // this reader thinks there is only one parallel sequence
+                                    // frame mode: individual frames are reported as parallel sequences of duration 1
+                                    for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
+                                    {
+                                        assert(s < m_numValidFrames[i]);        // MB is already set to only include the valid frames (no need for gaps)
+                                        m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, s, 0, 1);
+                                    }
+                                }
                                 else
                                     m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
 
@@ -961,57 +970,61 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ReNewBufferForMultiIO(i);
                     }
 
-                    // insert extra utt to the channels with space
-                    // As long as there is a gap at the end of any parallel sequence that is large enough for another utterance, fill it in.
                     if (!skip)
                     {
-                        size_t nextMinibatchUttnum = 0;
-                        bool inserted;
                         m_extraNumSeqs = 0;
-                        for (size_t i = 0; i < m_numSeqsPerMB; i++)
-                        {
-                            while (nextMinibatchUttnum <= i)
-                            {
-                                size_t framenum = m_numFramesToProcess[i];
-                                inserted = false;
-                                if (framenum > 0)
-                                {
-                                    for (size_t j = 0; j < m_numSeqsPerMB; j++)
-                                    {
-                                        if (framenum + m_numValidFrames[j] < m_mbNumTimeSteps)
-                                        {
-                                            m_extraSeqsPerMB.push_back(j);
-                                            if (m_latticeBufferMultiUtt[i] != nullptr)
-                                            {
-                                                m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
-                                                m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
-                                            }
-                                            fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
-                                            assert(!m_frameMode);
-                                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
-
-                                            ReNewBufferForMultiIO(i);
-                                            m_numValidFrames[j] += framenum;
-                                            m_extraNumSeqs++;
-                                            inserted = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (!inserted)
-                                {
-                                    nextMinibatchUttnum++;
-                                }
-                            }
-                        }
-
-                        // and declare the remaining gaps to be gaps
                         if (!m_frameMode)
                         {
+                            // insert extra utterances to parallel sequences that have enough space left
+                            // As long as there is a gap at the end of any parallel sequence that is large enough for another utterance, fill it in.
+                            size_t nextMinibatchUttnum = 0;
+                            bool inserted;
+                            // The next utterances have already been prepared under parallel-sequence indices [i], in prep for the next MB.
+                            // For each, we will go through all parallel sequences [j] to see whether the entry currently held for the next [i] fits into [j].
+                            for (size_t i = 0; i < m_numSeqsPerMB; i++)
+                            {
+                                while (nextMinibatchUttnum <= i)
+                                {
+                                    size_t framenum = m_numFramesToProcess[i];
+                                    inserted = false;
+                                    if (framenum > 0)       // non-empty entry: see were it fits
+                                    {
+                                        // greedily search for a parallel sequence with enough space at the end to insert this utterance
+                                        for (size_t j = 0; j < m_numSeqsPerMB; j++)
+                                        {
+                                            if (framenum + m_numValidFrames[j] < m_mbNumTimeSteps)
+                                            {
+                                                // enough space: insert it as parallel sequence [j] (instead of [i] in the next MB)
+                                                m_extraSeqsPerMB.push_back(j);
+                                                if (m_latticeBufferMultiUtt[i] != nullptr)
+                                                {
+                                                    m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
+                                                    m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
+                                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+                                                }
+                                                fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
+                                                m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
+
+                                                // consume it
+                                                ReNewBufferForMultiIO(i);       // replace current [i] with a new one; then try again with this new one at [i]
+                                                m_numValidFrames[j] += framenum;
+                                                m_extraNumSeqs++;
+                                                inserted = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (!inserted)
+                                    {
+                                        nextMinibatchUttnum++;  // didn't fit anywhere: done with entry [i]
+                                    }
+                                }
+                            }
+
+                            // and declare the remaining gaps as such
                             for (size_t i = 0; i < m_numSeqsPerMB; i++)
                                 m_pMBLayout->AddGap(i, m_numValidFrames[i], m_mbNumTimeSteps);
-                        }
+                        } // if (!frameMode)
 
                         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
                         {
@@ -1322,7 +1335,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
-    // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode.
+    // TODO: This should use DataFor(). But for that, DataFor() will have to move out from ComputationNode. Ah, it has!
     template<class ElemType>
         void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr,
                                                                    size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
