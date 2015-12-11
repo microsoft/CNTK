@@ -5,6 +5,14 @@
 // </copyright>
 //
 
+// TODO:
+//  - frame mode: some readers just call Init() (e.g. SparsePCReader)--should that be allowed?
+//  - IsAllNone() does not work presently (should cause no harm except some inefficiency)
+//  - add code that uses the new structure, and validates against the old one
+//  - fix RecurrentNode (remove shifted layout, use time offset in condition test)
+//  - finally remove the old bit masks
+//  - split Is() into IsStart, IsEnd, IsGap; then eliminate MinibatchPackingFlags as well
+
 #pragma once
 
 #include "Basics.h"
