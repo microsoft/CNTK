@@ -139,23 +139,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // remember the dimensions...
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            // ...but don't actually allocate anything
+            // ...but don't actually allocate anything   --TODO: no value in this anymore
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
             m_distanceToNearestStart.clear();
             m_distanceToNearestEnd.clear();
             m_distanceToStart.Resize(0, 0);
             m_distanceToEnd.Resize(0, 0);
+            m_numFramesDeclared = 0;
+            m_numGapFrames = 0;
             m_sequences.clear();
             m_writable = true;
         }
+
+        // short-hand to initialize an MBLayout for the special case of frame mode
+        // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
+        void InitAsFrameMode(size_t numSamples)
+        {
+            Init(numSamples, 1);
+            SequenceInfo seqInfo { 0, 0, 0, 1 };
+            for (size_t s = 0; s < numSamples; s++)
+            {
+                seqInfo.seqId = seqInfo.s = s;
+                AddSequence(seqInfo);
+            }
+            Lock();
+        }
     private:
+        // we are trying to access content--this verifies that the structure is consistent
+        // All frames must now be declared.
+        void CheckIsValid() const
+        {
+            if (m_numFramesDeclared != m_numTimeSteps * m_numParallelSequences)
+                LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
+                           (int)m_numFramesDeclared, (int)( m_numTimeSteps * m_numParallelSequences));
+        }
         // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
+        bool IsEmpty() const
+        {
+            CheckIsValid();
+            return m_minibatchPackingFlags.empty();
+        }
         // call this before ever writing anything--this will create the matrix/vector upon first use
         void LazyAlloc() const
         {
-            if (!IsEmpty() || m_numTimeSteps == 0)
+            if (!m_minibatchPackingFlags.empty() || m_numTimeSteps == 0)
                 return;
             // this is where the actual allocation happens
             m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
@@ -229,17 +257,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //         Should frame mode set boundaries at [-1, 2)? And keep AllNone if no flags set INSIDE the minibatch?
         bool IsAllNone() const { return IsEmpty(); }
     private:
-        // TODO: Set() should be private. Instead, use AddSequence().
-        // Places where it is currently used:
-        //  - BatchLUSequenceReader::EnsureDataAvailable( )
-        //  - LSTMNode::UnitTest()
-        //  - DelayedValueNodeBase::CacheMBLayout() --> this will go away (it is what we are trying to address here)
-        //  - HTKMLFReader::GetMinibatchToTrainOrTest()
-        //  - EvalReader::CopyMBLayoutTo()  --> ugly
-        //  - DecimateMinibatch()  --> need to do differently (get sentence array and rebuild)
         // set a boundary flag (OR it on top of the existing layout)
         // Currently not yet updated/disabled:
-        //  - decimation
         //  - RecurrentNode for m_timeStep > 1 (this will be fixed differently)
         // Currently marginally broken:
         //  - EvalReader.h
@@ -296,8 +315,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
             size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
             size_t e = min(endTime, m_numTimeSteps);
+            m_numFramesDeclared += (e - b);
             if (seqId == GAP_SEQUENCE_ID)
             {
+                m_numGapFrames += (e - b);
                 for (size_t t = b; t < e; t++)
                 {
                     Set(s, t, MinibatchPackingFlags::NoInput);
@@ -322,9 +343,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
-                assert(!Is(s, t, MinibatchPackingFlags::NoInput));
-                assert(t == (size_t)beginTime || !Is(s, t, MinibatchPackingFlags::SequenceStart));
-                assert(t == endTime - 1 || !Is(s, t, MinibatchPackingFlags::SequenceEnd));
+                assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
             }
         }
 
@@ -351,6 +370,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
+            if (m_numGapFrames != GetNumCols() - n)
+                LogicError("DetermineActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
             return n;
         }
 
@@ -358,14 +379,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Not efficient (linear scan). Once GetNumSamplesWithLabel() above is efficient (computed during building), we should just leverage that.
         bool HasGaps() const
         {
-            if (!IsAllNone())
-                for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                    if (Is(t, MinibatchPackingFlags::NoInput))
-                        return true;
-            return false;
+            CheckIsValid();
+            return m_numGapFrames > 0;
+            //if (!IsAllNone())
+            //    for (size_t t = 0; t < GetNumTimeSteps(); t++)
+            //        if (Is(t, MinibatchPackingFlags::NoInput))
+            //            return true;
+            //return false;
         }
         bool HasGaps(const FrameRange& /*fr*/) const
         {
+            CheckIsValid();
             return HasGaps();       // BUGBUG: inefficient. This is a stop-gap for now.
         }
 
@@ -383,6 +407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Freeze the MBLayout disallowing further modifications through set operations
         void Lock() const
         {
+            CheckIsValid();
             m_writable = false;
         }
 
@@ -392,10 +417,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
 
+        // counters on how much has been declared, for checks
+        size_t m_numFramesDeclared;
+        size_t m_numGapFrames;
+
         // all sequences that live inside this minibatch
         mutable vector<SequenceInfo> m_sequences;
-
-        // TODO: rename the following two variables, or even implement it with a very different structure
 
         // a matrix of S x T
         // S is the number of parallel sequences, T is the number of time steps (possibly of multiple concatenated sequences).
