@@ -220,6 +220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameRange version allows to test with time offset
         bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
 
+    private:    // Note: Only called from in here. Should replace each use with a better solution.
         // tests if Is() is false for every frame and sequence
         // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
         // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
@@ -336,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t DetermineActualNumSamples() const
         {
             size_t n = GetNumCols();
-            if (!IsAllNone())
+            if (HasGaps())
             {
                 for (size_t t = 0; t < GetNumTimeSteps(); t++)
                 {
@@ -362,6 +363,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (Is(t, MinibatchPackingFlags::NoInput))
                         return true;
             return false;
+        }
+        bool HasGaps(const FrameRange& /*fr*/) const
+        {
+            return HasGaps();       // BUGBUG: inefficient. This is a stop-gap for now.
         }
 
         shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const;
@@ -660,8 +665,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Lock();
             m_columnsValidityMask.reset(new Matrix<char>(deviceId));
 
-            // Determine indices of all invalid columns in the specified fr
-            if (!IsAllNone())       // TODO: use HasGaps() (but currently that would mean a second linear scan, which is not efficient)
+            // Determine indices of all invalid columns in the minibatch
+            if (HasGaps())
             {
                 size_t nT = GetNumTimeSteps();
                 size_t nS = GetNumParallelSequences();
@@ -675,7 +680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t s = 0; s < nS; s++)
                         {
                             if (Is(s, t, MinibatchPackingFlags::NoInput))
-                                columnsValidityMask[(t * nS) + s] = 0;
+                                columnsValidityMask[(t * nS) + s] = 0;  // TODO: use DataFor()
                         }
 
                         foundInvalidColumn = true;
@@ -849,7 +854,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
-        if (pMBLayout && !pMBLayout->IsAllNone())   // TODO: This should check whether there are any gaps in 'fr'. Add a method to MBLayout.
+        if (pMBLayout && pMBLayout->HasGaps(fr))
         {
             size_t nT = pMBLayout->GetNumTimeSteps();
             size_t nS = pMBLayout->GetNumParallelSequences();
