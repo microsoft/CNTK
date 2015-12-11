@@ -11,16 +11,6 @@
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
 #pragma once
 
-#ifdef    _WIN32
-#ifdef MATH_EXPORTS
-#define MATH_API __declspec(dllexport)
-#else
-#define MATH_API __declspec(dllimport)
-#endif
-#else    // no DLLs on Linux
-#define    MATH_API 
-#endif
-
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
