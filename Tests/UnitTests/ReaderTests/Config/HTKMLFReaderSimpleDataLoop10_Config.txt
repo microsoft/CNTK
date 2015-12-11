@@ -16,19 +16,19 @@ Simple_Test = [
         framemode = true
 
         features1 = [
-	        dim = 792
-	        scpFile = "$DataDir$/TIMIT.train.scp.fbank.fullpath"
+	        dim = 363
+	        scpFile = "$DataDir$/glob_0000.scp"
 	        type = "real"
         ]
         features2 = [
-            dim = 39
-            scpFile = "$DataDir$/TIMIT.train.scp.mfcc.fullpath"
+            dim = 363
+            scpFile = "$DataDir$/glob_0000.scp"
             type = "real"
         ]
         labels = [
-            mlfFile = "$DataDir$/TIMIT.train.align_cistate.mlf.cntk"
-            labelMappingFile = "$DataDir$/TIMIT.statelist"
-            labelDim = 183
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
             labelType = "category"
         ]
     ]
