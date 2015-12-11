@@ -22,7 +22,9 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
         struct TIMITReaderFixture : ReaderFixture
         {
             TIMITReaderFixture() : ReaderFixture("%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/ASR")
-            {}
+            {
+                m_maxMiniBatchCount = 4;
+            }
         };
 
         // Use SpeechReaderFixture for most tests
@@ -183,9 +185,9 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
                 0,
                 1);
         };
-        */
+        */        
 
-        BOOST_FIXTURE_TEST_CASE(HTKMLFReaderSimpleDataLoop10, TIMITReaderFixture)
+        BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop10)
         {
             HelperRunReaderTest<float>(
                 testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop10_Config.txt",
@@ -324,9 +326,9 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
                 0,
                 1);
         };
-        */
+        */        
 
-        BOOST_FIXTURE_TEST_CASE(HTKMLFReaderSimpleDataLoop20, TIMITReaderFixture)
+        BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
         {
             HelperRunReaderTest<double>(
                 testDataPath() + "/Config/HTKMLFReaderSimpleDataLoop20_Config.txt",

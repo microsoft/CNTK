@@ -147,13 +147,13 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt">
       <Filter>Control</Filter>
     </Text>
-    <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt">
-      <Filter>Control</Filter>
-    </Text>
     <Text Include="Control\HTKMLFReaderSimpleDataLoop4_8_14_Control.txt">
       <Filter>Control</Filter>
     </Text>
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt">
       <Filter>Control</Filter>
     </Text>
   </ItemGroup>
