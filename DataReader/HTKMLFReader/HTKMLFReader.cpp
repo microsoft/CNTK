@@ -924,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_frameMode)
                     {
                         assert(m_numSeqsPerMB == 1);            // user must not request parallel sequences
-                        m_pMBLayout->Init(m_mbNumTimeSteps, 1); // but we return frames as parallel sequences of length 1
+                        m_pMBLayout->InitAsFrameMode(m_mbNumTimeSteps);
                     }
                     else
                     {
@@ -946,16 +946,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 if (m_frameMode)
                                 {
+                                    // the layout has already been initialized as entirely frame mode above
                                     assert(i == 0);     // this reader thinks there is only one parallel sequence
-                                    // frame mode: individual frames are reported as parallel sequences of duration 1
                                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
-                                    {
                                         assert(s < m_numValidFrames[i]);        // MB is already set to only include the valid frames (no need for gaps)
-                                        m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, s, 0, 1);
-                                    }
                                 }
                                 else
-                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
+                                    m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, 0, m_numValidFrames[i]);
 
                                 m_extraSeqsPerMB.push_back(i);
                                 fillOneUttDataforParallelmode(matrices, 0, m_numValidFrames[i], i, i);
@@ -1003,7 +1000,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                     m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                                 }
                                                 fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
-                                                m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
+                                                m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
 
                                                 // consume it
                                                 ReNewBufferForMultiIO(i);       // replace current [i] with a new one; then try again with this new one at [i]
@@ -1083,7 +1080,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // add utterance to MBLayout
                         assert(m_numFramesToProcess[i] > startFr || (m_noData && m_numFramesToProcess[i] == startFr));
                         if (m_numFramesToProcess[i] > startFr)                  // in an edge case (m_noData), startFr is at end
-                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, -(ptrdiff_t)startFr, m_numFramesToProcess[i] - startFr);
+                            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, -(ptrdiff_t)startFr, m_numFramesToProcess[i] - startFr);
 
                         if (startFr + m_mbNumTimeSteps < m_numFramesToProcess[i])   // end of this minibatch does not reach until end of utterance
                         {
@@ -1237,7 +1234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     // Note: Don't confuse startT/endT with startFr/endFr above.
 
                                     // add sequence to MBLayout
-                                    m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, i, startT, startT + m_numFramesToProcess[i]);
+                                    m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, startT, startT + m_numFramesToProcess[i]);
 
                                     // copy the data
                                     for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
@@ -1475,7 +1472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (first)
                         {
                             m_pMBLayout->Init(1, feat.cols());
-                            m_pMBLayout->AddSequence(MAKE_SEQUENCE_ID, 0, 0, feat.cols());  // feat.cols() == number of time steps here since we only have one parallel sequence
+                            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, feat.cols());  // feat.cols() == number of time steps here since we only have one parallel sequence
                             //m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
                             //m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;

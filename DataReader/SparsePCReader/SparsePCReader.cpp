@@ -284,7 +284,12 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         labels->SetValue(1, j, labels->GetDeviceId(), m_labelsBuffer, 0);
     }
 
+    // create the MBLayout
+    // Each sample consists of a "sequence" of 'm_microBatchSize' samples.
+    // TODO: They are not really temporally ordered, so a better way would be to use tensors, once that is ready.
     m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize);
+    for (size_t s = 0; s < j / m_microBatchSize; s++)
+        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, m_microBatchSize);
 
     return true;
 }

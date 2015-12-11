@@ -1589,7 +1589,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
                 //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
-                pMBLayout->AddSequence(MAKE_SEQUENCE_ID, 0, 0, nT);
+                pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, nT);
                 Base::LinkToMBLayout(pMBLayout);
 
                 f0 = Input(0)->Value();
