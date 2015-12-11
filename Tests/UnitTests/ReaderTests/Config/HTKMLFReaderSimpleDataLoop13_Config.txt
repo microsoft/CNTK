@@ -1,0 +1,27 @@
+RootDir = .
+DataDir = $RootDir$
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+precision = "double"
+
+Simple_Test = [
+    action = "write"
+
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "rollingWindow"
+        miniBatchMode = "full"
+        randomize = "none"
+        verbosity = 0
+        frameMode = false
+        truncated = true
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+    ]
+]
