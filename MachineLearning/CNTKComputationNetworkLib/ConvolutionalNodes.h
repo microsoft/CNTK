@@ -224,7 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_maxTempMemSizeInSamples);
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
             if (m_filterT == nullptr)
@@ -421,7 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
             if (m_poolEng == nullptr)
-                m_poolEng = m_factory->CreatePoolEngine();
+                m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
             if (m_outT == nullptr)
@@ -696,7 +696,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
             if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(0);
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
             if (m_scaleBiasT == nullptr)

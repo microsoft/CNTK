@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreateConvEngine(0);
+            auto eng = fact->CreateConvEngine(deviceId, 0);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
             auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { -1, 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreateConvEngine(0);
+            auto eng = fact->CreateConvEngine(deviceId, 0);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
             auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
@@ -153,7 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreateConvEngine(0);
+            auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
             auto gradT = fact->CreateTensor(inW, inH, cmapIn, n);
@@ -206,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreateConvEngine(0);
+            auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
@@ -268,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreatePoolEngine();
+            auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
             auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
@@ -315,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreatePoolEngine();
+            auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
             auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
@@ -372,7 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreatePoolEngine();
+            auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
             auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);
@@ -419,7 +419,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             auto fact = ConvFact::Create(deviceId);
-            auto eng = fact->CreatePoolEngine();
+            auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
             auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);

@@ -238,10 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using PoolEnginePtr = std::unique_ptr<PoolingEngine<ElemType>>;
 
     public:
-        ConvolutionEngineFactory(DEVICEID_TYPE deviceId)
-            : m_deviceId(deviceId)
-        {
-        }
+        ConvolutionEngineFactory() = default;
         virtual ~ConvolutionEngineFactory() = default;
 
         virtual Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) = 0;
@@ -251,8 +248,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) = 0;
         //virtual Tensor4DPtr CreateLrnDescriptor() = 0;
 
-        virtual ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) = 0;
-        virtual PoolEnginePtr CreatePoolEngine() = 0;
+        virtual ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) = 0;
+        virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;
 
         static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId);
 
@@ -261,8 +258,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConvolutionEngineFactory& operator=(const ConvolutionEngineFactory&) = delete;
         ConvolutionEngineFactory(ConvolutionEngineFactory&&) = delete;
         ConvolutionEngineFactory& operator=(ConvolutionEngineFactory&&) = delete;
-
-    protected:
-        DEVICEID_TYPE m_deviceId;
     };
 }}}
