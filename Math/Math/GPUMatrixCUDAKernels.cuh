@@ -50,7 +50,7 @@ static __inline__ __device__ double atomicAdd(double* address, double val) UNUSE
 //CUDA Kernels code
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
-    ElemType alpha,     
+    const ElemType alpha,     
     const ElemType *a, 
     ElemType *res,    
     const CUDA_LONG N)
@@ -144,7 +144,7 @@ template<class ElemType>
 __global__ void _elementWiseSigmoidDerivativeOnCuda( 
     const ElemType *a,
     ElemType *res,
-    CUDA_LONG N)
+    const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX;
     res[id] = a[id] * (1-a[id]);
