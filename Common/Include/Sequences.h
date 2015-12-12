@@ -233,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get boundary flags
     private:
-        MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
+        MinibatchPackingFlags Get(size_t t) const;
         MinibatchPackingFlags Get(const FrameRange & fr) const;
     public:
         MinibatchPackingFlags Get(size_t s, size_t t) const;
@@ -647,11 +647,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MBLayout functions that require FrameRange
     // -----------------------------------------------------------------------
 
+    inline MinibatchPackingFlags MBLayout::Get(size_t t) const
+    {
+        return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
+    }
     inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
     {
-        if (IsEmpty())      // legacy stuff, will go away
-            return MinibatchPackingFlags::None;
-
         return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
     }
 
@@ -659,17 +660,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
     inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
     {
+        if (IsEmpty())      // legacy stuff, will go away
+            return MinibatchPackingFlags::None;
+
         if (fr.IsAllFrames())
             LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
 #if 1
-        else if (fr.seqIndex == SIZE_MAX)
-            return Get(fr.t()); // BUGBUG: Get(t) also must be folder in here to support time offsets
-
-        auto t = fr.t();    // use fr.timeSeqIndex directly
+        MinibatchPackingFlags f = MinibatchPackingFlags::None;
+        auto t = fr.t();        // TODO: use fr.timeIdxInSeq directly
         auto s = fr.seqIndex;
+        if (s == SIZE_MAX)      // aggregate requested
+        {
+            // determine flags from aggregate vectors
+
+            if (m_timeStepHasGap[t])      // indicates a gap
+                f |= MinibatchPackingFlags::NoInput;
+            // BUGBUG: This must consider a time offset in the future.
+            auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
+            if (distanceToStart == 0)   // TODO: update w.r.t. time offset
+                f |= MinibatchPackingFlags::SequenceStart;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
+            if (distanceToEnd == 0)     // TODO: update w.r.t. time offset
+                f |= MinibatchPackingFlags::SequenceEnd;
+
+            auto f1 = m_minibatchPackingFlags[t];
+            if (f1 != f)
+                sin(1.0);
+            assert(f1 == f); f1;
+
+            return f;
+        }
 
         // determine flags from matrices
-        MinibatchPackingFlags f = MinibatchPackingFlags::None;
 
         auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
         if (distanceToStart == -1)      // indicates a gap
@@ -679,7 +701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            // BUGBUG: This must consider a time offset in the future. First invert the logic so that Get(s,t) creates a FrameRange.
+            // BUGBUG: This must consider a time offset in the future.
             if (distanceToStart == 0)   // TODO: update w.r.t. time offset
                 f |= MinibatchPackingFlags::SequenceStart;
             auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
@@ -723,12 +745,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: can this be changed to get a reference to the whole matrix, to which one would then apply DataWithMBLayoutFor()?
     //       And assume that this is called only if !IsAllNone() and no gaps (we will have a flag for that, too), tested outside (otherwise we'd waste time creating a trivial matrix).
     //       Then we don't need all the logic to return a nullptr here.
+    // TODO: Can probably be faster by using the sequence array directly.
     inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const
     {
+        Lock();
         // lazily compute the validity mask
         if (m_columnsValidityMask == nullptr)
         {
-            Lock();
             m_columnsValidityMask.reset(new Matrix<char>(deviceId));
 
             // Determine indices of all invalid columns in the minibatch
