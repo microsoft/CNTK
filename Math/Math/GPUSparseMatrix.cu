@@ -2405,7 +2405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSigmoid()
     {
-        performElementWiseFunction(ElementWiseOperator::opSigmoid, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, *this);
         return *this;
     }
 
@@ -2414,14 +2414,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opSigmoid, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceLinearRectifierDerivative()
     {
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, *this);
         return *this;
     }
 
@@ -2430,14 +2430,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTanh()
     {
-        performElementWiseFunction(ElementWiseOperator::opTanh, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opTanh, *this);
         return *this;
     }
 
@@ -2446,14 +2446,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opTanh, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opTanh, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSqrt()
     {
-        performElementWiseFunction(ElementWiseOperator::opSqrt, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opSqrt, *this);
         return *this;
     }
 
@@ -2462,14 +2462,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opSqrt, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opSqrt, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceExp()
     {
-        performElementWiseFunction(ElementWiseOperator::opExp, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opExp, *this);
         return *this;
     }
 
@@ -2478,14 +2478,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opExp, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opExp, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceLog()
     {
-        performElementWiseFunction(ElementWiseOperator::opLog, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opLog, *this);
         return *this;
     }
 
@@ -2494,14 +2494,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opLog, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opLog, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceAbs()
     {
-        performElementWiseFunction(ElementWiseOperator::opAbs, this->m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opAbs, *this);
         return *this;
     }
 
@@ -2510,7 +2510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opAbs, a.m_pArray);
+        performElementWiseFunction(ElementWiseOperator::opAbs, a);
         return *this;
     }
 
@@ -2659,7 +2659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const ElemType *src)
+    void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src)
     {
         if (!OwnBuffer())
             LogicError("Cannot modify since the buffer is managed externally.");
@@ -2671,25 +2671,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         switch (kind)
         {
         case ElementWiseOperator::opSigmoid:
-            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opTanh:
-            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opSqrt:
-            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opExp:
-            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opLog:
-            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opAbs:
-            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         case ElementWiseOperator::opLinRectDerivative:
-            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src, m_pArray, N);
+            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         default:
             NOT_IMPLEMENTED;
