@@ -637,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (beta == 0)
             c.Resize(m, n);
         else
-            c.VerifySizeEqualOrGreater(m, n); // Can't resize if beta != 0
+            c.VerifySize(m, n); // Can't resize if beta != 0
 
         if (beta == 0)
         {

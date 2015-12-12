@@ -172,10 +172,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_baseMatrix->VerifySize(rows, cols);
         }
-        void VerifySizeEqualOrGreater(size_t rows, size_t cols)
-        {
-            m_baseMatrix->VerifySizeEqualOrGreater(rows, cols);
-        }
 
         Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
         void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
