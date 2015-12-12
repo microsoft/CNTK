@@ -236,34 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
         MinibatchPackingFlags Get(const FrameRange & fr) const;
     public:
-        MinibatchPackingFlags Get(size_t s, size_t t) const
-        {
-            // BUGBUG: This must consider a time offset in the future. First invert the logic so that Get(s,t) creates a FrameRange.
-            if (IsEmpty()) return MinibatchPackingFlags::None;
-
-            // determine flags from matrices
-            MinibatchPackingFlags f = MinibatchPackingFlags::None;
-
-            auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
-            if (distanceToStart == -1)      // indicates a gap
-            {
-                assert(m_timeStepHasGap[t]);
-                f |= MinibatchPackingFlags::NoInput;
-            }
-            else
-            {
-                if (distanceToStart == 0)
-                    f |= MinibatchPackingFlags::SequenceStart;
-                auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
-                if (distanceToEnd == 0)
-                    f |= MinibatchPackingFlags::SequenceEnd;
-            }
-
-            auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
-            assert(f1 == f);
-
-            return f;
-        }
+        MinibatchPackingFlags Get(size_t s, size_t t) const;
 
         // test boundary flags for a specific condition
         // TODO: Remove the direct-index versions in lieu of FrameRange version.
@@ -625,6 +598,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int LocateTimeOffset() const
         {
             EnsureNotAllFrames();
+            if (m_timeOffset == 0)      // no time offset: the time index itself must always be inside the actual MB
+                return 0;
             if (!m_pMBLayout)
                 InvalidArgument("FrameRange::LocateTimeOffset(): Time offset requires an MBLayout.");
             ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
@@ -672,6 +647,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MBLayout functions that require FrameRange
     // -----------------------------------------------------------------------
 
+    inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
+    {
+        if (IsEmpty())      // legacy stuff, will go away
+            return MinibatchPackingFlags::None;
+
+        return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
+    }
+
     // get packing flags from a frame range
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
     inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
@@ -679,8 +662,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (fr.IsAllFrames())
             LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
 #if 1
-        auto t = fr.t();
-        return fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
+        else if (fr.seqIndex == SIZE_MAX)
+            return Get(fr.t()); // BUGBUG: Get(t) also must be folder in here to support time offsets
+
+        auto t = fr.t();    // use fr.timeSeqIndex directly
+        auto s = fr.seqIndex;
+
+        // determine flags from matrices
+        MinibatchPackingFlags f = MinibatchPackingFlags::None;
+
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        if (distanceToStart == -1)      // indicates a gap
+        {
+            assert(m_timeStepHasGap[t]);
+            f |= MinibatchPackingFlags::NoInput;
+        }
+        else
+        {
+            // BUGBUG: This must consider a time offset in the future. First invert the logic so that Get(s,t) creates a FrameRange.
+            if (distanceToStart == 0)   // TODO: update w.r.t. time offset
+                f |= MinibatchPackingFlags::SequenceStart;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
+            if (distanceToEnd == 0)     // TODO: update w.r.t. time offset
+                f |= MinibatchPackingFlags::SequenceEnd;
+        }
+
+        auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
+        assert(f1 == f);
+
+        return f;
+        //auto t = fr.t();
+        //return fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
 #else
         // This specifically supports time offsets (e.g. pass fr.WithTimeOffset(-1)), and more specifically,
         // time offsets may refer to frames outside the sequence, which will be returned as NoLabel.
