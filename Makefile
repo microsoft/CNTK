@@ -77,6 +77,12 @@ all : buildall
 # Set up basic nvcc options and add CUDA targets from above
 CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
 
+ifndef NO_USE_MULTIVERSO
+INCLUDEPATH += Multiverso/include
+LIBPATH += Multiverso/x64/$(BUILDTYPE)
+LIBS += -lmultiverso -lzmq -lyaml-cpp
+endif
+
 ifdef CUDA_PATH
   ifndef GDK_PATH
     $(info defaulting GDK_PATH to /usr)
