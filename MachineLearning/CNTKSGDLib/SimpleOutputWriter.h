@@ -50,6 +50,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
             }
 
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
             //specify feature value nodes
             std::vector<ComputationNodeBasePtr>& featureNodes = m_net->FeatureNodes();
             std::vector<ComputationNodeBasePtr>& labelNodes = m_net->LabelNodes();
@@ -137,6 +140,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
                 outputStreams.push_back(new ofstream(wtocharpath(outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #endif
+
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
             //specify feature value nodes
             auto & featureNodes = m_net->FeatureNodes();

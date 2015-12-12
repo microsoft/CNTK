@@ -57,8 +57,13 @@
 #define let const auto
 #endif
 
-// TODO: Get rid of this global
+// TODO: Get rid of these globals
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
+
+// TODO: Temporary mechanism to enable memory sharing for
+// node output value matrices. This will go away when the 
+// sharing is ready to be enabled by default
+bool g_shareNodeValueMatrices = false;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -1776,6 +1781,8 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         g_mpi = new MPIWrapper();
+
+    g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
     // logging
     wstring logpath = config(L"stderr", L"");

@@ -841,15 +841,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // -----------------------------------------------------------------------
-    // DataWithMBLayoutFor() -- create view for a FrameRange of a Matrix with a given MBLayout
-    // This function binds the above together.
-    // Any access by FrameRange should only be done through this function.
+    // ColumnRangeWithMBLayoutFor() -- Return column range for a FrameRange of a Matrix with specified number of columns with a given MBLayout
     // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
-                                                         const FrameRange & fr/*select frame or entire batch*/,
-                                                         const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
+    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols, 
+                                                                       const FrameRange & fr/*select frame or entire batch*/,
+                                                                       const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
@@ -859,8 +855,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // if broadcast allowed then it is allowed to broadcast from an outer-loop value
             // Currently, the only 'outer' loop we have is to have no layout.
-            if (fr.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
-                return data.AsReference();
+            if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
+                return std::pair<size_t, size_t>(0, numCols);
             if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
                 LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
             else
@@ -873,7 +869,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!pMBLayout || fr.IsAllFrames())
         {
             if (fr.seqIndex == SIZE_MAX)
-                return data.AsReference();
+                return std::pair<size_t, size_t>(0, numCols);
             else
             {
                 if (!pMBLayout)
@@ -896,10 +892,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
             size_t startColumn = fr.t() * numParallelSequences;
             if (fr.seqIndex == SIZE_MAX)
-                return data.ColumnSlice(startColumn, numParallelSequences);
+                return std::pair<size_t, size_t>(startColumn, numParallelSequences);
             else
-                return data.ColumnSlice(startColumn + fr.seqIndex, 1);
+                return std::pair<size_t, size_t>(startColumn + fr.seqIndex, 1);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // DataWithMBLayoutFor() -- create view for a FrameRange of a Matrix with a given MBLayout
+    // This function binds the above together.
+    // Any access by FrameRange should only be done through this function.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
+                                                       const FrameRange & fr/*select frame or entire batch*/,
+                                                       const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
+    {
+        auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
+        if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
+            return data.AsReference();
+
+        return data.ColumnSlice(columnRange.first, columnRange.second);
     }
 
     // -----------------------------------------------------------------------

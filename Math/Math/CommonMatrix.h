@@ -103,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifySize: expected matrix size %lu x %lu, but it is %lu x %lu",
                 rows, cols, GetNumRows(), GetNumCols());
         }
-        void SetMatrixName(const wchar_t* s) 
+        void SetMatrixName(const wchar_t* s)
         { 
             Clear();
             if (s!=nullptr)
