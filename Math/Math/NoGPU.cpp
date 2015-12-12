@@ -1248,7 +1248,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     }
 
     template<class ElemType>
-    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported()
+    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
     {
         return false;
     }
