@@ -980,7 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (beta == 0)
             c.Resize(m, n);
         else
-            c.VerifySizeEqualOrGreater(m, n); // Can't resize if beta != 0
+            c.VerifySize(m, n); // Can't resize if beta != 0
 
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
@@ -1031,7 +1031,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (beta == 0)
             c.Resize(cRows, cCols);
         else
-            c.VerifySizeEqualOrGreater(cRows, cCols); // Can't resize if beta != 0
+            c.VerifySize(cRows, cCols); // Can't resize if beta != 0
 
         c.PrepareDevice();
         if (rhs.m_format == MatrixFormat::matrixFormatSparseCSC)
