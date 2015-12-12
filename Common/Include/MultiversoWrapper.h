@@ -104,7 +104,7 @@ namespace Microsoft {
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-						Matrix<ElemType> &mat = node->FunctionValues();
+						Matrix<ElemType> &mat = node->Value();
 
 						for (int j = 0; j < _nLocalCache; j++)
 							_pPMatrixCache[j][i] = new Matrix<ElemType>(mat);
@@ -147,7 +147,7 @@ namespace Microsoft {
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
+							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
 							//CNTK model -> GPU buffer
 							//*_pPMatrixCache[_nCacheIdx][i] = mat;
@@ -239,7 +239,7 @@ namespace Microsoft {
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
+							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
 							ElemType * px = _pDelta + _vTableIdx[i];
 							mat.CopyToArray(px, _vTableLength[i]);
@@ -275,7 +275,7 @@ namespace Microsoft {
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
+							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
 							ElemType * px = _pPCache[0] + _vTableIdx[i];
 							//ElemType * px = _pCache + _vTableIdx[i];
@@ -299,7 +299,7 @@ namespace Microsoft {
 					for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-						Matrix<ElemType> &mat = node->FunctionValues();
+						Matrix<ElemType> &mat = node->Value();
 						size_t layerSize = mat.GetNumElements();
 
 						_vTableLength.push_back(layerSize);

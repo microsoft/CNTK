@@ -1165,10 +1165,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f";
                 SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
 
-				string formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+				string statcis_formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
 									GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " + 
 									GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n" ;
-                SGDTrace(stderr, formatString.c_str(), readTime, computeTime, commTime);
+				SGDTrace(stderr, statcis_formatString.c_str(), readTime, computeTime, commTime);
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
                 {
