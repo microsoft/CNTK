@@ -41,6 +41,7 @@
 #include "CPUMatrix.h"  // used for SetNumThreads()
 #include "SGD.h"
 #include "MPIWrapper.h"
+#include "multiverso.h"
 #include "Config.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
@@ -1779,8 +1780,11 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     // parallel training
     g_mpi = nullptr;
     bool paralleltrain = config(L"parallelTrain", false);
-    if (paralleltrain)
-        g_mpi = new MPIWrapper();
+	if (paralleltrain)
+	{
+		multiverso::InitMPI();
+		g_mpi = new MPIWrapper();
+	}
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -1864,6 +1868,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
     {
+		multiverso::InitMPI();
         g_mpi = new MPIWrapper();
     }
 

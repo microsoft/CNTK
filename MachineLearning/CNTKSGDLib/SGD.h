@@ -21,6 +21,7 @@
 #include <chrono> 
 #include <random>
 #include "Profiler.h"
+#include "MultiversoWrapper.h"
 
 using namespace std;    // ugh! TODO: get rid of this from .h files!!!
 
@@ -56,6 +57,7 @@ enum class ParallelizationMethod : int
     DataParallelSGD = 1,
     ModelAveragingSGD = (1 << 1),
     ModelParallelSGD = (1 << 2), // Currently unsupported
+	DataParallelASGD = (1 << 3),
 };
 
 // configuration parameters associated with RMSProp learning algorithm
@@ -240,6 +242,11 @@ protected:
     bool m_needAveMultiplier;
     double m_L2RegWeight;
     double m_L1RegWeight;
+
+	// Parallel training related with ASGD 
+	size_t m_nFramesBetweenASGDSync;
+	bool m_isPipeline;
+	size_t m_nEpochBarrier;
 
     //sequence training
     double m_hSmoothingWeight;
@@ -497,6 +504,8 @@ protected:
 
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
+	MultiversoWrapper<ElemType>* m_multiverso;
+	bool m_multiverso_barrier;
 };
 
 }}}

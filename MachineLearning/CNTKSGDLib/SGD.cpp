@@ -306,15 +306,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
         }
 
+		//Multiverso Warpper for ASGD logic init
+		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+		{
+			m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes, g_mpi->NumNodesInUse(), m_isPipeline);
+			m_multiverso->ModelInit(learnableNodes);
+			m_multiverso_barrier = false;
+		}
+
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
-            if (g_mpi != nullptr)
+			if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
             {
                 g_mpi->WaitAll();
             }
+
+			if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD && m_nEpochBarrier > 0 && i % m_nEpochBarrier == 0)
+			{
+				fprintf(stderr, "Barrier at %d epoch..............", i + 1);
+				if (m_multiverso->_pThread->joinable())
+					m_multiverso->_pThread->join();
+				m_multiverso->_adaptor->Barrier();
+				fprintf(stderr, "Barrier finished.\n");
+			}
 
             Timer timer;
             timer.Start();
@@ -606,7 +623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Synchronize all ranks before proceeding to ensure that 
             // nobody tries reading the checkpoint file at the same time
             // as rank 0 deleting it below
-            if (g_mpi != nullptr)
+			if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
             {
                 g_mpi->WaitAll();
             }
@@ -647,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Synchronize all ranks before proceeding to ensure that 
         // rank 0 has finished writing the model file
-        if (g_mpi != nullptr)
+		if (g_mpi != nullptr && m_parallelizationMethod != ParallelizationMethod::DataParallelASGD)
         {
             g_mpi->WaitAll();
         }
@@ -720,7 +737,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        (epochNumber >= m_parallelizationStartEpochNum));
         bool useModelAveraging = ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) &&
                                   (epochNumber >= m_parallelizationStartEpochNum));
-        bool useParallelTrain = useGradientAggregation || useModelAveraging; 
+		bool useASGD = ((m_parallelizationMethod == ParallelizationMethod::DataParallelASGD) &&
+			(epochNumber >= m_parallelizationStartEpochNum));
+		bool useParallelTrain = useGradientAggregation || useModelAveraging || useASGD;
 
         // MA-related variables
         size_t nSamplesSinceLastModelSync = 0;
@@ -804,8 +823,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         fprintf(stderr, ".\n");
 
-        Timer timer;
-        timer.Start();
+		double readTime = 0, computeTime = 0, commTime = 0;
+		Timer timer, readTimer, computeTimer, commTimer;
+
+		timer.Start();
+		readTimer.Start();
 
         // --- MAIN MINIBATCH LOOP
 
@@ -817,6 +839,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = 0;
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
                                                                           useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+
+			if (!m_multiverso_barrier && useASGD)
+			{
+				fprintf(stderr, "Ready to train.....");
+				m_multiverso->_adaptor->Barrier();
+				m_multiverso_barrier = true;
+				fprintf(stderr, "Go!\n");
+			}
+
             if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
                 break;  // end of epoch
 
@@ -826,6 +857,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!wasDataRead)
                 actualMBSize = 0;   // (undefined if !wasDataRead)
 
+			readTimer.Stop();
+			readTime += readTimer.ElapsedSeconds();
+			computeTimer.Start();
             nSamplesSinceLastModelSync += actualMBSize;
 
             // node data was changed
@@ -1000,6 +1034,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
+			computeTimer.Stop();
+			computeTime += computeTimer.ElapsedSeconds();
+			commTimer.Start();
             // aggregation by model averaging
             // TODO: this does not happen each MB, does it?
             if (useModelAveraging)
@@ -1044,6 +1081,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     aggregateNumSamplesWithLabel = processedSamples;
                 }
             }
+
+			if (useASGD && g_mpi->NumNodesInUse() > 1)
+			{
+				size_t processedSamples = 0;
+				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
+				{
+					m_multiverso->ModelSync(learnableNodes);
+					processedSamples = nSamplesSinceLastModelSync;
+					nSamplesSinceLastModelSync = 0;
+				}
+				aggregateNumSamplesWithLabel = processedSamples;
+			}
+
+			commTimer.Stop();
+			commTime += commTimer.ElapsedSeconds();
 
             timer.Stop();
             numMBsRun++;
@@ -1110,9 +1162,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
-                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
+                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f";
                 SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
 
+				string formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+									GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " + 
+									GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n" ;
+                SGDTrace(stderr, formatString.c_str(), readTime, computeTime, commTime);
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
                 {
@@ -1127,6 +1183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // reset statistics
                 totalTimeInMBs = 0;
                 numSamplesLastMBs = 0;
+				readTime = 0; computeTime = 0; commTime = 0;
 
                 epochCriterionLastMBs = epochCriterion;
                 for (size_t i = 0; i < epochEvalErrorsLastMBs.size(); i++)
@@ -1143,6 +1200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             timer.Restart();
             totalEpochSamples += aggregateNumSamplesWithLabel;
             totalSamplesSeen += aggregateNumSamplesWithLabel;
+			readTimer.Restart();
 
             // call DataEnd function
             // This signals something from SGD to the reader.
@@ -1172,6 +1230,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nSynced++;
             nSamplesSinceLastModelSync = 0;
         }
+
+		if (useASGD && (g_mpi->NumNodesInUse() > 1))
+		{
+			// ASGD also may not be synced after epoch finished, so do the sync here 
+			int residualSampels = (int)nSamplesSinceLastModelSync;
+			totalSamplesSeen += residualSampels;
+			totalEpochSamples += residualSampels;
+			m_multiverso->ModelSync(learnableNodes);
+			nSamplesSinceLastModelSync = 0;
+		}
 
         // compute final criterion values
         if (useGradientAggregation)
@@ -2424,8 +2492,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ParallelizationMethod::DataParallelSGD;
         else if (!_wcsicmp(s.c_str(), L"ModelAveragingSGD"))
             return ParallelizationMethod::ModelAveragingSGD;
-        else
-            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD)");
+		else if (!_wcsicmp(s.c_str(), L"DataParallelASGD"))
+			return ParallelizationMethod::DataParallelASGD;
+		else
+			InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | dataParallelSGD | modelAveragingSGD| dataParallelASGD)");
     }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring & s)
@@ -2657,6 +2727,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_parallelizationStartEpochNum = 0;
         m_nFramesBetweenMASync = 40000; // default 40k frames 
 
+		m_nFramesBetweenASGDSync = 1280;
+		m_nEpochBarrier = 0;
+
+
         if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
         {
             const ConfigRecordType & configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
@@ -2683,6 +2757,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const ConfigRecordType & configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
                 m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
             }
+
+			if (configParallelTrain.Exists(L"DataParallelASGD"))
+			{
+				const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
+				m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", (size_t)1280);
+				m_isPipeline = configDataParallelASGD(L"UsePipeline", true);
+				m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", (size_t)0);
+			}
+
         }
     }
 
