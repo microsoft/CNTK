@@ -90,14 +90,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // DecimateMinibatch - decimate minibatch for parallelization
         // -------------------------------------------------------------------
-        // non-inplace decimation , to be used in subminibatch implementation 
+        // non-inplace decimation, to be used in subminibatch implementation 
         template<class ElemType>
         static void DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,           // input matrices 
-            std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,                                 // output decimated matrices. 
+                                      std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,       // output decimated matrices. 
                                                                                                     // Caller need to release the memory themselves!!!   TODO: use shared_ptr 
-            MBLayoutPtr pMBLayout,                                                                  // input MBLayout 
-            MBLayoutPtr& pDecimateMBLayout,                                                         // output decimated MBLayout 
-            int numWorker, int rank)
+                                      MBLayoutPtr pMBLayout,                                        // input MBLayout 
+                                      MBLayoutPtr& pDecimateMBLayout,                               // output decimated MBLayout (note: cannot work in-place)
+                                      int numWorker, int rank)
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
             size_t nT = pMBLayout->GetNumTimeSteps();
@@ -105,21 +105,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decide start column and end column 
             size_t st = numParallelSequences * (size_t)rank / numWorker;
             size_t en = numParallelSequences * (size_t)(rank + 1) / numWorker;
-            en = en > numParallelSequences ? numParallelSequences : en;
+            en = en > numParallelSequences ? numParallelSequences : en; // TODO: why are these two tests necessary?
             en = (rank == numWorker - 1) ? numParallelSequences : en;
             size_t numNewParallelSequence = en - st;
 
-#if 0   // per discussion with Frank and Amit, we remove this warning since the same decimation function is also called for frame-mode
-            // warning if needed 
-            static bool bWarned = false;
-            if (!bWarned && nSequence % numWorker != 0)
-            {
-                /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "DecimateMinibatch: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
-                    (int)nSequence, (int)numWorker);
-                bWarned = true;
-            }
-#endif 
             // begin decimate matrices 
             size_t rv = 0;
             for (const auto& it : MB)
@@ -141,22 +130,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decimatedMB[name] = new Matrix<ElemType>(devID);
                 decimatedMB[name]->AssignRowSliceValuesOf(mat.Reshaped(numRows*numParallelSequences, nT), st*numRows, (en - st)*numRows);
                 decimatedMB[name]->Reshape(numRows, numNewParallelSequence*nT);
-                // If we have RowSlice function, we would like to write in this way 
+                // If we had a RowSlice function, we would like to write in this way 
                 // decimatedMB[name]->SetValue(mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nNewParallelSequence*nT));
             }
             // decimate MBLayout as well 
             pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
-            for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
-                pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
-
+#if 1
+            // now copy over all sequence info records that are inside the range, with adjusted 's'
+            const auto & sequences = pMBLayout->GetAllSequences();
+            for (const auto & seq : sequences)
+            {
+                if (seq.s >= st && seq.s < en)
+                {
+                    auto shiftedSeq = seq;
+                    shiftedSeq.s -= st;     // these sequences have shifted up by 'st' sequences
+                    pDecimateMBLayout->AddSequence(shiftedSeq);
+                }
+            }
+#else
+            for (size_t t = 0; t < nT; t++) for (size_t s = 0; s < numNewParallelSequence; s++)
+                pDecimateMBLayout->Set(s, t, pMBLayout->Get(s + st, t));
+#endif
         }
 
-      // Inpace decimation 
+        // in-place decimation, for use with data-parallel processing
         template<class ElemType>
         static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
-                                        int numprocs, int rank,                           // rank info
-                                        MBLayoutPtr pMBLayout                              // get decimated as well 
-                                        )
+                                      int numprocs, int rank,                           // rank info
+                                      MBLayoutPtr pMBLayout)                            // get decimated as well 
         {
             if (numprocs == 1)
                 return;
@@ -164,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // allocate space for non-inplace decimation 
             MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
-            std::map<wstring, Matrix<ElemType>*>    decimatedMB;
+            std::map<wstring, Matrix<ElemType>*> decimatedMB;
             // call in-place decimation 
             DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
             // move the data 
@@ -177,8 +178,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             pMBLayout->MoveFrom(pDecimatedMB);
         }
-        // SubminibatchHelpers
-        // Helper for sub-minibatch implementation
+
+        // ===================================================================
+        // SubminibatchHelpers -- helper for sub-minibatch implementation
+        // TODO: Can this just exist inside SGD.cpp?
+        // ===================================================================
+
         // A sub-minibathc is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation 
         // The usage would be : 
         //        SubminibatchHelpers sbhelper;    
@@ -207,7 +212,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             typedef            std::vector<size_t>*                                                         ExtrauttMapPtr;
             typedef            std::map<std::wstring, Matrix<ElemType>*>                                    Matrices;
 
-
             // member variables served as caching space 
             Matrices                                            m_inputMatricesCache;
             MBLayoutPtr                                         m_MBLayoutCache;
@@ -234,9 +238,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t                                              m_numParallelSequences; // number of paralle sequence in the cached matrix and MBLayout 
             size_t                                              m_numSubminibatches;    // how many subminibatches we are going to use ? 
 
-            std::vector<shared_ptr<ComputationNode<ElemType>>>                 m_NetCriterionNodes;
-            std::vector<shared_ptr<ComputationNode<ElemType>>>                 m_NetEvaluationNodes;
-            std::map<wstring, shared_ptr<IStateFulNode>>                       m_NetStatefulNodes;      // we need to Export/Import states of stateful nodes when we swtich subminibatches 
+            std::vector<shared_ptr<ComputationNode<ElemType>>>  m_NetCriterionNodes;
+            std::vector<shared_ptr<ComputationNode<ElemType>>>  m_NetEvaluationNodes;
+            std::map<wstring, shared_ptr<IStateFulNode>>        m_NetStatefulNodes;      // we need to Export/Import states of stateful nodes when we swtich subminibatches 
 
         private:
 
@@ -256,8 +260,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             std::map<wstring, shared_ptr<IStateFulNode>> EnumerateStatefulNode(ComputationNetwork& net,
-                const std::vector<ComputationNodeBasePtr>& criterionNode,
-                const std::vector<ComputationNodeBasePtr>& evaluationNode)
+                                                                               const std::vector<ComputationNodeBasePtr>& criterionNode,
+                                                                               const std::vector<ComputationNodeBasePtr>& evaluationNode)
             {
                 std::map<wstring, shared_ptr<IStateFulNode>> statefulnodes;
                 for (auto& root : criterionNode)
@@ -277,14 +281,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             { }
 
             void Init(ComputationNetworkPtr & net,
-                const std::list<ComputationNodeBasePtr>& learnableNodes,
-                const std::vector<ComputationNodeBasePtr>& criterionNodes,
-                const std::vector<ComputationNodeBasePtr>& evaluationNodes)
+                      const std::list<ComputationNodeBasePtr>& learnableNodes,
+                      const std::vector<ComputationNodeBasePtr>& criterionNodes,
+                      const std::vector<ComputationNodeBasePtr>& evaluationNodes)
             {
                 m_MBLayoutCache = make_shared<MBLayout>();
                 m_NetCriterionAccumulator = make_shared<Matrix<ElemType>>(1, 1, net->GetDeviceId());
                 m_NetEvaluationAccumulator = make_shared<Matrix<ElemType>>(1, evaluationNodes.size(), net->GetDeviceId());
-                // remember ptr to  learnableNode 
+                // remember ptrs to learnable nodes
                 for (auto x : learnableNodes)
                 {
                     shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(x);
@@ -328,10 +332,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete x.second;
                 }
             }
-            size_t  GetMinibatchIntoCache(IDataReader<ElemType>& trainSetDataReader,
-                ComputationNetwork& net,
-                std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
-                size_t requestedSubminibatches)
+
+            size_t GetMinibatchIntoCache(IDataReader<ElemType>& trainSetDataReader,
+                                         ComputationNetwork& net,
+                                         std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
+                                         size_t requestedSubminibatches)
             {
                 // first, remember interface to the net 
                 m_NetMBLayoutPtr = net.GetMBLayoutPtr();
@@ -427,6 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         pNode->ImportState(m_NetStates[name][iSubminibatch]);
                 }
             }
+
             // TODO: encapsulate it into a destructor? Note: Cannot throw exceptions in destructor.
             void DoneWithCurrentSubMinibatch(size_t iSubminibatch)
             {
@@ -443,18 +449,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     pNode->Gradient().SetValue((ElemType)0);
                 }
                 // accumulate criterion value 
-                Matrix<ElemType>::AddElementToElement(
-                    m_NetCriterionNodes[0]->Value(), 0, 0,
-                    *m_NetCriterionAccumulator, 0, 0
-                    );
+                Matrix<ElemType>::AddElementToElement(m_NetCriterionNodes[0]->Value(), 0, 0,
+                                                      *m_NetCriterionAccumulator, 0, 0);
                 m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
                 // accumulate evaluation value 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
-                    Matrix<ElemType>::AddElementToElement(
-                        m_NetEvaluationNodes[i]->Value(), 0, 0,
-                        *m_NetEvaluationAccumulator, 0, i
-                        );
+                    Matrix<ElemType>::AddElementToElement(m_NetEvaluationNodes[i]->Value(), 0, 0,
+                                                          *m_NetEvaluationAccumulator, 0, i);
                     m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
                 }
 
@@ -465,6 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_NetStates[name][iSubminibatch] = x.second->ExportState();
                 }
             }
+
             void DoneWithCurrentMinibatch()
             {
                 for (auto& x : m_CachedGraident)
@@ -484,22 +487,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
                 //m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
-                Matrix<ElemType>::AddElementToElement(
-                    *m_NetCriterionAccumulator, 0, 0,
-                    m_NetCriterionNodes[0]->Value(), 0, 0
-                    );
+                Matrix<ElemType>::AddElementToElement(*m_NetCriterionAccumulator, 0, 0,
+                                                      m_NetCriterionNodes[0]->Value(), 0, 0);
                 m_NetCriterionAccumulator->SetValue((ElemType)0);
 
                 for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
                 {
                     //m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
-                    Matrix<ElemType>::AddElementToElement(
-                        *m_NetEvaluationAccumulator, 0, i,
-                        m_NetEvaluationNodes[i]->Value(), 0, 0
-                        );
+                    Matrix<ElemType>::AddElementToElement(*m_NetEvaluationAccumulator, 0, i,
+                                                          m_NetEvaluationNodes[i]->Value(), 0, 0);
                 }
                 m_NetEvaluationAccumulator->SetValue((ElemType)0);
             }
         };
     };
+
 }}}

@@ -937,7 +937,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     size_t currSubsetSize = currSubsetEndCol - currSubsetStartCol;
     // create the respective MBLayout
     // Every sample is returned as a sequence of 1 frame.
-    m_pMBLayout->Init(currSubsetSize, 1);
+    m_pMBLayout->InitAsFrameMode(currSubsetSize);
 
     // if we are writing out to the caching writer, do it now
     if (m_cachingWriter && (m_subsetNum == 0))

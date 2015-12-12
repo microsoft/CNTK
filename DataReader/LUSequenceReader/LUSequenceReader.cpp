@@ -714,17 +714,22 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                 size_t seq = mToProcess[k];         // utterance index
                 size_t seqLen = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
 
-                if (i == mLastPosInSentence)        // first token in the sequence
+                if (j == 0)        // first token in the sequence
                 {
                     mSentenceBeginAt[k] = i;
-                    if (!mIgnoreSentenceBeginTag)   // ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
-                        m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceStart);
+                    if (mIgnoreSentenceBeginTag)   // ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                        LogicError("BatchLUSequenceReader: ignoresentencebegintag option disabled, not supported by latest architecture changes.");
+
+                    // create the sequence entry in the MBLayout
+                    m_pMBLayout->AddSequence(seq, k, 0, seqLen);
+                    // and the gap behind if any
+                    if (seqLen < mMaxSentenceLength)
+                        m_pMBLayout->AddGap(k, seqLen, mMaxSentenceLength);
                 }
 
                 if (i == seqLen - 1)    // last token in the sequence
                 {
                     mSentenceEndAt[k] = i;
-                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceEnd);
                 }
 
                 if (i < seqLen)         // valid token
@@ -776,7 +781,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
 
-                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
+                    //m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
                 }
             }
         }
@@ -983,6 +988,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actua
     }
 }
 
+// This function seems unused.
 template<class ElemType>
 void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*actualMbSize*/)
 {
@@ -998,7 +1004,6 @@ void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*a
             mSentenceBegin = false; 
     }
 }
-
 
 template<class ElemType>
 bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
