@@ -688,7 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
-        assert(f1 == f);
+        assert(f1 == f); f1;
 
         return f;
         //auto t = fr.t();
