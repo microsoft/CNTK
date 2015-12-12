@@ -26,6 +26,7 @@
 #include <iostream>
 #include <regex>
 #include <chrono>
+#include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -130,11 +131,6 @@ public:
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
-#if 0
-        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
-        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
-        AllocateEvalMatrices(rootNode);
-#endif
         VerifyIsCompiled("StartEvaluateMinibatchLoop");
         ResetEvalTimeStamps();              // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
     }
@@ -169,12 +165,10 @@ private:
     void VerifyIsCompiled(const char * where) const;
     //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
+    void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
-    void AllocateGradientMatrices(ComputationNodeBasePtr rootNode); // public since this is called by SGD
 private:
-    void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, std::vector<ComputationNodeBasePtr>& outValueRootNodes, std::vector<ComputationNodeBasePtr>& trainRootNodes);
-    void AllocateEvalMatrices(ComputationNodeBasePtr rootNode);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount);
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 public:
 
@@ -211,7 +205,10 @@ public:
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
             fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        if (rootNode)
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        else
+            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
 
     // replace an existing eval order with an updated one
@@ -338,6 +335,7 @@ public:
     {
         return AsNodePtr<N>(inode) != nullptr;
     }
+
 
     // -----------------------------------------------------------------------
     // network editing

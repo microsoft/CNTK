@@ -156,11 +156,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // allocate memory for backward computation
-        // TODO: This should be done in CompileNetwork(). However, if I do it there, I get a double-free error from MatrixPool.
-        fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
-        for (int i = 0; i < criterionNodes.size(); i++)
-            net->AllocateGradientMatrices(criterionNodes[i]);
+        std::vector<ComputationNodeBasePtr> additionalNodesToEvaluate;
+        auto& outputNodes = net->OutputNodes();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
+        
+        auto preComputeNodesList = net->GetNodesRequiringPreComputation();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
+
+        // allocate memory for forward and backward computation
+        net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
 
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -205,6 +209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
             refNet->CompileNetwork();
+
+            // allocate memory for forward computation
+            refNet->AllocateAllMatrices({ refNode }, {}, nullptr);
         }
 
         // initializing weights and gradient holder
