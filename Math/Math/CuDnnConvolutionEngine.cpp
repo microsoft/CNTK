@@ -33,6 +33,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaDeviceProp props = { 0 };
         return cudaGetDeviceProperties(&props, deviceId) == cudaSuccess && props.major >= 3;
 #else
+        UNUSED(deviceId);
         return false;
 #endif
     }
