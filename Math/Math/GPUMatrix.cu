@@ -1945,10 +1945,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf (const GPUMatrix<ElemType>& a)
     {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-
-        performElementWiseFunction(ElementWiseOperator::opSigmoid, a.m_pArray);
+        Resize(a.GetNumRows(),a.GetNumCols());
+        CUDA_LONG N=(CUDA_LONG)GetNumElements();
+        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignSigmoidOf<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        /*SetValue(a);
+        InplaceSigmoid();*/
         return *this;
     }
 

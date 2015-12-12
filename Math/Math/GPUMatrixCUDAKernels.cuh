@@ -131,6 +131,27 @@ __device__ __forceinline__ double _exp(double f)
 }
 
 template<class ElemType>
+__global__ void _assignSigmoidOf(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (id >= N)
+    {
+        return;
+    }
+
+    // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
+    // and e^x / (1 + e^x) if x is positive.
+    ElemType negElem = -a[id];
+    ElemType e = _exp(negElem);
+
+    res[id] = 1 / (e + 1);
+};
+
+template<class ElemType>
 __global__ void _elementWiseLinRectDerivativeOnCuda(    
     const ElemType *a,
     ElemType *res,    
