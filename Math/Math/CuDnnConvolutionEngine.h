@@ -37,6 +37,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConvEnginePtr CreateConvEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples) override;
         PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) override;
 
-        static bool IsSupported();
+        static bool IsSupported(DEVICEID_TYPE deviceId);
     };
 }}}

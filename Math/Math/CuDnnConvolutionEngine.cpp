@@ -26,11 +26,12 @@ template<> const char* CudaErrString(cudnnStatus_t x)
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported()
+    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId)
     {
         // REVIEW alexeyk: compile-time for now, make runtime, config-driven.
 #ifdef USE_CUDNN
-        return true;
+        cudaDeviceProp props = { 0 };
+        return cudaGetDeviceProperties(&props, deviceId) == cudaSuccess && props.major >= 3;
 #else
         return false;
 #endif
