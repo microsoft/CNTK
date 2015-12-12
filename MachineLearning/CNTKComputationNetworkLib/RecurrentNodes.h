@@ -168,6 +168,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_timeStep == 1)
                 return;
 
+#if 1
+            LogicError("CacheMBLayout: m_timeStep > 1 temporarily disabled until MBLayout update completed.");
+#else
             // modify m_pShiftedMBLayout
             // If two utterances are packed together (S: start, E: end, N: no input) and we need to get values 2 steps in the past
             //    S X X X E S X X X X E N N
@@ -204,6 +207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
+#endif
         }
     public:
 

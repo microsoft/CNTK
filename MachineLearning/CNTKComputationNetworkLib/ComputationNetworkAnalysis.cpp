@@ -269,8 +269,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 if (!bFound)
                 {
+#if 1
+                    if (loopId != m_allSEQNodes.size())
+                        LogicError("DetermineSCCsR(): inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", (int)loopId, (int)m_allSEQNodes.size());
+                    SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size(), cur);
+#else
                     assert(loopId == m_allSEQNodes.size());     // BUGBUG: Only true if all loops are shared among roots. Fix: use m_allSEQNodes.size() instead
                     SEQTraversalFlowControlNode rInfo(loopId, cur);
+#endif
                     // TODO: can we prove that 'cur' == nestedNodes.front()? If so, we won't need to store it separately.
                     rInfo.m_nestedNodes = move(nestedNodes);    // TODO: make these two part of the constructor
                     rInfo.m_steppingDirection = DetermineLoopDirection(rInfo.m_nestedNodes);
