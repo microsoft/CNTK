@@ -492,6 +492,17 @@ then
     fi
 fi
 
+if test x$opencv_path = x
+then
+    opencv_path=$(find_opencv)
+    if test x$opencv_path = x ; then
+        echo Cannot locate OpenCV 3.0.0 directory
+        echo ImageReader will NOT be built.
+    else
+        echo Found OpenCV at $opencv_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -515,7 +526,6 @@ if test x$kaldi_path != x ; then
     echo KALDI_PATH=$kaldi_path >> $config
 fi
 if test x$opencv_path != x ; then
-    echo Found OpenCV at $opencv_path
     echo OPENCV_PATH=$opencv_path >> $config
 fi
 
