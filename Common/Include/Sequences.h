@@ -179,7 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
-        size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
+        size_t GetNumParallelSequences() const { return m_numParallelSequences; }
 
         // how many columns the MB matrix has
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
@@ -191,6 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t s;               // index of parallel sequence
             ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
             size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
+            bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
         };
         // return all sequences stored in this minibatch
         const vector<SequenceInfo> & GetAllSequences() const { return m_sequences; }
@@ -200,14 +201,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // compare whether two layouts are the same
         bool operator==(const MBLayout & other) const
         {
-            // for now just check the object identity
             if (this == &other)
                 return true;
-            // TODO: change to new structure
-            return          m_numTimeSteps == other.m_numTimeSteps &&
+            bool res =
+                m_numTimeSteps == other.m_numTimeSteps &&
+                m_numParallelSequences == other.m_numParallelSequences &&
+                m_distanceToStart.IsEqualTo(other.m_distanceToStart) &&
+                m_distanceToEnd  .IsEqualTo(other.m_distanceToEnd)   &&
+                m_distanceToNearestStart == other.m_distanceToNearestStart &&
+                m_distanceToNearestEnd   == other.m_distanceToNearestEnd   &&
+                m_timeStepHasGap == other.m_timeStepHasGap &&
+                m_sequences == other.m_sequences;
+#if 1
+            bool res1 =
+                m_numTimeSteps == other.m_numTimeSteps &&
                 m_numParallelSequences == other.m_numParallelSequences &&
                 m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
                 m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
+            assert(res == res1);
+#endif
+            return res;
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
@@ -416,6 +429,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable Matrix<char> m_columnsValidityMask;
 
     public:
+#if 1
+        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t) const { NOT_IMPLEMENTED; }
+        Matrix<float> & GetM() { NOT_IMPLEMENTED; }
+#else
         // specialized functions to replicate old behavior that shouldn't be there but I cannot test
         // TODO: these should all go away one day
 
@@ -425,9 +442,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
         }
-
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
         Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
+#endif
+
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
