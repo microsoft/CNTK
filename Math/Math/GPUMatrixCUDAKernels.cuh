@@ -530,7 +530,7 @@ __global__ void _scaleAndAddScalar(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id>=N)
         return;
-    c[id] += alpha*a[0] + b[id];
+    c[id] = alpha*a[0] + b[id];
 };
 
 template<class ElemType>
