@@ -1164,7 +1164,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_format = matrixFormatDense;
     }
 
-
     template<class ElemType>
     void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
     {
@@ -4503,7 +4502,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template GPUMatrix<char>::GPUMatrix(int);
     template void GPUMatrix<char>::SetValue(const char);
     template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
-    
+    template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
+
 }}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
@@ -4574,6 +4574,5 @@ int _ConvertSMVer2Cores(int major, int minor)
 //    else
 //        return (CUDA_LONG)free;
 //}
-
 
 #endif // CPUONLY
