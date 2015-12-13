@@ -5187,13 +5187,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class Matrix<float>; 
     template class Matrix<double>;    
 
-    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
     // Let's explicitly instantiate the methods we need for that purpose
     template Matrix<char>::Matrix(DEVICEID_TYPE);
     template Matrix<char>::Matrix(Matrix<char>&&);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
     template Matrix<char>::~Matrix();
+    template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
+    template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);
     template char* Matrix<char>::BufferPointer() const;
     template int Matrix<char>::GetDeviceId() const;
     template size_t Matrix<char>::GetNumElements() const;
@@ -5203,6 +5205,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template size_t Matrix<char>::GetNumCols() const;
     template void Matrix<char>::SetValue(const char);
     template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
-    template bool Matrix<char>::IsEmpty() const;  
-    
+    template bool Matrix<char>::IsEmpty() const;
+
 }}}
