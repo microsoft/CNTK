@@ -244,6 +244,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameRange version allows to test with time offset
         bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
         bool IsBeyondStartOrEnd(const FrameRange & fr) const;
+        bool IsGap(const FrameRange & fr) const { return Is(fr, MinibatchPackingFlags::NoInput); }
+
+        // TODO: these should go away
         bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
         bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
 
@@ -808,10 +811,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ColumnRangeWithMBLayoutFor() -- Return column range for a FrameRange of a Matrix with specified number of columns with a given MBLayout
     // -----------------------------------------------------------------------
+
+    // BUGBUG: Must support time offsets.
     static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols, 
                                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
+        assert(fr.m_timeOffset == 0);   // BUGBUG: must support this
+
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
         // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
@@ -869,20 +876,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Any access by FrameRange should only be done through this function.
     // -----------------------------------------------------------------------
 
-#if 0
-    template<class ElemType>
-    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
-                                                       const FrameRange & fr/*select frame or entire batch*/,
-                                                       const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
-    {
-        auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
-        //if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
-        //    return data.AsReference();
-        return data.ColumnSlice(columnRange.first, columnRange.second);
-    }
-
-    // const version (100% dup except the input type)
-#endif
     template<class ElemType>
     static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> & data,
                                                        const FrameRange & fr/*select frame or entire batch*/,
