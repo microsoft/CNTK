@@ -6,9 +6,7 @@
 //
 
 // TODO:
-//  - frame mode: some readers just call Init() (e.g. SparsePCReader)--should that be allowed?
-//  - IsAllNone() does not work presently (should cause no harm except some inefficiency)
-//  - add code that uses the new structure, and validates against the old one
+//  - implement time offsets in Get()
 //  - fix RecurrentNode (remove shifted layout, use time offset in condition test)
 //  - finally remove the old bit masks
 //  - split Is() into IsStart, IsEnd, IsGap; then eliminate MinibatchPackingFlags as well
@@ -136,22 +134,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
         void Init(size_t numParallelSequences, size_t numTimeSteps)
         {
-            // remember the dimensions...
+            // remember the dimensions
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            // ...but don't actually allocate anything   --TODO: no value in this anymore
-            m_sentenceBoundaryFlags.Resize(0, 0);
-            m_minibatchPackingFlags.clear();
-            m_distanceToNearestStart.clear();
-            m_distanceToNearestEnd.clear();
-            m_timeStepHasGap.clear();
-            m_distanceToStart.Resize(0, 0);
-            m_distanceToEnd.Resize(0, 0);
+            // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
+            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
+            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
+            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
+            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_timeStepHasGap.assign(m_numTimeSteps, false);
+            // reset state
             m_numFramesDeclared = 0;
             m_numGapFrames = 0;
             m_sequences.clear();
             m_writable = true;
-            LazyAlloc();
         }
 
         // short-hand to initialize an MBLayout for the special case of frame mode
@@ -172,38 +172,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // All frames must now be declared.
         void CheckIsValid() const
         {
-            if (m_numFramesDeclared != m_numTimeSteps * m_numParallelSequences)
+            if (m_numFramesDeclared != GetNumCols())
                 LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
                            (int)m_numFramesDeclared, (int)( m_numTimeSteps * m_numParallelSequences));
-        }
-        // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        void CheckNotEmpty() const
-        {
-            CheckIsValid();
-            CheckAlloc();
-            if (m_minibatchPackingFlags.empty())
-                LogicError("Cannot be empty anymore.");
-        }
-        void CheckAlloc() const
-        {
-            if (m_minibatchPackingFlags.empty() && m_numTimeSteps > 0)
-                LogicError("CheckAlloc: Not allocated??");
-        }
-        // call this before ever writing anything--this will create the matrix/vector upon first use
-        void LazyAlloc() const
-        {
-            if (!m_minibatchPackingFlags.empty() || m_numTimeSteps == 0)
-                return;
-            // this is where the actual allocation happens
-            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
-            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
-            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
-            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
-            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
-            m_timeStepHasGap.assign(m_numTimeSteps, false);
         }
     public:
 
@@ -257,14 +228,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameRange version allows to test with time offset
         bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
 
-    private:    // Note: Only called from in here. Should replace each use with a better solution.
-        // tests if Is() is false for every frame and sequence
-        // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
-        // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
-        // This is currently the case for frame randomization.
-        // BUGBUG: With the AddSequence() change, this can never be true. Need to check the performance impact, or implement it differently.
-        //         Should frame mode set boundaries at [-1, 2)? And keep AllNone if no flags set INSIDE the minibatch?
-        //bool IsAllNone() const { return CheckNotEmpty(); }
     private:
         // set a boundary flag (OR it on top of the existing layout)
         // Currently not yet updated/disabled:
@@ -277,7 +240,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
                 return;
-            CheckAlloc();
             m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
             m_minibatchPackingFlags[t] |= f;
         }
@@ -315,7 +277,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sequences.push_back(seqDesc);
 
             // create all the cached fast-lookup information
-            CheckAlloc();
             const auto seqId = seqDesc.seqId;
             const auto s = seqDesc.s;
             if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
@@ -430,7 +391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numGapFrames;
 
         // all sequences that live inside this minibatch
-        mutable vector<SequenceInfo> m_sequences;
+        vector<SequenceInfo> m_sequences;
 
         // a matrix of S x T
         // S is the number of parallel sequences, T is the number of time steps (possibly of multiple concatenated sequences).
@@ -439,18 +400,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //   S . . . E
         //   S . E G G          // (last two time steps have no content)
         // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
-        mutable Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
+        Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
         // TODO: we should change to a Matrix<char>.
 
         // a short-hand vector or-ing the above flags over all parallel sequences
-        mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+        vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
 
         // a short-hand for determining whether any sequence at time t is a boundary or gap
         // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
         // PTRDIFF_MAX stands for 'not initialized'.
-        mutable Matrix<float> m_distanceToStart, m_distanceToEnd;                       // (s,t); -1 stands for gap
-        mutable vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;     // [t]    (-1 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
-        mutable vector<bool> m_timeStepHasGap;                                                  // [t]
+        Matrix<float> m_distanceToStart, m_distanceToEnd;                       // (s,t); -1 stands for gap
+        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;     // [t]    (-1 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
+        vector<bool> m_timeStepHasGap;                                                  // [t]
 
         // A boolean flag indicating whether the MBLayout can be further modified
         // When it's value is false, no set operations are allowed on the MBLayout
@@ -471,51 +432,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
         pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
         {
-            CheckAlloc();
             return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
         }
 
-#if 0
-        // same as Set() but not ORing  --TODO: is this distinction needed?
-        void SetWithoutOr(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (f == MinibatchPackingFlags::None)
-                return;
-            CheckAlloc();
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
-            m_minibatchPackingFlags[t] |= f;
-        }
-
-        // needed in DelayedValueNodeBase
-        // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
-        void Mask(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (CheckNotEmpty())
-                return;
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
-            //m_minibatchPackingFlags[t] &= f;
-        }
-#endif
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { CheckAlloc(); return m_sentenceBoundaryFlags; }
-
-#if 0
-        // TODO: this function is only used in Kaldi2Reader for the moment, and
-        //       we plan to remove it in the future. It copies the current
-        //       MBLayout from an existing object but only copies <numTimeSteps>
-        //       steps starting from <startTimeStep>.
-        void CopyFromRange(const MBLayoutPtr & other, size_t startTimeStep, size_t numTimeSteps)
-        {
-            m_numParallelSequences = other->m_numParallelSequences;
-            m_numTimeSteps = numTimeSteps;
-            //m_dataIsSequential = other->m_dataIsSequential;
-            m_sentenceBoundaryFlags.SetValue(other->m_sentenceBoundaryFlags.ColumnSlice(startTimeStep, numTimeSteps));
-            m_minibatchPackingFlags.resize(numTimeSteps);
-            m_minibatchPackingFlags.assign(
-                other->m_minibatchPackingFlags.begin() + startTimeStep,
-                other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
-        }
-#endif
+        Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
@@ -668,7 +589,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
     inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
     {
-        CheckNotEmpty();
+        CheckIsValid();
 
         if (fr.IsAllFrames())
             LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
