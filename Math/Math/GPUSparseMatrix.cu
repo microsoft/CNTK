@@ -160,6 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DeepCopy(deepCopy);
     }
 
+    // from CPU
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
     {
@@ -2696,11 +2697,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MATH_API GPUSparseMatrix<double>;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
-    // Let's explciitly instantiate the methods we need for that purpose
+    // Let's explicitly instantiate the methods we need for that purpose
     template GPUSparseMatrix<char>::GPUSparseMatrix(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
     template GPUSparseMatrix<char>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
     template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char> const &);
+    template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char> &&);
     template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const &);
+    template void GPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const &);
     template void GPUSparseMatrix<char>::SetValue(GPUMatrix<char> const &);
     template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char> &)const;
     template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char> &)const;
@@ -2708,7 +2711,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void GPUSparseMatrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
     template void GPUSparseMatrix<char>::Reset();
     template GPUSparseMatrix<char>::~GPUSparseMatrix();
-    template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
     template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template GPUMatrix<char> GPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix<char>&& deepCopy);
