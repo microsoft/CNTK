@@ -6,9 +6,8 @@
 //
 
 // TODO:
-//  - implement time offsets in Get()
 //  - fix RecurrentNode (remove shifted layout, use time offset in condition test)
-//  - finally remove the old bit masks
+//  - finally remove the old bit masks  --nearly there, only used for checking the new code
 //  - split Is() into IsStart, IsEnd, IsGap; then eliminate MinibatchPackingFlags as well
 
 #pragma once
@@ -228,19 +227,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         MinibatchPackingFlags Get(size_t t) const;
         MinibatchPackingFlags Get(const FrameRange & fr) const;
-    public:
         MinibatchPackingFlags Get(size_t s, size_t t) const;
 
+    private:
+    public:     // naw, these are still used in RecurrentNodes. Will soon be replaced by a different mechanism.
+        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
+        bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
+
+    public:
         // test boundary flags for a specific condition
         // TODO: Remove the direct-index versions in lieu of FrameRange version.
         //       Direct-index versions are currently used here:
         //        - LUSequenceReader.cpp: a sanity check
         //        - ClassBasedCrossEntropyWithSoftmaxNode (where the correct FrameRange object is already available)
         //        - RecurrentNode (which will be rewritten after MBLayout can handle tests outside its time range)
-        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
         // FrameRange version allows to test with time offset
         bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
+        bool IsBeyondStartOrEnd(const FrameRange & fr) const;
+        bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
+        bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
+
+        // only used in sequence training, must be replaced by a different mechanism
+        bool IsEnd(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::SequenceEnd); }
 
     private:
         // set a boundary flag (OR it on top of the existing layout)
@@ -609,6 +617,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // get packing flags from a frame range
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
+    // TODO: This generic function will soon no longer be used; instead, tests for gap and boundary will be separate calls.
+    // BUGBUG: broken for time offsets, since off by one. Use IsBeyondStartOrEnd() instead.
     inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
     {
         CheckIsValid();
@@ -617,25 +627,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
 
         MinibatchPackingFlags f = MinibatchPackingFlags::None;
-        auto t = fr.t();        // TODO: use fr.timeIdxInSeq directly
+        auto t = fr.timeIdxInSeq;        // we test off the frame without offset
         auto s = fr.seqIndex;
-        if (s == SIZE_MAX)      // aggregate requested
+        if (s == SIZE_MAX)              // aggregate requested
         {
             // determine flags from aggregate vectors
-
             if (m_timeStepHasGap[t])      // indicates a gap
                 f |= MinibatchPackingFlags::NoInput;
-            // BUGBUG: This must consider a time offset in the future.
             auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
-            if (distanceToStart == 0)   // TODO: update w.r.t. time offset
+            if (distanceToStart <= -fr.m_timeOffset)
                 f |= MinibatchPackingFlags::SequenceStart;
             auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
-            if (distanceToEnd == 0)     // TODO: update w.r.t. time offset
+            if (distanceToEnd <= fr.m_timeOffset)
                 f |= MinibatchPackingFlags::SequenceEnd;
 
             auto f1 = m_minibatchPackingFlags[t];
-            if (f1 != f)
-                sin(1.0);
             assert(f1 == f); f1;
 
             return f;
@@ -651,11 +657,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            // BUGBUG: This must consider a time offset in the future.
-            if (distanceToStart == 0)   // TODO: update w.r.t. time offset
+            if (distanceToStart <= -fr.m_timeOffset)
                 f |= MinibatchPackingFlags::SequenceStart;
             auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
-            if (distanceToEnd == 0)     // TODO: update w.r.t. time offset
+            if (distanceToEnd <= fr.m_timeOffset)
                 f |= MinibatchPackingFlags::SequenceEnd;
         }
 
@@ -663,6 +668,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(f1 == f); f1;
 
         return f;
+    }
+
+    // test whether frame is exceeding the sentence boundaries
+    inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange & fr) const
+    {
+        CheckIsValid();
+
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
+
+        auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        auto s = fr.seqIndex;
+        if (s == SIZE_MAX)              // aggregate requested
+        {
+            // determine flags from aggregate vectors
+            auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
+            if (distanceToStart < -fr.m_timeOffset)
+                return true;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
+            if (distanceToEnd < fr.m_timeOffset)
+                return true;
+            return false;
+        }
+
+        // determine flags from matrices
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        if (distanceToStart == -1)      // indicates a gap
+        {
+            assert(m_timeStepHasGap[t]);
+            return false;   // a gap is not outside, so that we can allow collating
+        }
+        else
+        {
+            if (distanceToStart < -fr.m_timeOffset)
+                return true;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
+            if (distanceToEnd < fr.m_timeOffset)
+                return true;
+        }
+        return false;
     }
 
     // return m_columnsValidityMask(,), which is lazily created here upon first call
@@ -686,11 +731,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t gapsFound = 0;
             for (size_t t = 0; t < nT; t++)
             {
-                if (Is(t, MinibatchPackingFlags::NoInput))
+                if (IsGap(t))
                 {
                     for (size_t s = 0; s < nS; s++)
                     {
-                        if (Is(s, t, MinibatchPackingFlags::NoInput))
+                        if (IsGap(s, t))
                         {
                             columnsValidityMask[(t * nS) + s] = 0;
                             gapsFound++;
@@ -700,6 +745,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             assert(gapsFound == m_numGapFrames);    // sanity check
 
+            if (deviceId != m_columnsValidityMask.GetDeviceId())
+                m_columnsValidityMask = Matrix<char>(deviceId);
             m_columnsValidityMask.SetValue(1, nS * nT, deviceId, columnsValidityMask.data());
         }
         return m_columnsValidityMask;

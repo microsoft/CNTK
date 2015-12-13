@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::EndForwardProp();
         }
 
-        // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.
+        // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
         // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
         virtual void ForwardProp(const FrameRange & fr) override
         {
@@ -317,6 +317,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
+            FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
+
             size_t t = fr.t();
 
             VerifyDims(Input(0));
@@ -333,13 +335,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // if any sequence at this time step has a boundary flag, then process one by one
             // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?
-            if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End))
+            assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+            if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed))
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
                     Matrix<ElemType> out = ValueFor(fr.Sequence(id));
 
-                    if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
+                    assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                    if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))
                         out.SetValue(m_initialActivationValue);     // crossed a boundary
                     else    // not a boundary: just copy the delayed value
                     {
