@@ -813,12 +813,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // BUGBUG: Must support time offsets.
-    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols, 
+    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols/*of data matrix to slice*/, 
                                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
-        assert(fr.m_timeOffset == 0);   // BUGBUG: must support this
-
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
         // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
@@ -840,6 +838,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // but as a reference (e.g. it cannot be resized)
         if (!pMBLayout || fr.IsAllFrames())
         {
+            if (fr.m_timeOffset != 0)
+                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");
+            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(0, numCols);
             else
@@ -855,6 +856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
                 return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
                 // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
+                // TODO: The tensor version of this will support it.
 #endif
             }
         }
@@ -862,7 +864,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-            size_t startColumn = fr.t() * numParallelSequences;
+            size_t startColumn = (fr.timeIdxInSeq + fr.m_timeOffset) * numParallelSequences;
+            if (startColumn >= numCols)
+                LogicError("DataFor: FrameRange specifies a time index that is out of range.");
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(startColumn, numParallelSequences);
             else
