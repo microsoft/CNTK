@@ -111,7 +111,8 @@ namespace msra { namespace lattices {
                         
                     for (size_t j = validframes[mapi]; j < mbsize; j++)
                     {
-                        if (pMBLayout->Is(mapi,j, MinibatchPackingFlags::SequenceEnd))
+                        // TODO: Adapt this to new MBLayout, m_sequences would be easier to work off.
+                        if (pMBLayout->IsEnd(mapi,j))
                         {
                             mapframenum = j - validframes[mapi] + 1;
                             break;

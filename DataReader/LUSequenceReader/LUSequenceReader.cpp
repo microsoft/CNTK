@@ -877,12 +877,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     if (t > mSentenceEndAt[s] || idx >= featInfo.dim)
                     {
                         assert(idx == (LabelIdType)NULLLABEL);      // TODO: what other conditions?
-                        if (!m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
+                        if (!m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
                             LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
                         continue;
                     }
 
-                    if (m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
+                    if (m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
                         LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
 
                     locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
