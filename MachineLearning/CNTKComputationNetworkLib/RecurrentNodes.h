@@ -251,7 +251,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
                             // TODO: use delayed FrameRange here as well
-                            Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
                             to += frm;
                         }
                     }
@@ -260,7 +261,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> frm = GradientFor(fr);
                     // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                    Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
                     to += frm;
                 }
             }
@@ -363,7 +365,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else if (t_delayed >= T)
                             inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            inp = Input(0)->ValueFor(frDelayed.Sequence(id));
+                            //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -378,7 +381,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else if (t_delayed >= T)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+                    inp = Input(0)->ValueFor(frDelayed);
+                    //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
