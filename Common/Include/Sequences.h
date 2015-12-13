@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_numParallelSequences == other.m_numParallelSequences &&
                 m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
                 m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
-            assert(res == res1);
+            assert(res == res1); res1;
 #endif
             return res;
         }
