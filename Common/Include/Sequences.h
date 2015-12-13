@@ -151,6 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numGapFrames = 0;
             m_sequences.clear();
             m_writable = true;
+            LazyAlloc();
         }
 
         // short-hand to initialize an MBLayout for the special case of frame mode
@@ -176,10 +177,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                            (int)m_numFramesDeclared, (int)( m_numTimeSteps * m_numParallelSequences));
         }
         // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        bool IsEmpty() const
+        void CheckNotEmpty() const
         {
             CheckIsValid();
-            return m_minibatchPackingFlags.empty();
+            CheckAlloc();
+            if (m_minibatchPackingFlags.empty())
+                LogicError("Cannot be empty anymore.");
+        }
+        void CheckAlloc() const
+        {
+            if (m_minibatchPackingFlags.empty() && m_numTimeSteps > 0)
+                LogicError("CheckAlloc: Not allocated??");
         }
         // call this before ever writing anything--this will create the matrix/vector upon first use
         void LazyAlloc() const
@@ -256,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is currently the case for frame randomization.
         // BUGBUG: With the AddSequence() change, this can never be true. Need to check the performance impact, or implement it differently.
         //         Should frame mode set boundaries at [-1, 2)? And keep AllNone if no flags set INSIDE the minibatch?
-        bool IsAllNone() const { return IsEmpty(); }
+        //bool IsAllNone() const { return CheckNotEmpty(); }
     private:
         // set a boundary flag (OR it on top of the existing layout)
         // Currently not yet updated/disabled:
@@ -269,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
                 return;
-            LazyAlloc();
+            CheckAlloc();
             m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
             m_minibatchPackingFlags[t] |= f;
         }
@@ -307,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sequences.push_back(seqDesc);
 
             // create all the cached fast-lookup information
-            LazyAlloc();
+            CheckAlloc();
             const auto seqId = seqDesc.seqId;
             const auto s = seqDesc.s;
             if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
@@ -463,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
         pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
         {
-            LazyAlloc();
+            CheckAlloc();
             return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
         }
 
@@ -473,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (f == MinibatchPackingFlags::None)
                 return;
-            LazyAlloc();
+            CheckAlloc();
             m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
             m_minibatchPackingFlags[t] |= f;
         }
@@ -482,14 +490,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
         void Mask(size_t id, size_t t, MinibatchPackingFlags f)
         {
-            if (IsEmpty())
+            if (CheckNotEmpty())
                 return;
             m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
             //m_minibatchPackingFlags[t] &= f;
         }
 #endif
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
+        Matrix<float> & GetM() { CheckAlloc(); return m_sentenceBoundaryFlags; }
 
 #if 0
         // TODO: this function is only used in Kaldi2Reader for the moment, and
@@ -660,8 +668,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
     inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
     {
-        if (IsEmpty())      // legacy stuff, will go away
-            return MinibatchPackingFlags::None;
+        CheckNotEmpty();
 
         if (fr.IsAllFrames())
             LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
