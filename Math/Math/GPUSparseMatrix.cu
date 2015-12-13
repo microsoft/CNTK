@@ -2421,7 +2421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceLinearRectifierDerivative()
     {
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, *this);
+        performElementWiseFunction(ElementWiseOperator::opLinearRectifierDerivative, *this);
         return *this;
     }
 
@@ -2430,7 +2430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, a);
+        performElementWiseFunction(ElementWiseOperator::opLinearRectifierDerivative, a);
         return *this;
     }
 
@@ -2688,7 +2688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         case ElementWiseOperator::opAbs:
             _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case ElementWiseOperator::opLinRectDerivative:
+        case ElementWiseOperator::opLinearRectifierDerivative:
             _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
         default:

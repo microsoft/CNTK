@@ -45,7 +45,9 @@ typedef struct CUstream_st *cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-namespace Microsoft { namespace MSR { namespace CNTK {    
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
     // -----------------------------------------------------------------------
     // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -75,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum ElementWiseOperator
     {
-        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinRectDerivative, opCos, opNegativeSin, opSigmoidDerivative
+        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinearRectifierDerivative, opCosine, opNegativeSine, opSigmoidDerivative
     };
 
 

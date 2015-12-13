@@ -65,6 +65,15 @@ cudaStream_t MATH_API GetStream()
     return t_stream;
 }
 
+// Helper macro patterns for elemtwise methods
+#define DEF_ELEMWISE_INPLACE_FUNC(f) template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::Inplace##f() { \
+    performElementWiseFunction(ElementWiseOperator::op##f,  m_pArray); \
+    return *this; }
+#define DEF_ELEMWISE_ASSIGN_FUNC(f) template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::Assign##f##Of(const GPUMatrix<ElemType>& a) { \
+    if (a.IsEmpty()) LogicError("Assign##f##Of: Matrix a is empty."); \
+    if (this != &a) Resize(a.GetNumRows(), a.GetNumCols()); \
+    performElementWiseFunction(ElementWiseOperator::op##f, a.m_pArray); \
+    return *this; }
 
 static const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
 static const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
@@ -348,13 +357,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         case ElementWiseOperator::opAbs:
             _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case ElementWiseOperator::opLinRectDerivative:
+        case ElementWiseOperator::opLinearRectifierDerivative:
             _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case ElementWiseOperator::opCos:
+        case ElementWiseOperator::opCosine:
             _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case ElementWiseOperator::opNegativeSin:
+        case ElementWiseOperator::opNegativeSine:
             _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
         case ElementWiseOperator::opSigmoidDerivative:
@@ -1935,12 +1944,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ElementInverse();
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoid()
-    {
-        performElementWiseFunction(ElementWiseOperator::opSigmoid, this->m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Sigmoid)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf (const GPUMatrix<ElemType>& a)
@@ -1960,25 +1964,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoidDerivative()
-    {
-        performElementWiseFunction(ElementWiseOperator::opSigmoidDerivative, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidDerivativeOf (const GPUMatrix<ElemType>& a)
-    {
-        if (a.IsEmpty())
-            LogicError("AssignSigmoidDerivativeOf: Matrix a is empty.");
-
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-
-        performElementWiseFunction(ElementWiseOperator::opSigmoidDerivative, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(SigmoidDerivative)
+    DEF_ELEMWISE_ASSIGN_FUNC(SigmoidDerivative)
 
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
@@ -2108,22 +2095,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _reductionSum32<ElemType> << <1, 32 >> >(m_res, c.GetArray(), m_nz);*/
     }
 
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTanh()
-    {
-        performElementWiseFunction(ElementWiseOperator::opTanh, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanhOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opTanh, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Tanh)
+    DEF_ELEMWISE_ASSIGN_FUNC(Tanh)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax (const bool isColWise)
@@ -2211,117 +2184,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
-    {
-        performElementWiseFunction(ElementWiseOperator::opSqrt, this->m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Sqrt)
+    DEF_ELEMWISE_ASSIGN_FUNC(Sqrt)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSqrtOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opSqrt, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Exp)
+    DEF_ELEMWISE_ASSIGN_FUNC(Exp)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceExp()
-    {
-        performElementWiseFunction(ElementWiseOperator::opExp, this->m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Log)
+    DEF_ELEMWISE_ASSIGN_FUNC(Log)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignExpOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opExp, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Abs)
+    DEF_ELEMWISE_ASSIGN_FUNC(Abs)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLog()
-    {
-        performElementWiseFunction(ElementWiseOperator::opLog, this->m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(LinearRectifierDerivative)
+    DEF_ELEMWISE_ASSIGN_FUNC(LinearRectifierDerivative)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opLog, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Cosine)
+    DEF_ELEMWISE_ASSIGN_FUNC(Cosine)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAbs()
-    {
-        performElementWiseFunction(ElementWiseOperator::opAbs, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAbsOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opAbs, a.m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLinearRectifierDerivative()
-    {
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLinearRectifierDerivativeOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opLinRectDerivative, a.m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceCosine()
-    {
-        performElementWiseFunction(ElementWiseOperator::opCos, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCosineOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opCos, a.m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceNegativeSine()
-    {
-        performElementWiseFunction(ElementWiseOperator::opNegativeSin, this->m_pArray);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNegativeSineOf (const GPUMatrix<ElemType>& a)
-    {
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-        performElementWiseFunction(ElementWiseOperator::opNegativeSin, a.m_pArray);
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(NegativeSine)
+    DEF_ELEMWISE_ASSIGN_FUNC(NegativeSine)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
