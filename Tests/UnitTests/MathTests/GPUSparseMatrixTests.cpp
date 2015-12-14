@@ -587,11 +587,9 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
 }
 
-#if 0
-
 BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 {
-    size_t D = 10, S = 10, M = 10, K = 10, T = 10;
+    size_t D = 3, S = 5, M = 7, K = 11, T = 13;
     GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D * S * M * K, T, c_deviceIdZero, -1, 1, IncrementCounter());
     GPUMatrix<float> denseMatrixB(D*S*M*K, T, c_deviceIdZero);
     GPUMatrix<float> denseMatrixC(D*S*M*K, T, c_deviceIdZero);
@@ -605,8 +603,6 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
 }
-
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
