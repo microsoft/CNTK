@@ -2212,19 +2212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
-        if (IsEmpty())
-            LogicError("InplaceTruncateBottom: Matrix is empty.");    
-
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock); 
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,m_pArray,threshold,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        return *this;
+        return AssignTruncateBottomOf(*this, threshold);
     }
 
     template<class ElemType>
@@ -2254,18 +2242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
-        if (IsEmpty())
-            LogicError("InplaceTruncateTop: Matrix is empty.");
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);      
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,m_pArray,threshold,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        return *this;        
+        return AssignTruncateTopOf(*this, threshold);
     }
 
     template<class ElemType>
