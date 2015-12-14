@@ -544,7 +544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetValue(deepCopy);
 
         SetMatrixName(deepCopy.m_matrixName);
-        return *this;
+        return *this;       
     }
 
     template<class ElemType>
@@ -583,23 +583,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numRows = moveFrom.m_numRows;
             m_numCols = moveFrom.m_numCols;
             m_nz = moveFrom.m_nz;
-            m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
-            m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
-            m_pArray = moveFrom.m_pArray;
+        m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
+        m_totalBufferSizeAllocated = moveFrom.m_totalBufferSizeAllocated;
+        m_pArray = moveFrom.m_pArray;
             m_sliceViewOffset = moveFrom.m_sliceViewOffset;
-            m_format = moveFrom.m_format;
-            m_externalBuffer = moveFrom.m_externalBuffer;
+        m_format = moveFrom.m_format;
+        m_externalBuffer = moveFrom.m_externalBuffer;
 
             m_matrixName = moveFrom.m_matrixName;
 
-            m_blockSize = moveFrom.m_blockSize;
+        m_blockSize = moveFrom.m_blockSize;
 
-            m_rowToId = moveFrom.m_rowToId;
+        m_rowToId = moveFrom.m_rowToId;
 
-            m_tempHostBuffer = moveFrom.m_tempHostBuffer;
-            m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
+        m_tempHostBuffer = moveFrom.m_tempHostBuffer;
+        m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
 
-            moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice);
+        moveFrom.ZeroInit(moveFrom.m_format, moveFrom.m_computeDevice);
         }
 
         return *this;
@@ -632,8 +632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_rowToId = nullptr;
         }
 
-        ZeroInit(m_format, m_computeDevice);
-    }
+            ZeroInit(m_format, m_computeDevice);
+        }
 
     //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
     // a - sparse matrix whose structure we want to clone
@@ -1039,33 +1039,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeB)
             {
-                int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
-                cudaEvent_t done = nullptr;
-                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            int blocksPerGrid = (int)ceil(1.0*cRows*cCols / threadsPerBlock);
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
                 _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
-                    m,          // rowDense
-                    k,          // colDense
-                    n,          // colSparse
+                m,          // rowDense
+                k,          // colDense
+                n,          // colSparse
                     numChannels,// number of input channels
-                    numSteps,   // convolution num steps
+                numSteps,   // convolution num steps
                     horizontalSubsample,   // convolution step size
                     channelwise,// channelwise or pixelwise multiplication
-                    alpha,
-                    reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                alpha,
+                reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                     transposeA,
                     reinterpret_cast<const ElemType*>(rhs.BufferPointer()),  //sparse nz values
-                    rhs.RowLocation(),
-                    rhs.ColLocation(),
-                    beta,
-                    reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                    );
+                rhs.RowLocation(),
+                rhs.ColLocation(),
+                beta,
+                reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                );
 
-                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-            }
-            else
-            {
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
                 if (beta != 1.0)
                 {
                     RuntimeError("Only support c += alpha * a operation");
@@ -2405,105 +2405,112 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSigmoid()
     {
-        performInplaceFunction(0);                    
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignSigmoidOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceSigmoid();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opSigmoid, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceLinearRectifierDerivative()
     {
-        performInplaceFunction(6);                    
+        performElementWiseFunction(ElementWiseOperator::opLinearRectifierDerivative, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignLinearRectifierDerivativeOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceLinearRectifierDerivative();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opLinearRectifierDerivative, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTanh()
     {
-        performInplaceFunction(1);
+        performElementWiseFunction(ElementWiseOperator::opTanh, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTanhOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceTanh();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opTanh, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSqrt()
     {
-        performInplaceFunction(2);        
+        performElementWiseFunction(ElementWiseOperator::opSqrt, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignSqrtOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceSqrt();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opSqrt, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceExp()
     {
-        performInplaceFunction(3);        
+        performElementWiseFunction(ElementWiseOperator::opExp, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignExpOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceExp();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opExp, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceLog()
     {
-        performInplaceFunction(4);        
+        performElementWiseFunction(ElementWiseOperator::opLog, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignLogOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceLog();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opLog, a);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceAbs()
     {
-        performInplaceFunction(5);        
+        performElementWiseFunction(ElementWiseOperator::opAbs, *this);
         return *this;
     }
 
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignAbsOf (const GPUSparseMatrix<ElemType>& a)
     {
-        SetValue(a);
-        InplaceAbs();
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+        performElementWiseFunction(ElementWiseOperator::opAbs, a);
         return *this;
     }
 
@@ -2652,7 +2659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind)
+    void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src)
     {
         if (!OwnBuffer())
             LogicError("Cannot modify since the buffer is managed externally.");
@@ -2663,26 +2670,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         switch (kind)
         {
-        case 0:
-            _inplaceSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(NzValues(),N);
+        case ElementWiseOperator::opSigmoid:
+            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 1:
-            _inplaceTanhOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opTanh:
+            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 2:
-            _inplaceSqrtOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opSqrt:
+            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 3:
-            _inplaceExpOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opExp:
+            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 4:
-            _inplaceLogOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opLog:
+            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 5:
-            _inplaceAbsOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opAbs:
+            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
             break;
-        case 6:
-            _inplaceLinRectDerivative<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), N);
+        case ElementWiseOperator::opLinearRectifierDerivative:
+            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock>>>(src.NzValues(), NzValues(), N);
+            break;
+        default:
+            NOT_IMPLEMENTED;
         } 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));

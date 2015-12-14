@@ -65,6 +65,15 @@ cudaStream_t MATH_API GetStream()
     return t_stream;
 }
 
+// Helper macro patterns for elemtwise methods
+#define DEF_ELEMWISE_INPLACE_FUNC(f) template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::Inplace##f() { \
+    performElementWiseFunction(ElementWiseOperator::op##f,  m_pArray); \
+    return *this; }
+#define DEF_ELEMWISE_ASSIGN_FUNC(f) template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::Assign##f##Of(const GPUMatrix<ElemType>& a) { \
+    if (a.IsEmpty()) LogicError("Assign##f##Of: Matrix a is empty."); \
+    if (this != &a) Resize(a.GetNumRows(), a.GetNumCols()); \
+    performElementWiseFunction(ElementWiseOperator::op##f, a.m_pArray); \
+    return *this; }
 
 static const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
 static const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
@@ -320,42 +329,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::performInplaceFunction(int kind)    
+    void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const ElemType *src)    
     {        
         PrepareDevice();
         CUDA_LONG N= (CUDA_LONG) GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
+        PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         switch (kind)
         {
-        case 0:
-            _inplaceSigmoidOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, N);
+        case ElementWiseOperator::opSigmoid:
+            _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 1:
-            _inplaceTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, N);
+        case ElementWiseOperator::opTanh:
+            _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 2:
-            _inplaceSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, N);
+        case ElementWiseOperator::opSqrt:
+            _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(src, m_pArray, N);
             break;
-        case 3:
-            _inplaceExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opExp:
+            _elementWiseExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 4:
-            _inplaceLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opLog:
+            _elementWiseLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 5:
-            _inplaceAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opAbs:
+            _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 6:
-            _inplaceLinRectDerivative<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opLinearRectifierDerivative:
+            _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 7:
-            _inplaceCosineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opCosine:
+            _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
-        case 8:
-            _inplaceNegativeSineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);
+        case ElementWiseOperator::opNegativeSine:
+            _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
             break;
+        case ElementWiseOperator::opSigmoidDerivative:
+            _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(src, m_pArray, N);
+            break;
+
         } 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));       
@@ -632,7 +646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (CUDA_LONG)startIndex, (CUDA_LONG)GetNumRows(), (CUDA_LONG)a.GetNumRows());
+        _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, this->m_pArray, N, (CUDA_LONG)startIndex, (CUDA_LONG)GetNumRows(), (CUDA_LONG)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1930,12 +1944,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ElementInverse();
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoid()
-    {
-        performInplaceFunction(0);                    
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Sigmoid)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf (const GPUMatrix<ElemType>& a)
@@ -1955,35 +1964,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSigmoidDerivative()
-    {
-        AssignSigmoidDerivativeOf(*this);                    
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidDerivativeOf (const GPUMatrix<ElemType>& a)
-    {
-        if (a.IsEmpty())
-            LogicError("AssignSigmoidDerivativeOf: Matrix a is empty.");
-
-        //auto& us=*this;
-        if (this != &a)
-            Resize(a.GetNumRows(), a.GetNumCols());
-
-        PrepareDevice();
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-
-        _assignSigmoidDerivative<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, m_pArray, N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(SigmoidDerivative)
+    DEF_ELEMWISE_ASSIGN_FUNC(SigmoidDerivative)
 
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
@@ -2113,21 +2095,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _reductionSum32<ElemType> << <1, 32 >> >(m_res, c.GetArray(), m_nz);*/
     }
 
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTanh()
-    {
-        performInplaceFunction(1);
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanhOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceTanh();
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Tanh)
+    DEF_ELEMWISE_ASSIGN_FUNC(Tanh)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax (const bool isColWise)
@@ -2215,110 +2184,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
-    {
-        performInplaceFunction(2);        
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Sqrt)
+    DEF_ELEMWISE_ASSIGN_FUNC(Sqrt)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSqrtOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceSqrt();
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Exp)
+    DEF_ELEMWISE_ASSIGN_FUNC(Exp)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceExp()
-    {
-        performInplaceFunction(3);        
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Log)
+    DEF_ELEMWISE_ASSIGN_FUNC(Log)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignExpOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceExp();
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Abs)
+    DEF_ELEMWISE_ASSIGN_FUNC(Abs)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLog()
-    {
-        performInplaceFunction(4);        
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(LinearRectifierDerivative)
+    DEF_ELEMWISE_ASSIGN_FUNC(LinearRectifierDerivative)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceLog();
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(Cosine)
+    DEF_ELEMWISE_ASSIGN_FUNC(Cosine)
 
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAbs()
-    {
-        performInplaceFunction(5);        
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAbsOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceAbs();
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLinearRectifierDerivative()
-    {
-        performInplaceFunction(6);                    
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLinearRectifierDerivativeOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceLinearRectifierDerivative();
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceCosine()
-    {
-        performInplaceFunction(7);        
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCosineOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceCosine();
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceNegativeSine()
-    {
-        performInplaceFunction(8);        
-        return *this;
-    }
-
-    template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNegativeSineOf (const GPUMatrix<ElemType>& a)
-    {
-        SetValue(a);
-        InplaceNegativeSine();
-        return *this;
-    }
+    DEF_ELEMWISE_INPLACE_FUNC(NegativeSine)
+    DEF_ELEMWISE_ASSIGN_FUNC(NegativeSine)
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
@@ -3473,9 +3358,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="a">Input matrix</param>
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
-    void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+    void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
     {
-        if (a.GetComputeDeviceId()!=c.GetComputeDeviceId())
+        if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
         {
             InvalidArgument("All matrices must be on the same GPU");
         }
@@ -3485,7 +3370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (a.IsEmpty() || c.IsEmpty())
                 LogicError("ScaleAndAdd:  one of the input matrices is empty.");
             //if (a.GetNumRows() != 1 && a.GetNumCols() != 1) // a is not a col or row vector
-            if (a.GetNumRows()==c.GetNumRows() && a.GetNumCols()==c.GetNumCols()) // dimensions match
+            if (a.GetNumRows() == c.GetNumRows() && a.GetNumCols() == c.GetNumCols()) // dimensions match
             {
                 const int m = (int)a.GetNumRows();
                 const int n = (int)a.GetNumCols();
@@ -3493,24 +3378,136 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const int incx = 1;
                 const int incy = 1;
 
-                assert (m>0 && n>0 && len>0); //converting from size_t to int may cause overflow
-                assert ((int)c.GetNumRows() == m && (int)c.GetNumCols() == n);
+                assert(m>0 && n>0 && len>0); //converting from size_t to int may cause overflow
+                assert((int)c.GetNumRows() == m && (int)c.GetNumCols() == n);
                 if ((int)c.GetNumRows() != m || (int)c.GetNumCols() != n)
                     InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
 
                 cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
                 if (sizeof(ElemType) == sizeof(float))
                 {
-                    CUBLAS_CALL(cublasSaxpy(cuHandle,len,reinterpret_cast <float*>(&alpha),reinterpret_cast <float*>(a.m_pArray),incx,reinterpret_cast <float*>(c.m_pArray) ,incy));                
+                    CUBLAS_CALL(cublasSaxpy(cuHandle, len, reinterpret_cast <float*>(&alpha), reinterpret_cast <float*>(a.m_pArray), incx, reinterpret_cast <float*>(c.m_pArray), incy));
                 }
                 else if (sizeof(ElemType) == sizeof(double))
-                {   
-                    CUBLAS_CALL(cublasDaxpy(cuHandle,len,reinterpret_cast <double*>(&alpha),reinterpret_cast <double*>(a.m_pArray),incx,reinterpret_cast <double*>(c.m_pArray) ,incy)); 
-                }
-                else 
                 {
-                    RuntimeError("Unsupported template argument in GPUMatrix"); 
+                    CUBLAS_CALL(cublasDaxpy(cuHandle, len, reinterpret_cast <double*>(&alpha), reinterpret_cast <double*>(a.m_pArray), incx, reinterpret_cast <double*>(c.m_pArray), incy));
                 }
+                else
+                {
+                    RuntimeError("Unsupported template argument in GPUMatrix");
+                }
+            }
+            else if (a.GetNumElements() == 1)
+            {
+                CUDA_LONG N = (CUDA_LONG)c.GetNumElements();
+                int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+                c.PrepareDevice();
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                _scaleAndAddScalar<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(c.m_pArray, N, alpha, a.m_pArray, c.m_pArray);
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else if (a.GetNumCols() == 1) //col vector, add it to all columns
+            {
+                CUDA_LONG m = (CUDA_LONG)c.GetNumRows();
+                CUDA_LONG n = (CUDA_LONG)c.GetNumCols();
+                if (m != (CUDA_LONG)a.GetNumRows())
+                    InvalidArgument("To add column vector, rows should match.");
+
+                cudaEvent_t done = nullptr;
+                int blocksPerGrid = (int)(ceil(1.0*m*n / threadsPerBlock));
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+#ifdef VALIDATION
+                printf(">>>> CUDA compute device is %d\n", a.GetComputeDeviceId());
+                printf(">>>> a.m_pArray = %p, c.m_pArray = %p, alpha = %f, m = %ld, n = %ld\n", a.m_pArray, c.m_pArray, alpha, m, n);
+                for (int i = 0; i < 2; i++)
+                {
+                    ElemType buffer[10] = { -1.234f };
+                    cudaError_t error = cudaMemcpy(buffer, !i ? a.m_pArray : c.m_pArray, sizeof(buffer), cudaMemcpyKind::cudaMemcpyDeviceToHost);
+                    if (error == cudaError::cudaSuccess)
+                        printf("buffer valid\n");
+                }
+#endif
+
+                _matrixVectorColumnWiseAddWithThreadPerElem<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, c.m_pArray, c.m_pArray, alpha, m, n);
+
+
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else  if (a.GetNumRows() == 1)  //row vector, add it to all rows
+            {
+                cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+                int m = (int)c.GetNumRows();
+                int n = (int)c.GetNumCols();
+                assert(n == (int)a.GetNumCols());
+                if (n != (int)a.GetNumCols())
+                    InvalidArgument("To add row vector, cols should match.");
+
+                if (sizeof(ElemType) == sizeof(double))
+                {
+                    foreach_row(i, c)
+                    {
+                        CUBLAS_CALL(cublasDaxpy(cuHandle, n, reinterpret_cast <double*>(&alpha), reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray + i), m));
+                    }
+                }
+                else
+                {
+                    foreach_row(i, c)
+                    {
+                        CUBLAS_CALL(cublasSaxpy(cuHandle, n, reinterpret_cast <float*>(&alpha), reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray + i), m));
+                    }
+                }
+            }
+            else
+                InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
+        }
+    }
+
+    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + b</summary>
+    /// if a is a column vector, add to all columns of b 
+    /// if a is a row vector, add to all rows of b
+    /// if a is a scalar, add to all elements of b
+    /// <param name="alpha">Scalar</param>
+    /// <param name="a">Input matrix</param>
+    /// <param name="b">Input matrix</param>
+    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+    {
+        if (a.GetComputeDeviceId()!=c.GetComputeDeviceId() || a.GetComputeDeviceId()!=b.GetComputeDeviceId())
+        {
+            InvalidArgument("All matrices must be on the same GPU");
+        }
+        else
+        {
+            a.PrepareDevice();
+            if (a.IsEmpty() || b.IsEmpty())
+                LogicError("ScaleAndAdd:  one of the input matrices is empty.");
+            c.Resize(b.GetNumRows(), b.GetNumCols());
+            //if (a.GetNumRows() != 1 && a.GetNumCols() != 1) // a is not a col or row vector
+            if (a.GetNumRows()==b.GetNumRows() && a.GetNumCols()==b.GetNumCols()) // dimensions match
+            {
+                /*
+                const int m = (int)a.GetNumRows();
+                const int n = (int)a.GetNumCols();
+                const int len = m * n;
+                const int incx = 1;
+                const int incy = 1;
+                assert (m>0 && n>0 && len>0); //converting from size_t to int may cause overflow
+                */
+                CUDA_LONG N = (CUDA_LONG)c.GetNumElements();
+                int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+                c.PrepareDevice();
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                _matrixMatrixAddOnCuda<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(alpha, a.m_pArray, b.m_pArray, c.m_pArray, N);
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
             }
             else if (a.GetNumElements() == 1)
             {
@@ -3519,7 +3516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 c.PrepareDevice();
                 cudaEvent_t done = nullptr;
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-                _scaleAndAddScalar<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(c.m_pArray, N, alpha, a.m_pArray);
+                _scaleAndAddScalar<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(c.m_pArray, N, alpha, a.m_pArray, b.m_pArray);
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -3534,20 +3531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cudaEvent_t done = nullptr;
                 int blocksPerGrid = (int)(ceil(1.0*m*n / threadsPerBlock));
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));   
-#ifdef VALIDATION
-                printf(">>>> CUDA compute device is %d\n", a.GetComputeDeviceId());
-                printf(">>>> a.m_pArray = %p, c.m_pArray = %p, alpha = %f, m = %ld, n = %ld\n", a.m_pArray,c.m_pArray,alpha,m,n);   
-                for (int i=0; i < 2; i++)
-                {
-                    ElemType buffer[10] = {-1.234f};
-                    cudaError_t error = cudaMemcpy(buffer, !i?a.m_pArray:c.m_pArray, sizeof(buffer), cudaMemcpyKind::cudaMemcpyDeviceToHost);
-                    if (error == cudaError::cudaSuccess)
-                        printf("buffer valid\n"); 
-                }
-#endif
-
-                _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,c.m_pArray,alpha,m,n);
-
+                _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,b.m_pArray,c.m_pArray,alpha,m,n);
 
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));   
@@ -3555,27 +3539,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else  if (a.GetNumRows()==1)  //row vector, add it to all rows
             {
-                cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-                int m = (int)c.GetNumRows();
-                int n = (int)c.GetNumCols();
-                assert (n == (int)a.GetNumCols());
-                if (n != (int)a.GetNumCols())
-                    InvalidArgument("To add row vector, cols should match.");
+                CUDA_LONG m = (CUDA_LONG)c.GetNumRows();
+                CUDA_LONG n = (CUDA_LONG)c.GetNumCols();
+                if (m != (CUDA_LONG)a.GetNumRows())
+                    InvalidArgument("To add column vector, rows should match.");
 
-                if (sizeof(ElemType) == sizeof(double))
-                {
-                    foreach_row(i,c)
-                    {
-                        CUBLAS_CALL(cublasDaxpy(cuHandle,n,reinterpret_cast <double*>(&alpha),reinterpret_cast <double*>(a.m_pArray),1,reinterpret_cast <double*>(c.m_pArray+i),m));
-                    }                    
-                }
-                else
-                {
-                    foreach_row(i,c)
-                    {
-                        CUBLAS_CALL(cublasSaxpy(cuHandle,n,reinterpret_cast <float*>(&alpha),reinterpret_cast <float*>(a.m_pArray),1,reinterpret_cast <float*>(c.m_pArray+i),m));
-                    }                    
-                }
+                cudaEvent_t done = nullptr;
+                int blocksPerGrid = (int)(ceil(1.0*m*n / threadsPerBlock));
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                _matrixVectorRowWiseAddWithThreadPerElem<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, b.m_pArray, c.m_pArray, alpha, m, n);
+
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
             }
             else
                 InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
