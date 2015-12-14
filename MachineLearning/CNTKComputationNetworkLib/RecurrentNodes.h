@@ -229,20 +229,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = fr.t();
 
+            // we backpropagated into the delayed frame
+            FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
+
             // if delayed input is within valid time range then add its gradient
-            int t_delayed = (int)t + direction * m_timeStep;
+            int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
             if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
             {
+                // Boundary frames must not propagate. Gaps must also not propagate.
                 // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
-                if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature)) // true if at least one parallel sequence has a boundary or gap
+                assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+                if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
                 {
                     size_t mNbr = m_pMBLayout->GetNumParallelSequences();
                     for (size_t id = 0; id < mNbr; id++)
                     {
-                        if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
+                        assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                               m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                        if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id))))    // don't propagate boundary frames or gaps
                         {
                             Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
-                            Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            // TODO: use delayed FrameRange here as well
+                            //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
                             to += frm;
                         }
                     }
@@ -251,7 +261,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> frm = GradientFor(fr);
                     // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                    Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
                     to += frm;
                 }
             }
@@ -317,6 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
+            // we forward prop from the previous frame to this frame
             FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
             size_t t = fr.t();
@@ -353,7 +365,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else if (t_delayed >= T)
                             inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            inp = Input(0)->ValueFor(frDelayed.Sequence(id));
+                            //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -368,7 +381,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else if (t_delayed >= T)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+                    inp = Input(0)->ValueFor(frDelayed);
+                    //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
