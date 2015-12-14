@@ -1,0 +1,16 @@
+m=LoadModel($CurModel$, format=cntk)
+SetDefaultModel(m)
+
+ibn_e = BatchNormalization(featScaled, isc, ib, im, iisd, eval = true, spatial = true)
+SetNodeInput(conv1.c, 1, ibn_e)
+
+conv2.bn_e = BatchNormalization(pool1, conv2.sc, conv2.b, conv2.m, conv2.isd, eval = true, spatial = true)
+SetNodeInput(conv2.c, 1, conv2.bn_e)
+
+conv3.bn_e = BatchNormalization(pool2, conv3.sc, conv3.b, conv3.m, conv3.isd, eval = true, spatial = true)
+SetNodeInput(conv3.c, 1, conv3.bn_e)
+
+h1.bn_e = BatchNormalization(pool3, h1.sc, h1.b, h1.m, h1.isd, eval = true, spatial = false)
+SetNodeInput(h1.t, 1, h1.bn_e)
+
+SaveModel(m, $NewModel$, format=cntk)
