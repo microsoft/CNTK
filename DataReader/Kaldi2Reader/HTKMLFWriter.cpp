@@ -28,7 +28,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //DATAWRITER_API IDataWriter* DataWriterFactory(void)
 
     template<class ElemType>
-    void HTKMLFWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+    template<class ConfigRecordType>
+    void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig)
     {
         m_tempArray = nullptr;
         m_tempArraySize = 0;
@@ -40,11 +41,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
         
-        m_verbosity = writerConfig(L"verbosity", "2");
-        m_overflowValue = writerConfig(L"overflowValue", "50");
-        m_maxNumOverflowWarning = writerConfig(L"maxNumOverflowWarning", "10");
+        m_verbosity = writerConfig(L"verbosity", 2);
+        m_overflowValue = writerConfig(L"overflowValue", 50);
+        m_maxNumOverflowWarning = writerConfig(L"maxNumOverflowWarning", 10);
 
-        ConfigArray outputNames = writerConfig(L"outputNodeNames","");
+        vector<wstring> outputNames = writerConfig(L"outputNodeNames", ConfigRecordType::Array(stringargvector()));
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
         int counter = 0;

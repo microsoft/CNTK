@@ -106,10 +106,10 @@ private:
 
     std::vector<std::vector<std::vector<ElemType>>>m_labelToTargetMapMultiIO;
      
-    void PrepareForTrainingOrTesting(const ConfigParameters& config);
-    void PrepareForWriting(const ConfigParameters& config);
-    void PrepareForSequenceTraining(const ConfigParameters& config);
-    
+    template<class ConfigRecordType> void PrepareForTrainingOrTesting(const ConfigRecordType & config);
+    template<class ConfigRecordType> void PrepareForWriting(const ConfigRecordType & config);
+    template<class ConfigRecordType> void PrepareForSequenceTraining(const ConfigRecordType & config);
+
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetOneMinibatchToTrainOrTestDataBuffer(const std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices);
@@ -136,7 +136,7 @@ private:
     size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
 
-    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
+    template<class ConfigRecordType> void GetDataNamesFromConfig(const ConfigRecordType & readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
 
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
