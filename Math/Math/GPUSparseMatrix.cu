@@ -2526,7 +2526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _inplaceTruncateBottom<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), threshold, N);
+        _assignTruncateBottom<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), NzValues(), threshold, N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -2570,7 +2570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _inplaceTruncateTop<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), threshold, N);
+        _assignTruncateTop<ElemType> << <blocksPerGrid, threadsPerBlock >> >(NzValues(), NzValues(), threshold, N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
