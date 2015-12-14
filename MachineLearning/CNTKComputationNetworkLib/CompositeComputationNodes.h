@@ -421,7 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
-            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
@@ -508,7 +508,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
-            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
