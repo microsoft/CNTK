@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            size_t batchSize = sliceInput1Value.GetNumCols();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
@@ -140,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            size_t batchSize = sliceInput1Value.GetNumCols();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
@@ -362,7 +362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            size_t batchSize = sliceInput0Value.GetNumCols();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_poolEng != nullptr);
@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            size_t batchSize = sliceInput0Value.GetNumCols();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_poolEng != nullptr);
@@ -618,7 +618,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const Matrix<ElemType>& scale = Input(1)->Value();
                 const Matrix<ElemType>& bias = Input(2)->Value();
 
-                size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+                size_t batchSize = sliceInputValue.GetNumCols();
                 m_inT->setN(batchSize);
                 assert(m_convEng != nullptr);
 
@@ -661,7 +661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            size_t batchSize = sliceInputValue.GetNumCols();
             m_inT->setN(batchSize);
             assert(m_convEng != nullptr);
 #if NANCHECK
