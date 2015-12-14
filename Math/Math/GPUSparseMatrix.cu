@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors and Destructor
 
 #ifdef NO_SYNC
-    template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = false;
+    template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = true;
 #else
     template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = true;
 #endif
@@ -1132,7 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        CUDA_LONG N = (CUDA_LONG)c.GetNumCols();
+        CUDA_LONG N = (CUDA_LONG)c.GetNumNZElements();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
             reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
@@ -1141,7 +1141,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
             c.RowLocation(),
             c.ColLocation(),
-            D, S, M, K, T);
+            D, S, M, K, T,
+            c.GetNumNZElements());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
