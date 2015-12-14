@@ -1955,7 +1955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-#if 0
+#if 1
         _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #else
         _assignSigmoidOf<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
@@ -2220,7 +2220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _inplaceTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);
+        _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,m_pArray,threshold,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -2261,7 +2261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _inplaceTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);
+        _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,m_pArray,threshold,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
