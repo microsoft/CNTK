@@ -458,13 +458,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (dir == -1) // we look into past 
             {
+#if 0
                 bool   allAtBoundary = true;
                 // if the current last frames are all sentence end or no feature , there is no need to carry on state info
-                if (m_pMBLayout->Is(nT-1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                if (m_pMBLayout->Is(FrameRange(nT-1), MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
                 {
                     for (size_t u = 0; u < nU; u++)
                     {
-                        if (!m_pMBLayout->Is(u, nT - 1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                        if (!m_pMBLayout->Is(FrameRange(nT - 1).Sequence(u), MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
                         {
                             allAtBoundary = false;
                             break;
@@ -477,6 +478,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (allAtBoundary)
+#endif
+                if (!m_pMBLayout->HasSequenceBeyondEnd())       // only need to export state if anything crosses the MB boundary
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
@@ -492,15 +495,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (dir == 1) // we look into future 
             {
+#if 0
                 // TODO: check whether all at boundary and don't carry state if it is the case 
                 size_t nT = m_pMBLayout->GetNumTimeSteps(); 
                 size_t nU = m_pMBLayout->GetNumParallelSequences(); 
                 bool allAtBoundary = true; 
-                if (m_pMBLayout->Is(0, MinibatchPackingFlags::NoFeature | MinibatchPackingFlags::SequenceStart))
+                if (m_pMBLayout->Is(FrameRange(nullptr, 0), MinibatchPackingFlags::NoFeature | MinibatchPackingFlags::SequenceStart))
                 {
                     for (size_t u = 0; u < nU; u++)
                     {
-                        if (!m_pMBLayout->Is(u, 0, MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::NoFeature))
+                        if (!m_pMBLayout->Is(FrameRange(nullptr, 0).Sequence(u), MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::NoFeature))
                         {
                             allAtBoundary = false; 
                             break;
@@ -508,6 +512,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
                 if (allAtBoundary)
+#endif
+                if (!m_pMBLayout->HasSequenceBeyondBegin())       // only need to export state if anything crosses the MB boundary
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 

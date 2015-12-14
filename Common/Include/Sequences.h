@@ -225,14 +225,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get boundary flags
     private:
-        MinibatchPackingFlags Get(size_t t) const;
+        //MinibatchPackingFlags Get(size_t t) const;
+        //MinibatchPackingFlags Get(size_t s, size_t t) const;
         MinibatchPackingFlags Get(const FrameRange & fr) const;
-        MinibatchPackingFlags Get(size_t s, size_t t) const;
 
     private:
     public:     // naw, these are still used in RecurrentNodes. Will soon be replaced by a different mechanism.
-        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
+        //bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
+        //bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
 
     public:
         // test boundary flags for a specific condition
@@ -247,11 +247,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsGap(const FrameRange & fr) const { return Is(fr, MinibatchPackingFlags::NoInput); }
 
         // TODO: these should go away
-        bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
-        bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
+        //bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
+        //bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
 
         // only used in sequence training, must be replaced by a different mechanism
-        bool IsEnd(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::SequenceEnd); }
+        bool IsEnd(size_t s, size_t t) const
+        {
+            auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+#if 1       // I don't exactly know what this does, so try assert() fifst
+            assert(distanceToStart != -1); distanceToStart;
+#else
+            if (distanceToStart == -1)      // indicates a gap
+                return false;
+#endif
+            auto distanceToEnd = (size_t)m_distanceToEnd(s, t);
+            return distanceToEnd <= t;
+        }
+
+        // test whether at least one sequence crosses the bounds of this minibatch
+        bool HasSequenceBeyondBegin() const
+        {
+            for (const auto & seq : m_sequences)
+                if (seq.tBegin < 0)
+                    return true;
+            return false;
+        }
+
+        bool HasSequenceBeyondEnd() const
+        {
+            for (const auto & seq : m_sequences)
+                if (seq.tEnd > m_numTimeSteps)
+                    return true;
+            return false;
+        }
 
 #if 0
     private:
@@ -350,30 +378,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // compute the number of actual samples in this layout (not counting gaps)
         // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
         // TODO: rename Determine- to Get-, as it is a trivial operation now
-        size_t GetActualNumSamples() const
-        {
-#if 1       // sanity check  --TODO: delete this after a while
-            size_t n = GetNumCols();
-            if (HasGaps())
-            {
-                for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                {
-                    if (Is(t, MinibatchPackingFlags::NoInput))
-                    {
-                        for (size_t s = 0; s < GetNumParallelSequences(); s++)
-                        {
-                            if (Is(s, t, MinibatchPackingFlags::NoInput))
-                                n--;
-                        }
-                    }
-                }
-            }
-            if (m_numGapFrames != GetNumCols() - n)
-                LogicError("GetActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
-            assert(m_numFramesDeclared - m_numGapFrames == n);
-#endif
-            return m_numFramesDeclared - m_numGapFrames;
-        }
+        size_t GetActualNumSamples() const;
+        //size_t GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
 
         // function that must flatten gaps can call this to check whether there are any
         bool HasGaps() const;
@@ -604,21 +610,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CheckIsValid();
         if (fr.IsAllFrames())
             return m_numGapFrames > 0;      // test entire minibatch
-        auto t = fr.t();
         if (fr.seqIndex == SIZE_MAX)
-            return m_timeStepHasGap[t];     // test all seq for one time step
+            return m_timeStepHasGap[fr.timeIdxInSeq];     // test all seq for one time step
         else
-            return Is(fr.seqIndex, t, MinibatchPackingFlags::NoInput);  // test one sequence
+            return IsGap(fr);  // test one sequence
     }
 
-    inline MinibatchPackingFlags MBLayout::Get(size_t t) const
-    {
-        return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
-    }
-    inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
-    {
-        return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
-    }
+    //inline MinibatchPackingFlags MBLayout::Get(size_t t) const
+    //{
+    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
+    //}
+    //inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
+    //{
+    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
+    //}
 
     // get packing flags from a frame range
     // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
@@ -715,6 +720,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
+    inline size_t MBLayout::GetActualNumSamples() const
+    {
+#if 1       // sanity check  --TODO: delete this after a while
+        size_t n = GetNumCols();
+        if (HasGaps())
+        {
+            for (size_t t = 0; t < GetNumTimeSteps(); t++)
+            {
+                FrameRange fr(nullptr, t);
+                if (IsGap(fr))
+                {
+                    for (size_t s = 0; s < GetNumParallelSequences(); s++)
+                    {
+                        if (IsGap(fr.Sequence(s)))
+                            n--;
+                    }
+                }
+            }
+        }
+        if (m_numGapFrames != GetNumCols() - n)
+            LogicError("GetActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
+        assert(m_numFramesDeclared - m_numGapFrames == n);
+#endif
+        return m_numFramesDeclared - m_numGapFrames;
+    }
+
     // return m_columnsValidityMask(,), which is lazily created here upon first call
     // only called from MaskMissingColumnsTo()
     // TODO: Can probably be faster by using the sequence array directly.
@@ -736,11 +768,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t gapsFound = 0;
             for (size_t t = 0; t < nT; t++)
             {
-                if (IsGap(t))
+                FrameRange fr(nullptr, t);
+                if (IsGap(fr))
                 {
                     for (size_t s = 0; s < nS; s++)
                     {
-                        if (IsGap(s, t))
+                        if (IsGap(fr.Sequence(s)))
                         {
                             columnsValidityMask[(t * nS) + s] = 0;
                             gapsFound++;
