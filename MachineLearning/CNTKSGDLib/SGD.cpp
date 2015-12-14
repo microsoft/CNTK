@@ -312,6 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes, g_mpi->NumNodesInUse(), m_isPipeline);
 			m_multiverso->ModelInit(learnableNodes);
 			m_multiverso_barrier = false;
+			m_multiverso->_adaptor->Barrier();
 		}
 
         // --- MAIN EPOCH LOOP
@@ -1007,7 +1008,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i<epochEvalErrors.size(); i++)
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
-
+			computeTimer.Stop();
+			computeTime += computeTimer.ElapsedSeconds();
             // update model parameters
             if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
             {
@@ -1034,8 +1036,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-			computeTimer.Stop();
-			computeTime += computeTimer.ElapsedSeconds();
 			commTimer.Start();
             // aggregation by model averaging
             // TODO: this does not happen each MB, does it?
@@ -1101,7 +1101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             numMBsRun++;
 
             totalTimeInMBs += timer.ElapsedSeconds();
-            numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
+			numSamplesLastMBs += (useModelAveraging || useASGD) ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
 
             if (numMBsRun % m_numMBsToShowResult == 0)
             {
