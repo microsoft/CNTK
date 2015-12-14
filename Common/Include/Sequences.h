@@ -17,36 +17,6 @@
 #include <vector>
 #include <memory>   // for shared_ptr
 
-enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
-{
-    None = 0,
-    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
-    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
-    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
-    NoLabel = 1 << 3,               // binary 1000  frame has no label
-
-    NoInput = NoFeature | NoLabel,  // Note: Once we refactorized the reader, NoInput will no longer needed.
-    SequenceStartOrNoFeature = SequenceStart | NoFeature,
-    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
-    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
-};
-
-inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
-}
-
-inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
-{
-    a = a | b;
-    return a;
-}
-
-inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
-}
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Forward declarations
@@ -87,37 +57,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // An MBLayout provides the following functions:
     //  - (building:) add a new sequence (or gap range) to the MBLayout
     //  - inquire the set of sequences (sequence ids) that intersect with this minibatch
-    //  - inquire whether any time step t has any flags across all sequences
-    //  - inquire the flags at (s,t)
+    //  - inquire whether any time step t has a gap or boundary across all sequences
+    //  - inquire for gap or boundary at (s,t)
     //
     // Truncated BPTT support (partial sequences):
     //  - in truncated BPTT, minibatches only contain partial sequences, e.g. a range of 20 time steps
-    //  - the flags are stored for every sequence that intersects with this minibatch
-    //  - that is also true for flags that fall outside the time-step range of the minibatch
+    //  - boundary information is stored for every sequence that intersects with this minibatch,
+    //    including boundaries that fall outside of the time range of the minibatch
     //
     // An MBLayout object stores:
     //  - for every sequence in the minibatch the n-tuple (global sequence id, s, first t, last t)
     //    (where first and last t may sometimes lie outside of the minibatch, e.g. in case of truncated BPTT)
     //  - number of time steps and parallel sequences (their product is equal to the #columns in the minibatch matrix)
-    //  - MinibatchPackingFlags: information whether a frame (s,t) is
-    //     - SequenceBegin (first frame of a sequence)
-    //     - SequenceEnd (last frame of a sequence--in frame-randomization, each frame is both)
-    //     - NoInput (a gap or missing input frame)
-    //  - a column-wise OR of those flags for fast testing entire time steps at once
+    //  - lookup tables for looking up gap and boundary information
     // -----------------------------------------------------------------------
 
-    // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
-    // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
     // Contract between ComputationNode, ComputationNetwork, and MBLayout:
-    //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
+    //  - if a node has no MBLayout, m_{value,gradient} are not samples (they are not activations or input data), but e.g. model parameters
     //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
-    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling ForwardProp() on a node
-    // NOTE: Parts of this class represents the result of refactoring code, including a few irregular edge cases.
-    //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
+    //  - ComputationNetwork ensures that m_{value,gradient} are allocated correctly before calling ForwardProp() on a node
 
     struct MBLayout
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+
+        // information stored about sequences
+        struct SequenceInfo
+        {
+            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
+            size_t s;               // index of parallel sequence
+            ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
+            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
+            bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
+        };
+
+        // -------------------------------------------------------------------
+        // construction
+        // -------------------------------------------------------------------
 
         MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
         MBLayout() : MBLayout(1, 0) { }
@@ -137,9 +113,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
             // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
-            //m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            //m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            //m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
             // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
             m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
             m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
@@ -153,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_writable = true;
         }
 
-        // short-hand to initialize an MBLayout for the special case of frame mode
+        // short-hand to initialize an MBLayout for the common case of frame mode
         // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
         void InitAsFrameMode(size_t numSamples)
         {
@@ -166,16 +139,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             Lock();
         }
-    private:
-        // we are trying to access content--this verifies that the structure is consistent
-        // All frames must now be declared.
-        void CheckIsValid() const
-        {
-            if (m_numFramesDeclared != GetNumCols())
-                LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
-                           (int)m_numFramesDeclared, (int)( m_numTimeSteps * m_numParallelSequences));
-        }
-    public:
+
+        // -------------------------------------------------------------------
+        // accessors
+        // -------------------------------------------------------------------
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
         size_t GetNumParallelSequences() const { return m_numParallelSequences; }
@@ -183,19 +150,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // how many columns the MB matrix has
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
-        // information stored about sequences
-        struct SequenceInfo
-        {
-            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
-            size_t s;               // index of parallel sequence
-            ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
-            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
-            bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
-        };
         // return all sequences stored in this minibatch
         const vector<SequenceInfo> & GetAllSequences() const { return m_sequences; }
 
-    public:
+        // compute the number of actual samples in this layout (not counting gaps)
+        // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
+        size_t GetActualNumSamples() const;
+
+        const Matrix<char> & GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
 
         // compare whether two layouts are the same
         bool operator==(const MBLayout & other) const
@@ -211,91 +173,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_distanceToNearestEnd   == other.m_distanceToNearestEnd   &&
                 m_timeStepHasGap == other.m_timeStepHasGap &&
                 m_sequences == other.m_sequences;
-#if 0
-            bool res1 =
-                m_numTimeSteps == other.m_numTimeSteps &&
-                m_numParallelSequences == other.m_numParallelSequences &&
-                m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
-                m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
-            assert(res == res1); res1;
-#endif
             return res;
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
-        // get boundary flags
-    private:
-        //MinibatchPackingFlags Get(size_t t) const;
-        //MinibatchPackingFlags Get(size_t s, size_t t) const;
-        //MinibatchPackingFlags Get(const FrameRange & fr) const;
-
-    private:
-    public:     // naw, these are still used in RecurrentNodes. Will soon be replaced by a different mechanism.
-        //bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        //bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
-
-    public:
-        // test boundary flags for a specific condition
-        // TODO: Remove the direct-index versions in lieu of FrameRange version.
-        //       Direct-index versions are currently used here:
-        //        - LUSequenceReader.cpp: a sanity check
-        //        - ClassBasedCrossEntropyWithSoftmaxNode (where the correct FrameRange object is already available)
-        //        - RecurrentNode (which will be rewritten after MBLayout can handle tests outside its time range)
-        // FrameRange version allows to test with time offset
-        //bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
-        bool IsBeyondStartOrEnd(const FrameRange & fr) const;
-        bool IsGap(const FrameRange & fr) const;
-
-        // only used in sequence training, must be replaced by a different mechanism
-        bool IsEnd(size_t s, size_t t) const
-        {
-            auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
-#if 1       // I don't exactly know what this does, so try assert() fifst
-            assert(distanceToStart != -1); distanceToStart;
-#else
-            if (distanceToStart == -1)      // indicates a gap
-                return false;
-#endif
-            auto distanceToEnd = (size_t)m_distanceToEnd(s, t);
-            return distanceToEnd <= t;
-        }
-
-        // test whether at least one sequence crosses the bounds of this minibatch
-        bool HasSequenceBeyondBegin() const
-        {
-            for (const auto & seq : m_sequences)
-                if (seq.tBegin < 0)
-                    return true;
-            return false;
-        }
-
-        bool HasSequenceBeyondEnd() const
-        {
-            for (const auto & seq : m_sequences)
-                if (seq.tEnd > m_numTimeSteps)
-                    return true;
-            return false;
-        }
-
-#if 0
-    private:
-        // set a boundary flag (OR it on top of the existing layout)
-        // Currently not yet updated/disabled:
-        //  - RecurrentNode for m_timeStep > 1 (this will be fixed differently)
-        // Currently marginally broken:
-        //  - EvalReader.h
-        void Set(size_t s, size_t t, MinibatchPackingFlags f)
-        {
-            CheckWritable();
-
-            if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
-                return;
-            m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
-            m_minibatchPackingFlags[t] |= f;
-        }
-
-    public:
-#endif
+        // -------------------------------------------------------------------
+        // building (adding sequences or gaps)
+        // -------------------------------------------------------------------
 
         // mark a range of frames in a parallel sequence as one sentence
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
@@ -371,19 +255,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // I'd love to start with all-gaps, but that would require to set flags upfront, and then clearing them.
         void AddGap(size_t s, ptrdiff_t beginTime, size_t endTime) { if ((ptrdiff_t)endTime > beginTime) AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
 
-        // compute the number of actual samples in this layout (not counting gaps)
-        // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
-        // TODO: rename Determine- to Get-, as it is a trivial operation now
-        size_t GetActualNumSamples() const;
-        //size_t GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
+        // -------------------------------------------------------------------
+        // inquire about gaps or boundaries
+        // -------------------------------------------------------------------
 
-        // function that must flatten gaps can call this to check whether there are any
         bool HasGaps() const;
         bool HasGaps(const FrameRange & fr) const;
 
-        const Matrix<char> & GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
+        // test boundary flags for a specific condition
+        bool IsBeyondStartOrEnd(const FrameRange & fr) const;
+        bool IsGap(const FrameRange & fr) const;
+
+        // test whether at least one sequence crosses the bounds of this minibatch
+        bool HasSequenceBeyondBegin() const
+        {
+            for (const auto & seq : m_sequences)
+                if (seq.tBegin < 0)
+                    return true;
+            return false;
+        }
+
+        bool HasSequenceBeyondEnd() const
+        {
+            for (const auto & seq : m_sequences)
+                if (seq.tEnd > m_numTimeSteps)
+                    return true;
+            return false;
+        }
 
     private:
+
+        // we are trying to access content--this verifies that the structure is consistent
+        // All frames must now be declared.
+        void CheckIsValid() const
+        {
+            if (m_numFramesDeclared != GetNumCols())
+                LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
+                (int)m_numFramesDeclared, (int)(m_numTimeSteps * m_numParallelSequences));
+        }
 
         // Ensure that the MBLayout allows writes
         void CheckWritable() const
@@ -401,65 +310,76 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
 
+        // -------------------------------------------------------------------
+        // data members: main information
+        // -------------------------------------------------------------------
+
         // dimensions
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
 
-        // counters on how much has been declared, for checks
-        size_t m_numFramesDeclared;
-        size_t m_numGapFrames;
-
         // all sequences that live inside this minibatch
         vector<SequenceInfo> m_sequences;
 
-        // a matrix of S x T
-        // S is the number of parallel sequences, T is the number of time steps (possibly of multiple concatenated sequences).
-        // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch
-        // would be described by this [2 x 5]  matrix:
-        //   S . . . E
-        //   S . E G G          // (last two time steps have no content)
-        // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
-        //Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
-        // TODO: we should change to a Matrix<char>.
+    private:
 
-        // a short-hand vector or-ing the above flags over all parallel sequences
-        //vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+        // -------------------------------------------------------------------
+        // data members: cached information and inverse lookup tables
+        // -------------------------------------------------------------------
 
-        // a short-hand for determining whether any sequence at time t is a boundary or gap
-        // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
-        // PTRDIFF_MAX stands for 'not initialized'.
-        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); -1 stands for gap
+        // counters on how much has been declared, for fast access (this can be recomputed from m_sequences as well)
+        size_t m_numFramesDeclared;
+        size_t m_numGapFrames;
+
+        // Lookup tables for determining whether any sequence at time t is a boundary or gap.
+        // An optional time delay can be given, then the test is whether going from t to (t + time delay) crosses a boundary.
+        // The purpose is for knowing when to reset state of a recurrent node.
+        //
+        // For every (s,t), we store the distance to the corresponding sequence begin and end.
+        // We also store for every [t] an aggregate to know the nearest boundary.
+        // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch, both starting at step 0
+        // Would be described by these [2 x 5]  matrices:
+        // m_distanceToStart        = [ 0  1  2  3  4
+        //                              0  1  2 -1 -1 ]          // (last two time steps have no content)
+        // m_distanceToEnd          = [ 4  3  2  1  0
+        //                              2  1  0  .  . ]          // (last two time steps undefined)
+        // m_distanceToNearestStart = [ 0  1  2  3  4 ]
+        // m_distanceToNearestEnd   = [ 2  1  0  1  0 ]
+        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); -1 stands for gap, PTRDIFF_MAX for 'not initialized'
         vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (-1 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
-        vector<bool> m_timeStepHasGap;                                      // [t]
 
-        // A boolean flag indicating whether the MBLayout can be further modified
-        // When it's value is false, no set operations are allowed on the MBLayout
-        mutable bool m_writable;
+        vector<bool> m_timeStepHasGap;                                      // [t]
 
         // Cached mask indicating the validity of each column in the MBLayout
         // TODO: We actually just need a boolean matrix for this.
         // A value of 1 indicates that the column has valid content 
         // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
-        // If the matrix is empty it means all columns are valid
         mutable Matrix<char> m_columnsValidityMask;
 
-    public:
-#if 1
-        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t) const { NOT_IMPLEMENTED; }
-        Matrix<float> & GetM() { NOT_IMPLEMENTED; }
-#else
-        // specialized functions to replicate old behavior that shouldn't be there but I cannot test
-        // TODO: these should all go away one day
+        // A boolean flag indicating whether the MBLayout can be further modified
+        // When it's value is false, no set operations are allowed on the MBLayout.
+        // Meant to guard in lazy creation of m_columnsValidityMask.
+        mutable bool m_writable;
 
-        // get info for one frame; used in DelayedValueNode
-        // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
-        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
+    public:
+
+        // -------------------------------------------------------------------
+        // special deprecated functions that are result of refactoring
+        // -------------------------------------------------------------------
+
+        // only used in sequence training, must be replaced by a different mechanism
+        bool IsEnd(size_t s, size_t t) const
         {
-            return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
-        }
-        // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
+            auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+#if 1       // I don't exactly know what this does, so try assert() fifst
+            assert(distanceToStart != -1); distanceToStart;
+#else
+            if (distanceToStart == -1)      // indicates a gap
+                return false;
 #endif
+            auto distanceToEnd = (size_t)m_distanceToEnd(s, t);
+            return distanceToEnd <= t;
+        }
 
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
@@ -484,8 +404,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // TODO: We should also have a FrameRange that selects all frames of a single sequence. Currently now possible since that would require Matrix::RowSlice()
-    // TODO: Where this design currently breaks:  // <- BUGBUG: I think these are outdated
-    //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
     //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
     // BUGBUG: These nodes are currently broken and will need to be fixed:
     //  - CRFNode does not support > 1 parallel sequence
@@ -504,7 +422,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), m_timeOffset(0), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        //FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
         FrameRange(MBLayoutPtr pMBLayout) : FrameRange(pMBLayout, SIZE_MAX) {}
 
         // return a frame range with broadcast allowed
@@ -546,23 +463,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ret.m_timeOffset += offset;
             return ret;
         }
-        // check a FrameRange with time offset
-        // Returns 0 if time index with offset is inside the layout; -1 if left of it, and +1 if right of it.
-        int LocateTimeOffset() const
-        {
-            EnsureNotAllFrames();
-            if (m_timeOffset == 0)      // no time offset: the time index itself must always be inside the actual MB
-                return 0;
-            if (!m_pMBLayout)
-                InvalidArgument("FrameRange::LocateTimeOffset(): Time offset requires an MBLayout.");
-            ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
-            if (t < 0)
-                return -1;
-            else if ((size_t)t >= m_pMBLayout->GetNumTimeSteps())
-                return +1;
-            else
-                return 0;
-        }
 
         class IndexIteration    // range for range-based for over sequences
         {
@@ -581,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EnsureNotAllFrames();
             ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
-            if (LocateTimeOffset() != 0)
+            if (t < 0 || (size_t)t >= m_pMBLayout->GetNumTimeSteps())
                 InvalidArgument("FrameRange::t(): Time offset caused time index to be out of range.");
             return (size_t)t;
         }

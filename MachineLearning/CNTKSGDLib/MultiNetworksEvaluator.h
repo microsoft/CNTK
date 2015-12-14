@@ -769,7 +769,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
-            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
+            // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+            //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -779,7 +780,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
+                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+                    //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -938,7 +940,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
 
-            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));   // BUGBUG: huh? How can the entire batch be start frames?
+            // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+            //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));   // BUGBUG: huh? How can the entire batch be start frames?
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -948,7 +951,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
+                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+                    //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
