@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
-    template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
+    template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/  /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public
                                  ILateAttachingNode, public IStateFulNode,  public NumInputs<1>
     {
@@ -229,12 +229,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            size_t t = fr.t();
-
             // we backpropagated into the delayed frame
             FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
             // if delayed input is within valid time range then add its gradient
+            size_t t = fr.t();
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
             if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
             {
@@ -332,8 +331,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // we forward prop from the previous frame to this frame
             FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
-            size_t t = fr.t();
-
             VerifyDims(Input(0));
 
             size_t T = GetNumTimeSteps();
@@ -342,6 +339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // compute logical position of delayed value
             assert(m_timeStep > 0);
 
+            size_t t = fr.t();
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
 
             Matrix<ElemType> inp;   // ((DEVICEID_TYPE)m_value.GetDeviceId());
@@ -429,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction, SequenceStart_or_End>>(nodeP);
+                auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction/*, SequenceStart_or_End*/>>(nodeP);
                 node->m_timeStep = m_timeStep;
                 node->m_initialActivationValue = m_initialActivationValue;
                 node->m_delayedActivation = m_delayedActivation;
@@ -587,9 +585,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PastValueNode : public DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart>
+    class PastValueNode : public DelayedValueNodeBase<ElemType, -1 /*, MinibatchPackingFlags::SequenceStart*/>
     {
-        typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, -1/*, MinibatchPackingFlags::SequenceStart*/> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"PastValue"; }
     public:
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -613,9 +611,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd>
+    class FutureValueNode : public DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/>
     {
-        typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"FutureValue"; }
     public:
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
