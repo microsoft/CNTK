@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
         MBLayout() : MBLayout(1, 0) { }
 
         // copy the content of another MBLayoutPtr over
@@ -137,9 +137,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
             // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
-            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
+            //m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
+            //m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            //m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
             // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
             m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
             m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_distanceToNearestEnd   == other.m_distanceToNearestEnd   &&
                 m_timeStepHasGap == other.m_timeStepHasGap &&
                 m_sequences == other.m_sequences;
-#if 1
+#if 0
             bool res1 =
                 m_numTimeSteps == other.m_numTimeSteps &&
                 m_numParallelSequences == other.m_numParallelSequences &&
@@ -253,6 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // only used in sequence training, must be replaced by a different mechanism
         bool IsEnd(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::SequenceEnd); }
 
+#if 0
     private:
         // set a boundary flag (OR it on top of the existing layout)
         // Currently not yet updated/disabled:
@@ -270,6 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
+#endif
 
         // mark a range of frames in a parallel sequence as one sentence
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
@@ -304,10 +306,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // create all the cached fast-lookup information
             const auto seqId = seqDesc.seqId;
             const auto s = seqDesc.s;
-            if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
-                Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
-            if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
-                Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
+            //if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
+            //    Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
+            //if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
+            //    Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
             size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
             size_t e = min(endTime, m_numTimeSteps);
             m_numFramesDeclared += (e - b);
@@ -316,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_numGapFrames += (e - b);
                 for (size_t t = b; t < e; t++)
                 {
-                    Set(s, t, MinibatchPackingFlags::NoInput);
+                    //Set(s, t, MinibatchPackingFlags::NoInput);
                     m_timeStepHasGap[t] = true;
                     m_distanceToStart(s, t) = -1;   // start flags also encode gaps
                 }
@@ -337,7 +339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
-                assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
+                //assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
             }
         }
 
@@ -348,9 +350,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // compute the number of actual samples in this layout (not counting gaps)
         // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
         // TODO: rename Determine- to Get-, as it is a trivial operation now
-        size_t DetermineActualNumSamples() const
+        size_t GetActualNumSamples() const
         {
-#if 1
+#if 1       // sanity check  --TODO: delete this after a while
             size_t n = GetNumCols();
             if (HasGaps())
             {
@@ -367,7 +369,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             if (m_numGapFrames != GetNumCols() - n)
-                LogicError("DetermineActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
+                LogicError("GetActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
             assert(m_numFramesDeclared - m_numGapFrames == n);
 #endif
             return m_numFramesDeclared - m_numGapFrames;
@@ -415,11 +417,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //   S . . . E
         //   S . E G G          // (last two time steps have no content)
         // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
-        Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
+        //Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
         // TODO: we should change to a Matrix<char>.
 
         // a short-hand vector or-ing the above flags over all parallel sequences
-        vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+        //vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
 
         // a short-hand for determining whether any sequence at time t is a boundary or gap
         // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
@@ -644,8 +646,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (distanceToEnd <= fr.m_timeOffset)
                 f |= MinibatchPackingFlags::SequenceEnd;
 
-            auto f1 = m_minibatchPackingFlags[t];
-            assert(f1 == f); f1;
+            //auto f1 = m_minibatchPackingFlags[t];
+            //assert(f1 == f); f1;
 
             return f;
         }
@@ -667,8 +669,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 f |= MinibatchPackingFlags::SequenceEnd;
         }
 
-        auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
-        assert(f1 == f); f1;
+        //auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
+        //assert(f1 == f); f1;
 
         return f;
     }

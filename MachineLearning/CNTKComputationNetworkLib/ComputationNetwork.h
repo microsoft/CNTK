@@ -300,7 +300,7 @@ public:
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
         if (m_pMBLayout)
-            return m_pMBLayout->DetermineActualNumSamples();
+            return m_pMBLayout->GetActualNumSamples();
         else
             return numAllSamples;   // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }
