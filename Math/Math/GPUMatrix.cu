@@ -1955,7 +1955,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+#if 0
+        _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
+#else
         _assignSigmoidOf<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
+#endif
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
