@@ -12,6 +12,7 @@
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
+#include "CuDnnConvolutionEngine.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -353,8 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helper Functions
     template<class ElemType> void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) const { return nullptr; }
-
-    template<class ElemType> void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind) { }
+       
+    template<class ElemType> void GPUSparseMatrix<ElemType>::performElementWiseFunction(const ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src) { }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE *h_CSRRow, const CPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
@@ -365,6 +366,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat) {}
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
+
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise) { };
+    template<class ElemType> void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols) { }
 
     template<class ElemType> template <class OutType, class InType>
     void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
@@ -450,8 +455,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUMatrix<ElemType>::ChangeDeviceTo(int to_id) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::performInplaceFunction(int kind)
-    {}
+    template<class ElemType> void GPUMatrix<ElemType>::performElementWiseFunction(const ElementWiseOperator kind, const ElemType* src) { }
 
 
 #pragma endregion Helper functions
@@ -579,6 +583,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return 0;
     }
+
+    template<class ElemType> std::unique_ptr<GPUMatrix<ElemType>> GPUMatrix<ElemType>::GetOrCreateWorkspace() const
+    {
+        return NULL;
+    }
+
+    template<class ElemType> void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const { }
 
     template<class ElemType> size_t GPUMatrix<ElemType>::LocateColumn(const size_t col) const
     {
@@ -977,9 +988,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise) { }
-    template<class ElemType> void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c) { }
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols) { }
+    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + b</summary>
+    /// if a is a column vector, add to all columns of b
+    /// if a is a row vector, add to all rows of b
+    /// if a is a scalar, add to all elements of b
+    /// <param name="alpha">Scalar</param>
+    /// <param name="a">Input matrix</param>
+    /// <param name="b">Input matrix</param>
+    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+    template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary>c += alpha * (a-b)</summary>
     /// if a, b, c  must have same dim 
@@ -1180,8 +1197,8 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
     GPUMatrixComputeStreamEvent::~GPUMatrixComputeStreamEvent() { };
     void GPUMatrixComputeStreamEvent::SynchronizeEvent() { };
-    template <typename ElemType>
-    void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent() { };
+    template<> void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>() { };
+    template<> void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>() { };
 
 #pragma endregion GPUMatrixComputeStreamEvent functions
 
@@ -1200,6 +1217,54 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
     template<class ElemType> void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled with CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
+        const Tensor4D&, const Filter&, size_t, size_t, bool)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
+        typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
+    {
+        return false;
+    }
+
+    template class CuDnnConvolutionEngineFactory<float>;
+    template class CuDnnConvolutionEngineFactory<double>;
+
 }}}
 
 // define a dummy GPUWatcher class too

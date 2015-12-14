@@ -26,6 +26,7 @@
 #include <iostream>
 #include <regex>
 #include <chrono>
+#include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -130,11 +131,6 @@ public:
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
-#if 0
-        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
-        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
-        AllocateEvalMatrices(rootNode);
-#endif
         VerifyIsCompiled("StartEvaluateMinibatchLoop");
         ResetEvalTimeStamps();              // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
     }
@@ -169,12 +165,10 @@ private:
     void VerifyIsCompiled(const char * where) const;
     //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
+    void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
-    void AllocateGradientMatrices(ComputationNodeBasePtr rootNode); // public since this is called by SGD
 private:
-    void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, std::vector<ComputationNodeBasePtr>& outValueRootNodes, std::vector<ComputationNodeBasePtr>& trainRootNodes);
-    void AllocateEvalMatrices(ComputationNodeBasePtr rootNode);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount);
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 public:
 
@@ -196,7 +190,6 @@ private:
     void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void DetermineLoopDirections();
 
 public:
 
@@ -207,15 +200,26 @@ public:
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // skipPairNetwork == true is only used when called from FormRecurrentLoops()
-    void FormEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
+    void FormEvalOrder(const ComputationNodeBasePtr & rootNode)
     {
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
             fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
 
-        m_evalOrders[rootNode] = rootNode->EnumerateNodes(skipPairNetwork);
+        if (rootNode)
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        else
+            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork = true)
+    // replace an existing eval order with an updated one
+    // This is meant to be used by FormRecurrentLoops().  TODO: Hopefully this can be not done anymore some day.
+    void UpdateEvalOrder(const ComputationNodeBasePtr & rootNode, std::list<ComputationNodeBasePtr> & nodes)
+    {
+        GetEvalOrder(rootNode);     // verify that there is already an entry for rootNode
+        m_evalOrders[rootNode] = nodes;
+    }
+
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode)
     {
         if (m_evalOrders.find(rootNode) == m_evalOrders.end())
             LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
@@ -226,7 +230,7 @@ public:
 protected:
     class SEQTraversalFlowControlNode;
 private:
-    static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
+    static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(const std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
 public:
 
     // -----------------------------------------------------------------------
@@ -291,33 +295,14 @@ public:
             nodeIter->NotifyFunctionValuesMBSizeModified();
     }
 
-    // this coulds the actual number of frames in a minibatch, excluding gaps in parallel sequences
-    // TODO: Move to MBLayout class. Also should not need 'numAllSamples' anymore.
-    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
+    // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
-        {
-            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
-            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
-
-            size_t numSamplesWithoutLabel = 0;
-
-            for (size_t t = 0; t < numTimeSteps; t++)
-            {
-                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
-                {
-                    for (int id = 0; id < numSequences; id++)
-                    {
-                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                            numSamplesWithoutLabel++;
-                    }
-                }
-            }
-
-            return numTimeSteps*numSequences - numSamplesWithoutLabel;
-        }
+        if (m_pMBLayout)
+            return m_pMBLayout->GetActualNumSamples();
         else
-            return numAllSamples;
+            return numAllSamples;   // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }
 
     // -----------------------------------------------------------------------
@@ -344,8 +329,6 @@ public:
         return AsNodePtr<N>(inode) != nullptr;
     }
 
-    // TODO: comment what this function does. Seems to either initialize LearnableParameters or precompute nodes.
-    ComputationNodeBasePtr SetNodeValue(const std::wstring & nodeName, const double value);
 
     // -----------------------------------------------------------------------
     // network editing
@@ -515,7 +498,7 @@ public:
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+            const std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -811,7 +794,7 @@ protected:
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
-        int m_loopId;                                                       // the loop id (index in m_allSEQNodes array)
+        int m_loopId;                                                       // unique loop id, index in m_allSEQNodes array
         int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
@@ -853,7 +836,7 @@ protected:
     public:
         // this special constructor constructs the top-level network node
         // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
-        PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
+        PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
         // Base::m_nestedNodes contains all top-level nodes, in evaluation order
     };
 
@@ -907,9 +890,9 @@ private:
     // cache for evaluation ordering:
     bool m_isCompiled;      // CompileNetwork has been called
 
-    // cached network Iterations
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders;
-    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_nestedNetworks;
+    // cached network iterations
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders; // [out node] flat depth-first traversal starting from out node
+    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_nestedNetworks;        // [out node] network rewritten as recursive traveral, potentially optimized; execution plan
 
     // cached quick-access list for inputs and parameters
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;            // [out node] -> all input nodes feeding into out node

@@ -7,6 +7,7 @@
 //
 
 #include "stdafx.h"
+#include "Basics.h"
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
@@ -65,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // If <m_framemode> is false, throw away any utterance that is longer
         // than the specified <m_maxUtteranceLength>.
-        m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", "10000");
+        m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
 
         // m_truncated:
         //     If true, truncate utterances to fit the minibatch size. Otherwise
@@ -73,8 +74,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // m_numberOfuttsPerMinibatch:
         //     If larger than one, then each minibatch contains multiple
         //     utterances.
-        m_truncated = readerConfig(L"Truncated", "false");
-        m_numberOfuttsPerMinibatch = readerConfig(L"nbruttsineachrecurrentiter", "1");
+        m_truncated = readerConfig(L"Truncated", false);
+        m_numberOfuttsPerMinibatch = readerConfig(L"nbruttsineachrecurrentiter", 1);
         if (m_numberOfuttsPerMinibatch < 1)
         {
             LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.\n");
@@ -93,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (readerConfig.Exists(L"seqTrainCriterion"))
         {
             m_doSeqTrain = true;
-            m_seqTrainCriterion = wstring(readerConfig(L"seqTrainCriterion"));
+            m_seqTrainCriterion = (const wstring&) readerConfig(L"seqTrainCriterion",L"");
             if ((m_seqTrainCriterion != L"mpfe")
                 && (m_seqTrainCriterion != L"smbr"))
             {
@@ -102,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Checks if framemode is false in sequence training.
-        m_framemode = readerConfig(L"frameMode", "true");
+        m_framemode = readerConfig(L"frameMode", true);
         if (m_framemode && m_doSeqTrain)
         {
             LogicError("frameMode has to be false in sequence training.\n");
@@ -124,8 +125,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Checks if we are in "write" mode or "train/test" mode.
-        string command(readerConfig(L"action",L""));
-        if (command == "write")
+        wstring command(readerConfig(L"action",L""));
+        if (command == L"write")
         {
             m_trainOrTest = false;
             PrepareForWriting(readerConfig);
@@ -138,8 +139,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
     }
 
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::PrepareForSequenceTraining(const ConfigParameters& readerConfig)
+    template<class ElemType> template<class ConfigRecordType>
+    void HTKMLFReader<ElemType>::PrepareForSequenceTraining(const ConfigRecordType & readerConfig)
     {
         // Parameters that we are looking for.
         wstring denlatRspecifier, aliRspecifier, transModelFilename, silencePhoneStr;
@@ -159,51 +160,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Processes "denlats" section. 
-        ConfigParameters denlatConfig = readerConfig(L"denlats");
-        if (!denlatConfig.Exists("rx"))
+        const ConfigRecordType & denlatConfig = readerConfig(L"denlats");
+        if (!denlatConfig.Exists(L"rx"))
         {
             LogicError("Rspecifier is not provided for denominator lattices.\n");
         }
-        if (!denlatConfig.Exists("kaldiModel"))
+        if (!denlatConfig.Exists(L"kaldiModel"))
         {
             LogicError("Rspecifier is not provided for Kaldi model.\n");
         }
-        denlatRspecifier = wstring(denlatConfig("rx"));
-        transModelFilename = wstring(denlatConfig("kaldiModel"));
-        silencePhoneStr = wstring(denlatConfig("silPhoneList", ""));
-        oldAcousticScale = denlatConfig("oldAcousticScale", "0.0");
-        acousticScale = denlatConfig("acousticScale", "0.2");
-        lmScale = denlatConfig("lmScale", "1.0");
-        oneSilenceClass = denlatConfig("oneSilenceClass", "true");
+        denlatRspecifier = (const wstring&) denlatConfig(L"rx");
+        transModelFilename = (const wstring &)(denlatConfig(L"kaldiModel"));
+        silencePhoneStr = (const wstring&)(denlatConfig(L"silPhoneList", L""));
+        oldAcousticScale = denlatConfig(L"oldAcousticScale", 0.0);
+        acousticScale = denlatConfig(L"acousticScale", 0.2);
+        lmScale = denlatConfig(L"lmScale", 1.0);
+        oneSilenceClass = denlatConfig(L"oneSilenceClass", true);
 
         // Processes "alignments" section.
-        ConfigParameters aliConfig = readerConfig(L"alignments");
-        if (!aliConfig.Exists("rx"))
+        const ConfigRecordType & aliConfig = readerConfig(L"alignments");
+        if (!aliConfig.Exists(L"rx"))
         {
             LogicError("Rspecifier is not provided for alignments.\n");
         }
-        aliRspecifier = wstring(aliConfig("rx"));
+        aliRspecifier = (const wstring&) (aliConfig(L"rx"));
 
         // Scans the configurations to get "readerDeriv" type input and
         // "readerObj" type input. Both are feature nodes, we feed derivatives
         // to training criterion node through "readerDeriv" and feed objective
         // through "readerObj".
         bool hasDrive = false, hasObj = false;
-        for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
+        //for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
+        for (const auto & id : readerConfig.GetMemberIds())
         {
-            ConfigParameters temp = iter->second;
+            const ConfigRecordType & temp = readerConfig(id);
             if (temp.ExistsCurrent(L"type"))
             {
-                if (temp("type") == "readerDeriv"
-                    || temp("type") == "seqTrainDeriv" /*for back compatibility */)
+                wstring type = temp(L"type");
+                if (!_wcsicmp(type.c_str(), L"readerDeriv")
+                    || !_wcsicmp(type.c_str(), L"seqTrainDeriv") /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerDeriv;
+                    m_nameToTypeMap[id] = InputOutputTypes::readerDeriv;
                     hasDrive = true;
                 }
-                else if (temp("type") == "readerObj"
-                    || temp("type") == "seqTrainObj" /*for back compatibility */)
+                else if (!_wcsicmp(type.c_str(), L"readerObj")
+                    || !_wcsicmp(type.c_str(),L"seqTrainObj") /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerObj;
+                    m_nameToTypeMap[id] = InputOutputTypes::readerObj;
                     hasObj = true;
                 }
             }
@@ -241,8 +244,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Note that we treat <derivatives> and <objectives> as features, but they
     // will be computed in the reader, rather then reading from disks. Those
     // will then be fed to training criterion node for training purposes.
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigParameters& readerConfig)
+    template<class ElemType> template<class ConfigRecordType>
+    void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType& readerConfig)
     {
         // Loads files for sequence training.
         if (m_doSeqTrain)
@@ -278,15 +281,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<msra::asr::FeatureSection *> & scriptpaths = m_trainingOrTestingFeatureSections;
         foreach_index(i, featureNames)
         {
-            ConfigParameters thisFeature = readerConfig(featureNames[i]);
-
-            // Figures out the context.
-            ConfigArray contextWindow = thisFeature("contextWindow", "1");
+            const ConfigRecordType & thisFeature = readerConfig(featureNames[i]);
+            m_featDims.push_back(thisFeature(L"dim"));
+            intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{ 1 })));
             if (contextWindow.size() == 1) // symmetric
             {
                 size_t windowFrames = contextWindow[0];
                 if (windowFrames % 2 == 0 )
-                    RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
+                    RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowFrames);
                 size_t context = windowFrames / 2;           // extend each side by this
                 numContextLeft.push_back(context);
                 numContextRight.push_back(context);
@@ -299,28 +301,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
+                RuntimeError("contextFrames must have 1 or 2 values specified, found %d", (int)contextWindow.size());
             }
 
             // Figures the actual feature dimension, with context.
-            m_featDims.push_back(thisFeature("dim"));
             m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]); 
 
             // Figures out the category.
-            string type = thisFeature("type", "Real");
-            if (type == "Real")
+            wstring type = thisFeature(L"type", L"real");
+            if (!_wcsicmp(type.c_str(), L"real"))
             {
                 m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
             }
             else
             {
-                RuntimeError("feature type must be Real");
+                InvalidArgument("feature type must be 'real'");
             }
-
             m_featureNameToIdMap[featureNames[i]] = iFeat;
             assert(iFeat == m_featureIdToNameMap.size());
             m_featureIdToNameMap.push_back(featureNames[i]);
-            scriptpaths.push_back(new msra::asr::FeatureSection(thisFeature("scpFile"), thisFeature("rx"), thisFeature("featureTransform", "")));
+            scriptpaths.push_back(new msra::asr::FeatureSection(thisFeature(L"scpFile"), thisFeature(L"rx"), thisFeature(L"featureTransform", L"")));
             m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
             m_featuresBufferMultiIO.push_back(NULL);
@@ -336,36 +336,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<vector<wstring>> mlfpathsmulti;
         foreach_index(i, labelNames)
         {
-            ConfigParameters thisLabel = readerConfig(labelNames[i]);
+            const ConfigRecordType& thisLabel = readerConfig(labelNames[i]);
 
             // Figures out label dimension.
-            if (thisLabel.Exists("labelDim"))
-                m_labelDims.push_back(thisLabel("labelDim"));
-            else if (thisLabel.Exists("dim"))
-                m_labelDims.push_back(thisLabel("dim"));
+            if (thisLabel.Exists(L"labelDim"))
+                m_labelDims.push_back(thisLabel(L"labelDim"));
+            else if (thisLabel.Exists(L"dim"))
+                m_labelDims.push_back(thisLabel(L"dim"));
             else
-                RuntimeError("labels must specify dim or labelDim");
+                InvalidArgument("labels must specify dim or labelDim");
 
             // Figures out the category.
-            string type;
-            if (thisLabel.Exists("labelType"))
-                type = thisLabel("labelType"); // let's deprecate this eventually and just use "type"...
+            wstring type;
+            if (thisLabel.Exists(L"labelType"))
+                type = (const wstring &)thisLabel(L"labelType"); // let's deprecate this eventually and just use "type"...
             else
-                type = thisLabel("type","Category"); // outputs should default to category
-            if (type == "Category")
+                type = (const wstring &)thisLabel(L"type",L"category"); // outputs should default to category
+            if (!_wcsicmp(type.c_str(), L"category"))
                 m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
             else
-                RuntimeError("label type must be Category");
+                InvalidArgument("label type must be Category");
 
             // Loads label mapping.
-            statelistpaths.push_back(thisLabel("labelMappingFile",L""));
+            statelistpaths.push_back(thisLabel(L"labelMappingFile",L""));
 
             m_labelNameToIdMap[labelNames[i]] = iLabel;
             assert(iLabel == m_labelIdToNameMap.size());
             m_labelIdToNameMap.push_back(labelNames[i]);
             m_labelNameToDimMap[labelNames[i]] = m_labelDims[i];
             mlfpaths.clear();
-            mlfpaths.push_back(thisLabel("mlfFile"));
+            mlfpaths.push_back(thisLabel(L"mlfFile"));
             mlfpathsmulti.push_back(mlfpaths);
 
             m_labelsBufferMultiIO.push_back(NULL);
@@ -374,14 +374,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             iLabel++;
 
             // Figures out label to target mapping.
-            wstring labelToTargetMappingFile(thisLabel("labelToTargetMappingFile",L""));
+            wstring labelToTargetMappingFile(thisLabel(L"labelToTargetMappingFile",L""));
             if (labelToTargetMappingFile != L"")
             {
                 std::vector<std::vector<ElemType>> labelToTargetMap;
                 m_convertLabelsToTargetsMultiIO.push_back(true);
-                if (thisLabel.Exists("targetDim"))
+                if (thisLabel.Exists(L"targetDim"))
                 {
-                    m_labelNameToDimMap[labelNames[i]] = m_labelDims[i] = thisLabel("targetDim");
+                    m_labelNameToDimMap[labelNames[i]] = m_labelDims[i] = thisLabel(L"targetDim");
                 }
                 else
                     RuntimeError("output must specify targetDim if labelToTargetMappingFile specified!");
@@ -489,11 +489,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 LogicError("rollingWindow is not supported in sequence training.\n");
             }
-            std::string pageFilePath;
+            std::wstring pageFilePath;
             std::vector<std::wstring> pagePaths;
             if (readerConfig.Exists(L"pageFilePath"))
             {
-                pageFilePath = readerConfig(L"pageFilePath");
+                pageFilePath = (const wstring&) readerConfig(L"pageFilePath");
 
                 // replace any '/' with '\' for compat with default path
                 std::replace(pageFilePath.begin(), pageFilePath.end(), '/','\\'); 
@@ -505,9 +505,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 #ifdef __unix__
                 struct stat statbuf;
-                if (stat(pageFilePath.c_str(), &statbuf)==-1)
+                if (stat(wtocharpath(pageFilePath).c_str(), &statbuf)==-1)
                 {
-                    throw std::runtime_error ("pageFilePath does not exist");
+                    RuntimeError ("pageFilePath does not exist");
                 }
 
 #endif
@@ -520,7 +520,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 #ifdef __unix__
                 pageFilePath.reserve(PATH_MAX);
-                pageFilePath = "/tmp/temp.CNTK.XXXXXX";
+                pageFilePath = L"/tmp/temp.CNTK.XXXXXX";
 #endif
             }
 
@@ -555,7 +555,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //m_frameSourceMultiIO = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, randomize, pagepath, mayhavenoframe, addEnergy);
             //m_frameSourceMultiIO->setverbosity(verbosity);
-            int verbosity = readerConfig(L"verbosity","2");
+            int verbosity = readerConfig(L"verbosity",2);
             m_frameSource = new msra::dbn::minibatchframesourcemulti(scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy);
             m_frameSource->setverbosity(verbosity);
         }
@@ -570,8 +570,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // categories for different input/output:
     // features:      InputOutputTypes::real
     // labels:        InputOutputTypes::category
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigParameters& readerConfig)
+    template<class ElemType> template<class ConfigRecordType>
+    void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType & readerConfig)
     {
         // Gets a list of features and labels. Note that we assume feature
         // section names have prefix "features" and label section names have
@@ -596,7 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t windowFrames = contextWindow[0];
                 if (windowFrames % 2 == 0)
-                    RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
+                    RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", (int)windowFrames);
                 size_t context = windowFrames / 2;           // extend each side by this
                 numContextLeft.push_back(context);
                 numContextRight.push_back(context);
@@ -609,7 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
+                RuntimeError("contextFrames must have 1 or 2 values specified, found %d", (int)contextWindow.size());
             }
 
             // Figures out the feature dimension, with context.
@@ -1106,14 +1106,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // We initialize the sentence boundary information before we process
             // the utterances.
-            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_currentMBSize, !m_framemode);
-            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+            if (m_framemode)
+            {
+                assert(m_numberOfuttsPerMinibatch==1);
+                m_pMBLayout->InitAsFrameMode(m_currentMBSize);
+            } else
+            {
+                m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_currentMBSize);
+            }
+            /*for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
             {
                 for (size_t j = 0; j < m_currentMBSize; j++)
                 {
                     m_pMBLayout->SetWithoutOr(i, j, MinibatchPackingFlags::None);
                 }
-            }
+            }*/
 
             // Iterates over utterances. m_numberOfuttsPerMinibatch = 1 is a
             // special case.
@@ -1121,6 +1128,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t startFrame = m_processedFrame[i];
                 size_t endFrame = 0;
+                // Sets the utterance boundary.
+                if (!m_framemode)
+                {
+                    if (m_toProcess[i] > startFrame)
+                    {
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, -(ptrdiff_t)startFrame, m_toProcess[i]-startFrame);
+                    }
+                }
+                //m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
+
 
                 if ((startFrame + m_currentMBSize) < m_toProcess[i])
                 {
@@ -1128,12 +1145,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //     1. <m_framemode> is false, and <m_truncated> is true.
                     assert(m_framemode == false);
                     assert(m_truncated == true);
-
-                    // Sets the utterance boundary.
-                    if (startFrame == 0)
-                    {
-                        m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
-                    }
 
                     endFrame = startFrame + m_currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
@@ -1155,7 +1166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //        utterance boundary.
 
                     // Sets the utterance boundary.
-                    if (m_framemode == false)
+                    /*if (m_framemode == false)
                     {
                         if (startFrame == 0)
                         {
@@ -1164,7 +1175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         // We have to set the utterance end.
                         m_pMBLayout->Set(i, m_pMBLayout->GetNumTimeSteps() - 1, MinibatchPackingFlags::SequenceEnd);
-                    }
+                    }*/
 
                     // Now puts the utterance into the minibatch, and loads the
                     // next one.
@@ -1192,9 +1203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Checks if we have reached the end of the minibatch.
                     if (startFrame == m_toProcess[i])
                     {
+                        m_pMBLayout->AddGap(i, 0, m_currentMBSize); 
                         for (size_t k = 0; k < m_currentMBSize; k++)
                         {
-                            m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
+                            //m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
@@ -1215,7 +1227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // Second, we set utterance boundary for the partial
                     // minibatch, and then load it.
-                    if (m_framemode == false)
+                    /*  if (m_framemode == false)
                     {
                         if (startFrame == 0)
                         {
@@ -1225,7 +1237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // We have to set the utterance end.
                         assert(m_toProcess[i] - startFrame - 1 < m_pMBLayout->GetNumTimeSteps());
                         m_pMBLayout->Set(i, m_toProcess[i] - startFrame - 1, MinibatchPackingFlags::SequenceEnd);
-                    }
+                    }*/
                     endFrame = m_toProcess[i];
                     size_t currentMBFilled = endFrame - startFrame;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
@@ -1243,8 +1255,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         // Sets the utterance boundary.
                         assert(currentMBFilled + m_toProcess[i] <= m_pMBLayout->GetNumTimeSteps());
-                        m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
-                        m_pMBLayout->Set(i, currentMBFilled + m_toProcess[i] - 1, MinibatchPackingFlags::SequenceEnd);
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, currentMBFilled, currentMBFilled + m_toProcess[i]);
+                        //m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
+                        //m_pMBLayout->Set(i, currentMBFilled + m_toProcess[i] - 1, MinibatchPackingFlags::SequenceEnd);
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], m_currentMBSize, currentMBFilled);
                         if (m_doMinibatchBuffering && populateSucc)
                         {
@@ -1270,14 +1283,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_processedFrame[i] += m_currentMBSize - currentMBFilled;
                         if (currentMBFilled < m_currentMBSize)
                         {
-                            m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
+                            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, currentMBFilled, currentMBFilled+m_toProcess[i]);
+                            //m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
                         }
                     }
                     else
                     {
+                        m_pMBLayout->AddGap(i, currentMBFilled, m_currentMBSize);
                         for (size_t k = currentMBFilled; k < m_currentMBSize; k++)
                         {
-                            m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
+                            //m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
@@ -1343,8 +1358,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 currentMBSize : (originalMBSize - startIndex);
 
             // Sets MBLayout.
-            currentMinibatch.pMBLayout->CopyFromRange(m_pMBLayout, startIndex, numFrames);
-
+            //currentMinibatch.pMBLayout->CopyFromRange(m_pMBLayout, startIndex, numFrames);
+            currentMinibatch.pMBLayout->Init(m_pMBLayout->GetNumParallelSequences(), numFrames);
+            const auto & sequences = m_pMBLayout->GetAllSequences();
+            for (const auto & seq : sequences)
+            {
+                if (seq.tEnd > startIndex && seq.tBegin < (ptrdiff_t)(startIndex + numFrames))
+                {
+                    auto shiftedSeq = seq;
+                    shiftedSeq.tBegin -= startIndex;
+                    shiftedSeq.tEnd -= startIndex;
+                    currentMinibatch.pMBLayout->AddSequence(shiftedSeq);
+                }
+            }
             // Sets the minibatch size for the current minibatch.
             currentMinibatch.currentMBSize = numFrames;
 
@@ -1644,9 +1670,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                     if (first)
                     {
-                        m_pMBLayout->Init(1, feat.cols(), true);
-                        m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                        m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);
+                        m_pMBLayout->Init(1,feat.cols());
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, feat.cols());
+                        //m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);
                         first = false;
                     }
 
@@ -2089,21 +2115,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // For Kaldi2Reader, we now make the following assumptions
     // 1. feature sections will always have a sub-field "scpFile"
     // 2. label sections will always have a sub-field "mlfFile"
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
+    template<class ElemType> template<class ConfigRecordType>
+    void HTKMLFReader<ElemType>::GetDataNamesFromConfig(const ConfigRecordType& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
     {
-        for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
+        for (auto & id : readerConfig.GetMemberIds())
         {
-            auto pair = *iter;
-            ConfigParameters temp = iter->second;
+            if (!readerConfig.CanBeConfigRecord(id))
+                continue;
+            const ConfigRecordType & temp = readerConfig(id);
             // see if we have a config parameters that contains a "file" element, it's a sub key, use it
             if (temp.ExistsCurrent(L"scpFile"))
             {
-                features.push_back(msra::strfun::utf16(iter->first));
+                features.push_back(id);
             }
             else if (temp.ExistsCurrent(L"mlfFile"))
             {
-                labels.push_back(msra::strfun::utf16(iter->first));
+                labels.push_back(id);
             }
         }
     }

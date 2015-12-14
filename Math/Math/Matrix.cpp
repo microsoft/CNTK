@@ -165,6 +165,32 @@
         } \
     }
 
+// EnforceOneGPUOnly - enforce that we only use one GPU (because we don't really support more than one at this point in time)
+// BUGBUG workaround.
+// Call this after every place a device is deviced.
+// We have multiple independent mechanisms to pick a device.
+// After selecting a device id, always run the result through this function, which will cache the first choice.
+// TODO: This is a stop-gap. It will be cleaned up once we also fix the GPU late-locking bug.
+//       The correct fix is to always route GPU selection through a single function in the first place.
+DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
+{
+    if (requestedDeviceId < 0)      // only apply this to GPU ids
+        return requestedDeviceId;
+    static DEVICEID_TYPE theGPUId = DEVICEID_NOTYETDETERMINED;
+    if (theGPUId == DEVICEID_NOTYETDETERMINED)
+        theGPUId = requestedDeviceId;
+    else if (theGPUId != requestedDeviceId)
+    {
+        static bool shown = false;
+        if (!shown)
+        {
+            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d to %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
+            shown = true;
+        }
+    }
+    return theGPUId;
+}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors, destructors and other static matrix builders
 
@@ -5161,13 +5187,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class Matrix<float>; 
     template class Matrix<double>;    
 
-    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
     // Let's explicitly instantiate the methods we need for that purpose
     template Matrix<char>::Matrix(DEVICEID_TYPE);
     template Matrix<char>::Matrix(Matrix<char>&&);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
     template Matrix<char>::~Matrix();
+    template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
+    template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);
     template char* Matrix<char>::BufferPointer() const;
     template int Matrix<char>::GetDeviceId() const;
     template size_t Matrix<char>::GetNumElements() const;
@@ -5177,6 +5205,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template size_t Matrix<char>::GetNumCols() const;
     template void Matrix<char>::SetValue(const char);
     template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
-    template bool Matrix<char>::IsEmpty() const;  
-    
+    template bool Matrix<char>::IsEmpty() const;
+
 }}}
