@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         //MinibatchPackingFlags Get(size_t t) const;
         //MinibatchPackingFlags Get(size_t s, size_t t) const;
-        MinibatchPackingFlags Get(const FrameRange & fr) const;
+        //MinibatchPackingFlags Get(const FrameRange & fr) const;
 
     private:
     public:     // naw, these are still used in RecurrentNodes. Will soon be replaced by a different mechanism.
@@ -242,13 +242,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        - ClassBasedCrossEntropyWithSoftmaxNode (where the correct FrameRange object is already available)
         //        - RecurrentNode (which will be rewritten after MBLayout can handle tests outside its time range)
         // FrameRange version allows to test with time offset
-        bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
+        //bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
         bool IsBeyondStartOrEnd(const FrameRange & fr) const;
-        bool IsGap(const FrameRange & fr) const { return Is(fr, MinibatchPackingFlags::NoInput); }
-
-        // TODO: these should go away
-        //bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
-        //bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
+        bool IsGap(const FrameRange & fr) const;
 
         // only used in sequence training, must be replaced by a different mechanism
         bool IsEnd(size_t s, size_t t) const
@@ -616,6 +612,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return IsGap(fr);  // test one sequence
     }
 
+#if 0
     //inline MinibatchPackingFlags MBLayout::Get(size_t t) const
     //{
     //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
@@ -679,6 +676,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return f;
     }
+#endif
+
+    // test whether a given frame is or contains a gap
+    inline bool MBLayout::IsGap(const FrameRange & fr) const
+    {
+        CheckIsValid();
+
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
+
+        const auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        const auto s = fr.seqIndex;
+        if (s == SIZE_MAX)                      // aggregate requested
+            return m_timeStepHasGap[t];
+
+        // determine flags from matrices
+
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        return (distanceToStart == -1);
+    }
 
     // test whether frame is exceeding the sentence boundaries
     inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange & fr) const
@@ -688,9 +705,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (fr.IsAllFrames())
             LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
 
-        auto t = fr.timeIdxInSeq;        // we test off the frame without offset
-        auto s = fr.seqIndex;
-        if (s == SIZE_MAX)              // aggregate requested
+        const auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        const auto s = fr.seqIndex;
+        if (s == SIZE_MAX)                      // aggregate requested
         {
             // determine flags from aggregate vectors
             auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
