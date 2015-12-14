@@ -73,20 +73,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot, false);
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (const auto & fromNode : GetEvalOrder(fromRoot))
         {
-            ComputationNodeBasePtr fromNode = *nodeIter;
             wstring fromNodeName = fromNode->NodeName();
             wstring toNodeName = toNamePrefix + fromNodeName;
 
             ComputationNodeBasePtr toNode = CopyNode(fromNet, fromNodeName,
-                                                  toNodeName,
-                                                  CopyNodeFlags::copyNodeValue);
+                                                     toNodeName,
+                                                     CopyNodeFlags::copyNodeValue);
 
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
-                //copy the children structure but use the new nodes generated
+                // copy the children structure but use the new nodes generated
                 for (int i = 0; i < fromNode->GetNumInputs(); i++)
                     toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetInputs()[i]->NodeName()));
             }
@@ -308,10 +306,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             // for calculating a specific node
-            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            for (const auto & node : GetEvalOrder(rootNode))
             {
-                ComputationNodeBasePtr node = (*nodeIter);
                 if (node->OperationName() == OperationNameOf(LearnableParameter))
                     node->SetParameterUpdateRequired(needGradient);
             }

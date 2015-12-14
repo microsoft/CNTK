@@ -428,6 +428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // node construction
     // -----------------------------------------------------------------------
 
+#if 0   // This function is not used. Is there value to keep it?
     ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
     {
         ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
@@ -457,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return pNode;
     }
-
+#endif
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
@@ -525,7 +526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else                            // or for calculating a specific node
         {
-            for (const auto & nodei : GetEvalOrder(rootNode, false))
+            for (const auto & nodei : GetEvalOrder(rootNode))
             {
                 auto node = dynamic_pointer_cast<N>(nodei);
                 if (node)
@@ -563,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_inputValues.find(rootNode) == m_inputValues.end());        // this function must only be called once
         assert(m_learnableParameters.find(rootNode) == m_learnableParameters.end());
 
-        const list<ComputationNodeBasePtr> & nodes = GetEvalOrder(rootNode, false);
+        const list<ComputationNodeBasePtr> & nodes = GetEvalOrder(rootNode);
 
         // collect input values for given root
         list<ComputationNodeBasePtr> inputs;
@@ -710,9 +711,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
-
-        for (auto & nodeIter : nodes)
+        for (const auto & nodeIter : GetEvalOrder(rootNode))
             if (!nodeIter->UnitTest())
                 return false;
 

@@ -123,6 +123,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ReLU node does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
@@ -171,6 +178,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The Sigmoid node does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         // should be:
@@ -227,6 +242,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The plus node does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         // should be:
@@ -287,6 +310,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The plus node does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
@@ -335,6 +365,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientTemp->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
             sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradientTemp);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ExpNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
         virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { NOT_IMPLEMENTED; }   // not needed
 
         void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
@@ -382,6 +420,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The CosineNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
 
         // should be:
@@ -440,6 +485,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             BackpropToS(*m_gradientTemp, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The plus node does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         // should be:
@@ -530,6 +583,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             BackpropToS(*m_gradientTemp, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The plus node does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         // should be:
@@ -680,6 +741,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             default:
                 InvalidArgument("GMMLogLikelihoodNode criterion only takes four inputs.");
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The GMMLogLikelihoodNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The GMMLogLikelihoodNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         /*TODO: merge with call site*/void BackpropToUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
@@ -1026,6 +1102,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The DropoutNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The DropoutNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         /*TODO: merge with call site*/void BackpropToS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
         {
             if (dropoutRate > 0)
@@ -1101,7 +1192,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            m_maskOfDropout->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
         }
 
         void SetDropoutRate(const double val)

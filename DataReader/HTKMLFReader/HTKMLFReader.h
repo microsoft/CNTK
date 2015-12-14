@@ -28,7 +28,7 @@ private:
     vector<bool> m_sentenceEnd;
     bool m_truncated;
     bool m_frameMode;
-    vector<size_t> m_processedFrame;
+    vector<size_t> m_processedFrame;        // [seq index] (truncated BPTT only) current time step (cursor)
     intargvector m_numSeqsPerMBForAllEpochs;
     size_t m_numSeqsPerMB;                  // requested number of parallel sequences
     size_t m_mbNumTimeSteps;                // number of time steps  to fill/filled (note: for frame randomization, this the #frames, and not 1 as later reported)

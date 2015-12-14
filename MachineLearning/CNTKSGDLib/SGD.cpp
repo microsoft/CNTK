@@ -156,11 +156,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // allocate memory for backward computation
-        // TODO: This should be done in CompileNetwork(). However, if I do it there, I get a double-free error from MatrixPool.
-        fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
-        for (int i = 0; i < criterionNodes.size(); i++)
-            net->AllocateGradientMatrices(criterionNodes[i]);
+        std::vector<ComputationNodeBasePtr> additionalNodesToEvaluate;
+        auto& outputNodes = net->OutputNodes();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
+        
+        auto preComputeNodesList = net->GetNodesRequiringPreComputation();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
+
+        // allocate memory for forward and backward computation
+        net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
 
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -205,6 +209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
             refNet->CompileNetwork();
+
+            // allocate memory for forward computation
+            refNet->AllocateAllMatrices({ refNode }, {}, nullptr);
         }
 
         // initializing weights and gradient holder
@@ -809,9 +816,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
-                                                                              useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+                                                                          useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
                 break;  // end of epoch
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+
+            if (!wasDataRead)
+                actualMBSize = 0;   // (undefined if !wasDataRead)
 
             nSamplesSinceLastModelSync += actualMBSize;
 
@@ -825,6 +838,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (actualMBSize > 0)
             {
+                assert(wasDataRead);
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
                     LogicError("cannot pass gradient checker");
@@ -894,8 +908,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             } // if (actualMBSize > 0)
 
             // for progress and statistics, we should only count frames that are not gaps
-            size_t numSamplesWithLabel = net->GetNumSamplesWithLabel(actualMBSize);
-
+            size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
@@ -906,6 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // accumulate criterion values (objective, eval)
                 if (actualMBSize != 0)
                 {
+                    assert(wasDataRead);
                     // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->Value(),
                                                           0, 0, localEpochCriterion, 0, 0);
@@ -918,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                //distributed gradient aggregation
+                // distributed gradient aggregation
                 if (learnParamsGradients.size() == 0)
                 {
                     learnParamsGradients.reserve(learnableNodes.size());
@@ -942,7 +956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                //prepare the header
+                // prepare the header
                 m_gradHeader->numEvalNode = evaluationNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
@@ -1061,36 +1075,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // progress tracing for compute cluster management
                     double mbProg = 0.0;
+                    int mbProgNumPrecision = 2;
                     if (m_maxComputedEpochSize != 0)
                     {
-                        mbProg = (double)numMBsRun / ((double)m_maxComputedEpochSize / (double)tunedMBSize);
-                    }                    
+                        double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
+                        mbProg = (double)numMBsRun / numMBPerEpoch;
+                        mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
+                        mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
+                    }
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
 
                     // progress tracing for regular log
-#if 1
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2.4f%%]: SamplesSeen = %d; TrainLossPerSample = " +
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2." + std::to_string(mbProgNumPrecision) + "f%%]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                    SGDTrace(stderr, formatString.c_str(),
-                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                             numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
-#endif
                 }
                 else
                 {
-#if 1
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#endif
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, numSamplesLastMBs, trainLossPerSample);
@@ -1105,17 +1110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
-#if 1
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
                 SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
-#else
-                double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
-                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
-                                      GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
-                SGDTrace(stderr, formatString.c_str(),
-                         totalTimeInMBs, totalTimePerSample,
-                         (int)(numSamplesLastMBs / totalTimeInMBs));
-#endif
 
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
@@ -1153,7 +1149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(EndDataType::endDataSentence);
 
-            // Attemps to compute the error signal for the whole utterance, which will
+            // Attempts to compute the error signal for the whole utterance, which will
             // be fed to the neural network as features. Currently it is a workaround
             // for the two-forward-pass sequence and ctc training, which allows
             // processing more utterances at the same time. Only used in Kaldi2Reader.

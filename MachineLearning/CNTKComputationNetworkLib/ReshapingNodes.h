@@ -286,21 +286,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
-                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
-                if (weStack() || factor() == 1)
+                if (weStack())
                 {
                     // going from many samples to one: layout entry will get no flags
-                    if (m_pMBLayout->GetNumTimeSteps() != 1)
+                    if (Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
-                    // leave flags empty (single-frame 'utterances' come form frame randomization, hence no flags)
+                    // we are in frame mode now
+                    m_pMBLayout->InitAsFrameMode(Input(0)->GetNumParallelSequences());
                 }
                 else
                 {
                     // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                     if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                         LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
+                    m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
-                        m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
+                    // BUGBUG: In the future, NEW_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
                 }
             }
         }
@@ -353,6 +355,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     Base::Stack(fr.WithLayout(Input(0)->GetMBLayout()), Input(0)->GetMBLayout(), Gradient(), Input(0)->Gradient(), factor(), true/*addTo*/);
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ReshapeNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The ReshapeNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
     private:
@@ -411,6 +428,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else if (m_targetImageLayout.GetNumChannels() > 0)
                     RuntimeError("At least two image dimensions must be specified.");
+                else
+                    m_targetImageLayout = ImageLayoutWHC(m_numTargetRows, 1, 1);
             }
         }
     };
@@ -524,6 +543,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(0)->GradientFor(fr).AddToRowSliceValuesOf(GradientFor(fr), m_startIndex, m_sliceHeight);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowSliceNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowSliceNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             ValueFor(fr).AssignRowSliceValuesOf(Input(0)->ValueFor(fr), m_startIndex, m_sliceHeight);
@@ -587,6 +621,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowStackNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowStackNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
@@ -735,6 +784,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowRepeatNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The RowRepeatNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
     private:

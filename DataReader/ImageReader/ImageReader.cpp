@@ -98,8 +98,13 @@ public:
             ratio = m_cropRatioMin;
             break;
         case RatioJitterType::UniRatio:
-            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
-            assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
+            if (m_cropRatioMin == m_cropRatioMax)
+                ratio = m_cropRatioMin;
+            else
+            {
+                ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
+                assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
+            }
             break;
         default:
             RuntimeError("Jitter type currently not implemented.");
@@ -313,7 +318,15 @@ private:
 // ImageReader
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>())
+static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose);
+
+static std::launch GetLaunchPolicy(bool prefetch)
+{
+    return prefetch ? std::launch::async : std::launch::deferred;
+}
+
+template<class ElemType>
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>()), m_mbFmt(DataFormat::NCHW)
 {
     m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
     m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
@@ -347,6 +360,13 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     size_t h = featSect.second("height");
     size_t c = featSect.second("channels");
     m_featDim = w * h * c;
+    
+    // Get mini-batch format.
+    std::string mbFmt = featSect.second("mbFormat", "nchw");
+    if (AreEqual(mbFmt, "nhwc"))
+        m_mbFmt = DataFormat::NHWC;
+    else if (!AreEqual(mbFmt, "nchw"))
+        RuntimeError("ImageReader does not support the mini-batch format %s.", mbFmt.c_str());
 
     // Initialize transforms.
     for (auto& t: m_transforms)
@@ -368,8 +388,8 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
         std::string imgPath;
         std::string clsId;
         if (!std::getline(ss, imgPath, '\t') || !std::getline(ss, clsId, '\t'))
-            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.", mapPath.c_str(), cline);
-        files.push_back({ imgPath, std::stoi(clsId) });
+            RuntimeError("Invalid map file format, must contain 2 tab-delimited columns: %s, line: %d.", mapPath.c_str(), static_cast<int>(cline));
+        m_files.push_back({ imgPath, std::stoi(clsId) });
     }
 
     std::string rand = config(L"randomize", "auto");
@@ -378,10 +398,12 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     else if (!AreEqual(rand, "auto"))
         RuntimeError("Only Auto and None are currently supported.");
 
+    m_prefetch = config(L"prefetch", true);
+
     m_epochStart = 0;
     m_mbStart = 0;
 }
-template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
+//template<class ElemType> virtual void ImageReader<ElemType>::Init(const ConfigParameters & config);
 //template<class ElemType> virtual void ImageReader<ElemType>::Init(const ScriptableObjects::IConfigRecord & config);
 
 template<class ElemType>
@@ -396,15 +418,15 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
     assert(requestedEpochSamples > 0);
 
     if (m_imgListRand)
-        std::shuffle(files.begin(), files.end(), m_rng);
+        std::shuffle(m_files.begin(), m_files.end(), m_rng);
 
-    m_epochSize = (requestedEpochSamples == requestDataSize ? files.size() : requestedEpochSamples);
+    m_epochSize = (requestedEpochSamples == requestDataSize ? m_files.size() : requestedEpochSamples);
     m_mbSize = mbSize;
     // REVIEW alexeyk: if user provides epoch size explicitly then we assume epoch size is a multiple of mbsize, is this ok?
     assert(requestedEpochSamples == requestDataSize || (m_epochSize % m_mbSize) == 0);
     m_epoch = epoch;
     m_epochStart = m_epoch * m_epochSize;
-    if (m_epochStart >= files.size())
+    if (m_epochStart >= m_files.size())
     {
         m_epochStart = 0;
         m_mbStart = 0;
@@ -412,6 +434,7 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
 
     m_featBuf.resize(m_mbSize * m_featDim);
     m_labBuf.resize(m_mbSize * m_labDim);
+    m_mbPrefetchFut = std::async(GetLaunchPolicy(m_prefetch), [this]() { return ReadImages(); });
 }
 
 template<class ElemType>
@@ -421,38 +444,23 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     assert(matrices.find(m_featName) != matrices.end());
     assert(m_mbSize > 0);
 
-    Matrix<ElemType>& features = *matrices[m_featName];
-    Matrix<ElemType>& labels = *matrices[m_labName];
+    size_t mbSize = m_mbPrefetchFut.valid() ? m_mbPrefetchFut.get() : 0;
 
-    if (m_mbStart >= files.size() || m_mbStart >= m_epochStart + m_epochSize)
+    if (mbSize == 0)
         return false;
 
-    size_t mbLim = m_mbStart + m_mbSize;
-    if (mbLim > files.size())
-        mbLim = files.size();
-
-    std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
-    
-#pragma omp parallel for ordered schedule(dynamic)
-    for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
-    {
-        const auto& p = files[i + m_mbStart];
-        cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
-        for (auto& t: m_transforms)
-            t->Apply(img);
-       
-        assert(img.isContinuous());
-        auto data = reinterpret_cast<ElemType*>(img.ptr());
-        std::copy(data, data + m_featDim, m_featBuf.begin() + m_featDim * i);
-        m_labBuf[m_labDim * i + p.second] = 1;
-    }
-
-    size_t mbSize = mbLim - m_mbStart;
+    Matrix<ElemType>& features = *matrices[m_featName];
     features.SetValue(m_featDim, mbSize, features.GetDeviceId(), m_featBuf.data(), matrixFlagNormal);
-    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf.data(), matrixFlagNormal);
-    m_pMBLayout->Init(mbSize, 1);
 
-    m_mbStart = mbLim;
+    Matrix<ElemType>& labels = *matrices[m_labName];
+    labels.SetValue(m_labDim, mbSize, labels.GetDeviceId(), m_labBuf.data(), matrixFlagNormal);
+
+    m_pMBLayout->InitAsFrameMode(mbSize);
+
+    m_mbStart += mbSize;
+    // It is safe to run prefetching with just one buffer as SetValue is synchronous so there will be no race.
+    m_mbPrefetchFut = std::async(GetLaunchPolicy(m_prefetch), [this]() { return ReadImages(); });
+
     return true;
 }
 
@@ -469,7 +477,7 @@ bool ImageReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = m_mbStart < m_epochStart + m_epochSize;
         break;
     case endDataSet:
-        ret = m_mbStart >= files.size();
+        ret = m_mbStart >= m_files.size();
         break;
     case endDataSentence:
         ret = true;
@@ -485,7 +493,65 @@ void ImageReader<ElemType>::SetRandomSeed(unsigned int seed)
     m_rng.seed(m_seed);
 }
 
+template<class ElemType>
+size_t ImageReader<ElemType>::ReadImages()
+{
+    if (m_mbStart >= m_files.size() || m_mbStart >= m_epochStart + m_epochSize)
+        return 0;
+
+    size_t mbLim = m_mbStart + m_mbSize;
+    if (mbLim > m_files.size())
+        mbLim = m_files.size();
+    
+    std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
+
+#pragma omp parallel for ordered schedule(dynamic)
+    for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
+    {
+        const auto& p = m_files[i + m_mbStart];
+        cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
+        if (!img.data)
+            RuntimeError("Cannot read image file %s", p.first.c_str());
+        for (auto& t: m_transforms)
+            t->Apply(img);
+       
+        assert(img.rows * img.cols * img.channels() == m_featDim);
+        // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
+        // Transpose is required if requested mini-batch format is NCHW.
+        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::NCHW);
+        m_labBuf[m_labDim * i + p.second] = 1;
+    }
+
+    return mbLim - m_mbStart;
+}
+
 template class ImageReader<double>;
 template class ImageReader<float>;
+
+template<class ElemType>
+static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose)
+{
+    assert(src.isContinuous());
+    assert(src.channels() == 3);
+
+    size_t count = src.rows * src.cols * src.channels();
+    assert(ivDst + count <= dst.size());
+    
+    auto data = reinterpret_cast<const ElemType*>(src.ptr());
+    if (!transpose)
+        std::copy(data, data + count, dst.begin() + ivDst);
+    else
+    {
+        size_t crow = src.rows * src.cols;
+        size_t ccol = src.channels();
+        for (size_t irow = 0; irow < crow; irow++)
+        {
+            for (size_t icol = 0; icol < ccol; icol++)
+            {
+                dst[ivDst + icol * crow + irow] = data[irow * ccol + icol];
+            }
+        }
+    }
+}
 
 }}}

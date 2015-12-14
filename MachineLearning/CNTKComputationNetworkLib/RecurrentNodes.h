@@ -97,13 +97,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
-            m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
+            m_delayedActivation(deviceId)
         {
             Init(1, 1);
         }
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep) :
             Base(deviceId, name),
-            m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
+            m_delayedActivation(deviceId)
         {
             Init(row_size, col_size, initialActivationValue);
 
@@ -156,6 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream >> m_initialActivationValue;
         }
 
+#if 0
     private:
         // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
         // This post-processed layout has its bits spread out over m_timeStep, to help detect if we'd hop across a boundary.
@@ -168,6 +169,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_timeStep == 1)
                 return;
 
+#if 1
+            LogicError("CacheMBLayout: m_timeStep > 1 temporarily disabled until MBLayout update completed.");
+#else
             // modify m_pShiftedMBLayout
             // If two utterances are packed together (S: start, E: end, N: no input) and we need to get values 2 steps in the past
             //    S X X X E S X X X X E N N
@@ -204,8 +208,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
+#endif
         }
     public:
+#endif
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
@@ -225,20 +231,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = fr.t();
 
+            // we backpropagated into the delayed frame
+            FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
+
             // if delayed input is within valid time range then add its gradient
-            int t_delayed = (int)t + direction * m_timeStep;
+            int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
             if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
             {
+                // Boundary frames must not propagate. Gaps must also not propagate.
                 // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
-                if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature)) // true if at least one parallel sequence has a boundary or gap
+                //assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                //       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+                if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
                 {
                     size_t mNbr = m_pMBLayout->GetNumParallelSequences();
                     for (size_t id = 0; id < mNbr; id++)
                     {
-                        if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
+                        //assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                        //       m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                        if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id))))    // don't propagate boundary frames or gaps
                         {
                             Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
-                            Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            // TODO: use delayed FrameRange here as well
+                            //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
                             to += frm;
                         }
                     }
@@ -247,17 +263,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     Matrix<ElemType> frm = GradientFor(fr);
                     // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                    Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
                     to += frm;
                 }
             }
         }
 
-        virtual void BeginForwardProp() override      // called before first iteration step of ForwardProp()
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
         {
-            Base::BeginForwardProp();
-            CacheMBLayout();
+            // The DelayedValueNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The DelayedValueNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
+        //virtual void BeginForwardProp() override      // called before first iteration step of ForwardProp()
+        //{
+        //    Base::BeginForwardProp();
+        //    CacheMBLayout();
+        //}
 
         virtual void EndForwardProp() override        // called after last iteration step of ForwardProp()
         {
@@ -268,8 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - we don't need to keep anything in full-sequence mode
             //  - we don't need to keep anything if all sequences are closed (sentence end)
             //    This condition includes full-sequence mode.
-            // BUGBUG: The code does not check for skipping across an utterance boundary in the previosu minibatch. Only affects BPTT with timeStep > 1.
-            //         Maybe we should carry over the shifted layout (cf. CacheMBLayout())? We could just move the pointer. But the code must be adapted as well.
+            // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
             if (!m_isHistoryCarryOverManagedExternally) // means it's externally managed (for PairNetworkNode)
             {
                 m_delayedActivation = Input(0)->Value();
@@ -280,7 +311,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::EndForwardProp();
         }
 
-        // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.
+        // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
         // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
         virtual void ForwardProp(const FrameRange & fr) override
         {
@@ -298,6 +329,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
+            // we forward prop from the previous frame to this frame
+            FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
+
             size_t t = fr.t();
 
             VerifyDims(Input(0));
@@ -314,13 +348,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // if any sequence at this time step has a boundary flag, then process one by one
             // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?
-            if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End))
+            //assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+            if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed))
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
                     Matrix<ElemType> out = ValueFor(fr.Sequence(id));
 
-                    if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
+                    //assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                    if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))
                         out.SetValue(m_initialActivationValue);     // crossed a boundary
                     else    // not a boundary: just copy the delayed value
                     {
@@ -330,7 +366,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else if (t_delayed >= T)
                             inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                            inp = Input(0)->ValueFor(frDelayed.Sequence(id));
+                            //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -345,7 +382,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else if (t_delayed >= T)
                     inp = DataWithMBLayoutFor(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+                    inp = Input(0)->ValueFor(frDelayed);
+                    //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
@@ -528,14 +566,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
         MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
         int      m_timeStep;                        // delay in frames (typ. 1)
-        MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
+        //MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
         bool m_isHistoryCarryOverManagedExternally; // for PastValueNode only
         function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
-    using Base::m_pShiftedMBLayout; using Base::m_isHistoryCarryOverManagedExternally;
+    /*using Base::m_pShiftedMBLayout;*/ using Base::m_isHistoryCarryOverManagedExternally;
 
     // -----------------------------------------------------------------------
     // PastValueNode (input) -- delay node

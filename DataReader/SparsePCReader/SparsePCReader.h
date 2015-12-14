@@ -32,6 +32,7 @@ private:
     bool m_returnDense;
     size_t m_sparsenessFactor;
     int32_t m_verificationCode;
+    size_t m_reshapeInputToRowSize;
     std::vector<ElemType*> m_values;
     std::vector<int32_t*> m_rowIndices;
     std::vector<int32_t*> m_colIndices;

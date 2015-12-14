@@ -45,7 +45,9 @@ typedef struct CUstream_st *cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-namespace Microsoft { namespace MSR { namespace CNTK {    
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
     // -----------------------------------------------------------------------
     // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -67,6 +69,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
+
+
+    // -----------------------------------------------------------------------
+    // ElementWiseOperator -- This enum represents which function to apply. It needs to be outside of GPUMatrix, because it is also used in GPUSparseMatrix
+    // -----------------------------------------------------------------------
+
+    enum ElementWiseOperator
+    {
+        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinearRectifierDerivative, opCosine, opNegativeSine, opSigmoidDerivative
+    };
+
 
     // -----------------------------------------------------------------------
     // GPUMatrix
@@ -106,7 +119,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace;
 
     private:
-        void performInplaceFunction(int kind);
+        
+        void performElementWiseFunction(const ElementWiseOperator kind, const ElemType *src);
         size_t LocateElement (const size_t i, const size_t j) const;
         size_t LocateColumn (const size_t j) const;        
         void Clear();
@@ -381,7 +395,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void Multiply(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
         static void Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c);
 
-        static void ScaleAndAdd(ElemType alpha,const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
+        static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
+        static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
         static void AddScaledDifference(const ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
         static void AssignScaledDifference(const ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
         static void AddScaledDifference(const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
