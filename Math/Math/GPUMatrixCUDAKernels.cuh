@@ -1261,12 +1261,12 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     {
         // recover the 5 indices from the loop counter
         size_t d = (nc                  ) % D;
-        size_t s = (nc / D              ) % S;
-        size_t m = (nc / D / S          ) % M;
-        size_t k = (nc / D / S / M      ) % K;
+        size_t k = (nc / D              ) % K;
+        size_t m = (nc / D / K          ) % M;
+        size_t s = (nc / D / K / M      ) % S;
 
         // compute index for the a and b/c tensors
-        size_t na = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+        size_t na = ((k * M + m) * S + s) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
 
         for (size_t j = start; j < end; j++)
         {
