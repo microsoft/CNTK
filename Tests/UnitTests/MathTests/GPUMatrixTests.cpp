@@ -535,7 +535,7 @@ namespace Microsoft
                     BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
-//#if 0 // Temporarily disabling
+#if 0 // Temporarily disabling
                 BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
                 {
                     const int rows = 33553921;
@@ -546,7 +546,7 @@ namespace Microsoft
 
                     BOOST_CHECK(!m1.IsEqualTo(m0, c_epsilonFloatE5));
                 }
-//#endif
+#endif
 
                 BOOST_AUTO_TEST_SUITE_END()
             }
