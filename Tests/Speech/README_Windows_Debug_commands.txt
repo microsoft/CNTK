@@ -34,6 +34,12 @@ COMMAND:     --cd $(SolutionDir)Tests\Speech\Data  -f $(SolutionDir)Tests\Speech
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=..\DNN\DiscriminativePreTraining\cntk_dpt.config  stderr=..\RunDir\DNN\DiscriminativePreTraining\models\cntkSpeech.dnn.log  ConfigDir=$(SolutionDir)Tests\Speech\DNN\DiscriminativePreTraining  RunDir=..\RunDir\DNN\DiscriminativePreTraining  DataDir=.  DeviceId=auto  makeMode=false
 
+--- Speech\SequenceTraining:
+
+
+set CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY=\\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData
+COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData  configFile=$(SolutionDir)Tests\Speech\DNN\SequenceTraining\cntk_sequence.config  RunDir=$(SolutionDir)Tests\Speech\RunDir\DNN\SequenceTraining  DataDir=.  ConfigDir=$(SolutionDir)Tests\Speech\DNN\SequenceTraining  DeviceId=0
+
 --- MNIST:
 
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.config configName=02_Conv

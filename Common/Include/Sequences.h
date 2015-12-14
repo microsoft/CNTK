@@ -378,7 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
 #endif
             auto distanceToEnd = (size_t)m_distanceToEnd(s, t);
-            return distanceToEnd <= t;
+            return distanceToEnd == 0;
         }
 
     };
