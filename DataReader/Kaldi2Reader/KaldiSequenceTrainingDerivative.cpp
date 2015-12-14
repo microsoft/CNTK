@@ -67,8 +67,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RuntimeError("Number of labels in logLikelihood does not match that"
                          " in the Kaldi model for utterance %S: %d v.s. %d\n",
-                         uttID.c_str(), logLikelihood.GetNumRows(),
-                         m_transModel.NumPdfs());
+                         uttID.c_str(), (int)logLikelihood.GetNumRows(),
+                         (int)m_transModel.NumPdfs());
         }
 
         // Reads alignment.
@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RuntimeError("Number of frames in logLikelihood does not match that"
                          " in the alignment for utterance %S: %d v.s. %d\n",
-                         uttID.c_str(), logLikelihood.GetNumCols(), ali.size());
+                         uttID.c_str(), (int)logLikelihood.GetNumCols(), (int)ali.size());
         }
 
         // Reads denominator lattice.
@@ -184,8 +184,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (maxTime != logLikelihood.GetNumCols())
         {
             RuntimeError("Number of frames in the logLikelihood does not match"
-                         " that in the denominator lattice for utterance %S\n",
-                         uttID.c_str(), logLikelihood.GetNumRows(), maxTime);
+                         " that in the denominator lattice for utterance %S: %d vs. %d\n",
+                         uttID.c_str(), (int)logLikelihood.GetNumRows(), (int)maxTime);
         }
 
         std::vector<std::vector<kaldi::int32>> timeStateMap(
