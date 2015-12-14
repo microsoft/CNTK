@@ -244,6 +244,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameRange version allows to test with time offset
         bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
         bool IsBeyondStartOrEnd(const FrameRange & fr) const;
+        bool IsGap(const FrameRange & fr) const { return Is(fr, MinibatchPackingFlags::NoInput); }
+
+        // TODO: these should go away
         bool IsGap(size_t t) const { return Is(t, MinibatchPackingFlags::NoInput); }
         bool IsGap(size_t s, size_t t) const { return Is(s, t, MinibatchPackingFlags::NoInput); }
 
@@ -808,7 +811,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ColumnRangeWithMBLayoutFor() -- Return column range for a FrameRange of a Matrix with specified number of columns with a given MBLayout
     // -----------------------------------------------------------------------
-    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols, 
+
+    // BUGBUG: Must support time offsets.
+    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols/*of data matrix to slice*/, 
                                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
@@ -833,6 +838,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // but as a reference (e.g. it cannot be resized)
         if (!pMBLayout || fr.IsAllFrames())
         {
+            if (fr.m_timeOffset != 0)
+                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");
+            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(0, numCols);
             else
@@ -848,6 +856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
                 return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
                 // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
+                // TODO: The tensor version of this will support it.
 #endif
             }
         }
@@ -855,7 +864,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-            size_t startColumn = fr.t() * numParallelSequences;
+            size_t startColumn = (fr.timeIdxInSeq + fr.m_timeOffset) * numParallelSequences;
+            if (startColumn >= numCols)
+                LogicError("DataFor: FrameRange specifies a time index that is out of range.");
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(startColumn, numParallelSequences);
             else
@@ -869,20 +880,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Any access by FrameRange should only be done through this function.
     // -----------------------------------------------------------------------
 
-#if 0
-    template<class ElemType>
-    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
-                                                       const FrameRange & fr/*select frame or entire batch*/,
-                                                       const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
-    {
-        auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
-        //if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
-        //    return data.AsReference();
-        return data.ColumnSlice(columnRange.first, columnRange.second);
-    }
-
-    // const version (100% dup except the input type)
-#endif
     template<class ElemType>
     static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> & data,
                                                        const FrameRange & fr/*select frame or entire batch*/,
