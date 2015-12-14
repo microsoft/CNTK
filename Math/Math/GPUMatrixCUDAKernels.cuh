@@ -1246,42 +1246,55 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     ElemType* cnzValues,  //target nz values
     GPUSPARSE_INDEX_TYPE* cRowIndex,
     GPUSPARSE_INDEX_TYPE* cColCSCIndex,
-    size_t D, size_t S, size_t M, size_t K, size_t T)
+    size_t D, size_t S, size_t M, size_t K, size_t T,
+    size_t nz)
 {
-    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (col >= T)
+    CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (N >= nz)
         return;
 
-    size_t N = D * S * M * K;
+    size_t col;
+    for (col = 0; col < T; col++)
+    {
+        if (aColCSCIndex[col + 1] > N)
+            break;
+    }
+
+    size_t na = aRowIndex[N];
     int start = aColCSCIndex[col];
     int end = aColCSCIndex[col + 1];
-    int current = start;
 
-    for (size_t nc = 0; nc < N; nc++)
+    // recover the 5 indices from the loop counter
+    size_t d = (na                  ) % D;
+    size_t s = (na / D              ) % S;
+    size_t m = (na / D / S          ) % M;
+    size_t k = (na / D / S / M      ) % K;
+
+    // compute index for the a and b/c tensors
+    size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+
+    cColCSCIndex[col] = aColCSCIndex[col];
+    cColCSCIndex[col + 1] = aColCSCIndex[col + 1];
+
+    int rowIdx = start;
+    for (size_t na_i = start; na_i < end; na_i++)
     {
         // recover the 5 indices from the loop counter
-        size_t d = (nc                  ) % D;
-        size_t k = (nc / D              ) % K;
-        size_t m = (nc / D / K          ) % M;
-        size_t s = (nc / D / K / M      ) % S;
+        size_t d_i = (na_i              ) % D;
+        size_t s_i = (na_i / D          ) % S;
+        size_t m_i = (na_i / D / S      ) % M;
+        size_t k_i = (na_i / D / S / M  ) % K;
 
         // compute index for the a and b/c tensors
-        size_t na = ((k * M + m) * S + s) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
-
-        for (size_t j = start; j < end; j++)
+        size_t nc_i = ((s_i * M + m_i) * K + k_i) * D + d_i;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+        if (nc_i < nc)
         {
-            if (aRowIndex[j] == na)
-            {
-                cnzValues[current] = anzValues[j];
-                cRowIndex[current] = nc;
-                current++;
-                break;
-            }
+            rowIdx++;
         }
     }
 
-    cColCSCIndex[col] = start;
-    cColCSCIndex[col + 1] = end;
+    cnzValues[rowIdx] = anzValues[N];
+    cRowIndex[rowIdx] = nc;
 }
 
 template<class ElemType>

@@ -589,7 +589,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 {
-    size_t D = 3, S = 5, M = 7, K = 11, T = 13;
+    size_t D = 13, S = 11, M = 7, K = 15, T = 8;
     GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D * S * M * K, T, c_deviceIdZero, -1, 1, IncrementCounter());
     GPUMatrix<float> denseMatrixB(D*S*M*K, T, c_deviceIdZero);
     GPUMatrix<float> denseMatrixC(D*S*M*K, T, c_deviceIdZero);
