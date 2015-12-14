@@ -33,8 +33,8 @@ DNN=[
     kW1 = 11
     kH1 = 11
     cMap1 = 64
-    hStride1 = 3
-    vStride1 = 3
+    hStride1 = 4
+    vStride1 = 4
     # weight[cMap1, kW1 * kH1 * ImageC]
     conv1_act = ConvReLULayer(features, cMap1, 363, kW1, kH1, hStride1, vStride1, conv1WScale, conv1BValue)
     
@@ -96,7 +96,7 @@ DNN=[
     pool3 = MaxPooling(conv5_act, pool3W, pool3H, pool3hStride, pool3vStride)
 
     hiddenDim = 4096
-    h1 = DNNReLULayer(16384, hiddenDim, pool3, fc1WScale, fc1BValue)
+    h1 = DNNReLULayer(9216, hiddenDim, pool3, fc1WScale, fc1BValue)
     h1_d = Dropout(h1)
     h2 = DNNReLULayer(hiddenDim, hiddenDim, h1_d, fc2WScale, fc2BValue)
     h2_d = Dropout(h2)
