@@ -5,11 +5,6 @@
 // </copyright>
 //
 
-// TODO:
-//  - fix RecurrentNode (remove shifted layout, use time offset in condition test)
-//  - finally remove the old bit masks  --nearly there, only used for checking the new code
-//  - split Is() into IsStart, IsEnd, IsGap; then eliminate MinibatchPackingFlags as well
-
 #pragma once
 
 #include "Basics.h"
@@ -87,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
             size_t s;               // index of parallel sequence
             ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
-            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
+            size_t    tEnd;         // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
             bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
         };
 
@@ -147,7 +142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
         size_t GetNumParallelSequences() const { return m_numParallelSequences; }
 
-        // how many columns the MB matrix has
+        // how many columns the underlying MB matrix has
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
         // return all sequences stored in this minibatch
@@ -167,11 +162,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool res =
                 m_numTimeSteps == other.m_numTimeSteps &&
                 m_numParallelSequences == other.m_numParallelSequences &&
-                m_distanceToStart.IsEqualTo(other.m_distanceToStart) &&
-                m_distanceToEnd  .IsEqualTo(other.m_distanceToEnd)   &&
-                m_distanceToNearestStart == other.m_distanceToNearestStart &&
-                m_distanceToNearestEnd   == other.m_distanceToNearestEnd   &&
-                m_timeStepHasGap == other.m_timeStepHasGap &&
                 m_sequences == other.m_sequences;
             return res;
         }
@@ -214,10 +204,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // create all the cached fast-lookup information
             const auto seqId = seqDesc.seqId;
             const auto s = seqDesc.s;
-            //if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
-            //    Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
-            //if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
-            //    Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
             size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
             size_t e = min(endTime, m_numTimeSteps);
             m_numFramesDeclared += (e - b);
@@ -247,7 +233,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
-                //assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
             }
         }
 
@@ -339,14 +324,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // We also store for every [t] an aggregate to know the nearest boundary.
         // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch, both starting at step 0
         // Would be described by these [2 x 5]  matrices:
-        // m_distanceToStart        = [ 0  1  2  3  4
+        // m_distanceToStart        = [ 0  1  2  3  4 ;
         //                              0  1  2 -1 -1 ]          // (last two time steps have no content)
-        // m_distanceToEnd          = [ 4  3  2  1  0
+        // m_distanceToEnd          = [ 4  3  2  1  0 ;
         //                              2  1  0  .  . ]          // (last two time steps undefined)
         // m_distanceToNearestStart = [ 0  1  2  3  4 ]
         // m_distanceToNearestEnd   = [ 2  1  0  1  0 ]
-        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); -1 stands for gap, PTRDIFF_MAX for 'not initialized'
-        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (-1 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
+        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); value<0 stands for gap, PTRDIFF_MAX for 'not initialized'
+        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (value<0 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
 
         vector<bool> m_timeStepHasGap;                                      // [t]
 
@@ -364,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // -------------------------------------------------------------------
-        // special deprecated functions that are result of refactoring
+        // special deprecated functions that are result of refactoring (to go away)
         // -------------------------------------------------------------------
 
         // only used in sequence training, must be replaced by a different mechanism
@@ -512,72 +497,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return IsGap(fr);  // test one sequence
     }
 
-#if 0
-    //inline MinibatchPackingFlags MBLayout::Get(size_t t) const
-    //{
-    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
-    //}
-    //inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
-    //{
-    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
-    //}
-
-    // get packing flags from a frame range
-    // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
-    // TODO: This generic function will soon no longer be used; instead, tests for gap and boundary will be separate calls.
-    // BUGBUG: broken for time offsets, since off by one. Use IsBeyondStartOrEnd() instead.
-    inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
-    {
-        CheckIsValid();
-
-        if (fr.IsAllFrames())
-            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
-
-        MinibatchPackingFlags f = MinibatchPackingFlags::None;
-        auto t = fr.timeIdxInSeq;        // we test off the frame without offset
-        auto s = fr.seqIndex;
-        if (s == SIZE_MAX)              // aggregate requested
-        {
-            // determine flags from aggregate vectors
-            if (m_timeStepHasGap[t])      // indicates a gap
-                f |= MinibatchPackingFlags::NoInput;
-            auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
-            if (distanceToStart <= -fr.m_timeOffset)
-                f |= MinibatchPackingFlags::SequenceStart;
-            auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
-            if (distanceToEnd <= fr.m_timeOffset)
-                f |= MinibatchPackingFlags::SequenceEnd;
-
-            //auto f1 = m_minibatchPackingFlags[t];
-            //assert(f1 == f); f1;
-
-            return f;
-        }
-
-        // determine flags from matrices
-
-        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
-        if (distanceToStart == -1)      // indicates a gap
-        {
-            assert(m_timeStepHasGap[t]);
-            f |= MinibatchPackingFlags::NoInput;
-        }
-        else
-        {
-            if (distanceToStart <= -fr.m_timeOffset)
-                f |= MinibatchPackingFlags::SequenceStart;
-            auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
-            if (distanceToEnd <= fr.m_timeOffset)
-                f |= MinibatchPackingFlags::SequenceEnd;
-        }
-
-        //auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
-        //assert(f1 == f); f1;
-
-        return f;
-    }
-#endif
-
     // test whether a given frame is or contains a gap
     inline bool MBLayout::IsGap(const FrameRange & fr) const
     {
@@ -592,9 +511,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_timeStepHasGap[t];
 
         // determine flags from matrices
-
-        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
-        return (distanceToStart == -1);
+        return m_distanceToStart(s, t) < 0;     // value is -1 for gaps, non-negative otherwise
     }
 
     // test whether frame is exceeding the sentence boundaries
@@ -667,6 +584,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // return m_columnsValidityMask(,), which is lazily created here upon first call
     // only called from MaskMissingColumnsTo()
     // TODO: Can probably be faster by using the sequence array directly.
+    // TODO: Or should we just blast m_distanceToStart to GPU, and maks based on that? It is small compared to features.
     inline const Matrix<char> & MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
     {
         CheckIsValid();
@@ -764,7 +682,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ColumnRangeWithMBLayoutFor() -- Return column range for a FrameRange of a Matrix with specified number of columns with a given MBLayout
     // -----------------------------------------------------------------------
 
-    // BUGBUG: Must support time offsets.
     static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols/*of data matrix to slice*/, 
                                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
@@ -838,8 +755,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
         auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
-        //if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
-        //    return data.AsReference();
         return data.ColumnSlice(columnRange.first, columnRange.second);
     }
 
