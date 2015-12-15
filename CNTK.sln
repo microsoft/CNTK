@@ -108,7 +108,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "License", "License", "{63024704-A2D7-497E-AD4B-5C10C6AA1374}"
 	ProjectSection(SolutionItems) = preProject
-		license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).docx = license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).docx
+		license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).md = license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lyx", "lyx", "{F9BEB27E-8AF5-464E-8D45-0000D5AFA2D3}"
@@ -293,8 +293,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reade
 		DataReader\Kaldi2Reader\DataWriter.cpp = DataReader\Kaldi2Reader\DataWriter.cpp
 		DataReader\Kaldi2Reader\dllmain.cpp = DataReader\Kaldi2Reader\dllmain.cpp
 		DataReader\Kaldi2Reader\DOCUMENTATION.txt = DataReader\Kaldi2Reader\DOCUMENTATION.txt
-		DataReader\Kaldi2Reader\fileutil.cpp = DataReader\Kaldi2Reader\fileutil.cpp
-		DataReader\Kaldi2Reader\fileutil.h = DataReader\Kaldi2Reader\fileutil.h
 		DataReader\Kaldi2Reader\htkfeatio.h = DataReader\Kaldi2Reader\htkfeatio.h
 		DataReader\Kaldi2Reader\htkfeatio_utils.h = DataReader\Kaldi2Reader\htkfeatio_utils.h
 		DataReader\Kaldi2Reader\HTKMLFReader.cpp = DataReader\Kaldi2Reader\HTKMLFReader.cpp
@@ -531,8 +529,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{A07A00
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "AdditionalFiles", "{8EBD7E6F-415C-4B6A-927C-1AF82905B16C}"
 	ProjectSection(SolutionItems) = preProject
-		Demos\Text\AdditionalFiles\perplexity.class50.lr0.1.txt = Demos\Text\AdditionalFiles\perplexity.class50.lr0.1.txt
-		Demos\Text\AdditionalFiles\perplexity.nce100.lr0.1.txt = Demos\Text\AdditionalFiles\perplexity.nce100.lr0.1.txt
+		Demos\Text\AdditionalFiles\ExpectedResults.txt = Demos\Text\AdditionalFiles\ExpectedResults.txt
+		Demos\Text\AdditionalFiles\perplexity.txt = Demos\Text\AdditionalFiles\perplexity.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderTests", "Tests\UnitTests\ReaderTests\ReaderTests.vcxproj", "{A4FC3467-4787-43E8-BBC0-D79AE56B468D}"
