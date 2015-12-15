@@ -9,6 +9,8 @@
 #include "Basics.h"
 #include "DataReader.h"
 #include <memory>
+#include <future>
+#include <array>
 
 #include <boost/random/mersenne_twister.hpp>
 
@@ -48,6 +50,9 @@ public:
     void SetRandomSeed(unsigned int seed) override;
 
 private:
+    // Mini-batch format: NCHW (default, cuDNN) or NHWC (legacy).
+    enum class DataFormat { NCHW, NHWC };
+
     unsigned int m_seed;
     boost::random::mt19937_64 m_rng;
 
@@ -60,7 +65,7 @@ private:
     size_t m_labDim;
 
     using StrIntPairT = std::pair<std::string, int>;
-    std::vector<StrIntPairT> files;
+    std::vector<StrIntPairT> m_files;
 
     size_t m_epochSize;
     size_t m_mbSize;
@@ -68,11 +73,18 @@ private:
 
     size_t m_epochStart;
     size_t m_mbStart;
+
+    bool m_prefetch;
+    std::future<size_t> m_mbPrefetchFut;
     std::vector<ElemType> m_featBuf;
     std::vector<ElemType> m_labBuf;
 
     bool m_imgListRand;
 
     MBLayoutPtr m_pMBLayout;
+    DataFormat m_mbFmt;
+
+private:
+    size_t ReadImages();
 };
 }}}

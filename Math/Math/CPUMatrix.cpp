@@ -5551,5 +5551,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
     template void CPUMatrix<char>::SetValue(const char);
     template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char *pArray, size_t matrixFlags);
+    template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 
 }}}

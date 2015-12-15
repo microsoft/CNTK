@@ -42,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("CopyNode: Copying node children across network is invalid.");
         }
 
-        if (!NodeNameExist(toName))
+        if (!NodeNameExists(toName))
         {
             pToNode = pFromNode->Duplicate(toName, flags);
             AddNodeToNet(pToNode);
@@ -62,8 +62,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return pToNode;
     }
 
-    //only copy a complete independent tree
-    //when node name exists
+    // only copy a complete independent tree
+    // when node name exists
     void ComputationNetwork::CopySubTree(const ComputationNetwork & fromNet,
                                          const std::wstring fromName, std::wstring toNamePrefix,
                                          const CopyNodeFlags flags)
@@ -73,27 +73,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot, false);
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (const auto & fromNode : GetEvalOrder(fromRoot))
         {
-            ComputationNodeBasePtr fromNode = *nodeIter;
             wstring fromNodeName = fromNode->NodeName();
             wstring toNodeName = toNamePrefix + fromNodeName;
 
             ComputationNodeBasePtr toNode = CopyNode(fromNet, fromNodeName,
-                                                  toNodeName,
-                                                  CopyNodeFlags::copyNodeValue);
+                                                     toNodeName,
+                                                     CopyNodeFlags::copyNodeValue);
 
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
-                //copy the children structure but use the new nodes generated
+                // copy the children structure but use the new nodes generated
                 for (int i = 0; i < fromNode->GetNumInputs(); i++)
                     toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetInputs()[i]->NodeName()));
             }
         }
     }
 
-    //you can only copy inputs from nodes in the same network
+    // you can only copy inputs from nodes in the same network
     void ComputationNetwork::CopyInputs(const std::wstring fromName, std::wstring toName)
     {
         CopyNode(*this, fromName, toName, CopyNodeFlags::copyNodeChildren);
@@ -169,8 +167,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nameToNodeMap.erase(nodeName);    // this will deref the node and possibly deallocate it
     }
 
-    //change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
-    //need to update all the mappings as well childrens
+    // change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
+    // need to update all the mappings as well childrens
     void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode)
     {
         ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
@@ -253,7 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void ComputationNetwork::AddFeatureNode(ComputationNodeBasePtr featureNode)
     {
         wstring nodeName = featureNode->NodeName();
-        if (NodeNameExist(nodeName))
+        if (NodeNameExists(nodeName))
             RuntimeError("AddFeatureNode: feature node already exists.");
         m_nameToNodeMap[nodeName] = featureNode;
         m_features.push_back(featureNode);
@@ -263,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     {
         wstring nodeName = featureNode->NodeName();
-        if (!NodeNameExist(nodeName))
+        if (!NodeNameExists(nodeName))
             RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
         InvalidateCompiledNetwork();
@@ -308,10 +306,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             // for calculating a specific node
-            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            for (const auto & node : GetEvalOrder(rootNode))
             {
-                ComputationNodeBasePtr node = (*nodeIter);
                 if (node->OperationName() == OperationNameOf(LearnableParameter))
                     node->SetParameterUpdateRequired(needGradient);
             }

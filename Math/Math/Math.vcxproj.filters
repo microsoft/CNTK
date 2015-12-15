@@ -30,6 +30,7 @@
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp">
       <Filter>GPU\1bitSGD</Filter>
     </ClCompile>
+    <ClCompile Include="ConvolutionEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -65,6 +66,7 @@
       <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
+    <ClInclude Include="ConvolutionEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

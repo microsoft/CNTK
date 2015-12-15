@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool useDedicatedComputeStream = useAsync;
             return new MatrixQuantizerGPU<ElemType>(numRows, numCols, deviceId, useDedicatedComputeStream);
 #else
-            UNREFERENCED_PARAMETER(useAsync);
+            useAsync;
             RuntimeError("CreateMatrixQuantizer: attempted to use GPU while compiled without GPU support");
 #endif
         }

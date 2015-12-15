@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net->NodeNameExist(name))
+                if (m_net->NodeNameExists(name))
                     nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateInputNode(name, rows, cols);
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
-                if (m_net->NodeNameExist(name))
+                if (m_net->NodeNameExists(name))
                     nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
                 else
                     nodePtr = builder.CreateSparseInputNode(name, rows, cols);
@@ -447,6 +447,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 nodePtr = builder.AveragePooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight,
                                                  horizontalSubsample, verticalSubsample, name);
+            }
+        }
+        else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
+        {
+            if (parameter.size() != 5)
+                RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runInvStdDev].", cnNodeType.c_str());
+
+            // setup the parameter position of children so we can hook them up later
+            nodeParamCount = 5;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                int id = 5; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+
+                // Optional parameters
+                bool eval = node->GetOptionalParameter("eval", "false");
+                bool spatial = node->GetOptionalParameter("spatial", "false");
+                double expAvgFactor = node->GetOptionalParameter("expAvgFactor", "1.0");
+
+                nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, name);
             }
         }
         else

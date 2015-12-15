@@ -35,6 +35,12 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
+extern bool g_shareNodeValueMatrices;
+
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(P)          (P)
+#endif
+
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
 // #define TRACK_GAP_NANS
@@ -154,21 +160,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             other.m_needsGradient = m_needsGradient;
         }
 
-        static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
-        {
-            return lhs->m_visitedOrder < rhs->m_visitedOrder;
-        }
-
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    protected:  // TODO: should be fully encapsulated here
+
+        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     private:
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
-    protected:  // TODO: should be fully encapsulated here
-        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
-
     protected:
+
         // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
         void PurgeStateForFormingRecurrentLoops()
         {
@@ -181,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        int m_loopId;           // index into recurrent info array (TODO: verify this)
+        int m_loopId;           // index into m_allSEQNodes array, for use by reordering operation only
         int m_visitedOrder;     // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
         bool m_visited;         // note: also used by ValidateSubNetwork()
         int m_indexInLoop;
@@ -240,7 +243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
-            m_deviceId(deviceId),
+            m_deviceId(deviceId), m_outputNeededDuringBackprop(true),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name),
             m_numRows(0), m_numCols(0)
@@ -501,6 +504,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
         bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
 
+        void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
+        bool IsOutputNeededDuringBackprop() const 
+        {
+            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
+        }
+
         virtual void /*IComputationNode::*/InferImageDimsFromInputs()
         {
             if (!IsLeaf())
@@ -557,6 +566,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        // Is the output value of the computation node needed for computing 
+        // gradients of any of the input nodes
+        virtual bool OutputUsedInComputingInputNodesGradients() const
+        {
+            return true;
+        }
+
+        // Is the output value of the specified  input node needed for computing
+        // gradients of any of the input nodes
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            UNREFERENCED_PARAMETER(childIndex);
+            return true;
+        }
+
     protected:
 
         void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
@@ -574,11 +598,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void InferMBLayoutFromInputsForStandardCase();
 
     public:
-
-        static bool ByVisitedOrder(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)    // sorting predicate
-        {
-            return ComputationNetworkOwnedNodeState::ByVisitedOrder(lhs.get(), rhs.get());
-        }
 
         bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
         {
@@ -603,19 +622,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork)
+        static std::list<ComputationNodeBasePtr> EnumerateNodes(const std::vector<ComputationNodeBasePtr> & allRoots, bool skipPairNetwork = false/*legacy*/)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
-            // get forward computation order
-            EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
+            for (const auto & root : allRoots)
+                root->EnumerateNodesRec(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
 
             return nodes;
         }
+
+        // and a version that does it for only one root 'this'
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork) /*const*/ { return EnumerateNodes(std::vector<ComputationNodeBasePtr> { shared_from_this() }, skipPairNetwork); }
+
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork)
+        void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork) /*const*/ // const not working due to shared_from_this()
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {
@@ -736,6 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // flags related to gradient propagation
         bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
         bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
+        bool m_outputNeededDuringBackprop;  // indicates whether the output value of the node is needed during backprop
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -868,8 +892,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& /*matrixPool*/)
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
         {
+            if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE))
+                ReleaseMatrixToPool(m_value, matrixPool);
         }
 
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -895,10 +921,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_gradient != nullptr && m_gradient->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
                     ReleaseMatrixToPool(m_gradient, matrixPool);
 
-                if (m_value->GetMatrixType() != SPARSE)
+                // Release the Value matrix only if the output value is needed during backprop
+                // since in the case it isn't used, we release it during forward prop itself
+                if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE)
                     ReleaseMatrixToPool(m_value, matrixPool);
             }
         }
+
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
@@ -906,7 +935,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // we format it like "name : type rows x cols ( args )"
             wstring result = /*TidyName*/(NodeName()) + L" : " + OperationName();
-            result.append(msra::strfun::wstrprintf(L" %d x %d", (int)m_value->GetNumRows(), (int)m_value->GetNumCols()));
+            result.append(msra::strfun::wstrprintf(L" %d x %d", (int)GetNumRows(), (int)GetNumCols()));
             if (m_inputs.empty()) result.append(L" ()");
             else
             {
@@ -961,10 +990,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateInferInputDims(size_t i, size_t rows, size_t cols) override final;
 
     public:
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
+        static void MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
         {
             //fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
+            MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
         }
 
         void /*ComputationNodeBase::*/MaskMissingValueColumnsToZero(const FrameRange & fr) override final
@@ -1055,6 +1084,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
+        // Function to return the number of columns for whole batch or single frame
+        size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
+        {
+            try
+            {
+                return ColumnRangeWithMBLayoutFor(GetNumCols(), fr, m_pMBLayout).second;
+            }
+            catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
+            {
+                LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            }
+        }
+
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
         Matrix<ElemType> DataFor(Matrix<ElemType> & data, const FrameRange & fr/*select frame or entire batch*/)
@@ -1068,6 +1110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
             }
         }
+
         Matrix<ElemType> ValueFor(const FrameRange & fr/*select frame or entire batch*/)
         {
             return DataFor(Value(), fr);
@@ -1220,7 +1263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_gradientInitialized)
                 return;
 
-            Gradient().Resize(Value().GetNumRows(), Value().GetNumCols());
+            Gradient().Resize(GetNumRows(), GetNumCols());
             Gradient().SetValue(0);
 
             m_gradientInitialized = true;

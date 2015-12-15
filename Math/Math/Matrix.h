@@ -11,16 +11,6 @@
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
 #pragma once
 
-#ifdef    _WIN32
-#ifdef MATH_EXPORTS
-#define MATH_API __declspec(dllexport)
-#else
-#define MATH_API __declspec(dllimport)
-#endif
-#else    // no DLLs on Linux
-#define    MATH_API 
-#endif
-
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
@@ -182,6 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_baseMatrix->VerifySize(rows, cols);
         }
+
         Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
         void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
         Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)   // get a reshaped reference

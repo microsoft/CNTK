@@ -36,12 +36,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // determine nodes to evaluate
             std::vector<ComputationNodeBasePtr> evalNodes;
 
-            set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log critera
+            set<ComputationNodeBasePtr> criteriaLogged;     // (keeps track ot duplicates to avoid we don't double-log critera)
             if (evalNodeNames.size() == 0)
             {
                 fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
-                if (m_net->EvaluationNodes().size() == 0 && m_net->FinalCriterionNodes().size() == 0)
-                    LogicError("There is no default evalnodes or training criterion node specified in the network.");
+                if (m_net->EvaluationNodes().empty() && m_net->FinalCriterionNodes().empty())
+                    InvalidArgument("There is no default evaluation node or training criterion specified in the network.");
 
                 for (const auto & node : m_net->EvaluationNodes())
                     if (criteriaLogged.insert(node).second)
@@ -58,9 +58,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const auto & node = m_net->GetNodeFromName(evalNodeNames[i]);
                     if (!criteriaLogged.insert(node).second)
                         continue;
-                    m_net->BuildAndValidateSubNetwork(node);
+                    //m_net->BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-                        LogicError("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
+                        InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
                     evalNodes.push_back(node);
                 }
             }
@@ -69,6 +69,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<double> evalResults;
             for (int i = 0; i < evalNodes.size(); i++)
                 evalResults.push_back((double)0);
+
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
 
             // prepare features and labels
             auto & featureNodes = m_net->FeatureNodes();

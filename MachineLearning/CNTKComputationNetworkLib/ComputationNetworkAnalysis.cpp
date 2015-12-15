@@ -29,12 +29,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This sets/updates:
     //  - m_allSEQNodes
     //  - ComputationNode::m_isPartOfLoop and m_loopId
+    //  - the cached m_evalOrders[root], reordered to make nodes belonging to the same loop consecutive. TODO: Try not to do that.
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start.
     // Note: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't.
-    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
+    // TODO: In the future, this function will not take a rootNode parameter anymore.
+    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode/*or nullptr for all*/)
     {
-        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
+        // get the depth-first traversal order
+        // Note: This is only used for resetting the state and resetting m_visitedOrder. I think we only need the set, not the order.
+        const list<ComputationNodeBasePtr> & nodes = GetEvalOrder(rootNode);
 
         // initialize the node state owned by us
         for (auto & node : nodes)
@@ -44,13 +48,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DetermineSCCs(rootNode);
         // now we have formed all loops, with all nodes assigned to a loop or none
 
-        // recover m_visitedOrder
-        size_t i = 1;       // BUGBUG: why not 0? (left-over of refactoring)
+        // recover m_visitedOrder in original depth-first traversal order
+        size_t i = 0;
         for (auto & node : nodes)
-            node->m_visitedOrder = i++;
+            node->m_visitedOrder = i++; // (Note: There is some redundancy between m_index and m_visitedOrder; won't fix since I rather intend to remove the whole reordering.)
 
         // update m_visitedOrder of all nodes that participate in a loop
-        // All nodes that participate in a loop get the same m_visitedOrder value.
+        // All nodes that participate in a loop get the same m_visitedOrder value (their max).
         for (auto & iter : m_allSEQNodes)
         {
             size_t max_visitedOrderInLoop = 0;
@@ -62,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 itr->m_visitedOrder = max_visitedOrderInLoop;
         }
 
-        // implant m_loopId in all nodes in all loops
+        // for reordering operation that will follow next, implant m_loopId in all nodes in all loops
         for (auto & iter : m_allSEQNodes)
         {
             for (auto & node : iter->m_nestedNodes)
@@ -75,14 +79,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         for (auto & iter : m_allSEQNodes)
         {
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
             list<ComputationNodeBasePtr> result;
             unordered_set<ComputationNodeBasePtr> visited;
             unordered_set<ComputationNodeBasePtr> recStack;
 
             // set m_indexInLoop for all nodes except Past/FutureValueNodes in all loops
             // This value is only used in the block right after this.
-            // This is very mysterious. It is certainly no index in loop. More like a parent count, and excluding delay nodes.
             for (size_t j = 0; j < iter->m_nestedNodes.size(); j++)
             {
                 ComputationNodeBasePtr node = iter->m_nestedNodes[j];
@@ -116,15 +118,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get set of all nodes in and outside loops hanging off rootNode
             map<int, list<ComputationNodeBasePtr>> recurrentNodes;
             list<ComputationNodeBasePtr> noRecurrentNodes;
-            GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+#if 1       // will soon no longer be allowed
+            if (rootNode)
+                GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            else
+#endif
+            {
+                for (const auto & rootNode : m_allRoots)
+                    GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            }
 
-            nodes.sort(ComputationNodeBase::ByVisitedOrder);        // sorts by m_visitedOrder
+            auto reorderedNodes = nodes;
 
-            ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);  // group nodes in loops together
+            // first sort by the updated m_visitedOrder, which is identical for all nodes in a loop
+            reorderedNodes.sort([](const ComputationNodeBasePtr & lhs, const ComputationNodeBasePtr & rhs) { return lhs->m_visitedOrder < rhs->m_visitedOrder; });
 
-            m_evalOrders[rootNode] = nodes;
-            // TODO: Yikes! this ^^ should be under the control of FormEvalOrder() only.
-            //       Should not be needed anymore once all ops that require this just operate recursively on PAR and SEQ nodes.
+            ReorderLoops(reorderedNodes, recurrentNodes, noRecurrentNodes);  // group nodes in loops together
+
+            UpdateEvalOrder(rootNode, reorderedNodes);
 
 #ifdef DISPLAY_DEBUG
             fprintf(stderr, "Reordered nodes\n");
@@ -135,14 +146,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
         
-        DetermineLoopDirections();
-
-#if 0
-        // done: clear up after ourselves
-        // TODO: don't we better do that at the start as well?    --done
-        for (auto & node : nodes)
-            node->PurgeStateForFormingRecurrentLoops();
-#endif
 
         // log the loops
         for (auto & iter : m_allSEQNodes)
@@ -158,10 +161,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "\n");
         }
 
+#if 1
         // now turn this into a nested network, ready for evaluation
-        FormNestedNetwork(rootNode);
+        if (rootNode)
+            FormNestedNetwork(rootNode);
+#endif
     }
 
+    static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes);
     // get the strongly connected components from the graph
     // This sets index, lowLink, m_visited, and m_inStack.
     void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
@@ -169,20 +176,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
         list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
-        size_t loopId = 0;
-        if (!rootNode->m_visited)
-            DetermineSCCsR(rootNode, sccStack, index, loopId);
+        size_t loopId = 0;  // BUGBUG: I think this is currently buggy in an edge case, and not needed (use m_allSEQNodes.size() instead).
+#if 1
+        if (rootNode)
+        {
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
+            return;
+        }
+#endif
+        // traverse all root nodes (as if they were all children of a master root)
+        for (auto & rootNode : m_allRoots)
+            if (!rootNode->m_visited)
+                DetermineSCCsR(rootNode, sccStack, index, loopId);
     }
 
     // (recursive part of DetermineSCCs())
     void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
-                                                    list<ComputationNodeBasePtr>& sccStack,
-                                                    size_t& index, size_t& loopId)
+                                            list<ComputationNodeBasePtr>& sccStack,
+                                            size_t& index, size_t& loopId)
     {
         assert(!cur->m_visited);
 
         // set the index (in order of visitation)
-        cur->m_index = index;
+        cur->m_index = index;       // TODO: can this be used as m_visitedOrder?
         cur->m_minIndex = index; // also set m_minIndex
         index++;
 
@@ -210,21 +227,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if we closed a loop then create an entry in m_allSEQNodes
         if (cur->m_minIndex == cur->m_index)   // m_minIndex is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
+            // gather the list of all nodes in this loop
+            vector<ComputationNodeBasePtr> nestedNodes;
             // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
+#if 1
+            SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size()/*loopId*/, cur);
+            // Note: Don't fix anything here, latest master has changes here already except needs to add 'size_t loopId = m_allSEQNodes.size()'
+#else       // BUGBUG: loopId must be shared across multiple invocations of this from different roots. The above accomplishes this.
             SEQTraversalFlowControlNode rInfo(loopId, cur);
+#endif
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
                 w->m_inStack = false;
-                rInfo.m_nestedNodes.push_back(w);
+                nestedNodes.push_back(w);
                 if (w == cur)                       // hit our starting point: done
                     break;
             }
-            if (rInfo.m_nestedNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
+            // insert loop into m_allSEQNodes
+            if (nestedNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 // only add to the array if the loop is not already there
-                // Since FormRecurrentLoops() is called multiple times, for multiple output nodes, we end up producing the same loop multiple times.
+                // We end up producing the same loop multiple times because:
+                //  - FormRecurrentLoops() is called multiple times from different roots
+                //  - depth-first traversal might have led us to enter a loop multiple times?
+                // TODO: Check whether this edge case of idempotence is done correctly:
+                //  - a recurrent loop with two delay nodes
+                //  - two root nodes
+                //  - the first root takes the first delay node's value, the second root that of the second delay node
+                //    I.e. the depth-first tree traversals enter the loop at two different places (m_sourceNode).
+                //  -> Are these two loops detected as identical? (determined by m_minIndex, but m_index depends on traversal from each root, so maybe not)
                 bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
                 for (const auto & iter2 : m_allSEQNodes)
                 {
@@ -236,15 +269,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 if (!bFound)
                 {
-                    // TODO: construct rInfo down here
+#if 1
+                    if (loopId != m_allSEQNodes.size())
+                        LogicError("DetermineSCCsR(): inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", (int)loopId, (int)m_allSEQNodes.size());
+                    SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size(), cur);
+#else
+                    assert(loopId == m_allSEQNodes.size());     // BUGBUG: Only true if all loops are shared among roots. Fix: use m_allSEQNodes.size() instead
+                    SEQTraversalFlowControlNode rInfo(loopId, cur);
+#endif
+                    // TODO: can we prove that 'cur' == nestedNodes.front()? If so, we won't need to store it separately.
+                    rInfo.m_nestedNodes = move(nestedNodes);    // TODO: make these two part of the constructor
+                    rInfo.m_steppingDirection = DetermineLoopDirection(rInfo.m_nestedNodes);
                     m_allSEQNodes.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
-                    loopId++;                           // and count it
+                    loopId++;                                   // and count it  TODO: may be removed
                 }
             }
         }
     }
 
     // recovers the processing order within a recurrent loop
+    // TODO: Once we only use the nested network for recurrent traversal, this will be no longer necessary.
     void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
                                                        unordered_set<ComputationNodeBasePtr>& recStack,
                                                        list<ComputationNodeBasePtr>& nodesStack,
@@ -339,16 +383,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // set m_steppingDirection for all loops
-    void ComputationNetwork::DetermineLoopDirections()
+    // TODO: Move this up to where it is used (in a separate commit since git cannot track moving and changing at the same time).
+    static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes)
     {
-        for (auto & rInfo : m_allSEQNodes)
-        {
-            assert(rInfo->m_nestedNodes.size() > 0);    // (this check was left over after refactoring; it should not be necessary)
 
             bool hasPastValueNode = false;
             bool hasFutureValueNode = false;
 
-            for (auto & node : rInfo->m_nestedNodes)
+        for (auto & node : nestedNodes)
             {
                 if (node->OperationName() == OperationNameOf(PastValueNode))
                     hasPastValueNode = true;
@@ -357,14 +399,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (hasPastValueNode && !hasFutureValueNode)
-                rInfo->m_steppingDirection = +1;
+            return +1;
             else if (hasFutureValueNode && !hasPastValueNode)
-                rInfo->m_steppingDirection = -1;
+            return -1;
             else if (hasPastValueNode && hasFutureValueNode)
                 InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
             else
                 LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
-        }
     }
 
 }}}
