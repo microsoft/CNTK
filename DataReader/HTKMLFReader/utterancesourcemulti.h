@@ -610,13 +610,18 @@ private:
         srand (randomseed);
         foreach_index (i, v)
         {
+            if (i == v.size() - 1) 
+            {
+                break;
+            }
             // pick a random location
-            const size_t irand = msra::dbn::rand (0, v.size());
+            const size_t irand = msra::dbn::rand (i, v.size());
 
             // swap element i with it
-            if (irand == (size_t) i)
-                continue;
-            ::swap (v[i], v[irand]);
+            if (irand != i)
+            {
+                ::swap(v[i], v[irand]);
+            }
         }
     }
 #if 0
