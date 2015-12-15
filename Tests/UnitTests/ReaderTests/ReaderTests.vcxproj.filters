@@ -138,5 +138,20 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt">
       <Filter>Control</Filter>
     </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_0_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_1_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop22_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
   </ItemGroup>
 </Project>

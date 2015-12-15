@@ -154,11 +154,16 @@
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop1_5_11_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_0_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_1_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop22_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop2_12_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop3_13_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop4_8_14_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
+    <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt" />
   </ItemGroup>
