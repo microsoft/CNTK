@@ -2,7 +2,7 @@
 
 
 # description: 
-# this script is used to generated buildinfo.h in MachineLearning/CNTK which will contain the following infomation to be displayed at runtime: 
+# this script is used to generated buildinfo.h in Source/CNTK which will contain the following infomation to be displayed at runtime: 
 # 	CUDA_PATH 	(if exists) 
 #	CUB_PATH	(if exists)
 #	GIT_COMMIT	
@@ -14,7 +14,7 @@ usage ()
 {
 	echo "usage: $0 <Config.make>"
 	echo "-------------------------------------------------------------------"
-	echo "This script is used to generate buildinfo.h in MachineLearning/CNTK"
+	echo "This script is used to generate buildinfo.h in Source/CNTK"
 	echo "This script needs to be called from the top level directory of CNTK project"
 	echo "This script assumes git can be used"
 	echo "This script assumes Config.make has been made"
@@ -95,11 +95,11 @@ else
 fi
 
 # 5. make buildinfo.h 
-target=MachineLearning/CNTK/buildinfo.h
-if [ ! -d MachineLearning ] ; then 
+target=Source/CNTK/buildinfo.h
+if [ ! -d Source ] ; then 
 	usage
 fi
-if [ -e MachineLearning/CNTK/buildinfo.h ] ; then 
-	rm MachineLearning/CNTK/buildinfo.h
+if [ -e Source/CNTK/buildinfo.h ] ; then 
+	rm Source/CNTK/buildinfo.h
 fi
 makebuildinfo $target $BUILDTYPE $MATHLIB $GIT_COMMIT $GIT_BRANCH $CUDAPATH $CUBPATH

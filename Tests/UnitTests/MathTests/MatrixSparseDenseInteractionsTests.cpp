@@ -6,7 +6,7 @@
 // Tests for sparse and dense matrix interaction should go here
 //
 #include "stdafx.h"
-#include "../../../Math/Math/Matrix.h"
+#include "../../../Source/Math/Matrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 

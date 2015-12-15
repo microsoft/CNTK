@@ -4,7 +4,7 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include "../../../Math/Math/CPUMatrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
