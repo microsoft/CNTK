@@ -256,7 +256,7 @@ if [[ $RUN == 1 ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
                 time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
             else
-                time $BIN_PATH configFile=$CONF_FILE OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile=$CONF_FILE OutputDir="$OUTPUT_DIR" &>$OUT_FILE || exit $?
             fi
             chmod a+r $RUN_FILE.*
 
