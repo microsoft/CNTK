@@ -1,4 +1,4 @@
-// Matrix.cpp -- main CPP file that contains all functions exported by the CNTKMath.dll
+// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the CNTKMath.dll
 //
 // <copyright file="Matrix.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -26,7 +26,6 @@
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
-
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \

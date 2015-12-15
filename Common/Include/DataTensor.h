@@ -8,7 +8,9 @@
 #pragma once
 
 #include "Basics.h"
+#include "File.h"
 #include <vector>
+#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -84,81 +86,121 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorShape
     {
     public:
-        // BUGBUG: This initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
-        // Idea: We could construct this thing with a ref to the enclosing ComputationNode, and replace 'width' by an expression.
-        TensorShape() : m_tensorDims(3, 1) { }
         template<class VEC>
-        TensorShape(const VEC & dims) { m_tensorDims.reserve(dims.size()); m_tensorDims.assign(dims.begin(), dims.end()); }
-        TensorShape(std::vector<size_t> && dims) : m_tensorDims(std::move(dims)) { }
+        TensorShape(const VEC & dims)
+        {
+            m_dims.reserve(dims.size());
+            m_dims.assign(dims.begin(), dims.end());
+            InitAsNoSlice();
+        }
+        // convenience constructors, e,g. for test code
+        TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
+        TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
+        TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(std::vector<size_t> { I, J, K, L, M }) { }
+        // BUGBUG: This default initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
+        TensorShape() : TensorShape(1, 1, 1) { }
 
-        void Invalidate() { m_tensorDims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
+        // boilerplate
+        TensorShape(std::vector<size_t> && dims) : m_dims(std::move(dims)) { }
+        bool operator==(const TensorShape & other) const { return m_dims == other.m_dims; }
+
+        void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
 
         // TODO: need move constructor/assignment?
 
-        bool operator==(const TensorShape & other) const { return m_tensorDims == other.m_tensorDims; }
-
         void Save(File& fstream) const
         {
-#if 1
+            if (m_offset != 0)
+                LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
             // saving as 32-bit ints. This allows to continue to support the old format (size_t W, H, C)
-            fstream << (uint32_t)m_tensorDims.size();
-            for (auto dim : m_tensorDims)
+            fstream << (uint32_t)m_dims.size();
+            size_t mul = 1;
+            for (size_t k = 0; k < m_dims.size(); k++)
             {
+                auto dim = m_dims[k];
                 if (dim > UINT32_MAX)
-                    LogicError("TensorShape::Save(): Tensor dimension out of bounds (> 4G).");
+                    LogicError("TensorShape::Save(): Tensor dimensions %s out of bounds (> 4G).", string(*this).c_str());
                 fstream << (uint32_t)dim;
+                if (m_multipliers[k] != dim)
+                    LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
+                mul *= dim;
             }
-#else
-            // TODO: need to use a generic format
-            assert(m_tensorDims.size() == 3);   // current format does not understand anything else
-            fstream << m_tensorDims[1] << m_tensorDims[2] << m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
-#endif
         }
         void Load(File& fstream)
         {
-#if 1
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
             // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
             uint32_t n, dim;
             fstream >> n >> dim;
             if (dim)        // heuristic to detect the old format. Old format stores a size_t, i.e. the second uint32_t is 0 (no dimensions are > 4G)
             {
-                m_tensorDims.resize(n);
-                m_tensorDims[0] = dim;
+                m_dims.resize(n);
+                m_dims[0] = dim;
                 for (size_t i = 1; i < n; i++)
                 {
                     fstream >> dim;
-                    m_tensorDims[i] = dim;
+                    m_dims[i] = dim;
                 }
-                assert(n == m_tensorDims.size());
+                assert(n == m_dims.size());
             }
             else            // detected the old size_t W, H, C format
             {
-                m_tensorDims.resize(3);     // current format is hard-coded for 3, for back compat
-                m_tensorDims[1] = n;
-                fstream >> m_tensorDims[2] >> m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
-        }
-#else
-            // TODO: need to use a generic format
-            m_tensorDims.resize(3);     // current format is hard-coded for 3, for back compat
-            fstream >> m_tensorDims[1] >> m_tensorDims[2] >> m_tensorDims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
-#endif
+                m_dims.resize(3);     // current format is hard-coded for 3, for back compat
+                m_dims[1] = n;
+                fstream >> m_dims[2] >> m_dims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+            }
         }
 
         // accessors
-        size_t GetDim(size_t k) const { return m_tensorDims[k]; }
-        size_t GetNumDims() const { return m_tensorDims.size(); }
-        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_tensorDims) res *= dim; return res; }
+        size_t GetDim(size_t k) const { return m_dims[k]; }
+        size_t GetNumDims() const { return m_dims.size(); }
+        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; }
+        size_t size() const { return GetNumDims(); }
 
-        const std::vector<size_t> & GetDims() const { return m_tensorDims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
+        // vector-like accessors
+        size_t operator[](size_t k) const { return GetDim(k); }
+
+        const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
 
         // interpretation as an image tensor
-        size_t GetNumChannels() const { return m_tensorDims[0]; }
-        size_t GetWidth()       const { return m_tensorDims[1]; }
-        size_t GetHeight()      const { return m_tensorDims[2]; }
+        size_t GetNumChannels() const { return m_dims[0]; }
+        size_t GetWidth()       const { return m_dims[1]; }
+        size_t GetHeight()      const { return m_dims[2]; }
+
+        // pretty-printing. Returns tensor dims in the form "I x J x K".
+        operator std::string() const
+        {
+            std::string s;
+            for (const auto & dim : m_dims)
+            {
+                if (!s.empty())
+                    s.append(" x ");
+                s.append(std::to_string(dim));
+            }
+            return s;
+        }
 
     private:
-        std::vector<size_t> m_tensorDims;
+        // 
+        void InitAsNoSlice()
+        {
+            m_multipliers.resize(m_dims.size());
+            size_t mul = 1;
+            for (size_t k = 0; k < m_dims.size(); k++)
+            {
+                m_multipliers.push_back(mul);
+                mul *= m_dims[k];
+            }
+            m_storageSize = mul;
+        }
+
+    private:
+        std::vector<size_t> m_dims;         // dimensions of tensor or tensor slice
+        size_t m_offset;                    // offset to first element (may be non-0 in case of slice)
+        std::vector<size_t> m_multipliers;  // dimension gets multiplied by this for computing the index offset. Note this may be used for stride magic.
+        size_t m_storageSize;               // size of underlying storage object
     };
 
     // When constructing an image tensor with the usual W, H, C format, use the following function instead.
@@ -168,12 +210,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
     static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
-        return TensorShape(std::vector<size_t> { channels, width, height });
+        return TensorShape(channels, width, height);
     }
     // and use this one when the data is a plain vector
     static inline TensorShape ImageLayoutVector(size_t n)
     {
-        return TensorShape(std::vector<size_t> { 1, 1, n });    // for now storing it as a 3D object as well  --TODO: fix this
+        return TensorShape(1, 1, n);    // for now storing it as a 3D object as well  --TODO: fix this
     }
     // TODO: we need a constructor from config; that will allow us to generalize
 
