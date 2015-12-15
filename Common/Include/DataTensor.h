@@ -19,10 +19,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // an inner structure (time, parallel sequences) described by the MBLayout, the row dimension represents data
     // vectors that hold tensors of data.
     //
-    // The TensorShape describes the inner tensor structure of these vectors, as a column-major tensor of arbitrary number of dimensions.
+    // To the user, the TensorShape describes the inner tensor structure of these vectors, as a
+    // column-major tensor of arbitrary number of dimensions. (Internally, it may sometimes combine the MBLayout as well.)
     //
     // Specifically, when the image is an image, then this is a 3-dimensional tensor with dimensions ( channels, width, height ),
-    // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores (R,G,B) as a float3.
+    // which represents the column-major interpretation of a transposed row-by-row-scanned image where each pixel stores {R,G,B} as a float3.
     // -----------------------------------------------------------------------
 
     // Plans for improved tensor support:
@@ -33,13 +34,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //     - slicing
     //  - strides for computation, allowing
     //     - broadcasting (stride = 0)
-    //     - stride magic such as inverting index order or convolution
-    //  - insertion and dropping of 1-dimension (cf. 'new_axis' in numpy)
+    //     - stride magic such as inverting index order (negative stride) or convolution (stride < dimension)
+    //  - insertion of 1-dimension (cf. 'new_axis' in numpy), and dropping 1-dimensions (projection)
+    //  - BrainScript syntaxes for the above
     //
     // Relation to Matrix and MBLayout:
     //  - tensors are stored in Matrix objects
     //  - both matrix row and column dimensions are interpreted as tensor dimensions separately
-    //     - row dimension is explained by a TensorShape ComputationNode::SampleLayout
+    //     - row dimension is explained by a TensorShape ComputationNode::SampleLayout (which must match m_numRows, or might even replace it)
     //     - column dimensions are explained by MBLayout, which has one parallel-sequence index and one (or more) time-step dimensions, e.g. (s,t)
     //  - the total tensor shape of what is stored in the matrix is
     //     - no MBLayout: the SampleLayout
@@ -53,22 +55,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //        - A(I,T) + B(I) -> C(I,T)                                 // T is broadcasting for B, e.g. adding a bias
     //        - A(I,T1,T2) + B(1,T1) -> C(I,T1,T2)                      // 2D iteration; implies a third dim for B where both first and third dim broadcast
     //
-    // Operations:
-    //  - all elementwise operations:
+    // Supported operations:
+    //  - all elementwise operations (such as sum, sigmoid, or training criterion):
     //     - dimensions are expanded as explained above for all operands
     //     - also supported is inverse broadcasting for the result
     //        - this means that we will sum over the broadcasting dimension(s)
     //        - intended to support gradient computation for a broadcasting input dimension
     //        - for now, must be flattenable to a single dimension
-    //     - elementwise 'copy' is also included here, which allows for strided copies
+    //     - noteworthy operations also included here:
+    //        - elementwise 'copy', which allows for strided copies
+    //        - MUX (one matrix contains an index to select one of multiple inputs; can also implement a parallel "if c then a else b" node)
+    //        - indexing/lookup (one tensor contains indices into the other)
     //  - inner product (Kronecker product+contraction) -> TimesNode
     //     - A[U,I,J] * B[I,J,T] -> C[A,T], c_ut = sum_ij a_uij * b_ijt
     //     - allows output and input tensors (TimesNode will get optional parameter how many leading dims to not contract), e.g.
-    //       A[U,V,I,J] * B[I,J,S,T] -> C[U,V,S,T], c_uvst = sum_ij a_uij * b_ijt
+    //       A[U,V,I,J] * B[I,J,S,T] -> C[U,V,S,T], c_uvst = sum_ij a_uvij * b_ijst
     //     - for now this operation must be flattenable as to be implementable as SGEMM (may extend in the future)
     //  - tensor transpose -> TransposeNode
     //     - swaps any two dimensions. This does not change the column-major definition, i.e. requires a memory copy.
     //     - special case: swapping between sample and MBLayout, e.g. turn a sample dimension to a time dimension
+    //  - Validate() stage will automatically infer tensor dimensions from inputs, and also infer downwards into LearnableParameters where requested
+    //
+    // Interfacing to and inplementation in Matrix lib:
+    //  - a Tensor is realized as a type TensorView = { Matrix&, TensorShape& } (i.e. tensors don't own their memory)
+    //  - Matrix lib will contain overloads for relevant operations that take Tensor& instead of Matrix&.
+    //  - elementwise ops will go through a single bottleneck function that deals with matching dimensions (extend, broadcast) and flattening
 
     struct TensorShape
     {
