@@ -48,14 +48,11 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
+    <ClCompile Include="..\..\Common\Config.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -81,9 +78,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
