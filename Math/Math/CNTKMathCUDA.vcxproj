@@ -145,7 +145,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
@@ -216,7 +215,6 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Error Condition="!Exists('$(CUB_PATH)')"
-           Text="CNTK requires NVIDIA CUB library v1.4.1 to build. Please download the library from https://nvlabs.github.io/cub/ and set CUB_PATH environment variable to CUB root path (e.g. c:\src\cub-1.4.1)." />
+    <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires NVIDIA CUB library v1.4.1 to build. Please download the library from https://nvlabs.github.io/cub/ and set CUB_PATH environment variable to CUB root path (e.g. c:\src\cub-1.4.1)." />
   </Target>
 </Project>

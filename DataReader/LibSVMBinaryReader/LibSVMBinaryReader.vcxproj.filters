@@ -32,14 +32,9 @@
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="LibSVMBinaryReader.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -59,9 +54,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

@@ -34,9 +34,6 @@
     <ClInclude Include="..\..\Common\Include\Eval.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>

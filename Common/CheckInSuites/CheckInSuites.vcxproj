@@ -78,7 +78,6 @@
     <None Include="..\..\ExampleSetups\LM\LSTMLM\ExpectedResults.log" />
     <None Include="..\..\ExampleSetups\LM\LSTMLM\global.config" />
     <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.config" />
-    <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.nce.config.txt" />
     <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlmconfig.txt" />
     <None Include="..\..\ExampleSetups\LM\LSTMLM\perplexity.nce100.lr0.1.txt" />
     <None Include="..\..\ExampleSetups\LM\LSTMLM\ptb.test.cntk.100.txt" />
@@ -94,7 +93,7 @@
     <None Include="..\..\ExampleSetups\LM\RNNLM\GPU\rnnlm.config" />
     <None Include="..\..\ExampleSetups\LM\RNNLM\GPU\rnnlm.gpu.config" />
     <None Include="..\..\ExampleSetups\LM\RNNLM\rnnlm.ndl" />
-    <None Include="..\..\ExampleSetups\NDLExamples.ndl" />
+    <None Include="..\..\ExampleSetups\NdlExamples\NDLExamples.ndl" />
     <None Include="..\..\ExampleSetups\SLU\conlleval.pl" />
     <None Include="..\..\ExampleSetups\SLU\feat.txt" />
     <None Include="..\..\ExampleSetups\SLU\globals.config" />
@@ -144,7 +143,6 @@
     <None Include="SLU\atis.dev.IOB.simple" />
     <None Include="SLU\atis.test.apos.pred.pos.head.IOB.simple" />
     <None Include="SLU\atis.train.apos.pred.pos.head.IOB.simple" />
-    <None Include="SLU\Expected.log" />
     <None Include="SLU\globals.config" />
     <None Include="SLU\input.txt" />
     <None Include="SLU\inputmap.txt" />
