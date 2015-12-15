@@ -23,6 +23,8 @@
 #   If not specified, GPU will not be enabled
 # CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
 #   defaults to /usr/local/cub-1.4.1
+# CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
+#   If not specified, CNTK will be be built without cuDNN.
 # KALDI_PATH= Path to Kaldi
 #   If not specified, Kaldi plugins will not be built
 # OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
@@ -108,6 +110,13 @@ ifdef CUDA_PATH
   LIBPATH += $(CUDA_PATH)/lib64
   LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
+# Set up cuDNN if needed
+  ifdef CUDNN_PATH
+    INCLUDEPATH += $(CUDNN_PATH)/cuda/include
+    LIBPATH += $(CUDNN_PATH)/cuda/lib64
+    LIBS += -lcudnn
+    CPPFLAGS +=-DUSE_CUDNN
+  endif
 else
   DEVICE = cpu
 
@@ -224,6 +233,7 @@ MATH_SRC =\
 	Math/Math/QuantizedMatrix.cpp \
 	Math/Math/Matrix.cpp \
 	Math/Math/CUDAPageLockedMemAllocator.cpp \
+	Math/Math/ConvolutionEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -231,6 +241,7 @@ MATH_SRC +=\
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
 	Math/Math/MatrixQuantizerGPU.cu \
+	Math/Math/CuDnnConvolutionEngine.cpp \
 
 else
 MATH_SRC +=\
@@ -365,15 +376,15 @@ KALDIREADER_SRC = \
 KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
 
 KALDIREADER:=$(LIBDIR)/KaldiReader.so
-ALL+=$(KALDIREADER)
-SRC+=$(KALDIREADER_SRC)
+#ALL+=$(KALDIREADER)
+#SRC+=$(KALDIREADER_SRC)
 
 $(KALDIREADER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
-KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
-ALL+=$(KALDIWRITER)
+#KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
+#ALL+=$(KALDIWRITER)
 
 $(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -415,9 +426,12 @@ IMAGEREADER:=$(LIBDIR)/ImageReader.so
 ALL += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
+INCLUDEPATH += $(OPENCV_PATH)/include
+LIBPATH += $(OPENCV_PATH)/release/lib
+
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 endif
 
 ########################################

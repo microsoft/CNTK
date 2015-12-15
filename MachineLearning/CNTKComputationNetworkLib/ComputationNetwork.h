@@ -299,15 +299,8 @@ public:
     // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
     size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-#if 0   // BUGBUG: This is a workaround for a bug in SGD where this function is called after GetMinibatchIntoNetwork()
-        //         returned false. In that case, its return values, including the MBLayout, are invalid, and what we'd get from
-        //         it differs from allNumSamples (which is 0).
-        if (m_pMBLayout && m_pMBLayout->IsAllNone())
-            return numAllSamples;
-        else
-#endif
         if (m_pMBLayout)
-            return m_pMBLayout->DetermineActualNumSamples();
+            return m_pMBLayout->GetActualNumSamples();
         else
             return numAllSamples;   // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }

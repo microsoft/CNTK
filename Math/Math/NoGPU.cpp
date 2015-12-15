@@ -12,6 +12,7 @@
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
+#include "CuDnnConvolutionEngine.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -353,8 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helper Functions
     template<class ElemType> void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) const { return nullptr; }
-
-    template<class ElemType> void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind) { }
+       
+    template<class ElemType> void GPUSparseMatrix<ElemType>::performElementWiseFunction(const ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src) { }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE *h_CSRRow, const CPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
@@ -454,8 +455,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUMatrix<ElemType>::ChangeDeviceTo(int to_id) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::performInplaceFunction(int kind)
-    {}
+    template<class ElemType> void GPUMatrix<ElemType>::performElementWiseFunction(const ElementWiseOperator kind, const ElemType* src) { }
 
 
 #pragma endregion Helper functions
@@ -988,6 +988,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
+    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + b</summary>
+    /// if a is a column vector, add to all columns of b
+    /// if a is a row vector, add to all rows of b
+    /// if a is a scalar, add to all elements of b
+    /// <param name="alpha">Scalar</param>
+    /// <param name="a">Input matrix</param>
+    /// <param name="b">Input matrix</param>
+    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+    template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
+
     /// <summary>c += alpha * (a-b)</summary>
     /// if a, b, c  must have same dim 
     /// <param name="alpha">Scalar</param>
@@ -1207,6 +1217,54 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
     template<class ElemType> void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled with CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
+        const Tensor4D&, const Filter&, size_t, size_t, bool)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
+        typename PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(DEVICEID_TYPE, size_t)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine(DEVICEID_TYPE)
+    {
+        RuntimeError("The code is compiled without CPUONLY macro.");
+    }
+
+    template<class ElemType>
+    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
+    {
+        return false;
+    }
+
+    template class CuDnnConvolutionEngineFactory<float>;
+    template class CuDnnConvolutionEngineFactory<double>;
+
 }}}
 
 // define a dummy GPUWatcher class too

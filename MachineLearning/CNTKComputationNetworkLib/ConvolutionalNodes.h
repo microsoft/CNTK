@@ -9,6 +9,7 @@
 #include "Matrix.h"
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "ConvolutionEngine.h"
 
 #include <unordered_set>
 #include <map>
@@ -54,6 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
             m_sampleLayout = ImageLayoutWHC(1, 1, outputChannels);
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId);
         }
         ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
@@ -64,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
-        virtual void Save(File& fstream) const override
+        void Save(File& fstream) const override
         {
             Base::Save(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
@@ -72,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
         }
 
-        virtual void Load(File& fstream, size_t modelVersion) override
+        void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
@@ -82,7 +84,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
         }
 
-        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -102,17 +104,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
-            if (inputIndex == 0)  //derivative with regard to the weight matrix
-                BackpropToOverWeight(sliceOutputGrad, Input(0)->Gradient(), Input(0)->Value(), sliceInput1Value, *m_tempMatrix, !fr.IsAllFrames());
-            else if (inputIndex == 1)  // derivative with regard to the input feature
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_convEng != nullptr);
+            if (inputIndex == 0)  //derivative with respect to the weight matrix
             {
+                Matrix<ElemType>& grad = Input(0)->Gradient();
+                m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
+            }
+            else if (inputIndex == 1)  // derivative with respect to the input feature
+            {
+                const Matrix<ElemType>& input0 = Input(0)->Value();
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
-                BackpropToOverInputFeature(sliceOutputGrad, sliceInput1Grad, Input(0)->Value(), sliceInput1Value, *m_tempMatrix);
+                m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
             }
         }
 
@@ -123,182 +133,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-    private:
-        void BackpropToOverWeight(Matrix<ElemType> &gradientValues,
-            Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop)
+        void ForwardProp(const FrameRange & fr) override
         {
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
-            size_t packedInputColsPerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();  //size of each input sample
-
-            size_t batchSize = input1.GetNumCols(); //right child is the input sample
-
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
-
-            //const Matrix<ElemType> & weightMatrix = input0;
-            //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
-
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels(), batchSize * outputSizePerChannel);  //reshape to match the longernal operation
-
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
-
-            if (numSubBatches == 1 && !inLoop && !m_1DConvolutionOnGPUSparse)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps or special 1-D convolution for text.
-                Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, tempMatrix, true, inputGradientValues);
-            else
-            {
-                for (size_t i = 0; i<numSubBatches; i++)
-                {
-                    size_t startSampleID = i*subBatchSize;
-                    size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
-                    size_t smallBatchSize = endSampleID - startSampleID;
-                    Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-
-                    Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
-                        inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
-                        tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                        tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                            m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(),
-                            m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(),
-                            m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
-
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
-                }
-            }
-
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //change back
-        }
-
-        //compute gradient over the packed input and then convert the result to the original input
-        void BackpropToOverInputFeature(Matrix<ElemType> &gradientValues, const Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
-        {
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
-            size_t packedInputColsPerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();  //size of each input sample
-
-            size_t batchSize = input1.GetNumCols(); //right child is the input sample
-
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
-
-            const Matrix<ElemType> & weightMatrix = input0;
-
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels(), outputSizePerChannel * batchSize);  //reshape to match the longernal operation
-
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
-
-            for (size_t i = 0; i<numSubBatches; i++)
-            {
-                size_t startSampleID = i*subBatchSize;
-                size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
-                size_t smallBatchSize = endSampleID - startSampleID;
-
-                tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                Matrix<ElemType>::Multiply(weightMatrix, true, outputGradientSubBatch, false, tempMatrix);
-
-                Matrix<ElemType> inputGradientSubBatch = inputGradientValues.ColumnSlice(startSampleID, smallBatchSize);
-                tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
-                                                  m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(),
-                                                  m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(),
-                                                  m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
-                                                  m_zeroPadding);
-            }
-
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //change back
-        }
-    public:
-
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
-        {
+            const Matrix<ElemType>& input0 = Input(0)->Value();
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-            ForwardPropS(sliceOutputValue, Input(0)->Value(), sliceInput1Value, *m_tempMatrix);
-        }
 
-    private:
-        void ForwardPropS(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0, 
-                               const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
-        {
+            // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_convEng != nullptr);
 #if NANCHECK
             input0.HasNan("Convolution-input0");
-            input1.HasNan("Convolution-input1");
+            sliceInput1Value.HasNan("Convolution-input1");
 #endif
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
-            size_t packedInputColsPerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();  //size of each input sample
-
-            size_t batchSize = input1.GetNumCols();  //right child is the input sample
-
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
-
-            const Matrix<ElemType> & weightMatrix = input0;
-            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_sampleLayout.GetNumChannels());
-
-            // GPU and 1-dimensional image
-            m_1DConvolutionOnGPUSparse = (m_inputSampleLayout.GetHeight() == 1
-                && input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU
-                && input1.GetMatrixType() == MatrixType::SPARSE);
-
-            functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
-
-            // Reshaping is only necessary if we are going to use the unpacking trick
-            if (!m_1DConvolutionOnGPUSparse)
-                functionValues.Reshape(m_sampleLayout.GetNumChannels(), batchSize * outputSizePerChannel);
-
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
-            size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
-
-            for (size_t i=0; i<numSubBatches; i++) 
-            {
-                size_t startSampleID = i*subBatchSize; 
-                size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                size_t smallBatchSize = endSampleID-startSampleID;
-                Matrix<ElemType>  inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
-
-                // We optimize for three different scenarios here by handling them slightly differently.
-                // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
-                // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
-                // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                if (m_1DConvolutionOnGPUSparse)
-                {
-                    if (m_kernelWidth * m_inputSampleLayout.GetNumChannels() != weightMatrix.GetNumCols())
-                        LogicError("Kernel width and weight matrix dimensions don't match.");
-
-                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, false, inputSubBatch, false, 0, outputSubBatch,
-                        m_inputSampleLayout.GetNumChannels(), m_horizontalSubsample, m_zeroPadding, true);
-                }
-                else
-                {
-                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                    tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                                                        m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(),
-                                                        m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(),
-                                                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
-
-                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                    Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
-                }
-            }
-
-            functionValues.Reshape(m_sampleLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
-
+            m_convEng->Forward(*m_inT, sliceInput1Value, *m_filterT, input0, *m_convDesc, *m_outT, sliceOutputValue, *m_tempMatrix);
 #if NANCHECK
-            functionValues.HasNan("Convolution");
+            sliceOutputValue.HasNan("Convolution");
 #endif
         }
-    public:
+
+        void AddBias(const Matrix<ElemType>& output, const Matrix<ElemType>& bias, Matrix<ElemType>& dst)
+        {
+            assert(m_convEng != nullptr);
+            m_convEng->AddBias(*m_outT, output, *m_biasT, bias, dst);
+        }
+
+        void BackwardBias(const Matrix<ElemType>& srcGrad, Matrix<ElemType>& biasGrad)
+        {
+            assert(m_convEng != nullptr);
+            m_convEng->BackwardBias(*m_outT, srcGrad, *m_biasT, biasGrad);
+        }
 
         // note: this also infers dimensions from chilren
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
@@ -327,7 +196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(outputDim, Input(1)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs()
+        void InferImageDimsFromInputs() override
         {
             InferImageDimsFromInput(1, false);
 
@@ -338,19 +207,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const int kernelWidthCenter = m_kernelWidth % 2;
                 const int kernelHeightCenter = m_kernelHeight % 2;
-                m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
-                                                     (m_inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
-                                                     m_sampleLayout.GetNumChannels());
+                m_sampleLayout = ImageLayoutWHC(
+                    (m_inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+                    (m_inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
+                    m_sampleLayout.GetNumChannels());
             }
             else
             {
-                m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
-                                                     (m_inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
-                                                     m_sampleLayout.GetNumChannels());
+                m_sampleLayout = ImageLayoutWHC(
+                    (m_inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
+                    (m_inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
+                    m_sampleLayout.GetNumChannels());
             }    
+
+            // REVIEW alexeyk: is there a better place to create engines?
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
+            if (m_convEng == nullptr)
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
+            if (m_inT == nullptr)
+                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
+            if (m_filterT == nullptr)
+                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputSampleLayout.GetNumChannels(), m_sampleLayout.GetNumChannels());
+            if (m_outT == nullptr)
+                m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
+            if (m_convDesc == nullptr)
+                m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+            // REVIEW alexeyk: create per-channel (shared) bias. Consider adding other types of biases.
+            if (m_biasT == nullptr)
+                m_biasT = m_factory->CreateTensor(1, 1, m_sampleLayout.GetNumChannels(), 1);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+        void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -371,20 +259,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+        void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
         {
             Base::RequestMatricesBeforeForwardProp(matrixPool);
             RequestMatrixFromPool(m_tempMatrix, matrixPool);
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+        void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
         {
             Base::ReleaseMatricesAfterBackprop(matrixPool);
             ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         }
 
     private:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionFilter> m_filterT;
+        std::unique_ptr<ConvolutionTensor4D> m_outT;
+        std::unique_ptr<ConvolutionDescriptor> m_convDesc;
+        std::unique_ptr<ConvolutionTensor4D> m_biasT;
+
         size_t m_kernelWidth, m_kernelHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;
         bool m_zeroPadding;
@@ -417,7 +314,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
-        { }
+        {
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId);
+        }
         PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"))
         {
@@ -425,19 +324,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
-        virtual void Save(File& fstream) const override
+        void Save(File& fstream) const override
         {
             Base::Save(fstream);
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
-        virtual void Load(File& fstream, size_t modelVersion) override
+        void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         }
 
-        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -455,7 +354,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
+        void BackpropTo(const size_t /*inputIndex*/, const FrameRange & fr) override
         {
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
@@ -463,23 +362,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_poolEng != nullptr);
+            assert(m_poolDesc != nullptr);
+            m_poolEng->Backward(*m_outT, sliceOutputValue, sliceOutputGrad, *m_poolDesc, *m_inT, sliceInput0Value, sliceInput0Grad);
         }
 
-        // this function must be overriden by Max or AveragePoolingNode
-        virtual void BackpropToV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
-
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        void ForwardProp(const FrameRange & fr) override
         {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-            ForwardPropV(sliceOutputValue, sliceInput0Value);
+
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_poolEng != nullptr);
+            assert(m_poolDesc != nullptr);
+            m_poolEng->Forward(*m_inT, sliceInput0Value, *m_poolDesc, *m_outT, sliceOutputValue);
         }
 
-        // this function must be overriden by Max or AveragePoolingNode
-        virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
@@ -501,19 +405,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(m_outputSizePerSample, Input(0)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs()
+        void InferImageDimsFromInputs() override
         {
             InferImageDimsFromInput(0, false);
 
             if (m_inputSampleLayout.GetWidth() < m_windowWidth || m_inputSampleLayout.GetHeight() < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
-            m_sampleLayout = ImageLayoutWHC((m_inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
-                                                 (m_inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample   + 1,
-                                                 m_inputSampleLayout.GetNumChannels());
+            m_sampleLayout = ImageLayoutWHC(
+                (m_inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
+                (m_inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample + 1,
+                m_inputSampleLayout.GetNumChannels());
+
+            // REVIEW alexeyk: is there a better place to create engines?
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
+            if (m_poolEng == nullptr)
+                m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
+            if (m_inT == nullptr)
+                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
+            if (m_outT == nullptr)
+                m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+        void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -529,6 +444,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<PoolingEngine<ElemType>> m_poolEng;
+
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionTensor4D> m_outT;
+        std::unique_ptr<PoolingDescriptor> m_poolDesc;
+
         size_t m_windowWidth, m_windowHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;
         size_t m_inputSizePerSample, m_outputSizePerSample;
@@ -538,7 +460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
 #define UsingPoolingNodeBaseMembers UsingComputationNodeMembersBoilerplate; \
     protected:  \
-        using Base::m_windowWidth; using Base::m_windowHeight; using Base::m_horizontalSubsample; using Base::m_verticalSubsample; using Base::m_inputSizePerSample; using Base::m_outputSizePerSample; \
+        using Base::m_factory; using Base::m_poolDesc; using Base::m_windowWidth; using Base::m_windowHeight; using Base::m_horizontalSubsample; using Base::m_verticalSubsample; using Base::m_inputSizePerSample; using Base::m_outputSizePerSample; \
     public:
 
     // -----------------------------------------------------------------------
@@ -559,20 +481,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        virtual void BackpropToV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
+        void InferImageDimsFromInputs() override
         {
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputSampleLayout.GetNumChannels(),
-                                                      m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
-        virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
-        {
-            functionValues.AssignMaxPoolingResult(input0, m_inputSampleLayout.GetNumChannels(),
-                                                  m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                  m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                  m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+            Base::InferImageDimsFromInputs();
+            if (m_poolDesc == nullptr)
+                m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
     };
 
@@ -597,14 +510,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        virtual void BackpropToV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
-        {
-            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputSampleLayout.GetNumChannels(),
-                                                          m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                          m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                          m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-        }
-
         virtual bool OutputUsedInComputingInputNodesGradients() const override
         {
             // The AveragePoolingNode does not require its output value for computing
@@ -620,16 +525,254 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual void ForwardPropV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
+        void InferImageDimsFromInputs() override
         {
-            functionValues.AssignAveragePoolingResult(input0, m_inputSampleLayout.GetNumChannels(),
-                                                      m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_outputSizePerSample, 
-                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+            Base::InferImageDimsFromInputs();
+            if (m_poolDesc == nullptr)
+                m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
     };
 
     template class AveragePoolingNode<float>; 
     template class AveragePoolingNode<double>;    
+
+    // Implements batch normalization technique as described in:
+    // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
+    // http://arxiv.org/abs/1502.03167
+    // REVIEW alexeyk: is this a right header for this node? It's not really limited to only convolutional nodes.
+    template<class ElemType>
+    class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"BatchNormalization"; }
+    public:
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0)
+        {
+        }
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor) :
+            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
+        {
+        }
+        BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
+
+        void Save(File& fstream) const override
+        {
+            Base::Save(fstream);
+            fstream << m_version.VerWrittenCur() << m_version.VerReadableCur();
+
+            fstream << m_eval;
+            fstream << m_spatial;
+            fstream << m_expAvgFactor;
+        }
+
+        void Load(File& fstream, size_t modelVersion) override
+        {
+            Base::Load(fstream, modelVersion);
+
+            // Read and check version.
+            // REVIEW alexeyk: extract version checking so it can be re-used in other places.
+            int32_t verWritten;
+            int32_t verReadable;
+            fstream >> verWritten >> verReadable;
+
+            if (verReadable > verWritten)
+                RuntimeError("Corrupt model file.");
+            if (verWritten < m_version.VerWeCanReadBack())
+                RuntimeError("Model is too old.");
+            if (verReadable > m_version.VerWrittenCur())
+                RuntimeError("Model is too new.");
+
+            fstream >> m_eval;
+            fstream >> m_spatial;
+            fstream >> m_expAvgFactor;
+        }
+
+        void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
+                assert(node != nullptr);
+
+                node->m_eval = m_eval;
+                node->m_spatial = m_spatial;
+                node->m_expAvgFactor = m_expAvgFactor;
+            }
+        }
+
+        void BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            if (m_eval)
+                LogicError("BatchNormalization does not compute derivatives in inference mode.");
+
+            if (inputIndex == 0) // derivative with respect to the input.
+            {
+                Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+                Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& scale = Input(1)->Value();
+                const Matrix<ElemType>& bias = Input(2)->Value();
+
+                size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+                m_inT->setN(batchSize);
+                assert(m_convEng != nullptr);
+
+                Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
+                m_dScale->Resize(scale.GetNumRows(), scale.GetNumCols());
+                m_dBias->Resize(bias.GetNumRows(), bias.GetNumCols());
+                // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
+                m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
+                    *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);
+            }
+            else if (inputIndex == 1) // derivative with respect to the scale
+            {
+                // Derivative with respect to the scale was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Input(1)->Gradient();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->BufferPointer());
+            }
+            else if (inputIndex == 2) // derivative with respect to the bias
+            {
+                // Derivative with respect to the bias was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Input(2)->Gradient();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
+            }
+            // No derivatives with respect to running mean and InvStdDev.
+        }
+
+        void ForwardProp(const FrameRange & fr) override
+        {
+            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+
+            const Matrix<ElemType>& scale = Input(1)->Value();
+            const Matrix<ElemType>& bias = Input(2)->Value();
+            Matrix<ElemType>& runMean = Input(3)->Value();
+            Matrix<ElemType>& runInvStdDev = Input(4)->Value();
+            assert(scale.GetNumRows() == bias.GetNumRows());
+            assert(scale.GetNumCols() == bias.GetNumCols());
+            assert(runMean.GetNumRows() == scale.GetNumRows());
+            assert(runMean.GetNumCols() == scale.GetNumCols());
+            assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
+            assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
+
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            assert(m_convEng != nullptr);
+#if NANCHECK
+            sliceInputValue.HasNan("BatchNormalization-input");
+#endif
+            if (m_eval)
+                m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
+            else
+            {
+                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, runMean, runInvStdDev,
+                    sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+            }
+#if NANCHECK
+            sliceOutputValue.HasNan("BatchNormalization");
+#endif
+        }
+
+        void Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs();
+
+            SetDims(m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels(), Input(0)->GetNumCols());
+        }
+
+        void InferImageDimsFromInputs() override
+        {
+            InferImageDimsFromInput(0);
+
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
+            if (m_convEng == nullptr)
+                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
+            if (m_inT == nullptr)
+                m_inT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
+            if (m_scaleBiasT == nullptr)
+            {
+                if (m_spatial)
+                    m_scaleBiasT = m_factory->CreateTensor(1, 1, m_sampleLayout.GetNumChannels(), 1);
+                else
+                    m_scaleBiasT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
+            }
+        }
+
+        void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+        {
+            Base::RequestMatricesBeforeForwardProp(matrixPool);
+            if (!m_eval)
+            {
+                RequestMatrixFromPool(m_saveMean, matrixPool);
+                RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
+            }
+        }
+
+        void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+        {
+            Base::RequestMatricesBeforeBackprop(matrixPool);
+            if (!m_eval)
+            {
+                RequestMatrixFromPool(m_dScale, matrixPool);
+                RequestMatrixFromPool(m_dBias, matrixPool);
+            }
+        }
+
+        void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+        {
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
+            if (!m_eval)
+            {
+                ReleaseMatrixToPool(m_saveMean, matrixPool);
+                ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+                ReleaseMatrixToPool(m_dScale, matrixPool);
+                ReleaseMatrixToPool(m_dBias, matrixPool);
+            }
+        }
+
+    private:
+        struct VersionInfo
+        {
+            int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
+            int32_t VerReadableCur() const    { return 0x00010001; }
+            int32_t VerWeCanReadBack() const  { return 0x00010001; }
+        };
+        VersionInfo m_version;
+
+    private:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
+
+        // Determines whether to use training or inference(evaluation) mode.
+        bool m_eval;
+        // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
+        // or spatial (used after convolutional layers).
+        bool m_spatial;
+        // Smoothing factor.
+        double m_expAvgFactor;
+        // Stores pre-computed on forward pass mean values that are used in gradient computation.
+        shared_ptr<Matrix<ElemType>> m_saveMean;
+        // Stores pre-computed on forward pass InvStdDev values that are used in gradient computation.
+        shared_ptr<Matrix<ElemType>> m_saveInvStdDev;
+        // Stores scale derivatives
+        shared_ptr<Matrix<ElemType>> m_dScale;
+        // Stores bias derivatives.
+        shared_ptr<Matrix<ElemType>> m_dBias;
+    };
+
+    template class BatchNormalizationNode<float>; 
+    template class BatchNormalizationNode<double>;    
 
 }}}

@@ -21,6 +21,7 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "ComputationNode.h"
+#include "ConvolutionalNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -69,9 +70,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsc == 1 && colsp != 1)                      // child is a broadcasting column vector
             {
-                size_t colspExpand = rowsp*colsp/rowsc;
                 MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
-                Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
+                // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
+                    convNode->BackwardBias(gradientValues, inputGradientValues);
+                else
+                {
+                    size_t colspExpand = rowsp*colsp / rowsc;
+                    Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
+                }
             }
             else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
             {
@@ -132,17 +140,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1);
             }
-            else if (cols0 == 1 && rows1 % rows0 == 0)  // one is col vec with divisable rows, including scalar   --allowing divisable rows can be useful for images
+            else if (cols0 == 1 && rows1 % rows0 == 0 || cols1 == 1 && rows0 % rows1 == 0) // one is col vec with divisable rows, including scalar   --allowing divisable rows can be useful for images
             {
-                functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
+                // REVIEW alexeyk: this hack is required to handle bias in convolution node which may
+                // use a format (e.g. NCHW) where bias addition cannot be represented as adding column/row vector to matrix.
+                // Bias does NOT have to be a vector of size equal to number of output feature map (though it's a common case).
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
+                {
+                    convNode->AddBias(cols0 == 1 ? inputFunctionValues1 : inputFunctionValues0, 
+                        cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1, functionValues);
+                }
+                else
+                {
+                    // None of the input nodes are convolutional.
+                    if (cols0 == 1)
+                    {
+                        functionValues.Reshape(rows0, rows1 * cols1 / rows0);
+                        functionValues.AssignSumOf(inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0), inputFunctionValues0);
+                    }
+                    else
+                    {
+                        functionValues.Reshape(rows1, rows0 * cols0 / rows1);
+                        functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
+                    }
+                }
                 functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
             }
-            else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
-            {
-                functionValues.Reshape(rows1, rows0 * cols0 / rows1);
-                functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
-                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
-            }       
             else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  // first summand is a matrix with number of columns that is a multiple of the column number of the second matrix
             {
                 if (m_pMBLayout)
@@ -170,22 +194,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
-        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs()
         {
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-
-            if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
+            if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
-            else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
+            else
                 InferImageDimsFromInput(1);
-            else //same size
-            {
-                if (IsInputAnImage(0))  //when conflict, give priority to child 0
-                    InferImageDimsFromInput(0);
-                else
-                    InferImageDimsFromInput(1);
-            }
         }
     };
 
@@ -296,22 +310,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
-        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs()
         {
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-
-            if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
+            if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
-            else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
+            else
                 InferImageDimsFromInput(1);
-            else //same size
-            {
-                if (IsInputAnImage(0))  //when conflict, give priority to child 0
-                    InferImageDimsFromInput(0);
-                else
-                    InferImageDimsFromInput(1);
-            }
         }
     };
 

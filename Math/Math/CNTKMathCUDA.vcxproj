@@ -45,10 +45,27 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <Choose>
+    <When Condition="Exists('$(CUDNN_PATH)')">
+      <PropertyGroup>
+        <UseCuDnn>true</UseCuDnn>
+        <CuDnnDefine>USE_CUDNN</CuDnnDefine>
+        <CuDnnIncPath>$(CUDNN_PATH)\include</CuDnnIncPath>
+        <CuDnnLibPath>$(CUDNN_PATH)\lib\x64</CuDnnLibPath>
+        <CuDnnLib>cudnn.lib</CuDnnLib>
+        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_4.dll</CuDnnDll>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <UseCuDnn>false</UseCuDnn>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CudaPath)\include;$(CUB_PATH);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaPath)\lib\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CudaPath)\include;$(CUB_PATH);$(CuDnnIncPath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaPath)\lib\$(Platform);$(CuDnnLibPath);$(LibraryPath)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -65,7 +82,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\..\common\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -80,6 +97,10 @@
       <Profile>true</Profile>
       <DelayLoadDLLs>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;cudart64_70.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <Lib>
+      <AdditionalLibraryDirectories>$(CuDnnLibPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CuDnnLib)</AdditionalDependencies>
+    </Lib>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateLineInfo>true</GenerateLineInfo>
@@ -90,7 +111,10 @@
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)</Command>
+      <Command>
+xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)
+if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -133,6 +157,7 @@
     <ClInclude Include="cudalatticeops.cu.h" />
     <ClInclude Include="cudalatticeops.h" />
     <ClInclude Include="cudalib.h" />
+    <ClInclude Include="CuDnnConvolutionEngine.h" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
@@ -158,6 +183,7 @@
     </CudaCompile>
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
+    <ClCompile Include="CuDnnConvolutionEngine.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -180,8 +206,6 @@
     <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>
       <FileType>CppCode</FileType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +216,7 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires NVIDIA CUB library v1.4.1 to build. Please download the library from https://nvlabs.github.io/cub/ and set CUB_PATH environment variable to CUB root path (e.g. c:\src\cub-1.4.1)." />
+    <Error Condition="!Exists('$(CUB_PATH)')"
+           Text="CNTK requires NVIDIA CUB library v1.4.1 to build. Please download the library from https://nvlabs.github.io/cub/ and set CUB_PATH environment variable to CUB root path (e.g. c:\src\cub-1.4.1)." />
   </Target>
 </Project>

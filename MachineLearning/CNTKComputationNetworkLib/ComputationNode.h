@@ -990,10 +990,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateInferInputDims(size_t i, size_t rows, size_t cols) override final;
 
     public:
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
+        static void MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr)
         {
             //fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
+            MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType)0);
         }
 
         void /*ComputationNodeBase::*/MaskMissingValueColumnsToZero(const FrameRange & fr) override final

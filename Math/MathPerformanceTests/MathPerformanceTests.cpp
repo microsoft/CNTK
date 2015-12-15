@@ -31,9 +31,9 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
     colPos.SetValue(sentenceBegin); /// -1 0 1
-    colPos.InplaceTruncateBottom((int)MinibatchPackingFlags::SequenceStart);
+    colPos.InplaceTruncateBottom(1 << 0/*(int)MinibatchPackingFlags::SequenceStart*/);  // TODO: these flags no longer exist, this test probably no longer applies
     Matrix<ElemType>::Scale((ElemType)-1.0, colPos); 
-    colPos += (int)MinibatchPackingFlags::None;
+    colPos += 0;    // (int)MinibatchPackingFlags::None; // TODO: these flags no longer exist, this test probably no longer applies
     colSeg.SetDiagonalValue(colPos);  
     Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
     ones.Resize(nStateRow, nStream);
@@ -64,7 +64,7 @@ void rnnForwardPropSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<Ele
             colSeg.Resize(mNbr, mNbr);
             colSeg.SetValue(0);
             colSegPastActivity.SetValue(colBegin);
-            colSegPastActivity.InplaceTruncateBottom((int)MinibatchPackingFlags::SequenceStart);
+            colSegPastActivity.InplaceTruncateBottom(1 << 0/*(int)MinibatchPackingFlags::SequenceStart*/);  // TODO: these flags no longer exist, this test probably no longer applies
             colSeg.SetDiagonalValue(colSegPastActivity);
             Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
             ElemType initStateValue = (ElemType) 0.1;

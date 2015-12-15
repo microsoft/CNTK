@@ -6,11 +6,8 @@
 //
 
 // TODO:
-//  - frame mode: some readers just call Init() (e.g. SparsePCReader)--should that be allowed?
-//  - IsAllNone() does not work presently (should cause no harm except some inefficiency)
-//  - add code that uses the new structure, and validates against the old one
 //  - fix RecurrentNode (remove shifted layout, use time offset in condition test)
-//  - finally remove the old bit masks
+//  - finally remove the old bit masks  --nearly there, only used for checking the new code
 //  - split Is() into IsStart, IsEnd, IsGap; then eliminate MinibatchPackingFlags as well
 
 #pragma once
@@ -19,36 +16,6 @@
 #include "Matrix.h"
 #include <vector>
 #include <memory>   // for shared_ptr
-
-enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
-{
-    None = 0,
-    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
-    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
-    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
-    NoLabel = 1 << 3,               // binary 1000  frame has no label
-
-    NoInput = NoFeature | NoLabel,  // Note: Once we refactorized the reader, NoInput will no longer needed.
-    SequenceStartOrNoFeature = SequenceStart | NoFeature,
-    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
-    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
-};
-
-inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
-}
-
-inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
-{
-    a = a | b;
-    return a;
-}
-
-inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
-{
-    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
-}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -90,39 +57,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // An MBLayout provides the following functions:
     //  - (building:) add a new sequence (or gap range) to the MBLayout
     //  - inquire the set of sequences (sequence ids) that intersect with this minibatch
-    //  - inquire whether any time step t has any flags across all sequences
-    //  - inquire the flags at (s,t)
+    //  - inquire whether any time step t has a gap or boundary across all sequences
+    //  - inquire for gap or boundary at (s,t)
     //
     // Truncated BPTT support (partial sequences):
     //  - in truncated BPTT, minibatches only contain partial sequences, e.g. a range of 20 time steps
-    //  - the flags are stored for every sequence that intersects with this minibatch
-    //  - that is also true for flags that fall outside the time-step range of the minibatch
+    //  - boundary information is stored for every sequence that intersects with this minibatch,
+    //    including boundaries that fall outside of the time range of the minibatch
     //
     // An MBLayout object stores:
     //  - for every sequence in the minibatch the n-tuple (global sequence id, s, first t, last t)
     //    (where first and last t may sometimes lie outside of the minibatch, e.g. in case of truncated BPTT)
     //  - number of time steps and parallel sequences (their product is equal to the #columns in the minibatch matrix)
-    //  - MinibatchPackingFlags: information whether a frame (s,t) is
-    //     - SequenceBegin (first frame of a sequence)
-    //     - SequenceEnd (last frame of a sequence--in frame-randomization, each frame is both)
-    //     - NoInput (a gap or missing input frame)
-    //  - a column-wise OR of those flags for fast testing entire time steps at once
+    //  - lookup tables for looking up gap and boundary information
     // -----------------------------------------------------------------------
 
-    // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
-    // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
     // Contract between ComputationNode, ComputationNetwork, and MBLayout:
-    //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
+    //  - if a node has no MBLayout, m_{value,gradient} are not samples (they are not activations or input data), but e.g. model parameters
     //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
-    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling ForwardProp() on a node
-    // NOTE: Parts of this class represents the result of refactoring code, including a few irregular edge cases.
-    //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
+    //  - ComputationNetwork ensures that m_{value,gradient} are allocated correctly before calling ForwardProp() on a node
 
     struct MBLayout
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
+        // information stored about sequences
+        struct SequenceInfo
+        {
+            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
+            size_t s;               // index of parallel sequence
+            ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
+            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
+            bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
+        };
+
+        // -------------------------------------------------------------------
+        // construction
+        // -------------------------------------------------------------------
+
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
         MBLayout() : MBLayout(1, 0) { }
 
         // copy the content of another MBLayoutPtr over
@@ -136,23 +109,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
         void Init(size_t numParallelSequences, size_t numTimeSteps)
         {
-            // remember the dimensions...
+            // remember the dimensions
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            // ...but don't actually allocate anything   --TODO: no value in this anymore
-            m_sentenceBoundaryFlags.Resize(0, 0);
-            m_minibatchPackingFlags.clear();
-            m_distanceToNearestStart.clear();
-            m_distanceToNearestEnd.clear();
-            m_distanceToStart.Resize(0, 0);
-            m_distanceToEnd.Resize(0, 0);
+            // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
+            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
+            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
+            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_timeStepHasGap.assign(m_numTimeSteps, false);
+            // reset state
             m_numFramesDeclared = 0;
             m_numGapFrames = 0;
             m_sequences.clear();
             m_writable = true;
         }
 
-        // short-hand to initialize an MBLayout for the special case of frame mode
+        // short-hand to initialize an MBLayout for the common case of frame mode
         // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
         void InitAsFrameMode(size_t numSamples)
         {
@@ -165,115 +139,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             Lock();
         }
-    private:
-        // we are trying to access content--this verifies that the structure is consistent
-        // All frames must now be declared.
-        void CheckIsValid() const
-        {
-            if (m_numFramesDeclared != m_numTimeSteps * m_numParallelSequences)
-                LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
-                           (int)m_numFramesDeclared, (int)( m_numTimeSteps * m_numParallelSequences));
-        }
-        // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        bool IsEmpty() const
-        {
-            CheckIsValid();
-            return m_minibatchPackingFlags.empty();
-        }
-        // call this before ever writing anything--this will create the matrix/vector upon first use
-        void LazyAlloc() const
-        {
-            if (!m_minibatchPackingFlags.empty() || m_numTimeSteps == 0)
-                return;
-            // this is where the actual allocation happens
-            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
-            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
-            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
-            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
-            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
-        }
-    public:
+
+        // -------------------------------------------------------------------
+        // accessors
+        // -------------------------------------------------------------------
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
-        size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
+        size_t GetNumParallelSequences() const { return m_numParallelSequences; }
 
-        // how many columns the MB should be allocated for
+        // how many columns the MB matrix has
         size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
-        // information stored about sequences
-        struct SequenceInfo
-        {
-            UniqueSequenceId seqId; // unique sequence id (or GAP_SEQUENCE_ID--TODO: don't include gaps here)
-            size_t s;               // index of parallel sequence
-            ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
-            size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
-        };
         // return all sequences stored in this minibatch
         const vector<SequenceInfo> & GetAllSequences() const { return m_sequences; }
 
-    public:
+        // compute the number of actual samples in this layout (not counting gaps)
+        // This is used by MeanNode and InvStdDevNode, and by statistics reporting.
+        size_t GetActualNumSamples() const;
+
+        const Matrix<char> & GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
 
         // compare whether two layouts are the same
         bool operator==(const MBLayout & other) const
         {
-            // for now just check the object identity
             if (this == &other)
                 return true;
-            return          m_numTimeSteps == other.m_numTimeSteps &&
+            bool res =
+                m_numTimeSteps == other.m_numTimeSteps &&
                 m_numParallelSequences == other.m_numParallelSequences &&
-                m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
-                m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
+                m_distanceToStart.IsEqualTo(other.m_distanceToStart) &&
+                m_distanceToEnd  .IsEqualTo(other.m_distanceToEnd)   &&
+                m_distanceToNearestStart == other.m_distanceToNearestStart &&
+                m_distanceToNearestEnd   == other.m_distanceToNearestEnd   &&
+                m_timeStepHasGap == other.m_timeStepHasGap &&
+                m_sequences == other.m_sequences;
+            return res;
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
-        // get boundary flags
-    private:
-        MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
-        MinibatchPackingFlags Get(const FrameRange & fr) const;
-    public:
-        // This version is used by the minibatch-decimation function.
-        MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
-
-        // test boundary flags for a specific condition
-        // TODO: Remove the direct-index versions in lieu of FrameRange version.
-        //       Direct-index versions are currently used here:
-        //        - LUSequenceReader.cpp: a sanity check
-        //        - ClassBasedCrossEntropyWithSoftmaxNode (where the correct FrameRange object is already available)
-        //        - RecurrentNode (which will be rewritten after MBLayout can handle tests outside its time range)
-        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        bool Is(size_t s, size_t t, MinibatchPackingFlags f) const { return (Get(s, t) & f) != 0; }
-        // FrameRange version allows to test with time offset
-        bool Is(const FrameRange & fr, MinibatchPackingFlags f) const { return (Get(fr) & f) != 0; }
-
-    private:    // Note: Only called from in here. Should replace each use with a better solution.
-        // tests if Is() is false for every frame and sequence
-        // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
-        // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
-        // This is currently the case for frame randomization.
-        // BUGBUG: With the AddSequence() change, this can never be true. Need to check the performance impact, or implement it differently.
-        //         Should frame mode set boundaries at [-1, 2)? And keep AllNone if no flags set INSIDE the minibatch?
-        bool IsAllNone() const { return IsEmpty(); }
-    private:
-        // set a boundary flag (OR it on top of the existing layout)
-        // Currently not yet updated/disabled:
-        //  - RecurrentNode for m_timeStep > 1 (this will be fixed differently)
-        // Currently marginally broken:
-        //  - EvalReader.h
-        void Set(size_t s, size_t t, MinibatchPackingFlags f)
-        {
-            CheckWritable();
-
-            if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
-                return;
-            LazyAlloc();
-            m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
-            m_minibatchPackingFlags[t] |= f;
-        }
-
-    public:
+        // -------------------------------------------------------------------
+        // building (adding sequences or gaps)
+        // -------------------------------------------------------------------
 
         // mark a range of frames in a parallel sequence as one sentence
         // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
@@ -306,13 +212,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sequences.push_back(seqDesc);
 
             // create all the cached fast-lookup information
-            LazyAlloc();
             const auto seqId = seqDesc.seqId;
             const auto s = seqDesc.s;
-            if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
-                Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
-            if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
-                Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
+            //if (beginTime >= 0 && seqId != GAP_SEQUENCE_ID)
+            //    Set(s, beginTime, MinibatchPackingFlags::SequenceStart);
+            //if (endTime <= m_numTimeSteps && seqId != GAP_SEQUENCE_ID)
+            //    Set(s, endTime - 1, MinibatchPackingFlags::SequenceEnd);
             size_t b = (size_t)(max(beginTime, (ptrdiff_t)0));
             size_t e = min(endTime, m_numTimeSteps);
             m_numFramesDeclared += (e - b);
@@ -321,18 +226,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_numGapFrames += (e - b);
                 for (size_t t = b; t < e; t++)
                 {
-                    Set(s, t, MinibatchPackingFlags::NoInput);
-                    m_distanceToStart(s, t) = -1;        // gap
-                    m_distanceToEnd(s, t)   = -1;
-                    m_distanceToNearestStart[t] = -1;    // we have at least one gap in this frame
-                    m_distanceToNearestEnd[t]   = -1;
+                    //Set(s, t, MinibatchPackingFlags::NoInput);
+                    m_timeStepHasGap[t] = true;
+                    m_distanceToStart(s, t) = -1;   // start flags also encode gaps
                 }
             }
             else for (size_t t = b; t < e; t++)
             {
                 // update the nearest sentence boundaries, minimum over all parallel sequences
+                // -1 in distanceToStart(,) stands for a gap
+                assert(m_distanceToStart(s, t) != -1);  // gaps not allowed to overlap
                 // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
-                // -1 stands for at least one gap at this time step.
                 ptrdiff_t distanceToStart = t - beginTime;
                 if (m_distanceToStart(s, t) > (float)distanceToStart)
                     m_distanceToStart(s, t) = (float)distanceToStart;
@@ -343,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
-                assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
+                //assert(t == (size_t)beginTime || t == endTime - 1 || m_sentenceBoundaryFlags(s, t) == 0);
             }
         }
 
@@ -351,51 +255,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // I'd love to start with all-gaps, but that would require to set flags upfront, and then clearing them.
         void AddGap(size_t s, ptrdiff_t beginTime, size_t endTime) { if ((ptrdiff_t)endTime > beginTime) AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
 
-        // compute the number of actual samples in this layout (not counting NoLabel ones)
-        // This is used by MeanNode and InvStdDevNode.
-        size_t DetermineActualNumSamples() const
+        // -------------------------------------------------------------------
+        // inquire about gaps or boundaries
+        // -------------------------------------------------------------------
+
+        bool HasGaps() const;
+        bool HasGaps(const FrameRange & fr) const;
+
+        // test boundary flags for a specific condition
+        bool IsBeyondStartOrEnd(const FrameRange & fr) const;
+        bool IsGap(const FrameRange & fr) const;
+
+        // test whether at least one sequence crosses the bounds of this minibatch
+        bool HasSequenceBeyondBegin() const
         {
-            size_t n = GetNumCols();
-            if (HasGaps())
-            {
-                for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                {
-                    if (Is(t, MinibatchPackingFlags::NoInput))
-                    {
-                        for (size_t s = 0; s < GetNumParallelSequences(); s++)
-                        {
-                            if (Is(s, t, MinibatchPackingFlags::NoInput))
-                                n--;
-                        }
-                    }
-                }
-            }
-            if (m_numGapFrames != GetNumCols() - n)
-                LogicError("DetermineActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
-            return n;
+            for (const auto & seq : m_sequences)
+                if (seq.tBegin < 0)
+                    return true;
+            return false;
         }
 
-        // test function for those pieces of the code that cannot handle gaps
-        // TODO: Not efficient (linear scan). Once GetNumSamplesWithLabel() above is efficient (computed during building), we should just leverage that.
-        bool HasGaps() const
+        bool HasSequenceBeyondEnd() const
         {
-            CheckIsValid();
-            return m_numGapFrames > 0;
-            //if (!IsAllNone())
-            //    for (size_t t = 0; t < GetNumTimeSteps(); t++)
-            //        if (Is(t, MinibatchPackingFlags::NoInput))
-            //            return true;
-            //return false;
+            for (const auto & seq : m_sequences)
+                if (seq.tEnd > m_numTimeSteps)
+                    return true;
+            return false;
         }
-        bool HasGaps(const FrameRange& /*fr*/) const
-        {
-            CheckIsValid();
-            return HasGaps();       // BUGBUG: inefficient. This is a stop-gap for now.
-        }
-
-        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const;
 
     private:
+
+        // we are trying to access content--this verifies that the structure is consistent
+        // All frames must now be declared.
+        void CheckIsValid() const
+        {
+            if (m_numFramesDeclared != GetNumCols())
+                LogicError("MBLayout: Attempting to read out flags, but only only %d out of %d frames have been defined.",
+                (int)m_numFramesDeclared, (int)(m_numTimeSteps * m_numParallelSequences));
+        }
 
         // Ensure that the MBLayout allows writes
         void CheckWritable() const
@@ -413,101 +310,77 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
 
+        // -------------------------------------------------------------------
+        // data members: main information
+        // -------------------------------------------------------------------
+
         // dimensions
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
 
-        // counters on how much has been declared, for checks
+        // all sequences that live inside this minibatch
+        vector<SequenceInfo> m_sequences;
+
+    private:
+
+        // -------------------------------------------------------------------
+        // data members: cached information and inverse lookup tables
+        // -------------------------------------------------------------------
+
+        // counters on how much has been declared, for fast access (this can be recomputed from m_sequences as well)
         size_t m_numFramesDeclared;
         size_t m_numGapFrames;
 
-        // all sequences that live inside this minibatch
-        mutable vector<SequenceInfo> m_sequences;
+        // Lookup tables for determining whether any sequence at time t is a boundary or gap.
+        // An optional time delay can be given, then the test is whether going from t to (t + time delay) crosses a boundary.
+        // The purpose is for knowing when to reset state of a recurrent node.
+        //
+        // For every (s,t), we store the distance to the corresponding sequence begin and end.
+        // We also store for every [t] an aggregate to know the nearest boundary.
+        // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch, both starting at step 0
+        // Would be described by these [2 x 5]  matrices:
+        // m_distanceToStart        = [ 0  1  2  3  4
+        //                              0  1  2 -1 -1 ]          // (last two time steps have no content)
+        // m_distanceToEnd          = [ 4  3  2  1  0
+        //                              2  1  0  .  . ]          // (last two time steps undefined)
+        // m_distanceToNearestStart = [ 0  1  2  3  4 ]
+        // m_distanceToNearestEnd   = [ 2  1  0  1  0 ]
+        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); -1 stands for gap, PTRDIFF_MAX for 'not initialized'
+        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (-1 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
 
-        // a matrix of S x T
-        // S is the number of parallel sequences, T is the number of time steps (possibly of multiple concatenated sequences).
-        // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch
-        // would be described by this [2 x 5]  matrix:
-        //   S . . . E
-        //   S . E G G          // (last two time steps have no content)
-        // where S, E, and G stand for bit-mask values of MinibatchPackingFlags::SequenceStart, MinibatchPackingFlags::SequenceEnd, and MinibatchPackingFlags::NoInput, respectively.
-        mutable Matrix<float> m_sentenceBoundaryFlags;  // (s,t)
-        // TODO: we should change to a Matrix<char>.
-
-        // a short-hand vector or-ing the above flags over all parallel sequences
-        mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
-
-        // a short-hand for determining whether any sequence at time t is a boundary or gap
-        // TODO: Remove m_minibatchPackingFlags, and implement through these two. This will require to make Set() private, i.e. gotta change the readers.
-        // PTRDIFF_MAX stands for 'not initialized'.
-        // TODO: We need a guard against callers not calling AddGaps() for all frames. That will leave m_distanceToNearestStart in a bad state. May need a separate gaps flag.
-        mutable vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd;     // [t]
-        mutable Matrix<float> m_distanceToStart, m_distanceToEnd;                       // (s,t)
-
-        // A boolean flag indicating whether the MBLayout can be further modified
-        // When it's value is false, no set operations are allowed on the MBLayout
-        mutable bool m_writable;
+        vector<bool> m_timeStepHasGap;                                      // [t]
 
         // Cached mask indicating the validity of each column in the MBLayout
         // TODO: We actually just need a boolean matrix for this.
         // A value of 1 indicates that the column has valid content 
         // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
-        // If the matrix is empty it means all columns are valid
-        mutable std::shared_ptr<Matrix<char>> m_columnsValidityMask;
+        mutable Matrix<char> m_columnsValidityMask;
+
+        // A boolean flag indicating whether the MBLayout can be further modified
+        // When it's value is false, no set operations are allowed on the MBLayout.
+        // Meant to guard in lazy creation of m_columnsValidityMask.
+        mutable bool m_writable;
 
     public:
-        // specialized functions to replicate old behavior that shouldn't be there but I cannot test
-        // TODO: these should all go away one day
 
-        // get info for one frame; used in DelayedValueNode
-        // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
-        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
-        {
-            LazyAlloc();
-            return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
-        }
+        // -------------------------------------------------------------------
+        // special deprecated functions that are result of refactoring
+        // -------------------------------------------------------------------
 
-#if 0
-        // same as Set() but not ORing  --TODO: is this distinction needed?
-        void SetWithoutOr(size_t id, size_t t, MinibatchPackingFlags f)
+        // only used in sequence training, must be replaced by a different mechanism
+        bool IsEnd(size_t s, size_t t) const
         {
-            if (f == MinibatchPackingFlags::None)
-                return;
-            LazyAlloc();
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
-            m_minibatchPackingFlags[t] |= f;
-        }
-
-        // needed in DelayedValueNodeBase
-        // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
-        void Mask(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (IsEmpty())
-                return;
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
-            //m_minibatchPackingFlags[t] &= f;
-        }
+            auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+#if 1       // I don't exactly know what this does, so try assert() fifst
+            assert(distanceToStart != -1); distanceToStart;
+#else
+            if (distanceToStart == -1)      // indicates a gap
+                return false;
 #endif
-        // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
-
-#if 0
-        // TODO: this function is only used in Kaldi2Reader for the moment, and
-        //       we plan to remove it in the future. It copies the current
-        //       MBLayout from an existing object but only copies <numTimeSteps>
-        //       steps starting from <startTimeStep>.
-        void CopyFromRange(const MBLayoutPtr & other, size_t startTimeStep, size_t numTimeSteps)
-        {
-            m_numParallelSequences = other->m_numParallelSequences;
-            m_numTimeSteps = numTimeSteps;
-            //m_dataIsSequential = other->m_dataIsSequential;
-            m_sentenceBoundaryFlags.SetValue(other->m_sentenceBoundaryFlags.ColumnSlice(startTimeStep, numTimeSteps));
-            m_minibatchPackingFlags.resize(numTimeSteps);
-            m_minibatchPackingFlags.assign(
-                other->m_minibatchPackingFlags.begin() + startTimeStep,
-                other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
+            auto distanceToEnd = (size_t)m_distanceToEnd(s, t);
+            return distanceToEnd == 0;
         }
-#endif
+
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
@@ -531,8 +404,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // TODO: We should also have a FrameRange that selects all frames of a single sequence. Currently now possible since that would require Matrix::RowSlice()
-    // TODO: Where this design currently breaks:  // <- BUGBUG: I think these are outdated
-    //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
     //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
     // BUGBUG: These nodes are currently broken and will need to be fixed:
     //  - CRFNode does not support > 1 parallel sequence
@@ -551,7 +422,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), m_timeOffset(0), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        //FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
         FrameRange(MBLayoutPtr pMBLayout) : FrameRange(pMBLayout, SIZE_MAX) {}
 
         // return a frame range with broadcast allowed
@@ -593,21 +463,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ret.m_timeOffset += offset;
             return ret;
         }
-        // check a FrameRange with time offset
-        // Returns 0 if time index with offset is inside the layout; -1 if left of it, and +1 if right of it.
-        int LocateTimeOffset() const
-        {
-            EnsureNotAllFrames();
-            if (!m_pMBLayout)
-                InvalidArgument("FrameRange::LocateTimeOffset(): Time offset requires an MBLayout.");
-            ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
-            if (t < 0)
-                return -1;
-            else if ((size_t)t >= m_pMBLayout->GetNumTimeSteps())
-                return +1;
-            else
-                return 0;
-        }
 
         class IndexIteration    // range for range-based for over sequences
         {
@@ -626,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EnsureNotAllFrames();
             ptrdiff_t t = m_timeOffset + (ptrdiff_t)timeIdxInSeq;
-            if (LocateTimeOffset() != 0)
+            if (t < 0 || (size_t)t >= m_pMBLayout->GetNumTimeSteps())
                 InvalidArgument("FrameRange::t(): Time offset caused time index to be out of range.");
             return (size_t)t;
         }
@@ -645,107 +500,211 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MBLayout functions that require FrameRange
     // -----------------------------------------------------------------------
 
-    // get packing flags from a frame range
-    // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
-    inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
+    inline bool MBLayout::HasGaps() const { return m_numGapFrames > 0; /*HasGaps(FrameRange());*/ }
+    inline bool MBLayout::HasGaps(const FrameRange & fr) const
     {
+        CheckIsValid();
         if (fr.IsAllFrames())
-            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
-#if 1
-        auto t = fr.t();
-        return fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
-#else
-        // This specifically supports time offsets (e.g. pass fr.WithTimeOffset(-1)), and more specifically,
-        // time offsets may refer to frames outside the sequence, which will be returned as NoLabel.
-        // to account for time offsets, we linearly scan from center position to to the offset position
-        ptrdiff_t step = fr.m_timeOffset < 0 ? -1 : +1;
-        ptrdiff_t tend = fr.m_timeOffset + (ptrdiff_t)fr.timeIdxInSeq;
-        for (ptrdiff_t t = fr.timeIdxInSeq; ; t += step)
-        {
-            if (t < 0 || t >= GetNumTimeSteps())
-                break;
-            // get flag at time t
-            auto flags = fr.seqIndex == SIZE_MAX ? Get(t) : Get(fr.seqIndex,t); // for sequence only or all of them
-            if (t == tend)
-                return flags;
-            else if (step < 0 && (flags & MinibatchPackingFlags::SequenceStart))   // we are about to skip over sentence start -> we are in a gap
-                return MinibatchPackingFlags::NoInput;
-            else if (step > 0 && (flags & MinibatchPackingFlags::SequenceEnd))     // likewise for end
-                return MinibatchPackingFlags::NoInput;
-            else if (flags != MinibatchPackingFlags::None)                         // we hit an unexpected flag, e.g. running backwards into an End
-                LogicError("MBLayout::Get() unexpectedly found a gap or boundary frame where there should be none (flag value 0x%1x).", (int)flags);
-        }
-        // we get here if the time offset is not inside the currently allocated flag matrices
-        LogicError("MBLayout::Get: attempting to retrieve a flag outside the current range");
-#endif
+            return m_numGapFrames > 0;      // test entire minibatch
+        if (fr.seqIndex == SIZE_MAX)
+            return m_timeStepHasGap[fr.timeIdxInSeq];     // test all seq for one time step
+        else
+            return IsGap(fr);  // test one sequence
     }
 
-    // only called from MaskMissingColumnsTo()
-    // TODO: can this be changed to get a reference to the whole matrix, to which one would then apply DataWithMBLayoutFor()?
-    //       And assume that this is called only if !IsAllNone() and no gaps (we will have a flag for that, too), tested outside (otherwise we'd waste time creating a trivial matrix).
-    //       Then we don't need all the logic to return a nullptr here.
-    inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& fr, DEVICEID_TYPE deviceId) const
+#if 0
+    //inline MinibatchPackingFlags MBLayout::Get(size_t t) const
+    //{
+    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t));
+    //}
+    //inline MinibatchPackingFlags MBLayout::Get(size_t s, size_t t) const
+    //{
+    //    return Get(FrameRange(nullptr/*shared_from_this(); stop-gap, not really correct but won't hurt, until this whole function goes away*/, t).Sequence(s));
+    //}
+
+    // get packing flags from a frame range
+    // TODO: Can we always use this, and make the ones taking a time index private or absorb them here?
+    // TODO: This generic function will soon no longer be used; instead, tests for gap and boundary will be separate calls.
+    // BUGBUG: broken for time offsets, since off by one. Use IsBeyondStartOrEnd() instead.
+    inline MinibatchPackingFlags MBLayout::Get(const FrameRange & fr) const
     {
-        // lazily compute the validity mask
-        if (m_columnsValidityMask == nullptr)
+        CheckIsValid();
+
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
+
+        MinibatchPackingFlags f = MinibatchPackingFlags::None;
+        auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        auto s = fr.seqIndex;
+        if (s == SIZE_MAX)              // aggregate requested
         {
-            Lock();
-            m_columnsValidityMask.reset(new Matrix<char>(deviceId));
+            // determine flags from aggregate vectors
+            if (m_timeStepHasGap[t])      // indicates a gap
+                f |= MinibatchPackingFlags::NoInput;
+            auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
+            if (distanceToStart <= -fr.m_timeOffset)
+                f |= MinibatchPackingFlags::SequenceStart;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
+            if (distanceToEnd <= fr.m_timeOffset)
+                f |= MinibatchPackingFlags::SequenceEnd;
 
-            // Determine indices of all invalid columns in the minibatch
-            if (HasGaps())
-            {
-                size_t nT = GetNumTimeSteps();
-                size_t nS = GetNumParallelSequences();
+            //auto f1 = m_minibatchPackingFlags[t];
+            //assert(f1 == f); f1;
 
-                std::vector<char> columnsValidityMask(nT * nS, 1);  // form the mask in a CPU-side STL vector first
-                bool foundInvalidColumn = false;
-                for (size_t t = 0; t < nT; t++)
-                {
-                    if (Is(t, MinibatchPackingFlags::NoInput))
-                    {
-                        for (size_t s = 0; s < nS; s++)
-                        {
-                            if (Is(s, t, MinibatchPackingFlags::NoInput))
-                                columnsValidityMask[(t * nS) + s] = 0;  // TODO: use DataFor()
-                        }
-
-                        foundInvalidColumn = true;
-                    }
-                }
-
-                if (foundInvalidColumn)                     // if any then blast it over to the GPU side
-                    m_columnsValidityMask->SetValue(1, columnsValidityMask.size(), deviceId, columnsValidityMask.data());
-            }
+            return f;
         }
 
-        if (m_columnsValidityMask->IsEmpty())               // mask matrix was kept empty, which means no gaps detected
-            return nullptr;
+        // determine flags from matrices
 
-        // we have a validity mask: decide what to return
-        if (fr.IsAllFrames())
-            return m_columnsValidityMask;
-
-        // Check if there are any invalid frames in the specified fr
-        bool foundInvalidColumnsInRange = false;
-        if (fr.seqIndex == SIZE_MAX)
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        if (distanceToStart == -1)      // indicates a gap
         {
-            foundInvalidColumnsInRange = Is(fr.t(), MinibatchPackingFlags::NoInput);
+            assert(m_timeStepHasGap[t]);
+            f |= MinibatchPackingFlags::NoInput;
         }
         else
         {
-            foundInvalidColumnsInRange = Is(fr.seqIndex, fr.t(), MinibatchPackingFlags::NoInput);
+            if (distanceToStart <= -fr.m_timeOffset)
+                f |= MinibatchPackingFlags::SequenceStart;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
+            if (distanceToEnd <= fr.m_timeOffset)
+                f |= MinibatchPackingFlags::SequenceEnd;
         }
 
-        if (!foundInvalidColumnsInRange)
-            return nullptr;
+        //auto f1 = (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t);
+        //assert(f1 == f); f1;
 
-        // we get here if there is an actual validity mask and there are invalid frames in its range
-        size_t startColumn = (fr.t() * GetNumParallelSequences()) + ((fr.seqIndex == SIZE_MAX) ? 0 : fr.seqIndex);
-        size_t numColumns = (fr.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
+        return f;
+    }
+#endif
 
-        // TODO: why use ColumnSlice() and not DataFor()?
-        return make_shared<Matrix<char>>(m_columnsValidityMask->ColumnSlice(startColumn, numColumns));
+    // test whether a given frame is or contains a gap
+    inline bool MBLayout::IsGap(const FrameRange & fr) const
+    {
+        CheckIsValid();
+
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::Get() cannot be applied to FrameRange that specifies more than a single time step.");
+
+        const auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        const auto s = fr.seqIndex;
+        if (s == SIZE_MAX)                      // aggregate requested
+            return m_timeStepHasGap[t];
+
+        // determine flags from matrices
+
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        return (distanceToStart == -1);
+    }
+
+    // test whether frame is exceeding the sentence boundaries
+    inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange & fr) const
+    {
+        CheckIsValid();
+
+        if (fr.IsAllFrames())
+            LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
+
+        const auto t = fr.timeIdxInSeq;        // we test off the frame without offset
+        const auto s = fr.seqIndex;
+        if (s == SIZE_MAX)                      // aggregate requested
+        {
+            // determine flags from aggregate vectors
+            auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
+            if (distanceToStart < -fr.m_timeOffset)
+                return true;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToNearestEnd[t];
+            if (distanceToEnd < fr.m_timeOffset)
+                return true;
+            return false;
+        }
+
+        // determine flags from matrices
+        auto distanceToStart = (ptrdiff_t)m_distanceToStart(s, t);
+        if (distanceToStart == -1)      // indicates a gap
+        {
+            assert(m_timeStepHasGap[t]);
+            return false;   // a gap is not outside, so that we can allow collating
+        }
+        else
+        {
+            if (distanceToStart < -fr.m_timeOffset)
+                return true;
+            auto distanceToEnd = (ptrdiff_t)m_distanceToEnd(s, t);
+            if (distanceToEnd < fr.m_timeOffset)
+                return true;
+        }
+        return false;
+    }
+
+    // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
+    inline size_t MBLayout::GetActualNumSamples() const
+    {
+#if 1       // sanity check  --TODO: delete this after a while
+        size_t n = GetNumCols();
+        if (HasGaps())
+        {
+            for (size_t t = 0; t < GetNumTimeSteps(); t++)
+            {
+                FrameRange fr(nullptr, t);
+                if (IsGap(fr))
+                {
+                    for (size_t s = 0; s < GetNumParallelSequences(); s++)
+                    {
+                        if (IsGap(fr.Sequence(s)))
+                            n--;
+                    }
+                }
+            }
+        }
+        if (m_numGapFrames != GetNumCols() - n)
+            LogicError("GetActualNumSamples: Gap counting broken, measured %d vs. originally counted %d", (int)(GetNumCols() - n), (int)m_numGapFrames);
+        assert(m_numFramesDeclared - m_numGapFrames == n);
+#endif
+        return m_numFramesDeclared - m_numGapFrames;
+    }
+
+    // return m_columnsValidityMask(,), which is lazily created here upon first call
+    // only called from MaskMissingColumnsTo()
+    // TODO: Can probably be faster by using the sequence array directly.
+    inline const Matrix<char> & MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
+    {
+        CheckIsValid();
+        // lazily compute the validity mask
+        if (m_columnsValidityMask.IsEmpty())
+        {
+            assert(HasGaps());  // must only be called if there are gaps
+            Lock();
+
+            // Determine indices of all invalid columns in the minibatch
+            // TODO: This can be done more efficiently by using m_sequences[].
+            size_t nT = GetNumTimeSteps();
+            size_t nS = GetNumParallelSequences();
+
+            std::vector<char> columnsValidityMask(nT * nS, 1);  // form the mask in a CPU-side STL vector first
+            size_t gapsFound = 0;
+            for (size_t t = 0; t < nT; t++)
+            {
+                FrameRange fr(nullptr, t);
+                if (IsGap(fr))
+                {
+                    for (size_t s = 0; s < nS; s++)
+                    {
+                        if (IsGap(fr.Sequence(s)))
+                        {
+                            columnsValidityMask[(t * nS) + s] = 0;
+                            gapsFound++;
+                        }
+                    }
+                }
+            }
+            assert(gapsFound == m_numGapFrames);    // sanity check
+
+            if (deviceId != m_columnsValidityMask.GetDeviceId())
+                m_columnsValidityMask = Matrix<char>(deviceId);
+            m_columnsValidityMask.SetValue(1, nS * nT, deviceId, columnsValidityMask.data());
+        }
+        return m_columnsValidityMask;
     }
 
     // class for defining an iteration over a sequence
@@ -804,7 +763,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ColumnRangeWithMBLayoutFor() -- Return column range for a FrameRange of a Matrix with specified number of columns with a given MBLayout
     // -----------------------------------------------------------------------
-    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols, 
+
+    // BUGBUG: Must support time offsets.
+    static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols/*of data matrix to slice*/, 
                                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
@@ -829,6 +790,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // but as a reference (e.g. it cannot be resized)
         if (!pMBLayout || fr.IsAllFrames())
         {
+            if (fr.m_timeOffset != 0)
+                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");
+            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(0, numCols);
             else
@@ -844,6 +808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
                 return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
                 // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
+                // TODO: The tensor version of this will support it.
 #endif
             }
         }
@@ -851,7 +816,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-            size_t startColumn = fr.t() * numParallelSequences;
+            size_t startColumn = (fr.timeIdxInSeq + fr.m_timeOffset) * numParallelSequences;
+            if (startColumn >= numCols)
+                LogicError("DataFor: FrameRange specifies a time index that is out of range.");
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(startColumn, numParallelSequences);
             else
@@ -866,14 +833,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    static inline Matrix<ElemType> DataWithMBLayoutFor(Matrix<ElemType> & data,
+    static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> & data,
                                                        const FrameRange & fr/*select frame or entire batch*/,
                                                        const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
         auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
-        if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
-            return data.AsReference();
-
+        //if ((columnRange.first == 0) && (columnRange.second == data.GetNumCols()))
+        //    return data.AsReference();
         return data.ColumnSlice(columnRange.first, columnRange.second);
     }
 
@@ -887,34 +853,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // However, nodes that 'reduce' minibatches (e.g. computing the sum of all frames across all sequences) must deal with the garbage.
     // This function sets those to 0, assuming that now they can be reduced without affecting the result.
     // This function can operate on the whole range or on a selected single frame and/or a single sequence.
-    // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
-    // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
+    // 'Reduce' style operations--the criterion nodes and gradient computation--call this.
     // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Input(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
     template<class ElemType>
-    static inline bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & fr, ElemType val)
+    static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MBLayoutPtr & pMBLayout, const FrameRange & fr, ElemType val)
     {
-        bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
-
         if (pMBLayout && pMBLayout->HasGaps(fr))
         {
-            size_t nT = pMBLayout->GetNumTimeSteps();
-            size_t nS = pMBLayout->GetNumParallelSequences();
-
-            if (matrixToBeMasked.GetNumCols() != nT * nS)
-                LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
-
-            // TODO: Here we should just get a reference to the whole mask, then apply DataWithMBLayoutFor() to it.
-            //       This will make it consistent with future nested looping etc.
-            shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(fr, matrixToBeMasked.GetDeviceId());
-            if (columnsValidityMask != nullptr)
-            {
-                auto matrixSliceToMask = DataWithMBLayoutFor(matrixToBeMasked, fr, pMBLayout);
-                foundLabelOrFeatureMissing = true;
-                matrixSliceToMask.MaskColumnsValue(*columnsValidityMask, val);
-            }
+            const auto & maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
+            auto maskSlice          = DataWithMBLayoutFor(maskMatrix,   fr, pMBLayout);
+            auto matrixSliceToMask  = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
+            matrixSliceToMask.MaskColumnsValue(maskSlice, val);
         }
-
-        return foundLabelOrFeatureMissing;
     }
 
 }}}

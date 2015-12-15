@@ -739,6 +739,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LSTM"; }
+
+        // BUGBUG: These flags no longer exist outside. I moved this here to make it compile, but this node is no longer functional.
+        enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
+        {
+            None = 0,
+            SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+            SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+            NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+            NoLabel = 1 << 3,               // binary 1000  frame has no label
+
+            NoInput = NoFeature | NoLabel,  // Note: Once we refactorized the reader, NoInput will no longer needed.
+            SequenceStartOrNoFeature = SequenceStart | NoFeature,
+            SequenceEndOrNoFeature = SequenceEnd | NoFeature,
+            SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
+        };
     public:
         DeclareConstructorFromConfigWithNumInputs(LSTMNode);
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name),
@@ -861,7 +876,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
-                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, GetNumParallelSequences(), &m_pMBLayout->GetM());
+                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, GetNumParallelSequences(), nullptr/*&m_pMBLayout->GetM()*//*BUGBUG: no longer functional*/);
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -873,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, Value(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, Value(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, nullptr/*&m_pMBLayout->GetM()*//*BUGBUG: no longer functional*/);
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -902,7 +917,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     );
                     DataFor(grdToObs, fr).SetValue(grdToObsSlice);
 
-                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), &m_pMBLayout->GetM());
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), nullptr/*&m_pMBLayout->GetM()*//*BUGBUG: no longer functional*/);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Input(4)->Value().ColumnSlice(0, 1).FrobeniusNorm());
@@ -1154,12 +1169,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (streamid >= GetNumParallelSequences())
                 LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", (int)streamid, (int)GetNumParallelSequences());
 
-            size_t nT = Input(0)->GetNumCols();
-            if (t >= nT)
-                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
-
-            int utt_t = (int)t / GetNumParallelSequences();
-            auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
+            Matrix<float> thisCol; // BUGBUG: These flags no longer exist. This code is no longer functional.
+            //size_t nT = Input(0)->GetNumCols();
+            //if (t >= nT)
+            //    LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", (int)t, (int)nT);
+            //int utt_t = (int)t / GetNumParallelSequences();
+            //auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
             thisCol.Reshape(1, GetNumParallelSequences());
             return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
         }
@@ -1242,7 +1257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType> sliceTanhState = DataFor(tanhState, fr);
                     Matrix<ElemType> sliceTanhInput = DataFor(tanhObs, fr);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, Value(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, Value(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, nullptr/*&m_pMBLayout->GetM()*//*BUGBUG: no longer functional*/);
 
                     ForwardPropS(Input(1)->Value(), Input(2)->Value(), Input(3)->Value(), Input(4)->Value(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
