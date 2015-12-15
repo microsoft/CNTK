@@ -14,7 +14,10 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
         // Fixture specific to the AN4 data
         struct AN4ReaderFixture : ReaderFixture
         {
-            AN4ReaderFixture() : ReaderFixture("%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/AN4Corpus/v0")
+            AN4ReaderFixture() : ReaderFixture(
+                "%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/AN4Corpus/v0",
+                "This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location. \n Refer to the 'Setting up CNTK on Windows' documentation.)"
+                )
             {}
         };
 
