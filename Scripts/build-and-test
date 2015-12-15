@@ -134,7 +134,7 @@ CONF_FILE="$OUTPUT_DIR/Simple.conf"
 BUILD_FILE="$OUTPUT_DIR/Build"
 RUN_FILE="$OUTPUT_DIR/Result"
 
-if ! [[ -d "$CNTK_ROOT/MachineLearning" ]]; then
+if ! [[ -d "$CNTK_ROOT/Source" ]]; then
     echo "============ ERROR: Build script located in the wrong directory ($SCRIPT_DIR) ============"
     exit 1
 fi
