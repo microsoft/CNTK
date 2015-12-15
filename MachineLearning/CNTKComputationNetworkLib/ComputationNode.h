@@ -246,7 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId(deviceId), m_outputNeededDuringBackprop(true),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name),
-            m_numRows(0), m_numCols(0)
+            m_numRows(0), m_numCols(0), m_valueSharable(true)
         { }
         virtual ~ComputationNodeBase(){}
 
@@ -428,6 +428,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
+        bool isValueSharable() 
+        {
+            return m_valueSharable; 
+        }
+        virtual void MarkValueNonSharable()
+        {
+            m_valueSharable = false; 
+        }
     protected:
     public:     // ...the following should be protected, but nodes inquire about their children, requiring public access
 
@@ -760,6 +768,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
         bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
         bool m_outputNeededDuringBackprop;  // indicates whether the output value of the node is needed during backprop
+
+        // flags related with sharable values 
+        bool    m_valueSharable; // whether value is sharable 
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -807,7 +818,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Since the dimensions are read as well, this function also updates m_numRows/m_numCols.
         void LoadValue(File& fstream)
         {
-            CreateMatrixIfNull(m_value);
+            // CreateMatrixIfNull(m_value);
+            MarkValueNonSharable(); 
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
             m_numRows = Value().GetNumRows();
@@ -1292,6 +1304,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             CreateMatrixIfNull(m_gradient);
         }
+
+        void MarkValueNonSharable() override
+        {
+            m_valueSharable = false; 
+            CreateMatrixIfNull(m_value);
+        }
+
 
     protected:
 
