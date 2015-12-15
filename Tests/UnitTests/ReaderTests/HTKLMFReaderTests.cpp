@@ -18,15 +18,6 @@ namespace Microsoft {  namespace MSR  {  namespace CNTK
             {}
         };
 
-        // Fixture specific for the TIMIT data
-        struct TIMITReaderFixture : ReaderFixture
-        {
-            TIMITReaderFixture() : ReaderFixture("%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/Speech/ASR")
-            {
-                m_maxMiniBatchCount = 4;
-            }
-        };
-
         // Use SpeechReaderFixture for most tests
         // Some of them (e.g. 10, will use different data, thus a different fixture)
         BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, AN4ReaderFixture)
