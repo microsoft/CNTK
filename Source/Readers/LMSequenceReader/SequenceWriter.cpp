@@ -4,10 +4,10 @@
 // </copyright>
 //
 
-//
-
 #include "stdafx.h"
+#ifdef _WIN32
 #include <objbase.h>
+#endif
 #include "Basics.h"
 #include <fstream>
 #include <algorithm>

@@ -13,21 +13,6 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    void DATAWRITER_API GetWriter(IDataWriter<ElemType>** pwriter)
-    {
-        *pwriter = new LMSequenceWriter<ElemType>();
-    }
-
-    extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter)
-    {
-        GetWriter(pwriter);
-    }
-    extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
-    {
-        GetWriter(pwriter);
-    }
-
-    template<class ElemType>
     class LMSequenceWriter : public IDataWriter<ElemType>
     {
     private:
@@ -65,8 +50,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
+        using LabelType = typename IDataWriter<ElemType>::LabelType;
+        using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
         void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/){}
-        void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/){}
+        void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& /*labelMapping*/){}
 
     public:
         template<class ConfigRecordType>
@@ -76,5 +63,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Destroy();
         virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
     };
+
+    template<class ElemType>
+    void DATAWRITER_API GetWriter(IDataWriter<ElemType>** pwriter)
+    {
+        assert(pwriter != nullptr);
+        *pwriter = new LMSequenceWriter<ElemType>();
+        assert(*pwriter != nullptr);
+    }
+
+    extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter)
+    {
+        GetWriter(pwriter);
+    }
+    extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
+    {
+        GetWriter(pwriter);
+    }
 
 }}}
