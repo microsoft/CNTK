@@ -413,6 +413,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & node : m_allRoots)
             ValidateSubNetwork(node);
 
+        // STEP:  mark non-sharable function values 
+        // if all the descendants of a particular node are learnable parameters, 
+        // its function value is not sharable 
+        for (auto & node : m_allRoots)
+            MarkValueNonSharableNodes(node);
+       
+
         // STEP: Optimize the network.
         // :)
 
@@ -676,6 +683,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!valid)
                 todo++;
         }
+    }
+
+    // mark nodes that are purely induced by parameters as non-sharable and create space for value if null 
+    void ComputationNetwork::MarkValueNonSharableNodes(const ComputationNodeBasePtr& rootNode)
+    {
+        const auto & nodes = GetEvalOrder(rootNode);
+        for (auto& node : nodes)
+        {
+            auto children = node->GetInputs(); 
+            bool allChildrenNonSharable = true; 
+            for (auto& child : children)
+            {
+                if (child->isValueSharable())
+                {
+                    allChildrenNonSharable = false; 
+                    break;
+                }
+            }
+            if (allChildrenNonSharable)
+                node->MarkValueNonSharable(); 
+        }
+        
     }
 
 #if 0

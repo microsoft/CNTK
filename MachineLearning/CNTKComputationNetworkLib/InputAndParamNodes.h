@@ -48,7 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = true;
             m_sampleLayout = ImageLayoutWHC(1, rows, 1);
             // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
-            CreateMatrixIfNull(m_value);
+            //CreateMatrixIfNull(m_value); 
+            MarkValueNonSharable();
             SetDims(rows, cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
             Value().SetValue(0);
@@ -235,7 +236,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
-            CreateMatrixIfNull(m_value);
+            //CreateMatrixIfNull(m_value);
+            MarkValueNonSharable();
             if (isSparse)
                 ConvertToSparseMatrix();
 

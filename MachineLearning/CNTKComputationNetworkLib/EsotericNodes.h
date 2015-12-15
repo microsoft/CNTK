@@ -653,7 +653,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Init(size_t row_size, size_t col_size)
         {
-            CreateMatrixIfNull(m_value);
+            // CreateMatrixIfNull(m_value);
+            MarkValueNonSharable();
             SetDims(row_size, col_size);
             UpdateFunctionValuesSize();
         }
@@ -663,7 +664,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             Init(row_size, col_size);
-            CreateMatrixIfNull(m_gradient);
+            //CreateMatrixIfNull(m_gradient);
+            MarkValueNonSharable();
             m_gradient->Resize(row_size, col_size);
             m_gradient->SetValue(0.0f);
         }

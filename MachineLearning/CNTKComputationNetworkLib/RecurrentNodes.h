@@ -90,7 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
-            CreateMatrixIfNull(m_value);
+            // CreateMatrixIfNull(m_value);
+            MarkValueNonSharable();
             SetDims(row_size, col_size);
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
