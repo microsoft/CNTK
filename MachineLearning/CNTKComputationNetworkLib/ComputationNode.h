@@ -7,6 +7,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "TensorView.h"
 #include "ScriptableObjects.h"
 #include "Sequences.h"
 #include "DataTensor.h"

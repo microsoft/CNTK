@@ -31,6 +31,9 @@
       <Filter>GPU\1bitSGD</Filter>
     </ClCompile>
     <ClCompile Include="ConvolutionEngine.cpp" />
+    <ClCompile Include="TensorView.cpp">
+      <Filter>Tensors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -64,6 +67,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="ConvolutionEngine.h" />
+    <ClInclude Include="TensorView.h">
+      <Filter>Tensors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -98,6 +104,9 @@
     </Filter>
     <Filter Include="CPU\1bitSGD">
       <UniqueIdentifier>{af1f6489-f531-4338-a4c5-ebe52b884e5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tensors">
+      <UniqueIdentifier>{70fb07cf-603e-4444-bc10-f0add4920fd2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
