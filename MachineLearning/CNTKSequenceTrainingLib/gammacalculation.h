@@ -48,9 +48,16 @@ namespace msra { namespace lattices {
         }
             
             
-        void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<shared_ptr<const msra::dbn::latticepair>> &lattices, const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
-            Microsoft::MSR::CNTK::Matrix<ElemType>&  labels, Microsoft::MSR::CNTK::Matrix<ElemType>& gammafromlattice, std::vector<size_t> &uids, std::vector<size_t> &boundaries,
-            size_t samplesInRecurrentStep, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, std::vector<size_t> &extrauttmap, bool doreferencealign)
+        void calgammaformb( Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, 
+                            std::vector<shared_ptr<const msra::dbn::latticepair>> &lattices, 
+                            const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
+                            Microsoft::MSR::CNTK::Matrix<ElemType>&  labels, 
+                            Microsoft::MSR::CNTK::Matrix<ElemType>& gammafromlattice, 
+                            std::vector<size_t> &uids, std::vector<size_t> &boundaries,
+                            size_t samplesInRecurrentStep, /* numParallelUtterance ? */
+                            std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
+                            std::vector<size_t> &extrauttmap, 
+                            bool doreferencealign)
         {
             //check total frame number to be added ?
             //int deviceid = loglikelihood.GetDeviceId();
@@ -62,7 +69,7 @@ namespace msra { namespace lattices {
             size_t numrows = loglikelihood.GetNumRows();
             size_t numcols = loglikelihood.GetNumCols();                
             Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(m_deviceid);
-
+                
             //copy loglikelihood to pred
             if (numcols > pred.cols())
             {
@@ -72,14 +79,14 @@ namespace msra { namespace lattices {
 
             if (doreferencealign)
                 labels.SetValue((ElemType)(0.0f));
-
+                
             size_t T = numcols / samplesInRecurrentStep;        // number of time steps in minibatch           
             if (samplesInRecurrentStep > 1)
             {
                 assert(extrauttmap.size() == lattices.size());
                 assert(T == pMBLayout->GetNumTimeSteps());
             }
-
+                
             size_t mapi = 0;                // parallel-sequence index for utterance [i]
             // cal gamma for each utterance
             size_t ts = 0;
@@ -105,7 +112,7 @@ namespace msra { namespace lattices {
                 {
                     // get number of frames for the utterance
                     mapi = extrauttmap[i];          // parallel-sequence index; in case of >1 utterance within this parallel sequence, this is in order of concatenation
-
+                        
                     // scan MBLayout for end of utterance
                     size_t mapframenum = SIZE_MAX;         // duration of utterance [i] as determined from MBLayout
                     for (size_t t = validframes[mapi]; t < T; t++)
