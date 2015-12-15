@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //
     // Relation to Matrix and MBLayout:
     //  - tensors are stored in Matrix objects
-    //  - both matrix row and column dimensions are interpreted as tensor dimensions
+    //  - both matrix row and column dimensions are interpreted as tensor dimensions separately
     //     - row dimension is explained by a TensorShape ComputationNode::SampleLayout
     //     - column dimensions are explained by MBLayout, which has one parallel-sequence index and one (or more) time-step dimensions, e.g. (s,t)
     //  - the total tensor shape of what is stored in the matrix is
@@ -56,15 +56,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Operations:
     //  - all elementwise operations:
     //     - dimensions are expanded as explained above for all operands
-    //     - of note: result may also have broadcasting dimensions
-    //     - elementwise 'copy' is also considered here, which allows for strided copies
+    //     - also supported is inverse broadcasting for the result
+    //        - this means that we will sum over the broadcasting dimension(s)
+    //        - intended to support gradient computation for a broadcasting input dimension
+    //        - for now, must be flattenable to a single dimension
+    //     - elementwise 'copy' is also included here, which allows for strided copies
     //  - inner product (Kronecker product+contraction) -> TimesNode
-    //     - implementable as SGEMM (may extend in the future)
+    //     - A[U,I,J] * B[I,J,T] -> C[A,T], c_ut = sum_ij a_uij * b_ijt
+    //     - allows output and input tensors (TimesNode will get optional parameter how many leading dims to not contract), e.g.
+    //       A[U,V,I,J] * B[I,J,S,T] -> C[U,V,S,T], c_uvst = sum_ij a_uij * b_ijt
+    //     - for now this operation must be flattenable as to be implementable as SGEMM (may extend in the future)
     //  - tensor transpose -> TransposeNode
     //     - swaps any two dimensions. This does not change the column-major definition, i.e. requires a memory copy.
     //     - special case: swapping between sample and MBLayout, e.g. turn a sample dimension to a time dimension
 
-    // TODO: must match ComputationNode::m_numRows; or, rather, the TensorShape is how m_numRows is stored??
     struct TensorShape
     {
     public:
