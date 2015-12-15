@@ -111,7 +111,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Common\Include\Config.h" />
     <ClInclude Include="Common\ReaderTestHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -160,11 +159,6 @@
     <Text Include="Control\HTKMLFReaderSimpleDataLoop4_8_14_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop6_16_17_Control.txt" />
     <Text Include="Control\HTKMLFReaderSimpleDataLoop9_19_Control.txt" />
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_0_Control.txt" />
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_1_Control.txt" />
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop22_Control.txt" />
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop7_Control.txt" />
-    <Text Include="Data\UCIFastReaderSimpleDataLoop_Control.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Mapping.txt" />
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt" />
   </ItemGroup>
