@@ -90,11 +90,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // DecimateMinibatch - decimate minibatch for parallelization
         // -------------------------------------------------------------------
-        // non-inplace decimation, to be used in subminibatch implementation 
+        // non-inplace decimation , to be used in subminibatch implementation 
+        // return [st, en) parallel sequence which has been selected after decimation 
         template<class ElemType>
-        static void DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,           // input matrices 
-                                      std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,       // output decimated matrices. 
-                                                                                                    // Caller need to release the memory themselves!!!   TODO: use shared_ptr 
+        static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,           // input matrices 
+            std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,                                 // output decimated matrices. 
                                       MBLayoutPtr pMBLayout,                                        // input MBLayout 
                                       MBLayoutPtr& pDecimateMBLayout,                               // output decimated MBLayout (note: cannot work in-place)
                                       int numWorker, int rank)
@@ -148,26 +148,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 #else
-            for (size_t t = 0; t < nT; t++) for (size_t s = 0; s < numNewParallelSequence; s++)
-                pDecimateMBLayout->Set(s, t, pMBLayout->Get(s + st, t));
+            for (size_t t = 0; t < nT; t++) for (size_t id = 0; id < numNewParallelSequence; id++)
+                pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
 #endif
+
+            return pair<size_t, size_t>(st, en);
         }
 
         // in-place decimation, for use with data-parallel processing
+       // return [st, en) parallell sequence which has been selected after decimation 
         template<class ElemType>
-        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
-                                      int numprocs, int rank,                           // rank info
-                                      MBLayoutPtr pMBLayout)                            // get decimated as well 
+        static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
+                                        int numprocs, int rank,                           // rank info
+                                        MBLayoutPtr pMBLayout)                            // get decimated as well 
         {
             if (numprocs == 1)
-                return;
+                return pair<size_t, size_t>(0, pMBLayout->GetNumParallelSequences());
             // no need to do inplace decimation if numproc == 1 
 
             // allocate space for non-inplace decimation 
             MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
             std::map<wstring, Matrix<ElemType>*> decimatedMB;
             // call in-place decimation 
-            DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+            pair<size_t, size_t> selected=DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
             // move the data 
             for (auto k : mb)
             {
@@ -177,6 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decimatedMB[name] = nullptr;
             }
             pMBLayout->MoveFrom(pDecimatedMB);
+            return selected; 
         }
 
         // ===================================================================
@@ -206,22 +210,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             typedef            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>         Lattice;
             typedef            std::vector<size_t>                                                          Uid;
             typedef            std::vector<size_t>                                                          ExtrauttMap;
+            typedef            std::vector<size_t>                                                          Boundaries; 
 
             typedef            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>*        LatticePtr;
             typedef            std::vector<size_t>*                                                         UidPtr;
             typedef            std::vector<size_t>*                                                         ExtrauttMapPtr;
+            typedef            std::vector<size_t>*                                                         BoundariesPtr;
             typedef            std::map<std::wstring, Matrix<ElemType>*>                                    Matrices;
 
             // member variables served as caching space 
             Matrices                                            m_inputMatricesCache;
             MBLayoutPtr                                         m_MBLayoutCache;
-            LatticePtr                                          m_LatticeCache;
-            UidPtr                                              m_uidCache;
-            ExtrauttMapPtr                                      m_extrauttmapCache;
+            Lattice                                             m_LatticeCache;
+            Uid                                                 m_uidCache;
+            ExtrauttMap                                         m_extrauttmapCache;
+            Boundaries                                          m_BoundariesCache;
             shared_ptr<Matrix<ElemType>>                        m_NetCriterionAccumulator;
             shared_ptr<Matrix<ElemType>>                        m_NetEvaluationAccumulator;
             std::map<wstring, vector<shared_ptr<INodeState>>>   m_NetStates;            // m_NetStatefulNodes[node][i] caches the state of i-th subminibatch of node
-
+            bool                                                m_hasLattices; 
 
             Matrices                                            m_CachedGraident;
             // we also need to remember where to put into the net
@@ -232,6 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LatticePtr                                          m_NetLatticePtr;
             UidPtr                                              m_NetUidPtr;
             ExtrauttMapPtr                                      m_NetExtrauttMapPtr;
+            BoundariesPtr                                       m_NetBoundariesPtr;
             // we remember the pointer to the learnable Nodes so that we can accumulate the gradient once a sub-minibatch is done 
 
 
@@ -277,7 +285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         public:
             SubminibatchDispatcher() :
-                m_MBLayoutCache(nullptr), m_LatticeCache(nullptr), m_uidCache(nullptr), m_extrauttmapCache(nullptr)
+                m_MBLayoutCache(nullptr), m_NetLatticePtr(nullptr), m_NetExtrauttMapPtr(nullptr), m_NetUidPtr(nullptr), m_NetBoundariesPtr(nullptr)
             { }
 
             void Init(ComputationNetworkPtr & net,
@@ -313,14 +321,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     wstring name = x.first;
                     m_NetStates[name] = vector<shared_ptr<INodeState>>();
                 }
+
+                // for sequence training 
+                if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+                {
+                    auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+                    assert(node);
+                    m_NetLatticePtr = node->getLatticePtr(); 
+                    m_NetExtrauttMapPtr = node->getextrauttmap(); 
+                    m_NetUidPtr = node->getuidprt();
+                    m_NetBoundariesPtr = node->getboundaryprt(); 
+                    m_hasLattices = true; 
+                }
+                else
+                {
+                    m_NetLatticePtr = nullptr; 
+                    m_NetExtrauttMapPtr = nullptr; 
+                    m_NetUidPtr = nullptr; 
+                    m_NetBoundariesPtr = nullptr; 
+                    m_hasLattices = false; 
+                }
             }
 
             ~SubminibatchDispatcher()
             {
                 // TODO: remove these by using shared_ptr 
-                delete m_LatticeCache;
-                delete m_uidCache;
-                delete m_extrauttmapCache;
+
 
                 for (auto x : m_inputMatricesCache)
                 {
@@ -361,11 +387,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_MBLayoutCache->CopyFrom(net.GetMBLayoutPtr());
                 size_t nParallelSequences = m_MBLayoutCache->GetNumParallelSequences();
 
-                if (m_NetCriterionNodes[0] != nullptr && (m_NetCriterionNodes[0]->OperationName() == L"SequenceWithSoftmax"))
+
+                // 3. for bits in seq. training 
+                if (m_hasLattices)
                 {
-                    // auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNode);
-                    NOT_IMPLEMENTED;
-                    // TODO: implement this for Sequence training !!!
+                    m_LatticeCache.clear(); 
+                    m_uidCache.clear(); 
+                    m_extrauttmapCache.clear(); 
+                    m_BoundariesCache.clear();
+
+                    m_LatticeCache = *m_NetLatticePtr; 
+                    m_uidCache = *m_NetUidPtr; 
+                    m_extrauttmapCache = *m_NetExtrauttMapPtr; 
+                    m_BoundariesCache = *m_NetBoundariesPtr; 
                 }
 
                 // subminibatches are cutted at the parallel sequence level; 
@@ -373,7 +407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // we cannot split further; instead, each subsequence become a subminibatch 
                 size_t actualnumSubminibatches = requestedSubminibatches > nParallelSequences ? nParallelSequences : requestedSubminibatches;
 
-                // 3. third, allocate space for accumulated gradient 
+                // 4. third, allocate space for accumulated gradient 
                 for (auto& n : m_LearnableNodePtr)
                 {
                     auto node = n.second;
@@ -392,7 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                 }
-                // 4. for stateful node 
+                // 5. for stateful node 
                 for (auto x : m_NetStatefulNodes)
                 {
                     wstring name = x.first;
@@ -406,12 +440,62 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return (m_numSubminibatches = actualnumSubminibatches);
             }
 
+
+            void DecimateLattices(
+                LatticePtr decimatedLattices,          /* output: lattices after decimation*/
+                BoundariesPtr decimatedBoundaryPtr,    /* output: boundary after decimation*/
+                ExtrauttMapPtr decimatedExtraMapPtr,   /* output: extramap after decimation*/
+                UidPtr decimatedUidPtr,                /* output: Uid after decimation*/
+                const Lattice       lattices,          /* input: lattices to be decimated */
+                const Boundaries    boundaries,        /* input: boundary to be decimated */
+                const ExtrauttMap   extraMaps,         /* input: extra map to be decimated */
+                const Uid           uids,              /* input: uid to be decimated*/
+                pair<size_t, size_t> parallelSeqRange  /* input: what parallel sequence range we are looking at */
+                )
+            {
+                size_t parallelSeqStId = parallelSeqRange.first; 
+                size_t parallelSeqEnId = parallelSeqRange.second; 
+
+                decimatedLattices->clear();
+                decimatedBoundaryPtr->clear(); 
+                decimatedExtraMapPtr->clear(); 
+                decimatedUidPtr->clear();
+
+                size_t stFrame = 0; 
+                for (size_t iUtt = 0; iUtt < extraMaps.size(); iUtt++)
+                {
+                    size_t numFramesInThisUtterance = lattices[iUtt]->getnumframes();
+                    size_t iParallelSeq = extraMaps[iUtt];  // i-th utterance belongs to iParallelSeq-th parallel sequence 
+                    if (iParallelSeq >= parallelSeqStId && iParallelSeq < parallelSeqEnId)
+                    {
+                        // this utterance has been selected 
+                        decimatedLattices->push_back(lattices[iUtt]);
+                        decimatedBoundaryPtr->insert(decimatedBoundaryPtr->end(), boundaries.begin()+stFrame, boundaries.begin() + stFrame + numFramesInThisUtterance);
+                        decimatedUidPtr->insert(decimatedUidPtr->end(), uids.begin() + stFrame, uids.begin() + stFrame + numFramesInThisUtterance); 
+                        decimatedExtraMapPtr->push_back(extraMaps[iUtt] - parallelSeqStId);
+                    }
+                    stFrame += numFramesInThisUtterance; 
+                }
+            }
+
             void GetSubMinibatchToNet(size_t iSubminibatch)
             {
                 Matrices decimatedMatrices;
                 MBLayoutPtr decimatedLayout;
-                DataReaderHelpers::DecimateMinibatch(m_inputMatricesCache, decimatedMatrices, m_MBLayoutCache, decimatedLayout, m_numSubminibatches, iSubminibatch);
-                //  NOTE: decimatedMatrices must be released by caller
+                pair<size_t, size_t> seqRange = DataReaderHelpers::DecimateMinibatch(m_inputMatricesCache, decimatedMatrices, m_MBLayoutCache, decimatedLayout, m_numSubminibatches, iSubminibatch);
+                //  NOTE: deimatedMatrices must be released by caller
+
+                // base on the seqRange, we do the decimation for lattices and related variables 
+                if (m_hasLattices){
+                    DecimateLattices(
+                        /*output */ 
+                                    m_NetLatticePtr, m_NetBoundariesPtr, m_NetExtrauttMapPtr, m_NetUidPtr, 
+                        /*input to be decimated */
+                                    m_LatticeCache , m_BoundariesCache,  m_extrauttmapCache,  m_uidCache, 
+                        /* what range we want ? */
+                                    seqRange
+                        );
+                }
 
                 //m_NetInputMatrixPtr = decimatedMatrices;
                 for (auto& x : decimatedMatrices)
