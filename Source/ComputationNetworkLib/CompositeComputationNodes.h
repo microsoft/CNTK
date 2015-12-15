@@ -234,7 +234,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MarkComputed(const bool hasComputed)
         {
             m_hasComputed = hasComputed;
-            CreateMatrixIfNull(m_value);
+            // CreateMatrixIfNull(m_value);
+            MarkValueNonSharable();
         }
 
         virtual bool RequiresPreCompute() const override { return true; }
@@ -293,7 +294,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
         virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
         {
-            CreateMatrixIfNull(m_value);
+            //CreateMatrixIfNull(m_value);
+            MarkValueNonSharable();
             m_value->SetValue(value);
             m_hasComputed = true; 
         }
