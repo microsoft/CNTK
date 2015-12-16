@@ -8,9 +8,9 @@
 #include <memory>
 #include <io.h>
 
-#include "../../../Math/Math/MatrixQuantizer.h"
-#include "../../../Math/Math/CUDAPageLockedMemAllocator.h"
-#include "../../../Math/Math/ValueQuantizer.h"
+#include "../../../Source/Math/MatrixQuantizer.h"
+#include "../../../Source/Math/CUDAPageLockedMemAllocator.h"
+#include "../../../Source/Math/ValueQuantizer.h"
 
 using namespace Microsoft::MSR::CNTK;
 

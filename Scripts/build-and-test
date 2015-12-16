@@ -134,7 +134,7 @@ CONF_FILE="$OUTPUT_DIR/Simple.conf"
 BUILD_FILE="$OUTPUT_DIR/Build"
 RUN_FILE="$OUTPUT_DIR/Result"
 
-if ! [[ -d "$CNTK_ROOT/MachineLearning" ]]; then
+if ! [[ -d "$CNTK_ROOT/Source" ]]; then
     echo "============ ERROR: Build script located in the wrong directory ($SCRIPT_DIR) ============"
     exit 1
 fi
@@ -256,7 +256,7 @@ if [[ $RUN == 1 ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
                 time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
             else
-                time $BIN_PATH configFile=$CONF_FILE &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile=$CONF_FILE OutputDir="$OUTPUT_DIR" &>$OUT_FILE || exit $?
             fi
             chmod a+r $RUN_FILE.*
 
