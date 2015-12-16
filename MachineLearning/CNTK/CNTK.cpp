@@ -344,6 +344,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return TrainingCriterion::SquareError;
         else if (!_wcsicmp(s.c_str(), L"logistic"))
             return TrainingCriterion::Logistic;
+        else if (!_wcsicmp(s.c_str(), L"crf"))
+            return TrainingCriterion::CRF;
         else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode"/*spelling error, deprecated*/))
             return TrainingCriterion::NCECrossEntropyWithSoftmax;
         else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)

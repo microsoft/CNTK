@@ -273,6 +273,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             // BUGBUG: Not resizing FunctionValues?
 
+                if ((Input(1)->GetNumRows() == Input(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
+                    Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Input(2)->GetNumCols() == Input(2)->GetNumRows()))
+                {
+                    SetDims(Input(0)->GetNumRows(), Input(0)->GetNumCols());
+                }
+                else
+                {
+                    LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
+                }
+
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }

@@ -1238,7 +1238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
         {
             ULONG randomSeed = 1;
-
+			bool hasauxfeat = m_gprnnAuxFeatDim > 0;
             size_t numHiddenLayers = m_layerSizes.size() - 2;
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
@@ -1251,10 +1251,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr directWIO, directInput, directOutput;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
             ComputationNodePtr trans;
+			ComputationNodePtr auxfeat = nullptr;
 
             input = builder.CreateInputNode(L"features", m_layerSizes[0], mbSize);
             m_net->FeatureNodes().push_back(input);
 
+			if (hasauxfeat)
+			{
+                auxfeat = builder.CreateInputNode(L"auxfeatures", m_gprnnAuxFeatDim, mbSize);
+                m_net->FeatureNodes().push_back(auxfeat);
+			}
             if (m_applyMeanVarNorm)
             {
                 w = builder.Mean(input);
@@ -1275,6 +1281,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     input = output;
 
+				// row stack features
+				if (hasauxfeat)
+				{
+					std::vector<ComputationNodePtr> nodes;
+					nodes.push_back(input);
+					nodes.push_back(auxfeat);
+					input = builder.RowStack(nodes, L"CombineFeat");
+				}
+
                 outputFromEachLayer[1] = input;
             }
 
@@ -1288,7 +1303,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
                     {
-                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i] * (offset ? m_lookupTableOrder : 1), m_layerSizes[i + 1], input);
+						size_t inputDim = m_layerSizes[i] * (offset ? m_lookupTableOrder : 1);
+						if (hasauxfeat && (i == offset))
+						{
+                            inputDim += m_gprnnAuxFeatDim;
+						}
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, inputDim, m_layerSizes[i + 1], input);
                         input = output;
  
                         recur_idx++;
@@ -1308,7 +1328,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TimesBeforeSoftMax%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
+			if (hasauxfeat && m_gprnnDirectConnect)
+			{
+				std::vector<ComputationNodePtr> combined;
+				combined.push_back(input);
+				combined.push_back(auxfeat);
+                input = builder.RowStack(combined, L"directconnect");
+			}
+
+            w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TimesBeforeSoftMax%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]+m_gprnnAuxFeatDim);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
             output = builder.Times(w, input, L"outputsBeforeSoftmax");

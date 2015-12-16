@@ -1027,7 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
             for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
             {
-                FrameRange sequenceRange = fr.Sequence(i);    // FrameRange to select one sequence
+                FrameRange sequenceRange = fr.Sequence(SIZE_MAX);    // FrameRange to select one sequence
                 // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
                 ForwardPropS(
                     DataWithMBLayoutFor(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
@@ -1057,18 +1057,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 2)
             {
-                assert(Input(inputIndex)->GradientFor(fr).GetNumElements() > 0);
+                // assert(Input(inputIndex)->GradientFor(fr).GetNumElements() > 0);
+                // crf node currently only support one sequence, don't care any other details, just make it work.
                 size_t nS = Input(0)->GetNumParallelSequences();
+                if (nS != 1)
+                {
+                    LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
+                }
                 for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
-                    FrameRange sequenceRange = fr.Sequence(i);    // FrameRange to select one sequence
-                    auto gradient = Input(2)->GradientFor(fr);
+                    FrameRange sequenceRange = fr.Sequence(SIZE_MAX);    // FrameRange to select one sequence
+                    /* auto gradient = Input(2)->GradientFor(fr);
                     TransGrdCompute(Input(0)->ValueFor(sequenceRange),
-                                    DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
-                                    DataWithMBLayoutFor(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
-                                    Input(2)->ValueFor(fr),
-                                    gradient,
-                        mStartLbl, 1);
+                    DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
+                    DataWithMBLayoutFor(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
+                    Input(2)->ValueFor(fr),
+                    gradient,
+                    mStartLbl, 1);
+                    */
+                    auto gradient = Input(2)->Gradient();
+                    TransGrdCompute(Input(0)->Value(),
+                        mAlpha,
+                        mBeta,
+                        Input(2)->Value(), gradient, mStartLbl, 1);
                 }
             }
             else

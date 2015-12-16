@@ -235,6 +235,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nbrCls = (int)config("nbrClass", "-1");
             nce_noises = (int)config("noise_number", "-1");//nce noise
 
+            m_gprnnAuxFeatDim = (size_t)config("gprnnAuxfeatdim", "0");
+            m_gprnnDirectConnect = (bool)config("gprnnDirectconnect", "false");
+
             Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
                 nonlinearFunctions, addDropoutNodes,
                 uniformInit, initValueScale, applyMeanVarNorm, needPrior, deviceId);
@@ -401,6 +404,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for attention network development
         */
         size_t m_auxFeatDim;
+
+        /**
+        for gprnn auxiliary feature
+        */
+        size_t m_gprnnAuxFeatDim;
+        bool m_gprnnDirectConnect;
     };
 
 }}}
