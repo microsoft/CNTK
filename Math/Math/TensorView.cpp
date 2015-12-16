@@ -9,6 +9,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#include "stdafx.h"
 #include "Basics.h"
 #include "TensorView.h"
 #include <array>
@@ -60,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         TensorView & c = *this;
 
-        // TODO: an int matrix type would come in handy now... We can also use a vector<vector>.
+        // TODO: Turn the inner meat here into a function template using a std::array<., N-nariness>. Nullary ops are generators, e.g. constants.
 
         // massage TensorShapes
         // Note that TensorShapes here may be shapes are stored or shapes with stride magic applied.
