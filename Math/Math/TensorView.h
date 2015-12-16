@@ -26,12 +26,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // construction
         // -------------------------------------------------------------------
 
-        // cast a matrix as a TensorView (without shape change)
-        TensorView(const Matrix<ElemType> & sob);
+        // cast a matrix storage object (SOB) as a TensorView (without shape change)
+        TensorView(Matrix<ElemType> & sob);
         // reshape a TensorView
         TensorView(const TensorView<ElemType> & sob, const TensorShape & shape);
-        // reinterpret a Matrix as a TensorView with reshaping
-        TensorView(const Matrix<ElemType> & sob, const TensorShape & shape) :
+        // reinterpret a SOB as a TensorView with a given TensorShape
+        TensorView(Matrix<ElemType> & sob, const TensorShape & shape) :
             TensorView(TensorView(sob)/*cast as a TensorView*/, shape/*with a shape*/)
         { }
         // copy constructor
@@ -43,19 +43,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void operator=(const TensorView & other) = delete;  // since we have a reference
 
         // -------------------------------------------------------------------
-        // operations
+        // accessors
         // -------------------------------------------------------------------
+
+        const Matrix<ElemType> & GetSOB() const { return m_sob; }
+        const std::vector<size_t> & GetDims() const { return m_shape.GetDims(); }
+
+        // -------------------------------------------------------------------
+        // elementwise operations
+        // Result goes into 'this'.
+        // E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b).
+        //  and c.DoDiffOf(0, c, a, 1) means c -= a.
+        // All operators support elementwise in-place operations, i.e. a, b, and c
+        // may all reference the same underlying SOB.
+        // If beta == 0, c is not read out.
+        // -------------------------------------------------------------------
+
+        void DoSumOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, 0); }
 
         static void Test();
 
     private:
 
+        void DoBinaryOpOf(const TensorView & a, const TensorView & b, TensorView & c, int op/*will become an enum later*/);
+
         // -------------------------------------------------------------------
         // sob members
         // -------------------------------------------------------------------
 
-        const Matrix<ElemType> & m_sob; // Storage OBject that holds the data that is being viewed with this TensorView
+        Matrix<ElemType> & m_sob; // Storage OBject that holds the data that is being viewed with this TensorView
         TensorShape m_shape;            // the meta-data that describes the data's shape and/or access pattern
+        // TODO: use a reference here or not? With a reference, we can hide more info in here such as cuDNN handles
     };
 
 }}}
