@@ -8,6 +8,7 @@ CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
+TESTTARGETS="cpu:gpu"
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -21,10 +22,11 @@ case $key in
     echo "  -q|--quiet-build - redirect build output to file"
     echo "  -r|--run-only - elides build step, runs the binaries that have already been built"
     echo "  -b|--build-only - just build, do not run"
-    echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
-    echo "  -t|--targets <target1:target2...> - which target to run (by default $TARGETS)"
-    echo "                                      On Windows CPU-only builds currently are not performed"
+    echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build (by default $FLAVORS)"
+    echo "  -t|--targets <target1:target2...> - which target to build (by default $TARGETS)"
+    echo "  -tt|--test-targets <testtarget1:testtarget2...> - which target to test (by default $TESTTARGETS)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
+    echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
     echo "The root directory used to build and run CNTK is hosts the Scripts directory that contains this script"
@@ -48,12 +50,20 @@ case $key in
     CLEAN_BEFORE=1
     BUILD=1
     ;;
+    -cba|--clean-build-after)
+    CLEAN_AFTER=1
+    BUILD=1
+    ;;
     -f|--flavors)
     FLAVORS="${2,,}"
     shift # past argument
     ;;
     -t|--targets)
     TARGETS="${2,,}"
+    shift # past argument
+    ;;
+    -tt|--test-targets)
+    TESTTARGETS="${2,,}"
     shift # past argument
     ;;
     -o|--output-directory)
@@ -96,6 +106,12 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
         echo "============ ACML libraries are needed to successfully build CNTK ============"
         exit 1
     fi
+
+    if [[ "${TARGETS,,}" =~ "1bitsgd" && "${TARGETS,,}" =~ "gpu" ]]; then
+        echo "============ Cannot specify both GPU and 1bit-SGD as targets, please choose one ============"
+        exit 1
+    fi
+
 elif [[ $OSTYPE == "linux-gnu" ]]; then
     DEBUG_DIR=build/$TARGET/debug
     RELEASE_DIR=build/$TARGET/release
@@ -130,7 +146,7 @@ fi
 echo "============ Creating CNTK temp directory in $OUTPUT_DIR ============"
 mkdir -p $OUTPUT_DIR || exit $?
 
-CONF_FILE="$OUTPUT_DIR/Simple.conf"
+CONF_FILE="$OUTPUT_DIR/Simple.cntk"
 BUILD_FILE="$OUTPUT_DIR/Build"
 RUN_FILE="$OUTPUT_DIR/Result"
 
@@ -156,6 +172,7 @@ fi
 # Initialize lists of flavors and targets
 flavorArray=(${FLAVORS//:/ })
 targetArray=(${TARGETS//:/ })
+testTargetArray=(${TESTTARGETS//:/ })
 
 # Step 2 -- Build the project for all requested flavors and targets
 if [[ $BUILD == 1 ]]; then
@@ -163,12 +180,7 @@ if [[ $BUILD == 1 ]]; then
     do
         for TARGET in "${targetArray[@]}"
         do
-           echo "============ Building CNTK $TARGET/$FLAVOR (clean=$CLEAN_BEFORE)  ============"
-
-           if [[ $OS == "Windows_NT" && $TARGET == "cpu" ]]; then
-               echo "============ WARNING: skipping - target 'cpu' is not yet supported on Windows ============"
-               continue
-           fi
+            echo "============ Building CNTK $TARGET/$FLAVOR (clean=$CLEAN_BEFORE)  ============"
 
             # Our make is too noisy right now and it is difficult to spot
             # issues from stdout and stderr. In the quiet mode these are
@@ -182,14 +194,20 @@ if [[ $BUILD == 1 ]]; then
             fi
 
             if [[ $OS == "Windows_NT" ]]; then
-                if [[ $CLEAN_BEFORE == 1 ]]; then
-                    msbuild.exe /property:Configuration=$FLAVOR /t:Clean 1>&6 2>&7 || exit $?
-                fi
-                if [[ $TARGET == "1bitsgd" ]]; then
-                    msbuild.exe /property:Configuration=$FLAVOR /property:CNTK_ENABLE_1BitSGD=true /m 1>&6 2>&7 || exit $?
+                OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=
+                if [[ $TARGET == "cpu" ]]; then
+                    CONFIGURATION=${FLAVOR}_CpuOnly
                 else
-                    msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
+                    CONFIGURATION=${FLAVOR}
+                    if [[ $TARGET == "1bitsgd" ]]; then
+                        OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=true
+                    fi
                 fi
+
+                if [[ $CLEAN_BEFORE == 1 ]]; then
+                    msbuild.exe /nologo /verbosity:m /property:Configuration=$CONFIGURATION /t:Clean 1>&6 2>&7 || exit $?
+                fi
+                msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION $OneBitSGDOPT 1>&6 2>&7 || exit $?
             else
                 OneBitSGDOPT=no
                 BUILD_DIR=build/$TARGET/$FLAVOR
@@ -222,83 +240,99 @@ if [[ $RUN == 1 ]]; then
     echo "============ cp Examples/Other/Simple2d/Config/Simple.cntk $CONF_FILE  ============"
     echo "============ cd $CNTK_ROOT/Examples/Other/Simple2d/Data  ============"
 
-    for TARGET in "${targetArray[@]}"
+    for FLAVOR in "${flavorArray[@]}"
     do
-        TARGET_DEVICE=
-        # These sed scripts are simply toggling DeviceNumber argument in the config file
-        # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
-        if [[ $TARGET == cpu ]]; then
-            TARGET_DEVICE=CPU
-            sed -i -e 's/^deviceId.*/deviceId=-1/g' $CONF_FILE || exit $?
-        else
-            TARGET_DEVICE=GPU
-            sed -i -e 's/^deviceId.*/deviceId=Auto/g' $CONF_FILE || exit $?
-        fi
-
-        for FLAVOR in "${flavorArray[@]}"
+        for TARGET in "${targetArray[@]}"
         do
-            if [[ $FLAVOR == "debug" ]]; then
-                FLAVOR_DIR="$DEBUG_DIR"
-            else
-                FLAVOR_DIR="$RELEASE_DIR"
-            fi
-            OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.out"
+            for TESTTARGET in "${testTargetArray[@]}"
+            do
+                # Determine how to set the deviceId parameter in the configuration.
+                # 0 will pick the first GPU (or fail. -1 will pick the CPU.
+                if [[ $TESTTARGET == gpu ]]; then
+                    DEVICE_ID=0
+                else
+                    DEVICE_ID=-1
+                fi
 
-            BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME 
-            if ! [[ -f $BIN_PATH ]]; then
-                echo "============ ERROR: CNTK did not build properly for flavor ($FLAVOR)  ============"
-                echo "Missing file: $BIN_PATH"
-                exit 1
-            fi
+                if [[ $TESTTARGET == gpu && $TARGET == cpu ]]; then
+                    # CPU-only builds cannot run GPU test targets
+                    continue;
+                fi
 
-            if [[ $OS == "Windows_NT" ]]; then
-                echo "============ Running $BIN_PATH configFile=`cygpath -w $CONF_FILE` for ($FLAVOR) ($TARGET) ============"
-            else
-                echo "============ Running $BIN_PATH configFile=$CONF_FILE for ($FLAVOR) ($TARGET) ============"
-            fi
-            echo "============ output in ($OUT_FILE) ============"
-            cd $CNTK_ROOT/Examples/Other/Simple2d/Data
-            rm -rf models
-            if [[ $OS == "Windows_NT" ]]; then
-                # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
-                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
-            else
-                time $BIN_PATH configFile=$CONF_FILE OutputDir="$OUTPUT_DIR" &>$OUT_FILE || exit $?
-            fi
-            chmod a+r $RUN_FILE.*
+                if [[ $OSTYPE == "linux-gnu" ]]; then
+                    FLAVOR_DIR=build/$TARGET/$FLAVOR
+                else
+                    if [[ $FLAVOR == "debug" ]]; then
+                        FLAVOR_DIR="$DEBUG_DIR"
+                    else
+                        FLAVOR_DIR="$RELEASE_DIR"
+                    fi
+                    if [[ $TARGET == cpu ]]; then
+                        FLAVOR_DIR="${FLAVOR}_CpuOnly"
+                    fi
+                fi
+                OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.$TESTTARGET.out"
 
-            # Check if execution was successful
-            grep -q "Using ${TARGET_DEVICE^^}" "$OUT_FILE" || {
-                echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET_DEVICE) ============"
-                exit 1
-            }
+                BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME 
+                if ! [[ -f $BIN_PATH ]]; then
+                    echo "============ ERROR: CNTK did not build properly for $TARGET/$FLAVOR ============"
+                    echo "Missing file: $BIN_PATH"
+                    exit 1
+                fi
 
-            grep -q "EXCEPTION" "$OUT_FILE" && {
-                echo "============ ERROR: Run output in ($OUT_FILE) contains exceptions ============"
-                grep "EXCEPTION" "$OUT_FILE"
-                exit 1
-            }
+                if [[ $OS == "Windows_NT" ]]; then
+                    echo "============ Running $BIN_PATH configFile=`cygpath -w $CONF_FILE` for $TARGET/$FLAVOR (on $TESTTARGET) ============"
+                else
+                    echo "============ Running $BIN_PATH configFile=$CONF_FILE for $TARGET/$FLAVOR (on $TESTTARGET) ============"
+                fi
+                echo "============ output in ($OUT_FILE) ============"
+                cd $CNTK_ROOT/Examples/Other/Simple2d/Data
+                rm -rf "$OUTPUT_DIR/Models"
+                if [[ $OS == "Windows_NT" ]]; then
+                    # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
+                    time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" deviceId=$DEVICE_ID OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
+                else
+                    time $BIN_PATH configFile=$CONF_FILE deviceId=$DEVICE_ID OutputDir="$OUTPUT_DIR" &>$OUT_FILE || exit $?
+                fi
+                chmod a+r $RUN_FILE.*
+
+                # Check if execution was successful
+                grep -q "Using ${TESTTARGET^^}" "$OUT_FILE" || {
+                    echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TESTTARGET) ============"
+                    exit 1
+                }
+
+                grep -q "EXCEPTION" "$OUT_FILE" && {
+                    echo "============ ERROR: Run output in ($OUT_FILE) contains exceptions ============"
+                    grep "EXCEPTION" "$OUT_FILE"
+                    exit 1
+                }
+            done
         done
     done
 fi
 
 # Step 5 -- Optionally clean after builds and tests
 if [[ $CLEAN_AFTER == 1 ]]; then
-    rm -rf models
     cd $CNTK_ROOT
     for FLAVOR in "${flavorArray[@]}"
     do
-        echo "============ Cleaning up CNTK $FLAVOR  ============"
-        if [[ $OS == "Windows_NT" ]]; then
-            msbuild.exe /property:Configuration=$FLAVOR /t:clean 1>&6 2>&7 || exit $?
-        else
-            for TARGET in "${targetArray[@]}"
-            do
-                make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
-            done
-        fi
+        for TARGET in "${targetArray[@]}"
+        do
+            echo "============ Cleaning up CNTK $TARGET/$FLAVOR  ============"
+            if [[ $OS == "Windows_NT" ]]; then
+                if [[ $TARGET == "cpu" ]]; then
+                    CONFIGURATION=${FLAVOR}_CpuOnly
+                else
+                    CONFIGURATION=${FLAVOR}
+                fi
+                msbuild.exe /nologo /verbosity:m /property:Configuration=$CONFIGURATION /t:clean 1>&6 2>&7 || exit $?
+            else
+                make -C build/$TARGET/$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+            fi
+        done
     done
-    rm -rf $OUTPUT_DIR
+    rm -rf "$OUTPUT_DIR"
 fi
 
 echo "============ Build and test of CNTK was successful!  ============"
