@@ -87,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t k = 0; k < dims; k++)
         {
             if (!Matches(as[k], os[k]) || !Matches(bs[k], os[k]) || !Matches(cs[k], os[k]))
-                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs and output (%d vs. %d vs. %d)", (int)as[k], (int)bs[k], (int)cs[k]);
+                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs and output (%d vs. %d vs. %d)", (int)dims, (int)as[k], (int)bs[k], (int)cs[k]);
         }
 
         // flatten consecutive dimensions
