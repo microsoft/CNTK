@@ -206,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             if (valp.Is<ConfigArray>())
                 return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
             else
-                return TensorShape(std::vector<size_t>(1, valp));       // single element
+                return TensorShape(std::vector<size_t>(1, (size_t)valp));       // single element
         }
     public:
         BoxedTensorShape(const IConfigRecordPtr configp) : BoxOf<TensorShape>(TensorShapeFromConfig(*configp)) { }
