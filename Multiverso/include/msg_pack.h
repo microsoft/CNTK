@@ -35,61 +35,66 @@
 
 namespace multiverso
 {
-    class MsgPack
-    {
-    public:
-        MsgPack() : start_(0) {}
-        // Parsing a memory block (mainly from MPI) as ZMQ messages.
-        MsgPack(char *buffer, int size);
-        MsgPack(zmq::socket_t *socket);
-        ~MsgPack();
+	class MsgPack
+	{
+	public:
+		MsgPack() : start_(0) {}
+		// Parsing a memory block (mainly from MPI) as ZMQ messages.
+		MsgPack(char *buffer, int size);
+		MsgPack(zmq::socket_t *socket);
+		~MsgPack();
 
-        void Clear();
-        void Push(zmq::message_t *msg);
-        void Send(zmq::socket_t *socket);
-        void Serialize(void *buffer, long long *size);
+		void Clear();
+		void Push(zmq::message_t *msg);
+		void Send(zmq::socket_t *socket);
+		void Serialize(void *buffer, long long *size);
+		void GetSerializeSize(long long *size);
 
-        RequestType GetRequestType();
-        int GetSrcId();
-        int GetSrcRank();
-        int GetDstId();
-        int GetDstRank();
-        int GetCacheId();
-        int GetTableId();
-        int GetCount();
-        int GetMsgCount();
-        zmq::message_t *GetMsg(int idx);
+		RequestType GetRequestType();
+		int GetSrcId();
+		int GetSrcRank();
+		int GetDstId();
+		int GetDstRank();
+		int GetCacheId();
+		int GetTableId();
+		int GetCount();
+		int GetMsgCount();
+		zmq::message_t *GetMsg(int idx);
 
-        void PushRow(long long row_id, long long row_size, void *row);
+		void PushRow(long long row_id, long long row_size, void *row);
+		void PushRow(long long row_size, void *row);
 
-        void AsRegister(int src_id, int src_rank);
-        MsgPack *GetReplyReg(int response_rank);
+		void AsRegister(int src_id, int src_rank);
+		MsgPack *GetReplyReg(int response_rank);
 
-        void AsReduce(int src_id, int cache_id);
+		void AsReduce(int src_id, int cache_id);
 
-        void AsGet(int src_id, int src_rank, int dst_rank, int table_id, 
-            long long *rows, long long num);
-        MsgPack *GetReplyGet();
-		
+		void AsGet(int src_id, int src_rank, int dst_rank, int table_id,
+			long long *rows, long long num);
+		MsgPack *GetReplyGet(int row_id = -1);
+
 		//void AsData(int src_id, int src_rank);
 		//MsgPack *GetReplyData();
 
-        void AsAdd(int src_rank, int dst_rank, int table_id);
-        void AsExit(int src_rank);
+		void AsAdd(int src_rank, int dst_rank, int table_id);
+		void AsAdd(int src_rank, int dst_rank, int table_id, int row_id);
+		void AsExit(int src_rank);
 		void AsFinish(int src_rank);
-        void AsClock(int src_id, int src_rank);
-        void AsReplyClock();
-        void AsBarrier(int src_id, int src_rank);
-        void AsReplyBarrier();
+		void AsClock(int src_id, int src_rank);
+		void AsReplyClock();
+		void AsBarrier(int src_id, int src_rank);
+		void AsReplyBarrier();
 
-    protected:
-        int *GetHeader();
-        void ClearWithEmptyAddr();
-        MsgPack *CreateMsgPackWithAddress();
+		void AsUpdate(int src_rank, int dst_rank, int table_id, int row_id);
 
-        int start_;
-        vector<zmq::message_t*> messages_;
-    };
+	protected:
+		int *GetHeader();
+		void ClearWithEmptyAddr();
+		MsgPack *CreateMsgPackWithAddress();
+
+		int start_;
+		vector<zmq::message_t*> messages_;
+	};
 }
 
 #endif //_MULTIVERSO_MSG_PACK_H_ 

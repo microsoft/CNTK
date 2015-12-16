@@ -309,9 +309,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		//Multiverso Warpper for ASGD logic init
 		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
 		{
-			m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes, g_mpi->NumNodesInUse(), m_isPipeline);
+			m_multiverso = new MultiversoWrapper<ElemType>(learnableNodes,
+				g_mpi->NumNodesInUse(),
+				m_isPipeline,
+				m_adjustlearningrateatbeginning,
+				m_adjustcoefficient,
+				m_adjustnbminibatch);
 			m_multiverso->ModelInit(learnableNodes);
-			m_multiverso_barrier = false;
+			m_multiversoBarrier = false;
 			m_multiverso->_adaptor->Barrier();
 		}
 
@@ -841,11 +846,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
                                                                           useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
 
-			if (!m_multiverso_barrier && useASGD)
+			if (!m_multiversoBarrier && useASGD)
 			{
 				fprintf(stderr, "Ready to train.....");
 				m_multiverso->_adaptor->Barrier();
-				m_multiverso_barrier = true;
+				m_multiversoBarrier = true;
 				fprintf(stderr, "Go!\n");
 			}
 
@@ -2511,6 +2516,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
     }
 
+	static AdjustLearningRateatBeginning AdjustLearningRateAtBeginningType(wstring s)
+	{
+		if (!_wcsicmp(s.c_str(), L"") || !_wcsicmp(s.c_str(), L"none"))
+			return AdjustLearningRateatBeginning::None;
+		else if (!_wcsicmp(s.c_str(), L"linearly"))
+			return AdjustLearningRateatBeginning::Linearly;
+		else if (!_wcsicmp(s.c_str(), L"staircase"))
+			return AdjustLearningRateatBeginning::Staircase;
+		else
+			InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
+	}
+
     template<class ConfigRecordType>
     SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     {
@@ -2729,6 +2746,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		m_nFramesBetweenASGDSync = 1280;
 		m_nEpochBarrier = 0;
+		m_adjustlearningrateatbeginning = AdjustLearningRateatBeginning::None;
 
 
         if ((g_mpi != nullptr) && configSGD.Exists(L"ParallelTrain"))
@@ -2764,6 +2782,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				m_nFramesBetweenASGDSync = configDataParallelASGD(L"SyncFrequencyInFrames", (size_t)1280);
 				m_isPipeline = configDataParallelASGD(L"UsePipeline", true);
 				m_nEpochBarrier = configDataParallelASGD(L"EpochBarrier", (size_t)0);
+				if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning"))
+				{
+					const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
+					m_adjustlearningrateatbeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"None"));
+					m_adjustcoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.2);
+					m_adjustnbminibatch = configAdjustLearningRateAtBeginning(L"adjustNbMinibatch", (size_t)600);
+				}
 			}
 
         }

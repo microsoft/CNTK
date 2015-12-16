@@ -4,6 +4,7 @@
 #include "table.h"
 #include "zmq_util.h"
 #include "server_base.h"
+#include "mt_queue.h"
 
 namespace multiverso
 {
@@ -36,8 +37,12 @@ namespace multiverso
 
         CheckpointInfo checkpoint_info_;
         thread *checkpoint_thread_;
+		thread *add_thread_;
+		MtQueueMove<shared_ptr<MsgPack>> add_queue_;
         bool is_checkpoint_;
         bool is_checkpoint_working_;
+
+		std::vector<std::pair<int, int>> receive_log_;
     };
 }
 

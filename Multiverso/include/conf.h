@@ -95,6 +95,7 @@ namespace multiverso
 		DATA = 8,			// get block index
 		REPLYDATA = -8,			// get block index
 		FINISH = 9,			// finish train
+		UPDATE = 10,
         UNKNOWN = 0
 	};
 

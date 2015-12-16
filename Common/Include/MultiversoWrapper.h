@@ -33,6 +33,13 @@ namespace Microsoft {
 				}
 			}
 
+			enum class AdjustLearningRateatBeginning : int
+			{
+				None = 0,
+				Linearly = 1,
+				Staircase = (1 << 1),
+			};
+
 			template<class ElemType = float>
 			class MultiversoWrapper
 			{
@@ -43,8 +50,18 @@ namespace Microsoft {
 				multiverso::Adaptor * _adaptor;
 				thread * _pThread;
 
-				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes, int localWorkerNumber, bool isPipeline = true)
+				MultiversoWrapper(const std::list<ComputationNodeBasePtr> & learnableNodes,
+					int localWorkerNumber,
+					bool isPipeline = true,
+					AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
+					double adjustcoef = 0.2,
+					size_t adjustnbmb = 600)
 				{
+					_commCnt = 0;
+					_adjustlearningrateatbeginningtype = adjusttype;
+					_adjustcoefficient = adjustcoef;
+					_adjustnbmb = adjustnbmb;
+
 					_isInitialized = false;
 
 					_nClients = localWorkerNumber;
@@ -66,7 +83,7 @@ namespace Microsoft {
 					for (int i = 0; i < _nLocalCache; i++)
 						_pCacheState[i] = (i + 1) % _nLocalCache;
 
-					_pThread = new thread();
+						_pThread = new thread();
 
 					_pSizeEachServer = new size_t[_nClients];
 					_pIdxEachServer = new size_t[_nClients];
@@ -117,13 +134,15 @@ namespace Microsoft {
 					for (int i = 1; i < _nLocalCache; i++)
 						memcpy(_pPCache[i], _pPCache[0], sizeof(ElemType) * _lTotalLength);
 
-					//////////////////////////////////////////////////
+					memcpy(_pDelta, _pPCache[0], sizeof(ElemType) * _lTotalLength);
+
 					for (int row = 0; row < _nClients; ++row)
-						_adaptor->Add(table_id, row, _pPCache[0] + _pIdxEachServer[row], factor);
-					//_adaptor->Add(table_id, 0, _pPCache[0], factor);
-					//////////////////////////////////////////////////
-					_adaptor->Clock();
-					_adaptor->BatchLoad(table_id);
+						_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+					//_adaptor->Clock();
+					_adaptor->Barrier();
+					_adaptor->BatchLoad(table_id, _pDelta, _pIdxEachServer, _pSizeEachServer);
+
+					memcpy(_pDelta, _pPCache[0], sizeof(ElemType) * _lTotalLength);
 				}
 
 				//Todo: support auto adjust learning rate 
@@ -132,6 +151,9 @@ namespace Microsoft {
 				//ASGD logic
 				void ModelSync(const std::list<ComputationNodeBasePtr> & learnableNodes)
 				{
+					//Note: maybe overflow.
+					_commCnt++;
+
 					Timer timer;
 					//float factor = (float) 1.0 / _nClients;
 					int table_id = 0;
@@ -166,6 +188,7 @@ namespace Microsoft {
 
 						_pThread = new thread([&](){
 							//float t_factor = (float) 1.0 / _nClients;
+							float factor = getUpdateCoefficient();
 							int table_id = 0, t_cacheIdx = _nCacheIdx;
 							int deviceId = _pPMatrixCache[t_cacheIdx][0]->GetDeviceId();
 
@@ -189,33 +212,18 @@ namespace Microsoft {
 							transform(_pDelta, _pDelta + _lTotalLength, _pPCache[t_cacheIdx], _pDelta, std::minus<ElemType>());
 							//transform(_pDelta, _pDelta + _lTotalLength, _pCache, _pDelta, std::minus<ElemType>());
 
-							//Communication
-							///////////////////////////////////////////////////////
+							//////Communication
 							for (int row = 0; row < _nClients; row++)
-								_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row]/*, t_factor*/);
-
-							_adaptor->Clock();
-
-							_adaptor->BatchLoad(table_id);
-
-
-							for (int row = 0; row < _nClients; row++)
-							{
-								ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
-								memcpy(_pPCache[t_cacheIdx] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-								//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-							}
-
-							//_adaptor->Add(table_id, 0, _pDelta/*, t_factor*/);
-
+								_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
 							//_adaptor->Clock();
+							_adaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
 
-							//_adaptor->BatchLoad(table_id);
-
-							//ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, 0));
-							//memcpy(_pPCache[t_cacheIdx], py, sizeof(ElemType) * _lTotalLength);
-							///////////////////////////////////////////////////////
-
+							//for (int row = 0; row < _nClients; row++)
+							//{
+							//	ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
+							//	memcpy(_pPCache[t_cacheIdx] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
+							//	//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
+							//}
 
 							//CPU buffer -> GPU buffer
 							for (int widx = 0; widx < _nTableCnt; widx++)
@@ -236,6 +244,7 @@ namespace Microsoft {
 					}
 					else
 					{
+						float factor = getUpdateCoefficient();
 						for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -248,27 +257,18 @@ namespace Microsoft {
 						transform(_pDelta, _pDelta + _lTotalLength, _pPCache[0], _pDelta, std::minus<ElemType>());
 						//transform(_pDelta, _pDelta + _lTotalLength, _pCache, _pDelta, std::minus<ElemType>());
 
-						////////////////////////////////////////////////////////
 						for (int row = 0; row < _nClients; row++)
-							_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row]/*, factor*/);
+							_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
 
-						_adaptor->Clock();
-						//_adaptor->Barrier();
-						_adaptor->BatchLoad(table_id);
-
-						for (int row = 0; row < _nClients; row++)
-						{
-							ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
-							memcpy(_pPCache[0] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-							//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-						}
-
-						//_adaptor->Add(table_id, 0, _pDelta/*, factor*/);
 						//_adaptor->Clock();
-						//_adaptor->BatchLoad(table_id);
-						//ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, 0));
-						//memcpy(_pPCache[0], py, sizeof(ElemType) * _lTotalLength);
-						////////////////////////////////////////////////////////
+						_adaptor->BatchLoad(table_id, _pPCache[0], _pIdxEachServer, _pSizeEachServer);
+
+						//for (int row = 0; row < _nClients; row++)
+						//{
+						//	ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
+						//	memcpy(_pPCache[0] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
+						//	//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
+						//}
 
 						i = 0;
 
@@ -309,7 +309,6 @@ namespace Microsoft {
 
 					//init cache space.
 					_lTotalLength = accumulate(_vTableLength.begin(), _vTableLength.end(), 0);
-
 					size_t idx = 0;
 					for (int i = 0; i < _nClients; i++)
 					{
@@ -317,11 +316,7 @@ namespace Microsoft {
 						_pSizeEachServer[i] = i < _lTotalLength % _nClients ? _lTotalLength / _nClients + 1 : _lTotalLength / _nClients;
 						idx += _pSizeEachServer[i];
 					}
-
-					//////////////////////////////////////////////////////////////////
-					multiverso::SetTable(table_id, _nClients, _lTotalLength / _nClients + 1, sizeof(ElemType) == 4 ? "float" : "double");
-					//multiverso::SetTable(table_id, 1, _lTotalLength , sizeof(ElemType) == 4 ? "float" : "double");
-					//////////////////////////////////////////////////////////////////
+					multiverso::SetTable(table_id, _nClients, ((size_t)(_lTotalLength / _nClients)) + 1, sizeof(ElemType) == 4 ? "float" : "double");
 					idx = 0;
 					for (size_t len : _vTableLength)
 					{
@@ -354,6 +349,24 @@ namespace Microsoft {
 					fflush(stdout);
 				}
 
+				float getUpdateCoefficient()
+				{
+					float f = 1.f;
+					switch (_adjustlearningrateatbeginningtype)
+					{
+					case AdjustLearningRateatBeginning::None:
+						break;
+					case AdjustLearningRateatBeginning::Linearly:
+						f = min(f, max(0.f, (float)(_adjustcoefficient + (1 - _adjustcoefficient) / _adjustnbmb * _commCnt)));
+						break;
+					case AdjustLearningRateatBeginning::Staircase:
+						f = min(f, max(0.f, (float)(_adjustcoefficient * (_commCnt / _adjustnbmb + 1))));
+						break;
+					default:
+						break;
+					}
+					return f;
+				}
 
 				bool _isInitialized;
 
@@ -363,6 +376,12 @@ namespace Microsoft {
 				int _nLocalCache;
 				int * _pCacheState;
 				int _nCacheIdx;
+
+				size_t _commCnt;
+
+				AdjustLearningRateatBeginning _adjustlearningrateatbeginningtype;
+				double _adjustcoefficient;
+				size_t _adjustnbmb;
 
 				vector<size_t> _vTableLength;
 				size_t _lTotalLength;
@@ -378,7 +397,6 @@ namespace Microsoft {
 				Matrix<ElemType> *** _pPMatrixCache;
 				int _nTableCnt;
 				cudaStream_t _commStream;
-
 			};
 		}
 	}

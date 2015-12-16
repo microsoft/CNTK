@@ -247,6 +247,9 @@ protected:
 	size_t m_nFramesBetweenASGDSync;
 	bool m_isPipeline;
 	size_t m_nEpochBarrier;
+	AdjustLearningRateatBeginning m_adjustlearningrateatbeginning;
+	double m_adjustcoefficient;
+	size_t m_adjustnbminibatch;
 
     //sequence training
     double m_hSmoothingWeight;
@@ -505,7 +508,7 @@ protected:
 private:
     int SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...);
 	MultiversoWrapper<ElemType>* m_multiverso;
-	bool m_multiverso_barrier;
+	bool m_multiversoBarrier;
 };
 
 }}}
