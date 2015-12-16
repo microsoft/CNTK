@@ -19,7 +19,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux build files", "Linux 
 	ProjectSection(SolutionItems) = preProject
 		configure = configure
 		Makefile = Makefile
-		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{065AF55D-AF02-448B-BFCD-52619FDA4BD0}"
@@ -94,8 +93,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "figures", "figures", "{889C
 		Documentation\CNTK-TechReport\figures\simpleRNN.png = Documentation\CNTK-TechReport\figures\simpleRNN.png
 		Documentation\CNTK-TechReport\figures\SpeechErrorRate.png = Documentation\CNTK-TechReport\figures\SpeechErrorRate.png
 	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{39E42C4B-A078-4CA4-9D92-B883D8129601}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}"
 	ProjectSection(SolutionItems) = preProject
@@ -748,6 +745,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "setups", "setups", "{7734DD
 		Examples\Text\Miscellaneous\SMT\setups\s2sfb.class.alignment.config = Examples\Text\Miscellaneous\SMT\setups\s2sfb.class.alignment.config
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{83BFF5BF-D054-4B3E-9769-B00BA707F116}"
+	ProjectSection(SolutionItems) = preProject
+		Tools\build-and-test = Tools\build-and-test
+		Tools\generate_build_info = Tools\generate_build_info
+		Tools\msvc_collect_coverage.py = Tools\msvc_collect_coverage.py
+		Tools\run_boost_unit_tests.py = Tools\run_boost_unit_tests.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -844,8 +849,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
-		{3ED0465D-23E7-4855-9694-F788717B6533} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
-		{065AF55D-AF02-448B-BFCD-52619FDA4BD0} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{3ED0465D-23E7-4855-9694-F788717B6533} = {83BFF5BF-D054-4B3E-9769-B00BA707F116}
 		{98D2C32B-0C1F-4E19-A626-65F7BA4600CF} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{EA67F51F-1FE8-462D-9F3E-01161685AD59} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
@@ -881,7 +885,6 @@ Global
 		{2A884EB5-037C-481E-8170-BCDC8B3EDD93} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{669B6203-9675-4950-B526-7CD72D55E5E1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{81AE014F-DD63-47C7-B6E2-DB1D2833DCD1} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
-		{47755F2E-D674-4175-9E38-8EA053455072} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{9BDFA4BE-790E-408F-915B-5979BB5078C6} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{3CE841C0-02E5-46DB-B401-6F8784880173} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{97AAB0C8-D553-49CB-A539-004FCD7FD59F} = {47755F2E-D674-4175-9E38-8EA053455072}
