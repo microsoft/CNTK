@@ -174,7 +174,7 @@
     <ClCompile Include="DataReaderUnitTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Source\Math\Math.vcxproj">
+    <ProjectReference Include="..\..\Math\Math.vcxproj">
       <Project>{60bdb847-d0c4-4fd3-a947-0c15c08bcdb5}</Project>
     </ProjectReference>
   </ItemGroup>
