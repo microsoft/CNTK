@@ -15,8 +15,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MATH_API  MemAllocator
     {
     public:
-        virtual char* Malloc(size_t size) = 0;
-        virtual void Free(char* p) = 0;
+        virtual void* Malloc(size_t size) = 0;
+        virtual void Free(void* p) = 0;
     };
 
 }}}
