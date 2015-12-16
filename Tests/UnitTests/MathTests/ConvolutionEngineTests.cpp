@@ -110,6 +110,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
     // REVIEW alexeyk: this really should be rolled into ConvolutionForward, make it data-driven.
     BOOST_AUTO_TEST_CASE(ConvolutionForwardPad)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         int n = 2;
         int cmapIn = 1;
         int inW = 4;
@@ -154,6 +157,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         // REVIEW alexeyk: very simple test, improve.
         int n = 2;
         int cmapIn = 3;
@@ -207,6 +213,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(ConvolutionBackwardFilter)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         // REVIEW alexeyk: very simple test, improve.
         int n = 2;
         int cmapIn = 3;
@@ -271,6 +280,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(MaxPoolForward)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         int n = 2;
         int cmap = 2;
         int inW = 4;
@@ -318,6 +330,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(MaxPoolBackward)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         int n = 2;
         int cmap = 2;
         int inW = 4;
@@ -375,6 +390,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(AvgPoolForward)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         int n = 2;
         int cmap = 2;
         int inW = 4;
@@ -422,6 +440,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     BOOST_AUTO_TEST_CASE(AvgPoolBackward)
     {
+        if (!IsCuDnnSupported())
+            return;
+
         int n = 1;
         int cmap = 1;
         int inW = 4;
