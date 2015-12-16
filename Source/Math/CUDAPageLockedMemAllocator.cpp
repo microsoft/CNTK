@@ -13,21 +13,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     }
 
-    char* CUDAPageLockedMemAllocator::Malloc(size_t size)
+    void* CUDAPageLockedMemAllocator::Malloc(size_t size, int deviceId)
     {
         void* p;
-        cudaSetDevice(m_deviceID);
+        cudaSetDevice(deviceId);
 
         // Note: I ask for cudaHostAllocDefault but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
         cudaHostAlloc(&p, size, cudaHostAllocDefault) || "Malloc in CUDAPageLockedMemAllocator failed";
 
-        return (char*)p;
+        return p;
     }
 
-    void CUDAPageLockedMemAllocator::Free(char* p)
+    void CUDAPageLockedMemAllocator::Free(void* p, int deviceId)
     {
-        cudaSetDevice(m_deviceID);
+        cudaSetDevice(deviceId);
         cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
+    }
+
+
+    void* CUDAPageLockedMemAllocator::Malloc(size_t size)
+    {
+        return Malloc(size, m_deviceID);
+    }
+
+    void CUDAPageLockedMemAllocator::Free(void* p)
+    {
+        Free(p, m_deviceID);
     }
 
     int CUDAPageLockedMemAllocator::GetDeviceId() const
@@ -45,12 +56,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return -1;
     }
 
-    char* CUDAPageLockedMemAllocator::Malloc(size_t)
+    void* CUDAPageLockedMemAllocator::Malloc(size_t)
     {
         return nullptr;
     }
 
-    void CUDAPageLockedMemAllocator::Free(char*)
+    void CUDAPageLockedMemAllocator::Free(void*)
     {
     }
 #endif
