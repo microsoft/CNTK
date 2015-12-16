@@ -5,7 +5,7 @@
 //
 #include "stdafx.h"
 #include <crtdefs.h>
-#include "../../../Math/Math/CPUSparseMatrix.h"
+#include "../../../Source/Math/CPUSparseMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
