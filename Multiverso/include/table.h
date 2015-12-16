@@ -19,22 +19,22 @@ namespace multiverso
 	public:
 		virtual ~TableBase() {}
         // Returns a pointer to the specified row.
-		virtual void *Get(long long row_id) = 0;
+		virtual void *Get(int64_t row_id) = 0;
         virtual void *GetAll() = 0;
         // Adds a delta to the row.
-        virtual int Add(long long row_id, void* delta) = 0;
+        virtual int Add(int64_t row_id, void* delta) = 0;
         // Fills the specified row.
-		virtual int Set(long long row_id, void *row) = 0;
+		virtual int Set(int64_t row_id, void *row) = 0;
         // Fills the whole table.
 		virtual int FullFill(void *src) = 0;
         virtual int SetZero() = 0;
         virtual int Scale(float coef) = 0;
 
-        virtual long long GetElementSize() = 0;
-        virtual long long GetMemSize() = 0;
-        virtual long long GetRowMemSize() = 0;
-        virtual long long GetRowCount() { return table_config_.row_count; }
-        virtual long long GetColCount() { return table_config_.col_count; }
+        virtual int64_t GetElementSize() = 0;
+        virtual int64_t GetMemSize() = 0;
+        virtual int64_t GetRowMemSize() = 0;
+        virtual int64_t GetRowCount() { return table_config_.row_count; }
+        virtual int64_t GetColCount() { return table_config_.col_count; }
 
         virtual void OuterScale(void *result, float coef = 1) = 0;
         virtual void OuterAdd(void *result, void *operand, float coef = 1) = 0;
@@ -56,31 +56,31 @@ namespace multiverso
         StaticTable(int table_id, int mod = 1, int rm = 0);
 		~StaticTable();
 
-        void *Get(long long row_id) override;
+        void *Get(int64_t row_id) override;
         inline void *GetAll() override { return data_; }
-        int Add(long long row_id, void *delta) override;
-        int Set(long long row_id, void *value) override;
+        int Add(int64_t row_id, void *delta) override;
+        int Set(int64_t row_id, void *value) override;
         int FullFill(void *value) override;
         int SetZero() override;
         int Scale(float coef) override;
 
-        long long GetElementSize() override { return sizeof(T); }
-        long long GetMemSize() override { return phy_mem_size_; }
-        long long GetRowMemSize() override { return row_mem_size_; }
+        int64_t GetElementSize() override { return sizeof(T); }
+        int64_t GetMemSize() override { return phy_mem_size_; }
+        int64_t GetRowMemSize() override { return row_mem_size_; }
 
         void OuterScale(void *result, float coef = 1.0f) override;
         void OuterAdd(void *result, void *operand, float coef = 1.0f) override;
 
 	private:
-        inline long long GetPhysicalRow(long long row_id) const { return row_id / mod_; }
+        inline int64_t GetPhysicalRow(int64_t row_id) const { return row_id / mod_; }
 
 		T *data_;   // a continuous memory blocks of storying the static table
         int mod_;
         int rm_;
-        long long phy_row_count_;
-        long long phy_size_;
-        long long phy_mem_size_;
-        long long row_mem_size_;
+        int64_t phy_row_count_;
+        int64_t phy_size_;
+        int64_t phy_mem_size_;
+        int64_t row_mem_size_;
 	};
 
 

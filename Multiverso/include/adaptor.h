@@ -37,7 +37,7 @@ namespace multiverso
 		// Returns the memory of the row.
 		void *Get(int table_id, int64_t row_id);
 		// Updates a row by adding a delta.
-		void Add(int table_id, int64_t row_id, void *delta,
+		void Add(int table_id, int row_id, void *delta,
 			float server_coef = 1.0f);
 		// Updates a row by replacing the value.
 		void Set(int table_id, int64_t row_id, void *value);

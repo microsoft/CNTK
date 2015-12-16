@@ -47,8 +47,8 @@ namespace multiverso
 		void Clear();
 		void Push(zmq::message_t *msg);
 		void Send(zmq::socket_t *socket);
-		void Serialize(void *buffer, long long *size);
-		void GetSerializeSize(long long *size);
+		void Serialize(void *buffer, int64_t *size);
+		void GetSerializeSize(int64_t *size);
 
 		RequestType GetRequestType();
 		int GetSrcId();
@@ -61,8 +61,8 @@ namespace multiverso
 		int GetMsgCount();
 		zmq::message_t *GetMsg(int idx);
 
-		void PushRow(long long row_id, long long row_size, void *row);
-		void PushRow(long long row_size, void *row);
+		void PushRow(int64_t row_id, int64_t row_size, void *row);
+		void PushRow(int64_t row_size, void *row);
 
 		void AsRegister(int src_id, int src_rank);
 		MsgPack *GetReplyReg(int response_rank);
@@ -70,7 +70,7 @@ namespace multiverso
 		void AsReduce(int src_id, int cache_id);
 
 		void AsGet(int src_id, int src_rank, int dst_rank, int table_id,
-			long long *rows, long long num);
+			int64_t *rows, int64_t num);
 		MsgPack *GetReplyGet(int row_id = -1);
 
 		//void AsData(int src_id, int src_rank);

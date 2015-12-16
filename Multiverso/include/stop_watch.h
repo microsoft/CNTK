@@ -1,6 +1,8 @@
 #ifndef _MULTIVERSO_STOP_WATCH_H_
 #define _MULTIVERSO_STOP_WATCH_H_
 
+#include<cstdint>
+
 namespace multiverso
 {
     class StopWatch
@@ -16,9 +18,9 @@ namespace multiverso
         double ElapsedMillisecondsToStop();
 
     private:
-        long long tick_per_sec_;
-        long long start_tick_;
-        long long stop_tick_;
+        int64_t tick_per_sec_;
+        int64_t start_tick_;
+        int64_t stop_tick_;
     };
 }
 

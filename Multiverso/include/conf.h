@@ -16,9 +16,9 @@ namespace YAML
 namespace multiverso
 {
     // the maximal data block size to be sent by MPI
-    const long long BLOCK_SIZE = 1 << 27; // 128 MB
-    const long long ADAPTOR_ADD_CACHE_SIZE = 1 << 25;  // 32 MB
-    const long long MPI_SEND_BAR = 1 << 10;    // 1024
+    const int64_t BLOCK_SIZE = 1 << 27; // 128 MB
+    const int64_t ADAPTOR_ADD_CACHE_SIZE = 1 << 25;  // 32 MB
+    const int64_t MPI_SEND_BAR = 1 << 10;    // 1024
 
 #pragma region configuration options
     // The communication type. REDUCE by default.
@@ -168,11 +168,11 @@ namespace multiverso
         //TableConfig(YAML::Node *table_config);
 
 		int table_id;
-		long long row_count;
-		long long col_count;
+		int64_t row_count;
+		int64_t col_count;
 		EleType ele_type;
 		TableFormat format;
-		long long cache_size;
+		int64_t cache_size;
         // ATTENTION(@developers): may deprecate these 3 members
         UpdateType update_type;
         double init_lower;
@@ -209,7 +209,7 @@ namespace multiverso
         void SetDelayBound(int delay);
         void SetStaleness(int staleness);
         void SetLock(bool lock_option, int row_locks, int table_locks);
-        void SetTable(int table_id, long long rows, long long cols, 
+        void SetTable(int table_id, int64_t rows, int64_t cols, 
             string ele_type = "float");
         void SetCheckpoint(int server_id, int minutes = -1, 
             string store_path = "", string recover_file = "");
@@ -240,7 +240,7 @@ namespace multiverso
         void Parse(const YAML::Node &config_root, int process_count);
         void ParseTableConfig(const YAML::Node &configroot);
         void ParseCheckpointConfig(const YAML::Node &configroot, int size);
-        long long ConfigHash();
+        int64_t ConfigHash();
 
         // configuration properties
         AlgoConfig algo_config_;

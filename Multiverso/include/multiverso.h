@@ -37,7 +37,7 @@ namespace multiverso
     // rows: number of rows
     // cols: number of columns
     // ele_type: element data type. "float" by default, could be "double"
-    void SetTable(int table_id, long long rows, long long cols, 
+    void SetTable(int table_id, int64_t rows, int64_t cols, 
         string ele_type = "float");
 
     // Sets the local cache locks. No lock by defualt as each adaptor uses its

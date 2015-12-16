@@ -29,7 +29,7 @@ namespace multiverso
 		static char* GetNodeName() { return node_name_; }
         static shared_ptr<MsgPack> MPIProbe();
         static void Send(shared_ptr<MsgPack> msg_pack, int dst_rank);
-        static long long SendQueueSize() { return send_msg_queue_.size(); }
+        static int64_t SendQueueSize() { return send_msg_queue_.size(); }
         static void Allreduce(void *sendbuf, void *recvbuf, int count, 
             EleType ele_type, MPIOperator op = MPIOperator::SUM);
 
