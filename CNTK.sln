@@ -142,35 +142,35 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGD
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\ParallelTraining\SimpleMultiGPU.config = Tests\ParallelTraining\SimpleMultiGPU.config
+		Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.config = Tests\EndToEndTests\ParallelTraining\SimpleMultiGPU.config
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{6D1353D6-F196-466F-B886-F16D48759B20}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\ParallelTraining\Data\SimpleDataTrain.txt = Tests\ParallelTraining\Data\SimpleDataTrain.txt
-		Tests\ParallelTraining\Data\SimpleMapping.txt = Tests\ParallelTraining\Data\SimpleMapping.txt
+		Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain.txt = Tests\EndToEndTests\ParallelTraining\Data\SimpleDataTrain.txt
+		Tests\EndToEndTests\ParallelTraining\Data\SimpleMapping.txt = Tests\EndToEndTests\ParallelTraining\Data\SimpleMapping.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NoQuantization", "NoQuantization", "{B6725C9F-A6D2-4269-9B74-7888A90F7884}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePrecision", "{B27DD434-EECD-4EE0-A03B-1150EB87258E}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test
-		Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.gpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\run-test
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\EndToEndTests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePrecision", "{A4884465-CFBB-4A64-A9DE-690E1A63EF7E}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test
-		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.gpu.txt
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\run-test
+		Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\EndToEndTests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader", "{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4}"
