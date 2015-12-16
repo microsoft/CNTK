@@ -499,38 +499,26 @@ namespace Microsoft
                     BOOST_CHECK(m0.IsEqualTo(m2, c_epsilonFloatE4));
                 }
 
-                BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingFloat, RandomSeedFixture)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniformReuseSeedFloat, RandomSeedFixture)
                 {
                     const float low = 0;
                     const float high = 1;
-                    const unsigned long seedUsed = 1;
-                    const unsigned long seedIgnored = 4711;
+                    const unsigned long seed = 1;
 
-                    // The current GPUMatrix implementation uses a static RNG.
-
-                    GPUMatrix<float>::ResetCurandObject(seedUsed, __FUNCTION__);
-                    auto m1 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
-
-                    GPUMatrix<float>::ResetCurandObject(seedUsed, __FUNCTION__);
-                    auto m2 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+                    auto m1 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seed);
+                    auto m2 = GPUMatrix<float>::RandomUniform(16, 16, c_deviceIdZero, low, high, seed);
 
                     BOOST_CHECK(m1.IsEqualTo(m2));
                 }
 
-                BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
+                BOOST_FIXTURE_TEST_CASE(GPUMatrixRandomUniformReuseSeedDouble, RandomSeedFixture)
                 {
                     const double low = 0;
                     const double high = 1;
-                    const unsigned long seedUsed = 1;
-                    const unsigned long seedIgnored = 4711;
+                    const unsigned long seed = 1;
 
-                    // The current GPUMatrix implementation uses a static RNG.
-
-                    GPUMatrix<double>::ResetCurandObject(seedUsed, __FUNCTION__);
-                    auto m1 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
-
-                    GPUMatrix<double>::ResetCurandObject(seedUsed, __FUNCTION__);
-                    auto m2 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
+                    auto m1 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seed);
+                    auto m2 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seed);
 
                     BOOST_CHECK(m1.IsEqualTo(m2));
                 }

@@ -1227,21 +1227,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+        ReseedCurandGenerator(seed, __FUNCTION__);
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
-            CURAND_CALL(curandGenerateUniform(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements()));
+            CURAND_CALL(curandGenerateUniform(s_curandGenerator, reinterpret_cast<float*>(m_pArray), GetNumElements()));
         }
         else
         {
-            CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements()));
+            CURAND_CALL(curandGenerateUniformDouble(s_curandGenerator, reinterpret_cast<double*>(m_pArray), GetNumElements()));
         }
         CUDA_CALL(cudaEventRecord(done));        
-        CUDA_CALL(cudaEventSynchronize(done)); 
-        //CURAND_CALL(curandDestroyGenerator(gen));
+        CUDA_CALL(cudaEventSynchronize(done));
         CUDA_CALL(cudaEventDestroy(done));
 
         size_t N=GetNumElements();
@@ -1258,17 +1257,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+        ReseedCurandGenerator(seed, __FUNCTION__);
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            CURAND_CALL(curandGenerateNormal(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements(), (float)mean, (float)sigma));
+            CURAND_CALL(curandGenerateNormal(s_curandGenerator, reinterpret_cast<float*>(m_pArray), GetNumElements(), (float)mean, (float)sigma));
         }
         else
         {
-            CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements(), (double)mean, (double)sigma));
+            CURAND_CALL(curandGenerateNormalDouble(s_curandGenerator, reinterpret_cast<double*>(m_pArray), GetNumElements(), (double)mean, (double)sigma));
         }
-        //CURAND_CALL(curandDestroyGenerator(gen));
     }
 
     //maskRate: percentage of values masked out (similar to dropout rate)
@@ -1277,22 +1275,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         PrepareDevice();
-        CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+
+        // Create the generator if none exists, otherwise do nothing (no reseeding is necessary here).
+        if (s_curandGenerator == NULL) 
+        {
+            ReseedCurandGenerator(seed, __FUNCTION__);
+        }
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
-            CURAND_CALL(curandGenerateUniform((((curandGenerator_t*)s_curandGenerator)[0]), reinterpret_cast<float*>(m_pArray), GetNumElements()));
+            CURAND_CALL(curandGenerateUniform(s_curandGenerator, reinterpret_cast<float*>(m_pArray), GetNumElements()));
         }
         else
         {
-            CURAND_CALL(curandGenerateUniformDouble((((curandGenerator_t*)s_curandGenerator)[0]), reinterpret_cast<double*>(m_pArray), GetNumElements()));
+            CURAND_CALL(curandGenerateUniformDouble(s_curandGenerator, reinterpret_cast<double*>(m_pArray), GetNumElements()));
         }
         CUDA_CALL(cudaEventRecord(done));        
         CUDA_CALL(cudaEventSynchronize(done)); 
         CUDA_CALL(cudaEventDestroy(done));
-        //CURAND_CALL(curandDestroyGenerator(gen));
 
         size_t N=GetNumElements();
         size_t blocksPerGrid = (size_t)ceil(N/(double)threadsPerBlock);        
@@ -4022,39 +4024,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char *caller)
+    void GPUMatrix<ElemType>::ReseedCurandGenerator(unsigned long seed, const char *caller)
     {
         assert(caller != nullptr);
+
+        unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
 
         if (s_curandGenerator==NULL)
         {
-            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-            fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%u\n",
-                caller, cudaSeed, sizeof(ElemType));
-            s_curandGenerator = new curandGenerator_t;
+            fprintf(stderr, "%s (GPU): creating curand generator\n", caller);
             // Create pseudo-random number generator
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
-            CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0], CURAND_ORDERING_PSEUDO_SEEDED));
-        }
-    }
-
-    template<class ElemType>
-    void GPUMatrix<ElemType>::ResetCurandObject(unsigned long seed, const char *caller)
-    {
-        assert(caller != nullptr);
-
-        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
-        {
-            // Note: this might be slow.
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed));
-            CURAND_CALL(curandSetGeneratorOffset(((curandGenerator_t*)s_curandGenerator)[0], 0));
-        }
-        else
-        {
-            CreateCurandObject(seed, caller);
+            CURAND_CALL(curandCreateGenerator(&s_curandGenerator, CURAND_RNG_PSEUDO_XORWOW));
+            CURAND_CALL(curandSetGeneratorOrdering(s_curandGenerator, CURAND_ORDERING_PSEUDO_SEEDED));
         }
 
+        fprintf(stderr, "%s (GPU): re-seeding curand generator with seed value %llu, sizeof(ElemType)==%u\n",
+            caller, cudaSeed, sizeof(ElemType));
+
+        // Note: this might be slow.
+        CURAND_CALL(curandSetPseudoRandomGeneratorSeed(s_curandGenerator, cudaSeed));
+        CURAND_CALL(curandSetGeneratorOffset(s_curandGenerator, 0));
     }
 
     template<class ElemType>
@@ -4459,7 +4448,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus]={0};
 
     template<class ElemType>
-    void* GPUMatrix<ElemType>::s_curandGenerator=NULL;    
+    curandGenerator_t GPUMatrix<ElemType>::s_curandGenerator = NULL;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explicitly instantiate the methods we need for that purpose

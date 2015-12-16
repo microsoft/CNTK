@@ -25,6 +25,10 @@ typedef struct cublasContext *cublasHandle_t;
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
+// predeclare curandGenerator_t
+struct curandGenerator_st;
+typedef struct curandGenerator_st *curandGenerator_t;
+
 #ifdef _WIN32
 #ifndef    MATH_API
 #ifdef MATH_EXPORTS
@@ -112,7 +116,10 @@ namespace Microsoft {
         using BaseMatrix<ElemType>::SetMatrixName;
     private:
         static cublasHandle_t s_cuHandle[MaxGpus];
-        static void *s_curandGenerator;
+        // Using a static generator is probably not the best idea if/when matrices can be mapped to different devices.
+        // Also, it may lead to data races and non-determinism if used concurrently.
+        static curandGenerator_t s_curandGenerator;
+        static void ReseedCurandGenerator(unsigned long seed, const char *caller);
 
         // Have to use naked pointer to avoid issues with __declspec(dllexport) on Windows (C4251).
         // Cannot use atomic for the same reason either.
@@ -418,8 +425,6 @@ namespace Microsoft {
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
-        static void CreateCurandObject(unsigned long seed, const char *caller);
-        static void ResetCurandObject(unsigned long seed, const char *caller);
         static GPUMatrix<ElemType> Ones(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Eye(const size_t rows, int deviceId);

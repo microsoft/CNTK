@@ -1063,15 +1063,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c) { }
 
-    template<class ElemType>
-    void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char *caller)
-    {
-    }
-
-    template<class ElemType>
-    void GPUMatrix<ElemType>::ResetCurandObject(unsigned long seed, const char *caller)
-    {
-    }
+    template<class ElemType> void GPUMatrix<ElemType>::ReseedCurandGenerator(unsigned long seed, const char *caller) { }
 
     template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols, int deviceId)
     {
@@ -1216,7 +1208,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
-    template<class ElemType> void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
+	template<class ElemType> curandGenerator_t GPUMatrix<ElemType>::s_curandGenerator = NULL;
 
     template<class ElemType>
     typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)

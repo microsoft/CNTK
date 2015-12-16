@@ -5,10 +5,13 @@
 //
 #pragma once
 
+// This fixure is used in the unit tests to provide a sequence of consecutive 
+// values to seed the random number generators. In order to generate the seed 
+// values independent of the execution order of the tests, in each unit test 
+// the sequence is restarted from 0.
 class RandomSeedFixture
 {
-    static unsigned long s_counter;
+    unsigned long counter = 0ul;
 public:
-    RandomSeedFixture();
-    unsigned long IncrementCounter();
+    unsigned long IncrementCounter() { return counter++; };
 };
