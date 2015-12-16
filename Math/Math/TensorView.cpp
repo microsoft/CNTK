@@ -17,11 +17,13 @@
 #define let const auto
 #endif
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
+
+    // -------------------------------------------------------------------
+    // construction
+    // -------------------------------------------------------------------
 
     // cast a matrix as a tensor
     template<class ElemType>
@@ -47,16 +49,69 @@ namespace Microsoft {
             LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob.GetNumRows(), (int)m_sob.GetNumCols());
     }
 
+    // -------------------------------------------------------------------
+    // elementwise operations
+    // -------------------------------------------------------------------
+
+    template<class ElemType>
+    void TensorView<ElemType>::DoBinaryOpOf(const TensorView & a, const TensorView & b, TensorView & c, int op/*will become an enum later*/)
+    {
+        TensorView & c = *this;
+
+        // massage TensorShapes
+        auto as = a.GetShape().GetDims();
+        auto bs = b.GetShape().GetDims();
+        auto cs = c.GetShape().GetDims();
+
+        // expand ones to make tensors compatible
+        // Trailing dimensions broadcast.
+        // E.g. A(J) vs. B(J x T) will broadcast A(:) to all T columns.
+        // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
+        let dims = max(max(as.size(), bs.size()), cs.size());
+        as.resize(dims, 1);
+        bs.resize(dims, 1);
+        cs.resize(dims, 1);
+
+        // compatibility check
+        // Each participant can broadcast. Non-broadcasting dimensions must match.
+        for (size_t k = 0; k < dims; k++)
+        {
+            dim = as[k];
+            if (dim == 1)
+                dim = bs[k];
+            else if (bs[k] != 1 && dim != bs[k])
+                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs (%d vs. %d)", (int)dim, (int)bs[k]);
+            else if (cs[k] != 1 && dim != 1 && dim != cs[k])
+                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between inputs and output (%d vs. %d)", (int)dim, (int)cs[k]);
+        }
+
+        // flatten consecutive dimensions
+        // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
+
+        // determine inverse broadcasting dimensions
+        // TODO: describe the resulting for loop as a set of tensor dims and strides as well.
+        vector<bool> cBroadcasts(dims);
+        for (size_t k = 0; k < dims; k++)
+            cBroadcasts[k] = cs[k] != 1 && dim == 1;
+
+        // now perform the operation
+        // :)
+    }
+
     // simple test function for testing stuff
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
-        Matrix<ElemType> m(0);
-        m.Resize(13, 42);
-        TensorShape s1(13, 2, 22);
-        TensorShape s2(13, 2, 21);
-        s1;//let t1 = TensorView<ElemType>(m, s1); t1;
-        let t2 = TensorView<ElemType>(m, s2); t2;
+        Matrix<ElemType> m1(0); m1.Resize(1, 42);
+        Matrix<ElemType> m2(0); m2.Resize(13, 1);
+        Matrix<ElemType> m3(0); m3.Resize(13, 21);
+        TensorShape s1(1, 2, 21);
+        TensorShape s2(13, 1);
+        TensorShape s3(13, 1, 21);
+        let t1 = TensorView<ElemType>(m1, s1); t1;
+        let t2 = TensorView<ElemType>(m2, s2); t2;
+        let t3 = TensorView<ElemType>(m3, s3); t3;
+        Add(m1, m2, m3);
     }
 
     template class TensorView<float>;
