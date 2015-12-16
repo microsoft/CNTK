@@ -237,7 +237,7 @@ if [[ $RUN == 1 ]]; then
             fi
             OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.out"
 
-            BIN_PATH=$CNTK_ROOT/$FLAVOR_DIR/$BIN_NAME 
+            BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME 
             if ! [[ -f $BIN_PATH ]]; then
                 echo "============ ERROR: CNTK did not build properly for flavor ($FLAVOR)  ============"
                 echo "Missing file: $BIN_PATH"
@@ -254,7 +254,7 @@ if [[ $RUN == 1 ]]; then
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
-                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
             else
                 time $BIN_PATH configFile=$CONF_FILE &>$OUT_FILE || exit $?
             fi

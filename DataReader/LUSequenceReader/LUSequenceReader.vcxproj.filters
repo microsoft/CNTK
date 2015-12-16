@@ -20,9 +20,7 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp" />
-    <ClCompile Include="C:\work\cntk-public\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\Common\Config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LUSequenceWriter.h" />
@@ -30,9 +28,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="LUSequenceReader.h" />
     <ClInclude Include="LUSequenceParser.h" />
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -45,13 +40,7 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="minibatchsourcehelpers.h">
-      <Filter>Duplicates to remove</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
-    <ClInclude Include="C:\work\cntk-public\Common\Include\Config.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="SequenceTest.txt" />

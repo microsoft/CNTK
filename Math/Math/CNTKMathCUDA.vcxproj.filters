@@ -50,9 +50,6 @@
     <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="ColumnQuantizer.h">
       <Filter>GPU\1bitSGD</Filter>
     </ClInclude>

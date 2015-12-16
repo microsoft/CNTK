@@ -410,12 +410,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     template<class ElemType>
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
+    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, EngineType engType)
     {
-        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
-            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
-        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+        if (engType == EngineType::Auto)
+        {
+            // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
+            if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
+                return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
+            return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+        }
+        else if (engType == EngineType::CuDnn)
+        {
+            if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
+                return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
+            RuntimeError("cuDNN convolution engine is not supported, check the device id and whether the code was compiled with cuDNN.");
+        }
+        else if (engType == EngineType::Legacy)
+            return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+
+        RuntimeError("Not supported convolution engine type: %d.", engType);
     }
 
     template class ConvolutionEngineFactory<float>;

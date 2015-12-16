@@ -159,7 +159,6 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="ConcurrentReader.h" />
-    <ClInclude Include="minibatchsourcehelpers.h" />
     <ClInclude Include="readaheadsource.h" />
     <ClInclude Include="simplethread.h" />
     <ClInclude Include="stdafx.h" />

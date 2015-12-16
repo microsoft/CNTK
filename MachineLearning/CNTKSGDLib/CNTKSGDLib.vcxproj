@@ -152,7 +152,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\Config.h" />
@@ -162,8 +161,7 @@
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
-    <ClInclude Include="..\..\Common\Include\MultiversoWrapper.h" />
+	<ClInclude Include="..\..\Common\Include\MultiversoWrapper.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\..\Common\Include\Sequences.h" />
@@ -173,7 +171,6 @@
     <ClInclude Include="..\..\Math\Math\MatrixQuantizer.h" />
     <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
-    <ClInclude Include="..\CNTK\Profiler.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />
@@ -182,8 +179,6 @@
     <ClInclude Include="DistGradHeader.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IDistGradAggregator.h" />
-    <ClInclude Include="MPIWrapper.h" />
-    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h" />
