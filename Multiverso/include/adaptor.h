@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <thread>
+#include <cstdint>
 using namespace std;
 
 namespace zmq
@@ -29,24 +30,24 @@ namespace multiverso
 		// Will load the whole table if rows is empty.
 		// BatchLoad methods only work for P2P comm mode and thery are 
 		// transparent to REDUCE comm mode.
-		long long BatchLoad(int table_id, vector<long long> &rows);
-		long long BatchLoad(int table_id, long long *rows = nullptr,
-			long long num = 0);
-		long long BatchLoad(int table_id, void *dst, unsigned long long *idx_each_server, unsigned long long *size_each_server);
+		int64_t BatchLoad(int table_id, vector<int64_t> &rows);
+		int64_t BatchLoad(int table_id, int64_t *rows = nullptr,
+			int64_t num = 0);
+		int64_t BatchLoad(int table_id, void *dst, uint64_t *idx_each_server, uint64_t *size_each_server);
 		// Returns the memory of the row.
-		void *Get(int table_id, long long row_id);
+		void *Get(int table_id, int64_t row_id);
 		// Updates a row by adding a delta.
-		void Add(int table_id, long long row_id, void *delta,
+		void Add(int table_id, int64_t row_id, void *delta,
 			float server_coef = 1.0f);
 		// Updates a row by replacing the value.
-		void Set(int table_id, long long row_id, void *value);
+		void Set(int table_id, int64_t row_id, void *value);
 
 		// All working adaptor sync at this point and continue.
 		void Barrier();
 
 		void Clock();
 
-		void Update(void *dst, unsigned long long *idx_each_server, unsigned long long *size_each_server, int table_id, long long rows, void *delta);
+		void Update(void *dst, uint64_t *idx_each_server, uint64_t *size_each_server, int table_id, int64_t rows, void *delta);
 
 	private:
 		// Registers the client adaptor to communicator.
@@ -54,7 +55,7 @@ namespace multiverso
 		void WaitForReply(int wait_count, zmq::socket_t *socket);
 		// Send all and clean up the local add cache.
 		void SendAddCache();
-		int GetRowServerId(long long row_id) { return row_id % server_count_; }
+		int GetRowServerId(int64_t row_id) { return row_id % server_count_; }
 
 		// Sync the model with AllReduce method.
 		void AllReduce();
@@ -68,9 +69,9 @@ namespace multiverso
 
 		// A simple memory pool method of caching and aggregating the updates
 		// to servers.
-		vector<unordered_map<long long, char*>*> add_records_;
+		vector<unordered_map<int64_t, char*>*> add_records_;
 		char *add_cache_;
-		long long used_add_size_;
+		int64_t used_add_size_;
 
 		thread::id * _tid;
 	};
