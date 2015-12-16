@@ -180,6 +180,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
+
+        virtual bool isLearnableParameter()const override{ return true; }
     };
 
 #if 0
