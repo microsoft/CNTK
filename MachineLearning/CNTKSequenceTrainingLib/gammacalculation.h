@@ -62,7 +62,7 @@ namespace msra { namespace lattices {
             //check total frame number to be added ?
             //int deviceid = loglikelihood.GetDeviceId();
             size_t boundaryframenum;
-            std::vector<size_t> validframes;
+            std::vector<size_t> validframes;                // [s] cursor pointing to next utterance begin within a single parallel sequence [s]
             validframes.assign(samplesInRecurrentStep, 0);
             ElemType objectValue = 0.0;
             //convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
@@ -80,18 +80,16 @@ namespace msra { namespace lattices {
             if (doreferencealign)
                 labels.SetValue((ElemType)(0.0f));
                 
-            size_t mbsize = numcols / samplesInRecurrentStep;                
+            size_t T = numcols / samplesInRecurrentStep;        // number of time steps in minibatch           
             if (samplesInRecurrentStep > 1)
             {
                 assert(extrauttmap.size() == lattices.size());
-                assert(mbsize == pMBLayout->GetNumTimeSteps());
+                assert(T == pMBLayout->GetNumTimeSteps());
             }
                 
-            size_t mapi = 0;
-            size_t mapframenum = 0;
-            //cal gamma for each utterance
+            size_t mapi = 0;                // parallel-sequence index for utterance [i]
+            // cal gamma for each utterance
             size_t ts = 0;
-            //size_t ts_uid = 0;                
             for (size_t i = 0; i < lattices.size(); i++)
             {
                 const size_t numframes = lattices[i]->getnumframes();
@@ -99,8 +97,7 @@ namespace msra { namespace lattices {
                 msra::dbn::matrixstripe predstripe(pred, ts, numframes);           // logLLs for this utterance                    
                 msra::dbn::matrixstripe dengammasstripe(dengammas, ts, numframes); // denominator gammas
 
-                                        
-                if (samplesInRecurrentStep == 1)  //one channel 
+                if (samplesInRecurrentStep == 1)  // no sequence parallelism
                 {
                     tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
                     //if (m_deviceid == CPUDEVICE)
@@ -111,21 +108,26 @@ namespace msra { namespace lattices {
                     if (m_deviceid != CPUDEVICE)
                         parallellattice.setloglls(tempmatrix);
                 }
-                else                   //multi channel
+                else                   // multiple parallel sequences
                 {
-                    //get frame number for each utterance
-                    mapi = extrauttmap[i];  // map from utterance id to parallel utterance id 
+                    // get number of frames for the utterance
+                    mapi = extrauttmap[i];          // parallel-sequence index; in case of >1 utterance within this parallel sequence, this is in order of concatenation
                         
-                    for (size_t j = validframes[mapi]; j < mbsize; j++)
+                    // scan MBLayout for end of utterance
+                    size_t mapframenum = SIZE_MAX;         // duration of utterance [i] as determined from MBLayout
+                    for (size_t t = validframes[mapi]; t < T; t++)
                     {
                         // TODO: Adapt this to new MBLayout, m_sequences would be easier to work off.
-                        if (pMBLayout->IsEnd(mapi,j))
+                        if (pMBLayout->IsEnd(mapi,t))
                         {
-                            mapframenum = j - validframes[mapi] + 1;
+                            mapframenum = t - validframes[mapi] + 1;
                             break;
                         }
                     }
 
+                    // must match the explicit information we get from the reader
+                    if (numframes != mapframenum)
+                        LogicError("gammacalculation: IsEnd() not working, numframes (%d) vs. mapframenum (%d)", (int)numframes, (int)mapframenum);
                     assert(numframes == mapframenum);
 
                     if (numframes > tempmatrix.GetNumCols())
@@ -202,7 +204,7 @@ namespace msra { namespace lattices {
                     }
                 }
                 if (samplesInRecurrentStep > 1)
-                    validframes[mapi] += numframes;
+                    validframes[mapi] += numframes;             // advance the cursor within the parallel sequence
                 fprintf(stderr, "dengamma value %f\n", denavlogp);
                 ts += numframes;
             }       

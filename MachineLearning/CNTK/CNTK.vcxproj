@@ -162,7 +162,6 @@
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataTensor.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
@@ -185,15 +184,10 @@
     <ClInclude Include="..\CNTKSGDLib\SGD.h" />
     <ClInclude Include="..\CNTKSGDLib\SimpleEvaluator.h" />
     <ClInclude Include="..\CNTKSGDLib\SimpleOutputWriter.h" />
-    <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetworkBuilder.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h" />
-    <ClInclude Include="DistGradHeader.h" />
-    <ClInclude Include="IDistGradAggregator.h" />
-    <ClInclude Include="MPIWrapper.h" />
-    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />

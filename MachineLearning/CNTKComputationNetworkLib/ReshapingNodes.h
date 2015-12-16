@@ -657,7 +657,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < GetNumInputs(); i++)
             {
-                if (isFinalValidationPass && Input(i)->GetNumCols() != numCols)
+                if (isFinalValidationPass && !HasMBLayout() && Input(i)->GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Input(i)->NodeName().c_str());
 
                 m_startRowIndices[i] = totalRows;

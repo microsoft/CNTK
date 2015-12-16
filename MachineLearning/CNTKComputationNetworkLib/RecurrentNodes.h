@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
-    template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
+    template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/  /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public
                                  ILateAttachingNode, public IStateFulNode,  public NumInputs<1>
     {
@@ -230,12 +230,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             }
 
-            size_t t = fr.t();
-
             // we backpropagated into the delayed frame
             FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
             // if delayed input is within valid time range then add its gradient
+            size_t t = fr.t();
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
             if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
             {
@@ -333,8 +332,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // we forward prop from the previous frame to this frame
             FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
-            size_t t = fr.t();
-
             VerifyDims(Input(0));
 
             size_t T = GetNumTimeSteps();
@@ -343,6 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // compute logical position of delayed value
             assert(m_timeStep > 0);
 
+            size_t t = fr.t();
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
 
             Matrix<ElemType> inp;   // ((DEVICEID_TYPE)m_value.GetDeviceId());
@@ -430,7 +428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction, SequenceStart_or_End>>(nodeP);
+                auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction/*, SequenceStart_or_End*/>>(nodeP);
                 node->m_timeStep = m_timeStep;
                 node->m_initialActivationValue = m_initialActivationValue;
                 node->m_delayedActivation = m_delayedActivation;
@@ -459,13 +457,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (dir == -1) // we look into past 
             {
+#if 0
                 bool   allAtBoundary = true;
                 // if the current last frames are all sentence end or no feature , there is no need to carry on state info
-                if (m_pMBLayout->Is(nT-1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                if (m_pMBLayout->Is(FrameRange(nT-1), MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
                 {
                     for (size_t u = 0; u < nU; u++)
                     {
-                        if (!m_pMBLayout->Is(u, nT - 1, MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
+                        if (!m_pMBLayout->Is(FrameRange(nT - 1).Sequence(u), MinibatchPackingFlags::SequenceEnd | MinibatchPackingFlags::NoFeature))
                         {
                             allAtBoundary = false;
                             break;
@@ -478,6 +477,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (allAtBoundary)
+#endif
+                if (!m_pMBLayout->HasSequenceBeyondEnd())       // only need to export state if anything crosses the MB boundary
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
@@ -493,15 +494,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (dir == 1) // we look into future 
             {
+#if 0
                 // TODO: check whether all at boundary and don't carry state if it is the case 
                 size_t nT = m_pMBLayout->GetNumTimeSteps(); 
                 size_t nU = m_pMBLayout->GetNumParallelSequences(); 
                 bool allAtBoundary = true; 
-                if (m_pMBLayout->Is(0, MinibatchPackingFlags::NoFeature | MinibatchPackingFlags::SequenceStart))
+                if (m_pMBLayout->Is(FrameRange(nullptr, 0), MinibatchPackingFlags::NoFeature | MinibatchPackingFlags::SequenceStart))
                 {
                     for (size_t u = 0; u < nU; u++)
                     {
-                        if (!m_pMBLayout->Is(u, 0, MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::NoFeature))
+                        if (!m_pMBLayout->Is(FrameRange(nullptr, 0).Sequence(u), MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::NoFeature))
                         {
                             allAtBoundary = false; 
                             break;
@@ -509,6 +511,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
                 if (allAtBoundary)
+#endif
+                if (!m_pMBLayout->HasSequenceBeyondBegin())       // only need to export state if anything crosses the MB boundary
                 {
                     auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId); 
                     pState->CacheDelayedMBLayout(m_delayedActivationMBLayout); 
@@ -582,9 +586,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PastValueNode : public DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart>
+    class PastValueNode : public DelayedValueNodeBase<ElemType, -1 /*, MinibatchPackingFlags::SequenceStart*/>
     {
-        typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, -1/*, MinibatchPackingFlags::SequenceStart*/> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"PastValue"; }
     public:
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -608,9 +612,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd>
+    class FutureValueNode : public DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/>
     {
-        typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/> Base; UsingDelayedValueNodeMembers;
         static const std::wstring TypeName() { return L"FutureValue"; }
     public:
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :

@@ -24,28 +24,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - if there are more than one different layouts involved, this function will fail
     void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase()
     {
-        //wstring name = NodeName(); name;
-        //fprintf(stderr, "\nDetermining Layout --> %ls:", name.c_str());
-        MBLayoutPtr pMBLayout;  // starts with NULL layout
+        MBLayoutPtr pMBLayout;                  // start with NULL layout
         for (auto child : m_inputs)
         {
-            //wstring cname = child->NodeName(); cname;
-            //fprintf(stderr, "  %ls(%s)", cname.c_str(), child->m_pMBLayout ? "." : "NULL");
             if (!child)                         // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
                 ;
             else if (!child->m_pMBLayout)       // NULL layout (typical for parameter nodes)
                 ;
             else if (!pMBLayout)                // first non-NULL layout: just copy it
                 pMBLayout = child->m_pMBLayout;
-#if 0
-            else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
-//#if 0
-                fprintf(stderr, "InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
-//#else
-                RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
-#endif
+            else if (pMBLayout != child->m_pMBLayout) // got a layout--compare whether it is the same
+                RuntimeError("InferMBLayoutFromInputsForStandardCase: Found inconsistent layout in %ls %ls operation, mismatch detected for child %ls %ls.",
+                             NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
-        //fprintf(stderr, "  --> (%s)\n", pMBLayout ? "." : "NULL");
         // all are consistent: install it
         LinkToMBLayout(pMBLayout);
     }

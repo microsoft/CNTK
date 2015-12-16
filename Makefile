@@ -226,6 +226,7 @@ MATH_SRC =\
 	Math/Math/MatrixQuantizerCPU.cpp \
 	Math/Math/QuantizedMatrix.cpp \
 	Math/Math/Matrix.cpp \
+	Math/Math/TensorView.cpp \
 	Math/Math/CUDAPageLockedMemAllocator.cpp \
 	Math/Math/ConvolutionEngine.cpp \
 

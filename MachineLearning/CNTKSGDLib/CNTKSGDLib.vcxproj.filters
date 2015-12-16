@@ -30,9 +30,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -66,9 +63,6 @@
     <ClInclude Include="..\..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -96,9 +90,6 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h">
       <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -111,14 +102,8 @@
     <ClInclude Include="IDistGradAggregator.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
-    <ClInclude Include="MPIWrapper.h">
-      <Filter>Parallelization</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\CNTK\Profiler.h">
-      <Filter>GPU Interfacing</Filter>
     </ClInclude>
     <ClInclude Include="SGD.h">
       <Filter>SGD</Filter>
