@@ -484,7 +484,14 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         const ConfigValuePtr & At(int index) const { return At(index, [](const std::wstring &){ LogicError("ConfigArray::At(): Index unexpectedly out of bounds."); }); }
         // get an entire array into a std::vector. Note that this will force all values to be evaluated.
         template<typename C, typename FAILFN>
-        std::vector<C> AsVector(const FAILFN & Fail) const { GetSize(Fail); return std::vector<C>(values.begin(), values.end()); }
+        std::vector<C> AsVector(const FAILFN & Fail) const
+        {
+            std::vector<C> res;
+            res.reserve(GetSize(Fail));
+            for (const auto & val : values)
+                res.push_back(val);
+            return res;
+        }
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
