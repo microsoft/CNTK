@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="gammacalculation.h" />
+    <ClInclude Include="..\Common\Include\simple_checked_arrays.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\simplesenonehmm.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\ssefloat4.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\ssematrix.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\latticearchive.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\latticestorage.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="latticeforwardbackward.cpp" />
+    <ClCompile Include="parallelforwardbackward.cpp" />
+    <ClCompile Include="latticeNoGPU.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{1a125fc4-c205-4fed-9042-28e5951deb5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{9e99ce54-08c8-423c-810e-f44cfbadb2c5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -10,26 +10,26 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Common\DataReader.cpp">
+    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\DebugUtil.cpp">
+    <ClCompile Include="..\..\..\Source\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\Eval.cpp">
+    <ClCompile Include="..\..\..\Source\Common\Eval.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\File.cpp">
+    <ClCompile Include="..\..\..\Source\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\TimerUtility.cpp">
+    <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="UCIFastReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Common\Config.cpp">
+    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
