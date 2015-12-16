@@ -2,19 +2,19 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="CNTKEval.cpp" />
-    <ClCompile Include="..\..\Common\Eval.cpp">
+    <ClCompile Include="..\Common\Eval.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+    <ClCompile Include="..\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
+    <ClCompile Include="..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+    <ClCompile Include="..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp">
@@ -23,7 +23,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Config.cpp">
+    <ClCompile Include="..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -31,22 +31,22 @@
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
     <ClInclude Include="CNTKEval.h" />
-    <ClInclude Include="..\..\Common\Include\Eval.h">
+    <ClInclude Include="..\Common\Include\Eval.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\File.h">
+    <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\fileutil.h">
+    <ClInclude Include="..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
+    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+    <ClInclude Include="..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Basics.h">
+    <ClInclude Include="..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -55,7 +55,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Config.h">
+    <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,13 +4,13 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="..\..\Common\File.cpp">
+    <ClCompile Include="..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+    <ClCompile Include="..\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp">
@@ -41,10 +41,10 @@
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="..\..\Common\Include\File.h">
+    <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\fileutil.h">
+    <ClInclude Include="..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="CPUMatrix.h">
@@ -65,7 +65,7 @@
     <ClInclude Include="CUDAPageLockedMemAllocator.h">
       <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
+    <ClInclude Include="..\Common\Include\DebugUtil.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="TensorView.h">
       <Filter>Tensors</Filter>
