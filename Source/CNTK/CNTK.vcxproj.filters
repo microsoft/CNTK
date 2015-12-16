@@ -122,10 +122,10 @@
       <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\CPUMatrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
@@ -200,13 +200,13 @@
     <Filter Include="from ComputationNetworkLib\Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKSGDLib">
+    <Filter Include="from SGDLib">
       <UniqueIdentifier>{d3d5900a-8c5e-45f1-a2b7-f82f0e31994d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKSGDLib\SGD Parallelization">
+    <Filter Include="from SGDLib\SGD Parallelization">
       <UniqueIdentifier>{8531d7fb-a673-491a-988a-012c92fafbfd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKSGDLib\SGD">
+    <Filter Include="from SGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
     </Filter>
     <Filter Include="Model Building, from old NDL">
@@ -215,7 +215,7 @@
     <Filter Include="Model Building, Standard Models">
       <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKMath">
+    <Filter Include="from Math">
       <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
     </Filter>
     <Filter Include="MPI Interfacing">

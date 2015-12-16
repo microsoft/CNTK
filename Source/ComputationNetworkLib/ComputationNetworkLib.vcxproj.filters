@@ -106,7 +106,7 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="ReshapingNodes.h">
       <Filter>Nodes</Filter>
@@ -143,7 +143,7 @@
     <Filter Include="Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKMath">
+    <Filter Include="from Math">
       <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
