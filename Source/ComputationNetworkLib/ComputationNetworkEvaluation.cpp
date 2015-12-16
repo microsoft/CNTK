@@ -15,6 +15,7 @@
 #include <list>
 #include <set>
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -689,20 +690,52 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void ComputationNetwork::MarkValueNonSharableNodes(const ComputationNodeBasePtr& rootNode)
     {
         const auto & nodes = GetEvalOrder(rootNode);
+        std::map<wstring, bool>    allLeafDescendentsAreParameters; 
         for (auto& node : nodes)
         {
             auto children = node->GetInputs(); 
-            bool allChildrenNonSharable = true; 
-            for (auto& child : children)
+            wstring myname = node->NodeName();
+            bool allParameters = true; 
+                        
+            if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already 
             {
-                if (child->isValueSharable())
+                for (auto child : children)
                 {
-                    allChildrenNonSharable = false; 
-                    break;
+                    wstring ChildName = child->NodeName();
+                    if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
+                    {
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(child->IsLeaf());
+                        if (node->isLearnableParameter())
+                        {
+                            allLeafDescendentsAreParameters[ChildName] = true; 
+                        }
+                        else
+                        {
+                            allParameters = false; 
+                            allLeafDescendentsAreParameters[ChildName] = false;
+                            break;
+                        }                      
+                    }
+                    else
+                    {
+                        if (allLeafDescendentsAreParameters[ChildName] == false)
+                        {
+                            allParameters = false;
+                            break;
+                        }
+                    }
+                }
+                allLeafDescendentsAreParameters[myname] = allParameters;
+                if (allParameters)
+                {
+                    node->MarkValueNonSharable();
+                }
+                else
+                {
+                    node->MarkValueSharable();
                 }
             }
-            if (allChildrenNonSharable)
-                node->MarkValueNonSharable(); 
         }
         
     }

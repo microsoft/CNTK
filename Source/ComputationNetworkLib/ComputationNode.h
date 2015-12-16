@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
-            m_needsGradient(false)
+            m_needsGradient(false), m_valueSharable(true)
         {
             PurgeStateForFormingRecurrentLoops();
             m_isPartOfLoop = false;
@@ -166,10 +166,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
+        virtual void MarkValueNonSharable(){ m_valueSharable = false; }
+        virtual void MarkValueSharable() { m_valueSharable = true;    }
+        bool isValueSharable() { return m_valueSharable;  }
+        
     protected:  // TODO: should be fully encapsulated here
 
         bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
+        bool m_valueSharable;   // a flag is needed for memory share. 
+                                // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters), 
+                                // it will never be released to memory pool 
     private:
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
@@ -250,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId(deviceId), m_outputNeededDuringBackprop(true),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name),
-            m_numRows(0), m_numCols(0), m_valueSharable(true)
+            m_numRows(0), m_numCols(0) 
         { }
         virtual ~ComputationNodeBase(){}
 
@@ -455,14 +462,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
-        bool isValueSharable() 
-        {
-            return m_valueSharable; 
-        }
-        virtual void MarkValueNonSharable()
-        {
-            m_valueSharable = false; 
-        }
+        // sometimes, it is necessary to know whether it is a particular node (e.g., learnable parameter)
+        virtual bool isLearnableParameter() const { return false; }
+
     protected:
     public:     // ...the following should be protected, but nodes inquire about their children, requiring public access
 
@@ -778,8 +780,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
         bool m_outputNeededDuringBackprop;  // indicates whether the output value of the node is needed during backprop
 
-        // flags related with sharable values 
-        bool    m_valueSharable; // whether value is sharable 
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
