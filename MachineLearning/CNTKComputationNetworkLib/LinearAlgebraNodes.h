@@ -72,6 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
                 // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
+                // BUGBUG: This is not composable. For example, MinusNode does not allow this.
                 auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
                 if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
                     convNode->BackwardBias(gradientValues, inputGradientValues);

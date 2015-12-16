@@ -61,9 +61,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -136,23 +133,8 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h">
       <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="AllReduceDistGradAggregator.h">
-      <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="DistGradHeader.h">
-      <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="IDistGradAggregator.h">
-      <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="MPIWrapper.h">
-      <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>

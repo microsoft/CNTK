@@ -91,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // DecimateMinibatch - decimate minibatch for parallelization
         // -------------------------------------------------------------------
         // non-inplace decimation , to be used in subminibatch implementation 
-        // return [st, en) parallell sequence which has been selected after decimation 
+        // return [st, en) parallel sequence which has been selected after decimation 
         template<class ElemType>
         static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,           // input matrices 
             std::map<std::wstring, Matrix<ElemType>*>& decimatedMB,                                 // output decimated matrices. 
@@ -155,13 +155,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return pair<size_t, size_t>(st, en);
         }
 
-      // Inpace decimation 
+        // in-place decimation, for use with data-parallel processing
        // return [st, en) parallell sequence which has been selected after decimation 
         template<class ElemType>
         static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,    // matrix to be decimated
                                         int numprocs, int rank,                           // rank info
-                                        MBLayoutPtr pMBLayout                              // get decimated as well 
-                                        )
+                                        MBLayoutPtr pMBLayout)                            // get decimated as well 
         {
             if (numprocs == 1)
                 return pair<size_t, size_t>(0, pMBLayout->GetNumParallelSequences());
