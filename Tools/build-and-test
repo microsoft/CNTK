@@ -106,7 +106,7 @@ elif [[ $OSTYPE == "linux-gnu" ]]; then
     BUILD_OS="linux"
 else
     echo "============ ERROR: Unsupported OS ============"
-    echo "============ Scripts supports only building from Linux and Windows through Cygwin ============"
+    echo "============ Script supports only building from Linux and Windows through Cygwin ============"
     exit 1
 fi
 

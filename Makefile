@@ -198,7 +198,7 @@ CNTKMATH:=cntkmath
 ########################################
 
 BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
-GENBUILD:=Scripts/generate_build_info
+GENBUILD:=Tools/generate_build_info
 
 $(BUILDINFO): $(GENBUILD)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
