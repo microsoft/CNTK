@@ -1,19 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\DataReader.cpp">
+    <ClCompile Include="..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DataWriter.cpp">
+    <ClCompile Include="..\Common\DataWriter.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
+    <ClCompile Include="..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+    <ClCompile Include="..\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="ModelEditLanguage.cpp">
@@ -25,7 +25,7 @@
     <ClCompile Include="tests.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+    <ClCompile Include="..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
@@ -38,13 +38,13 @@
     <ClCompile Include="SimpleNetworkBuilder.cpp">
       <Filter>Model Building, Standard Models</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\MPIWrapper.cpp">
+    <ClCompile Include="..\Common\MPIWrapper.cpp">
       <Filter>MPI Interfacing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Include\ConcStack.h">
+    <ClCompile Include="..\Common\Include\ConcStack.h">
       <Filter>Common\Include</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Config.cpp">
+    <ClCompile Include="..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="BrainScript\BrainScriptEvaluator.cpp">
@@ -61,19 +61,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\fileutil.h">
+    <ClInclude Include="..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
+    <ClInclude Include="..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\File.h">
+    <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataReader.h">
+    <ClInclude Include="..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+    <ClInclude Include="..\Common\Include\DataWriter.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="IExecutionEngine.h">
@@ -91,22 +91,22 @@
     <ClInclude Include="targetver.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\hostname.h">
+    <ClInclude Include="..\Common\Include\hostname.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+    <ClInclude Include="..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Basics.h">
+    <ClInclude Include="..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\BestGpu.h">
+    <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\CrossProcessMutex.h">
+    <ClInclude Include="..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Platform.h">
+    <ClInclude Include="..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="NDLNetworkBuilder.h">
@@ -121,22 +121,22 @@
     <ClInclude Include="SimpleNetworkBuilder.h">
       <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\Matrix.h">
+    <ClInclude Include="..\Math\Matrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\CPUMatrix.h">
+    <ClInclude Include="..\Math\CPUMatrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+    <ClInclude Include="..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Sequences.h">
+    <ClInclude Include="..\Common\Include\Sequences.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataTensor.h">
+    <ClInclude Include="..\Common\Include\DataTensor.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\ProgressTracing.h">
+    <ClInclude Include="..\Common\Include\ProgressTracing.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
@@ -191,13 +191,13 @@
     <Filter Include="Misc">
       <UniqueIdentifier>{3c119a92-ffb2-4850-adae-01778324974d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib">
+    <Filter Include="from ComputationNetworkLib">
       <UniqueIdentifier>{7b4cb3e8-272f-413d-badd-d437779b1aeb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib\Nodes">
+    <Filter Include="from ComputationNetworkLib\Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib\Network">
+    <Filter Include="from ComputationNetworkLib\Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
     <Filter Include="from CNTKSGDLib">

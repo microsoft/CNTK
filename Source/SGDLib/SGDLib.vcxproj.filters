@@ -1,22 +1,22 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\DataReader.cpp">
+    <ClCompile Include="..\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\DataWriter.cpp">
+    <ClCompile Include="..\Common\DataWriter.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
+    <ClCompile Include="..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+    <ClCompile Include="..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Profiler.cpp">
@@ -25,28 +25,28 @@
     <ClCompile Include="SGD.cpp">
       <Filter>SGD</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Config.cpp">
+    <ClCompile Include="..\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\fileutil.h">
+    <ClInclude Include="..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\File.h">
+    <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataReader.h">
+    <ClInclude Include="..\Common\Include\DataReader.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+    <ClInclude Include="..\Common\Include\DataWriter.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h">
-      <Filter>from CNTKComputationNetworkLib\Network</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
@@ -54,43 +54,43 @@
     <ClInclude Include="targetver.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\hostname.h">
+    <ClInclude Include="..\Common\Include\hostname.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+    <ClInclude Include="..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Basics.h">
+    <ClInclude Include="..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\BestGpu.h">
+    <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\TrainingCriterionNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h">
-      <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
+    <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\CrossProcessMutex.h">
+    <ClInclude Include="..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="AllReduceDistGradAggregator.h">
@@ -102,7 +102,7 @@
     <ClInclude Include="IDistGradAggregator.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Platform.h">
+    <ClInclude Include="..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="SGD.h">
@@ -111,19 +111,19 @@
     <ClInclude Include="SimpleOutputWriter.h">
       <Filter>Eval</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+    <ClInclude Include="..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\Matrix.h">
+    <ClInclude Include="..\Math\Matrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\CUDAPageLockedMemAllocator.h">
+    <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\MatrixQuantizer.h">
+    <ClInclude Include="..\Math\MatrixQuantizer.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h">
+    <ClInclude Include="..\Math\QuantizedMatrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
     <ClInclude Include="SimpleEvaluator.h">
@@ -138,13 +138,13 @@
     <ClInclude Include="MultiNetworksEvaluator.h">
       <Filter>MultiNetworks</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Sequences.h">
+    <ClInclude Include="..\Common\Include\Sequences.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataTensor.h">
+    <ClInclude Include="..\Common\Include\DataTensor.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\Config.h">
+    <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="IComputationNetBuilder.h">
@@ -173,13 +173,13 @@
     <Filter Include="Eval">
       <UniqueIdentifier>{c263e5cd-26a3-4277-bf2f-f3de466267a3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib">
+    <Filter Include="from ComputationNetworkLib">
       <UniqueIdentifier>{d5cc574b-5fd1-476b-b69e-0c6428a55262}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib\Network">
+    <Filter Include="from ComputationNetworkLib\Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKComputationNetworkLib\Nodes">
+    <Filter Include="from ComputationNetworkLib\Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
     <Filter Include="from CNTKMath">
