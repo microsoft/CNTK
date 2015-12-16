@@ -1273,6 +1273,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
         // should only need one memory block per device
+        // Thread-safety could be achieved by changing this to a shared_ptr.
+        // When using the TensorView interface, one could instead just use a 1x1 matrix with a view that broadcasts its columns (stride 0).
         static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
         {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
