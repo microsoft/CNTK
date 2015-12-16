@@ -86,24 +86,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorShape
     {
     public:
+        // main constructor (from vector that holds dimensions)
         template<class VEC>
-        TensorShape(const VEC & dims)
-        {
-            m_dims.reserve(dims.size());
-            m_dims.assign(dims.begin(), dims.end());
-            InitAsNoSlice();
-        }
+        TensorShape(const VEC & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        TensorShape(std::vector<size_t> && dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
+
         // convenience constructors, e,g. for test code
         TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
         TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
         TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
         TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }
         TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(std::vector<size_t> { I, J, K, L, M }) { }
+
+        // default constructor
         // BUGBUG: This default initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
         TensorShape() : TensorShape(1, 1, 1) { }
 
         // boilerplate
-        TensorShape(std::vector<size_t> && dims) : m_dims(std::move(dims)) { }
         bool operator==(const TensorShape & other) const { return m_dims == other.m_dims; }
 
         void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
@@ -123,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (dim > UINT32_MAX)
                     LogicError("TensorShape::Save(): Tensor dimensions %s out of bounds (> 4G).", string(*this).c_str());
                 fstream << (uint32_t)dim;
-                if (m_multipliers[k] != dim)
+                if (m_multipliers[k] != mul)
                     LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
                 mul *= dim;
             }
@@ -151,6 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_dims[1] = n;
                 fstream >> m_dims[2] >> m_dims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
             }
+            InitAsNoSlice();
         }
 
         // accessors
@@ -186,11 +186,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // 
         void InitAsNoSlice()
         {
+            m_offset = 0;
             m_multipliers.resize(m_dims.size());
             size_t mul = 1;
             for (size_t k = 0; k < m_dims.size(); k++)
             {
-                m_multipliers.push_back(mul);
+                m_multipliers[k] = mul;
                 mul *= m_dims[k];
             }
             m_storageSize = mul;
