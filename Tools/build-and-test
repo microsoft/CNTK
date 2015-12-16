@@ -142,7 +142,7 @@ fi
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
-    cp Demos/Simple2d/Config/Simple.config $CONF_FILE || exit $?
+    cp Examples/Miscellaneous/Simple2d/Config/Simple.config $CONF_FILE || exit $?
 
     # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
     # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
@@ -213,8 +213,8 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
-    echo "============ cp Demos/Simple2d/Config/Simple.config $CONF_FILE  ============"
-    echo "============ cd $CNTK_ROOT/Demos/Simple2d/Data  ============"
+    echo "============ cp Examples/Miscellaneous/Simple2d/Config/Simple.config $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Examples/Miscellaneous/Simple2d/Data  ============"
 
     for TARGET in "${targetArray[@]}"
     do
@@ -250,7 +250,7 @@ if [[ $RUN == 1 ]]; then
                 echo "============ Running $BIN_PATH configFile=$CONF_FILE for ($FLAVOR) ($TARGET) ============"
             fi
             echo "============ output in ($OUT_FILE) ============"
-            cd $CNTK_ROOT/Demos/Simple2d/Data
+            cd $CNTK_ROOT/Examples/Miscellaneous/Simple2d/Data
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
