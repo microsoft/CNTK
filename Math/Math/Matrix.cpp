@@ -1,4 +1,4 @@
-// Matrix.cpp -- main CPP file that contains all functions exported by the CNTKMath.dll
+// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the CNTKMath.dll
 //
 // <copyright file="Matrix.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -26,7 +26,6 @@
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
-
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
@@ -164,6 +163,32 @@
             RuntimeError("Matrices do not exist in either CPU or GPU."); \
         } \
     }
+
+// EnforceOneGPUOnly - enforce that we only use one GPU (because we don't really support more than one at this point in time)
+// BUGBUG workaround.
+// Call this after every place a device is deviced.
+// We have multiple independent mechanisms to pick a device.
+// After selecting a device id, always run the result through this function, which will cache the first choice.
+// TODO: This is a stop-gap. It will be cleaned up once we also fix the GPU late-locking bug.
+//       The correct fix is to always route GPU selection through a single function in the first place.
+DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
+{
+    if (requestedDeviceId < 0)      // only apply this to GPU ids
+        return requestedDeviceId;
+    static DEVICEID_TYPE theGPUId = DEVICEID_NOTYETDETERMINED;
+    if (theGPUId == DEVICEID_NOTYETDETERMINED)
+        theGPUId = requestedDeviceId;
+    else if (theGPUId != requestedDeviceId)
+    {
+        static bool shown = false;
+        if (!shown)
+        {
+            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d to %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
+            shown = true;
+        }
+    }
+    return theGPUId;
+}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors, destructors and other static matrix builders
@@ -361,9 +386,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_GPUMatrix = new GPUMatrix<ElemType>(numRows, numCols, m_preferredDeviceId);
                 SetDataLocation(GPU, DENSE);
             }
-        }
 
-        SetValue(0);
+            SetValue(0);
+        }
     }
 
     template<class ElemType>
@@ -1060,9 +1085,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
             this->m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix), 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
+            this->m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix),
+            NOT_IMPLEMENTED,
+            this->m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix)
             );
 
         return *this;
@@ -1444,10 +1469,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             DISPATCH_MATRIX_ON_FLAG(this,
                 this,
-                    m_CPUMatrix->Reshape(numRows, numCols),
-                    m_GPUMatrix->Reshape(numRows, numCols),
+                m_CPUMatrix->Reshape(numRows, numCols),
+                m_GPUMatrix->Reshape(numRows, numCols),
                 NOT_IMPLEMENTED, 
-                NOT_IMPLEMENTED
+                m_GPUSparseMatrix->Reshape(numRows, numCols)
                 );
         }
     }
@@ -2860,6 +2885,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
 
         return *this;
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::InplaceTranspose()
+    {
+        if (IsEmpty())
+            return;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            this->m_GPUSparseMatrix->InplaceTranspose()
+            );
     }
 
     template<class ElemType>
@@ -4282,15 +4322,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="beta">Scalar</param>
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
-    void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b,
-        ElemType beta, Matrix<ElemType>& c, size_t stepSize, bool padding)
+    void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+        ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         DecideAndMoveToRightDevice(a, b, c);
         
         if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE
             && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
         {
-            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUSparseMatrix, beta, *c.m_GPUMatrix, stepSize, padding);
+            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
         }
         else
         {
@@ -4407,7 +4447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_CPUMatrix, D, S, M, K, T, scaleFactor, *b.m_CPUMatrix, *c.m_CPUMatrix),
             GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUMatrix, *c.m_GPUMatrix),
             NOT_IMPLEMENTED,
-            NOT_IMPLEMENTED
+            GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUSparseMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix)
             );
     }
 
@@ -5146,13 +5186,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class Matrix<float>; 
     template class Matrix<double>;    
 
-    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
     // Let's explicitly instantiate the methods we need for that purpose
     template Matrix<char>::Matrix(DEVICEID_TYPE);
     template Matrix<char>::Matrix(Matrix<char>&&);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
     template Matrix<char>::~Matrix();
+    template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
+    template Matrix<char>& Matrix<char>::operator=(const Matrix<char>& deepCopyFrom);
     template char* Matrix<char>::BufferPointer() const;
     template int Matrix<char>::GetDeviceId() const;
     template size_t Matrix<char>::GetNumElements() const;
@@ -5162,6 +5204,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template size_t Matrix<char>::GetNumCols() const;
     template void Matrix<char>::SetValue(const char);
     template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
-    template bool Matrix<char>::IsEmpty() const;  
-    
+    template bool Matrix<char>::IsEmpty() const;
+
 }}}

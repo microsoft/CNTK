@@ -61,6 +61,7 @@ using namespace std;
         L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n"   // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
         L"ClassificationError = ErrorPrediction \n"
         L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
+        L"BatchNormalization(input, scale, bias, runMean, runInvStdDev, eval, spatial, expAvgFactor, tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]\n"
         // standard nodes. We use macros to define these strings.
 #define UnaryStandardNode(Op,a) L ## #Op L"(" L ## #a L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = " L ## #a L" /*plus the function args*/ ]\n"
 #define BinaryStandardNode(Op,a,b) L ## #Op L"(" L ## #a L", " L ## #b L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = (" L ## #a L" : " L ## #b L") /*plus the function args*/ ]\n"
@@ -69,7 +70,7 @@ using namespace std;
         TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores)    // TODO: better names
         QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
         // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
-        //BinaryStandardNode(ColumnElementTimesNode)
+        BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
         BinaryStandardNode(CosDistance, aVectorSequence, anotherVectorSequence)
         QuaternaryStandardNode(CosDistanceWithNegativeSamples, aVectorSequence, anotherVectorSequence, numShifts, numNegSamples)
         //BinaryStandardNode(CosDistanceWithNegativeSamplesNode)

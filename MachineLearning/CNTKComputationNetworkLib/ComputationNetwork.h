@@ -26,6 +26,7 @@
 #include <iostream>
 #include <regex>
 #include <chrono>
+#include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,6 +45,7 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
+        m_isCompiled(false),
         m_pMBLayout(make_shared<MBLayout>())
     { }
     ComputationNetwork(DEVICEID_TYPE deviceId) :
@@ -55,10 +57,11 @@ public:
 
     virtual ~ComputationNetwork()
     {
-        ClearNet();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
+        ClearNetwork();     // This will explicitly remove all nodes. This is needed to break circular references in loops.
     }
 
-    void ClearNet();
+    void ClearNetwork();
+    void InvalidateCompiledNetwork();
 
     void SetDeviceId(DEVICEID_TYPE deviceId)
     {
@@ -79,8 +82,15 @@ private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
 
-    void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
-                                           const FileOptions fileFormat = FileOptions::fileOptionsBinary);
+    template<class ElemType>
+    void LoadPersistableParameters(File & fstream, bool create);
+    // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
+    template<class ElemType>
+    void ReloadPersistableParameters(const std::wstring& fileName)
+    {
+        File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+        LoadPersistableParameters<ElemType>(fstream, false);
+    }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<class ElemType>
@@ -115,19 +125,14 @@ public:
             ForwardProp(node);
     }
 
-    static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
-    void ResetEvalTimeStamp();
+    static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr> & nodes);
+    void ResetEvalTimeStamps();
 
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
-#if 0
-        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
-        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
-        AllocateEvalMatrices(rootNode);
-#endif
-        // TODO: do we need to reset time stamps?
-        BuildAndValidateSubNetwork(rootNode);
+        VerifyIsCompiled("StartEvaluateMinibatchLoop");
+        ResetEvalTimeStamps();              // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
     }
     template<class NODESET>
     void StartEvaluateMinibatchLoop(const NODESET & nodes)  // (ugly name; meant to be unique so we can rename if needed)
@@ -146,44 +151,37 @@ public:
     // evaluation: preparation
     // -----------------------------------------------------------------------
 
-    void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
+    void CompileNetwork();      // call this after creation, Load(), and any modification
+
+    //void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
     // prepares the network for computation
-    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+    //void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
 private:
+    void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
-    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
+    void VerifyIsCompiled(const char * where) const;
+    //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
+    void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
-    void AllocateGradientMatrices(ComputationNodeBasePtr rootNode); // public since this is called by SGD
 private:
-    void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, std::vector<ComputationNodeBasePtr>& outValueRootNodes, std::vector<ComputationNodeBasePtr>& trainRootNodes);
-    void AllocateEvalMatrices(ComputationNodeBasePtr rootNode);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount);
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 public:
-
-    // called by TrainOrAdaptModel() for refNet, and from PerformSVDDecomposition()
-    // TODO: Is this function really needed?
-    void RebuildNetwork(const ComputationNodeBasePtr& rootNode)
-    {
-        ClearCaches();
-        BuildAndValidateSubNetwork(rootNode);
-    }
 
     // -----------------------------------------------------------------------
     // evaluation: execution plan and network recurrent-loop analysis
     // -----------------------------------------------------------------------
 
-    ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode);
+    void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
+    ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class?
 private:
-
-    void ClearCalcOrderCaches();
 
     // This is part of the FormRecurrentLoops() process, and only called from there.
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
@@ -192,7 +190,6 @@ private:
     void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void DetermineLoopDirections();
 
 public:
 
@@ -203,33 +200,37 @@ public:
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // skipPairNetwork == true is only used when called from FormRecurrentLoops()
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork)
+    void FormEvalOrder(const ComputationNodeBasePtr & rootNode)
     {
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, skipPairNetwork);
+        if (m_evalOrders.find(rootNode) != m_evalOrders.end())
+            fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+
+        if (rootNode)
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
+        else
+            m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }
 
-    // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
-    // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
-    std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
+    // replace an existing eval order with an updated one
+    // This is meant to be used by FormRecurrentLoops().  TODO: Hopefully this can be not done anymore some day.
+    void UpdateEvalOrder(const ComputationNodeBasePtr & rootNode, std::list<ComputationNodeBasePtr> & nodes)
     {
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*skipPairNetwork*/);
+        GetEvalOrder(rootNode);     // verify that there is already an entry for rootNode
+        m_evalOrders[rootNode] = nodes;
     }
 
-private:
-
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr & rootNode,
-                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool skipPairNetwork)
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode)
     {
-        if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, skipPairNetwork);
-        return orderMap[rootNode];
+        if (m_evalOrders.find(rootNode) == m_evalOrders.end())
+            LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+
+        return m_evalOrders[rootNode];
     }
 
 protected:
     class SEQTraversalFlowControlNode;
 private:
-    static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
+    static std::shared_ptr<SEQTraversalFlowControlNode> FindInRecurrentLoops(const std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node);
 public:
 
     // -----------------------------------------------------------------------
@@ -294,33 +295,14 @@ public:
             nodeIter->NotifyFunctionValuesMBSizeModified();
     }
 
-    // this coulds the actual number of frames in a minibatch, excluding gaps in parallel sequences
-    // TODO: Move to MBLayout class. Also should not need 'numAllSamples' anymore.
-    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    // this counts the actual number of frames in a minibatch (not counting gaps in parallel sequences)
+    // TODO: Instead of passing numAllSamples in here, we should determine it from the inputs in case of no layout. Or simply forbid this case.
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples) const
     {
-        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
-        {
-            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
-            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
-
-            size_t numSamplesWithoutLabel = 0;
-
-            for (size_t t = 0; t < numTimeSteps; t++)
-            {
-                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
-                {
-                    for (int id = 0; id < numSequences; id++)
-                    {
-                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                            numSamplesWithoutLabel++;
-                    }
-                }
-            }
-
-            return numTimeSteps*numSequences - numSamplesWithoutLabel;
-        }
+        if (m_pMBLayout)
+            return m_pMBLayout->GetActualNumSamples();
         else
-            return numAllSamples;
+            return numAllSamples;   // TODO: Return the actual number of samples, by inquiring our own input nodes; then eliminate the numAllSamples parameter.
     }
 
     // -----------------------------------------------------------------------
@@ -347,8 +329,6 @@ public:
         return AsNodePtr<N>(inode) != nullptr;
     }
 
-    // TODO: comment what this function does. Seems to either initialize LearnableParameters or precompute nodes.
-    ComputationNodeBasePtr SetNodeValue(const std::wstring & nodeName, const double value);
 
     // -----------------------------------------------------------------------
     // network editing
@@ -367,20 +347,11 @@ public:
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
 
-    // called by model editing operations, such as DeleteNode(); and by RebuildNetwork()
-    void ClearCaches()
-    {
-        m_built.clear();
-        m_inputValues.clear();
-        m_learnableParameters.clear();
-        ClearCalcOrderCaches();
-    }
-
     // -----------------------------------------------------------------------
     // node access
     // -----------------------------------------------------------------------
 
-    bool NodeNameExist(const std::wstring& name) const
+    bool NodeNameExists(const std::wstring& name) const
     {
         auto iter = m_nameToNodeMap.find(name);
         return (iter != m_nameToNodeMap.end());
@@ -414,7 +385,7 @@ public:
         size_t found = name.find_first_of(L'*');
         if (found == std::wstring::npos)
         {
-            if (NodeNameExist(name))
+            if (NodeNameExists(name))
                 nodes.push_back(GetNodeFromName(name));
             }
         else
@@ -449,19 +420,25 @@ public:
     // node-group access
     // -----------------------------------------------------------------------
 
-    std::list<ComputationNodeBasePtr>& InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
+    // these two groups are determined from the network to be executed
+    // They depend on the root node that is being evaluated.
+    const std::list<ComputationNodeBasePtr>& InputNodes(const ComputationNodeBasePtr& rootNode/*, bool bNoBuild = false*/)
     {
-        if (bNoBuild == false)
-            BuildAndValidateSubNetwork(rootNode);
-        return m_inputValues[rootNode];
+        auto iter = m_inputValues.find(rootNode);
+        if (iter == m_inputValues.end())
+            LogicError("InputNodes() called for root %ls %ls operation for the set of inputs has not (yet?) been determined.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return iter->second;
     }
 
-    std::list<ComputationNodeBasePtr>& LearnableNodes(const ComputationNodeBasePtr& rootNode)
+    const std::list<ComputationNodeBasePtr>& LearnableParameterNodes(const ComputationNodeBasePtr& rootNode)
     {
-        BuildAndValidateSubNetwork(rootNode);
-        return m_learnableParameters[rootNode];
+        auto iter = m_learnableParameters.find(rootNode);
+        if (iter == m_learnableParameters.end())
+            LogicError("LearnableParameterNodes() called for root %ls %ls operation for which the set of learnable parameters has not (yet?) been determined.", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        return iter->second;
     }
 
+    // these are specified as such by the user
     inline       std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
     inline const std::vector<ComputationNodeBasePtr> & FeatureNodes() const  { return m_features; }
     inline       std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
@@ -521,7 +498,7 @@ public:
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+            const std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -624,7 +601,7 @@ public:
     // Duplicate node names are rejected.
     ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& nodePtr)
     {
-        //found
+        // found
         // TODO: use .insert() and test result.second == false means not inserted since already exists
         if (m_nameToNodeMap.find(nodePtr->NodeName()) != m_nameToNodeMap.end())
             RuntimeError("Duplicated computation node name.");
@@ -658,8 +635,7 @@ public:
     // (Note that inside the nodes this only really sets a flag to do it later when needed, but that's not our concern.)
     void ZeroGradients(const ComputationNodeBasePtr& rootNode)
     {
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
-        for (auto &node : allNodes)
+        for (auto &node : GetEvalOrder(rootNode))   // note: any order will do
             node->ZeroGradientsOfInputs();
     }
 
@@ -677,14 +653,13 @@ public:
 
     // if node name is not found, dump all nodes
     // otherwise dump just that node
+    // This function is called from MEL, i.e. must be prepared to operate on an uncompiled network (only m_nameToNodeMap is valid).
     void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile, const std::wstring& nodeNameInRegEx = L"")
     {
         if (nodeNameInRegEx.empty())
         {
-            if (NodeNameExist(nodeName))
+            if (NodeNameExists(nodeName))
             {
-                ValidateNetwork(true); //some internal values in the nodes are computed during validation
-
                 File fstream(outputFile,
                              FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -721,17 +696,10 @@ public:
         }
     }
 
-    //dump all nodes in the network to file
+    // dump all nodes in the network to file
     void DumpAllNodesToFile(const bool printValues,
-                            const std::wstring outputFile,
-                            const bool validateBeforeDump = true)
+                            const std::wstring outputFile)
     {
-        if (validateBeforeDump) 
-        {
-            //some internal values in the nodes are computed during validation
-            ValidateNetwork();
-        }
-
         File fstream(outputFile,
                      FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -746,8 +714,6 @@ public:
                             const bool printValues,
                             const std::wstring outputFile)
     {
-        ValidateNetwork(); //some internal values in the nodes are computed during validation
-
         File fstream(outputFile,
                      FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
@@ -759,8 +725,7 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    // topological plot [erw]
-    // TODO: Can this be a separate class? Can it be moved to a CPP?
+    // topological plot [1/13/2015 erw] plot network topology using dot language
     // -----------------------------------------------------------------------
 
 private:
@@ -768,11 +733,16 @@ private:
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
-    void PlotNetworkTopology(const std::wstring outputFile); //  [1/13/2015 erw] plot network topology using dot language
+    void PlotNetworkTopology(const std::wstring outputFile);
 
     // -----------------------------------------------------------------------
-    // BS integration
+    // scripting integration
     // -----------------------------------------------------------------------
+
+    // pretend to be a ConfigRecord
+    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const override;   // e.g. confRec[L"message"]
+    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const override;         // returns nullptr if not found
+    vector<wstring> /*IConfigRecord::*/GetMemberIds() const override;
 
     // create a somewhat readable representation, aimed at diagnostics/debugging
     wstring /*HasToString::*/ToString() const
@@ -786,20 +756,6 @@ public:
             args.append(node->ToString());
         }
         return TypeId<decltype(*this)>() + L" " + NestString(args, L'[', true, ']');
-    }
-
-    // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
-    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
-    {
-        id; RuntimeError("unknown class parameter");    // (for now)
-    }
-    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
-    {
-        id; return nullptr; // (for now)
-    }
-    vector<wstring> /*IConfigRecord::*/GetMemberIds() const
-    {
-        return vector<wstring>();
     }
 
 protected:
@@ -821,8 +777,6 @@ protected:
     public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
         typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
-        // next steps:
-        //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"SEQTraversalFlowControlNode"; }
         virtual void BeginForwardProp() override;
         virtual void ForwardProp(const FrameRange &) override;
@@ -840,7 +794,7 @@ protected:
     public:
         //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
-        int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
+        int m_loopId;                                                       // unique loop id, index in m_allSEQNodes array
         int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur) :
@@ -882,7 +836,7 @@ protected:
     public:
         // this special constructor constructs the top-level network node
         // There is currently no other constructor for inner nested PAR-traversed sub-networks, but there will be.
-        PARTraversalFlowControlNode(/*const*/ std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
+        PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
         // Base::m_nestedNodes contains all top-level nodes, in evaluation order
     };
 
@@ -900,7 +854,11 @@ protected:
     DEVICEID_TYPE m_deviceId;           // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
+    // main node holder
+    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+
     // node groups
+    // These are specified by the user by means of tags or explicitly listing the node groups.
     std::vector<ComputationNodeBasePtr> m_features;
     std::vector<ComputationNodeBasePtr> m_labels;
     std::vector<ComputationNodeBasePtr> m_finalCriteria;
@@ -912,26 +870,35 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes };
     }
 
-    std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_recurrentInfo;     // [loopId] cache of SEQTraversalFlowControlNodes to allow itempotence of FormRecurrentLoops()
-
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
+    // TODO: This will change once we allow for multiple inconsistent layouts.
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
 
-    // main node holder
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+private:
 
-private:    // TODO: make all private that can be made private
+    // -----------------------------------------------------------------------
+    // the following members are all result of post-processing by CompileNetwork()
+    // -----------------------------------------------------------------------
+
+    // list of all roots in this network
+    // A root is a node that can run as a target of ForwardProp(). See DetermineSetOfAllRoots().
+    std::vector<ComputationNodeBasePtr> m_allRoots;
+
+    std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_allSEQNodes;     // [loopId] cached set of SEQTraversalFlowControlNodes to allow sharing and idempotence of FormRecurrentLoops()
+
     // cache for evaluation ordering:
-    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
+    bool m_isCompiled;      // CompileNetwork has been called
 
-    // cached network Iterations
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
-    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_cachedOuterLoopNodes;
+    // cached network iterations
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_evalOrders; // [out node] flat depth-first traversal starting from out node
+    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_nestedNetworks;        // [out node] network rewritten as recursive traveral, potentially optimized; execution plan
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;                 // [out node] -> all input nodes feeding into out node
+    // cached quick-access list for inputs and parameters
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputValues;            // [out node] -> all input nodes feeding into out node
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node
+
+private:
 
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?

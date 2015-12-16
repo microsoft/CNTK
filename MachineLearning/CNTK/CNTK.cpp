@@ -57,8 +57,13 @@
 #define let const auto
 #endif
 
-// TODO: Get rid of this global
+// TODO: Get rid of these globals
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
+
+// TODO: Temporary mechanism to enable memory sharing for
+// node output value matrices. This will go away when the 
+// sharing is ready to be enabled by default
+bool g_shareNodeValueMatrices = false;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -818,7 +823,7 @@ public:
             net->Load<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
             m_net = net;
         }
-        m_net->ResetEvalTimeStamp();
+        m_net->ResetEvalTimeStamps();
         return m_net.get();
     }
 };
@@ -919,7 +924,6 @@ void DoTrain(const ConfigRecordType & config)
             if (!network)
                 RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
             // success
-            network->ResetEvalTimeStamp();
             return network;
         };
     }
@@ -1780,6 +1784,8 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     if (paralleltrain)
         g_mpi = new MPIWrapper();
 
+    g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+
     // logging
     wstring logpath = config(L"stderr", L"");
     if (logpath != L"")
@@ -1953,52 +1959,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
 
 
 // ---------------------------------------------------------------------------
-// Check ACML_FMA functionality
-//
-// we encountered problems with the ACML library on newer machines which report FMA3 support
-// this function will reproduce the problems on these machines.
-// A workaround is to set the environment varialbe ACML_FSA to 0
-// ---------------------------------------------------------------------------
-
-void CheckFMA(void)
-{
-    static bool useAcml;
-#ifndef USE_MKL
-    useAcml = true;
-#else
-    useAcml = false;
-#endif
-
-    if (useAcml)
-    {
-        const size_t row = 100;
-        const size_t col = 900;
-        CPUMatrix<float> cpuMatrix1 = CPUMatrix<float>::RandomUniform(row, col, -1, 1, 1);
-        CPUMatrix<float> cpuMatrix2 = CPUMatrix<float>::RandomUniform(row, row, -2, 2, 2);
-        CPUMatrix<float> cpuMatrix3 = CPUMatrix<float>::RandomUniform(row, row, -3, 1, 3);
-        CPUMatrix<float>::MultiplyAndAdd(cpuMatrix1, true, cpuMatrix2, false, cpuMatrix3);
-
-        size_t counter = 0;
-        foreach_coord(i, j, cpuMatrix3)
-        {
-            if (cpuMatrix3(i, j) == 0)
-                counter++;
-        }
-
-        if (counter < row*col)
-        {
-            return; // no problem found - we can continue
-        }
-
-        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> ACML FMA test failed >>>>>>>>>>>>>>>>>>>>\n");
-        fprintf(stderr, "\nDefine environment variable ACML_FMA and set to 0\n");
-        fprintf(stderr, "If the problem persists, contact development.\n");
-        RuntimeError("ACML FMA Test Failed");
-    }
-}
-
-
-// ---------------------------------------------------------------------------
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
@@ -2006,7 +1966,6 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 {
     try
     {
-        CheckFMA();
         if (argc <= 1)
             InvalidArgument("No command-line argument given.");
         // detect legacy CNTK configuration

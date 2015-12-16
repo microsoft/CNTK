@@ -11,16 +11,6 @@
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
 #pragma once
 
-#ifdef    _WIN32
-#ifdef MATH_EXPORTS
-#define MATH_API __declspec(dllexport)
-#else
-#define MATH_API __declspec(dllimport)
-#endif
-#else    // no DLLs on Linux
-#define    MATH_API 
-#endif
-
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
@@ -180,9 +170,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         void VerifySize(size_t rows, size_t cols)
         {
-            if (rows != GetNumRows() || cols != GetNumCols())
-                LogicError("VerifySize: Expected a matrix of size %d x %d, but got %d x %d.", (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+            m_baseMatrix->VerifySize(rows, cols);
         }
+
         Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
         void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
         Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)   // get a reshaped reference
@@ -332,6 +322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignTruncateTopOf (const Matrix<ElemType>& a, const ElemType threshold);
         Matrix<ElemType>& InplaceTruncate (const ElemType threshold);
         Matrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
+        void InplaceTranspose();
 
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -442,7 +433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
         static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
-        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c, size_t stepSize, bool padding);
+        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);

@@ -35,6 +35,8 @@
 #endif
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
+#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; if (id>=N) return;
+
 #define threadsPerBlock 512
 
 #ifdef __GNUC__
@@ -48,75 +50,72 @@ static __inline__ __device__ double atomicAdd(double* address, double val) UNUSE
 //CUDA Kernels code
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
-    ElemType alpha,     
+    const ElemType alpha,     
     const ElemType *a, 
-    ElemType* c,    
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (alpha==0)
     {
-        c[id]=1;
+        res[id]=1;
     }
     else if (alpha==1)
     {
-        c[id]=a[id];
+        res[id]=a[id];
     }
     else if (alpha==2)
     {
-        c[id]=a[id]*a[id];
+        res[id]=a[id]*a[id];
     }
     else if (alpha==3)
     {
-        c[id]=a[id]*a[id]*a[id];
+        res[id]=a[id]*a[id]*a[id];
     }
     else
     {
         if (sizeof(ElemType)==sizeof(double))
         {
-            c[id]=pow(a[id],alpha);
+            res[id]=pow(a[id],alpha);
         }
         else
         {
-            c[id]=powf(a[id],alpha);
+            res[id]=powf(a[id],alpha);
         }
     }    
 };
 
 template<class ElemType>
-__global__ void _inplaceSigmoidOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseSigmoidOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        if (c[id]>=0)
+        if (a[id]>=0)
         {
-            double e = exp(-1*c[id]);
-            c[id]=1/(1+e);
+            double e = exp(-1*a[id]);
+            res[id]=1/(1+e);
         }
         else
         {
-            double e = exp(c[id]);
-            c[id]=e/(1+e);
+            double e = exp(a[id]);
+            res[id]=e/(1+e);
         }
     }
     else
     {
-        if (c[id]>=0)
+        if (res[id]>=0)
         {
-            float e = expf(-1*c[id]);
-            c[id]=1/(1+e);
+            float e = expf(-1*a[id]);
+            res[id]=1/(1+e);
         }
         else
         {
-            float e = exp(c[id]);
-            c[id]=e/(1+e);
+            float e = exp(a[id]);
+            res[id]=e/(1+e);
         }
     }
 };
@@ -153,46 +152,39 @@ __global__ void _assignSigmoidOf(
 };
 
 template<class ElemType>
-__global__ void _inplaceLinRectDerivative(    
-    ElemType* c,    
+__global__ void _elementWiseLinRectDerivativeOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (c[id]<=0)
-        c[id]=0;
-    else
-        c[id]=1;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = (a[id] <= 0) ? 0 : 1;
 }
 
 template<class ElemType>
-__global__ void _assignSigmoidDerivative( 
-    ElemType *a,
-    ElemType *c,
-    CUDA_LONG N)
+__global__ void _elementWiseSigmoidDerivativeOnCuda( 
+    const ElemType *a,
+    ElemType *res,
+    const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    c[id] = a[id] * (1-a[id]);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = a[id] * (1-a[id]);
 }
 
 template<class ElemType>
-__global__ void _inplaceTanhOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseTanhOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=tanh(c[id]);
+        res[id]=tanh(a[id]);
     }
     else
     {
-        c[id]=tanhf(c[id]);
+        res[id]=tanhf(a[id]);
     }
 
 };
@@ -200,117 +192,111 @@ __global__ void _inplaceTanhOnCuda(
 //to prevent negative values caused by floating operations, we force inputs to be >=0
 //this may, however, hide problems in the caller.
 template<class ElemType>
-__global__ void _inplaceSqrtOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseSqrtOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=sqrt(max((ElemType)0, c[id]));
+        res[id]=sqrt(max((ElemType)0, a[id]));
     }
     else
     {
-        c[id]=sqrtf(max(ElemType(0), c[id]));
+        res[id]=sqrtf(max(ElemType(0), a[id]));
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceExpOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseExpOnCuda(  
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=exp(c[id]);
+        res[id]=exp(a[id]);
     }
     else
     {
-        c[id]=expf(c[id]);
+        res[id]=expf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceLogOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseLogOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (c[id]<EPS_IN_LOG)
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    if (a[id]<EPS_IN_LOG)
     {
-        c[id]=LOG_OF_EPS_IN_LOG;
+        res[id]=LOG_OF_EPS_IN_LOG;
     }
     else
     {
         if (sizeof(ElemType)==sizeof(double))
         {
-            c[id]=log(c[id]);
+            res[id]=log(a[id]);
         }
         else
         {
-            c[id]=logf(c[id]);
+            res[id]=logf(a[id]);
         }
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceAbsOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseAbsOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=fabs(c[id]);
+        res[id]=fabs(a[id]);
     }
     else
     {
-        c[id]=fabsf(c[id]);
+        res[id]=fabsf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceCosineOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseCosineOnCuda(
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=cos(c[id]);
+        res[id]=cos(a[id]);
     }
     else
     {
-        c[id]=cosf(c[id]);
+        res[id]=cosf(a[id]);
     }
 };
 
 template<class ElemType>
-__global__ void _inplaceNegativeSineOnCuda(    
-    ElemType* c,    
+__global__ void _elementWiseNegativeSineOnCuda(    
+    const ElemType *a,
+    ElemType *res,    
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
     if (sizeof(ElemType)==sizeof(double))
     {
-        c[id]=-sin(c[id]);
+        res[id]=-sin(a[id]);
     }
     else
     {
-        c[id]=-sinf(c[id]);
+        res[id]=-sinf(a[id]);
     }
 };
 
@@ -537,13 +523,14 @@ __global__ void _scaleAndAddScalar(
     ElemType* c,
     const CUDA_LONG N,
     const ElemType alpha,
-    const ElemType* a
+    const ElemType *a,
+    const ElemType *b
 )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id>=N)
         return;
-    c[id] += alpha*a[0];
+    c[id] = alpha*a[0] + b[id];
 };
 
 template<class ElemType>
@@ -1235,6 +1222,53 @@ __global__ void _tensorShuffleScaleAndAdd(
     ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
     cval += scaleFactor * pa[na];
     pc[nb] = cval;
+}
+
+// see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
+template<class ElemType>
+__global__ void _tensorShuffleScaleAndAddRowSparse(
+    const ElemType* anzValues,  //source nz values
+    const GPUSPARSE_INDEX_TYPE* aRowIndex,
+    const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
+    ElemType* cnzValues,  //target nz values
+    GPUSPARSE_INDEX_TYPE* cRowIndex,
+    GPUSPARSE_INDEX_TYPE* cColCSCIndex,
+    size_t D, size_t S, size_t M, size_t K, size_t T)
+{
+    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (col >= T)
+        return;
+
+    size_t N = D * S * M * K;
+    int start = aColCSCIndex[col];
+    int end = aColCSCIndex[col + 1];
+    int current = start;
+
+    for (size_t nc = 0; nc < N; nc++)
+    {
+        // recover the 5 indices from the loop counter
+        size_t d = (nc                  ) % D;
+        size_t s = (nc / D              ) % S;
+        size_t m = (nc / D / S          ) % M;
+        size_t k = (nc / D / S / M      ) % K;
+
+        // compute index for the a and b/c tensors
+        size_t na = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+
+        for (size_t j = start; j < end; j++)
+        {
+            if (aRowIndex[j] == na)
+            {
+                cnzValues[current] = anzValues[j];
+                cRowIndex[current] = nc;
+                current++;
+                break;
+            }
+        }
+    }
+
+    cColCSCIndex[col] = start;
+    cColCSCIndex[col + 1] = end;
 }
 
 template<class ElemType>
@@ -2344,28 +2378,58 @@ __global__ void _vectorMin(
     minValues[id]=minVal;
 }
 
-//this implementation uses more threads but also more memory access
 template<class ElemType>
-__global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
-    const ElemType* a,
+__global__ void _matrixMatrixAddOnCuda(
+    const ElemType alpha,
+    const ElemType *a,
+    const ElemType *b,
+    ElemType *c,
+    const CUDA_LONG N
+    )
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    c[id] = alpha * a[id] + b[id];
+}
+
+template<class ElemType>
+__global__ void _matrixVectorRowWiseAddWithThreadPerElem(
+    const ElemType *a,
+    const ElemType *b,
     ElemType* us,
     ElemType alpha,
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*n)
-        return;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+
+    CUDA_LONG col = id / m;
+
+    us[id] = alpha*a[col] + b[id];
+}
+
+//this implementation uses more threads but also more memory access
+template<class ElemType>
+__global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
+    const ElemType *a,
+    const ElemType *b,
+    ElemType* us,
+    ElemType alpha,
+    const CUDA_LONG m,  //number of rows
+    const CUDA_LONG n)  //number of cols     
+{
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
 
     CUDA_LONG col = id / m;
     CUDA_LONG row = id - col*m;
 
-    us[id] += alpha*a[row];
+    us[id] = alpha*a[row] + b[id];
 }
 
 template<class ElemType>
 __global__ void _matrixVectorColumnWiseAddWithThreadPerRow(
-    const ElemType* a,
+    const ElemType *a,
     ElemType* us,
     ElemType alpha,
     const CUDA_LONG m,  //number of rows
@@ -2649,16 +2713,19 @@ __global__ void _sparseCSRElemMulDense(
 
 
 //c = alpha * op(a) * op(b) + beta*c
-//this function can be further improved by using shared memory
+// TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    int m,  // rowDense
-    int k,  // colDense
-    int n,  // colSparse
-    int numSteps,   // convolution num steps
-    int stepSize,   // convolution step size
+    int m,                  // rowDense
+    int k,                  // colDense
+    int n,                  // colSparse
+    int numChannels,        // input num channels
+    int numSteps,           // convolution num steps
+    int horizontalSubsample,// convolution step size
+    bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
     ElemType alpha,
-    const ElemType* a,  //dense
+    const ElemType* a,      //dense
+    bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
@@ -2680,14 +2747,27 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     ElemType s = 0;
     for (int j = start; j < end; j++)  //j points to the value
     {
-        int i = rowIndex[j] - (stepSize * stepIdx); // offset row index by the convolution step
+        int i = rowIndex[j] - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
         if (i >= 0)
         {
             if (i >= k)
                 break;
 
-            s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+            // Convert to channelwise index.
+            // This is similar to rowwise to columnwise conversion
+            if (channelwise)
+            {
+                int pixel = i / numChannels;
+                int channel = i % numChannels;
+                int numPixels = k / numChannels;
+                i = channel * numPixels + pixel;
+            }
+
+            if (!transposeA)
+                s += a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+            else
+                s += a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
         }
     }
 
@@ -2696,36 +2776,109 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
 
 /// c += alpha * a * b^T
 template<class ElemType>
-__global__ void _denseMultSparseCSCTransposeAndAddToDense(
-    int m, //rowDense
-    int n,   //number of columns in sparse matrix
-    int colInC, /// column index of the sparse matrix
+__global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
+    int m,                      // rowDense
+    int k,                      // colDense
+    int n,                      // colSparse
+    int numChannels,            // input num channels
+    int numSteps,               // convolution num steps
+    int horizontalSubsample,    // convolution step size
+    bool channelwise,           // pixelwise for normal multiplication and channelwise for convolution operation
+    int rowInB,                 // row index of the sparse matrix
     ElemType alpha,
-    const ElemType* a,  //dense
+    const ElemType* a,          //dense
+    bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType* c  //dense target
+    ElemType* c                 //dense target
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m)
+    if (id >= m*numSteps)
         return;
 
     int rowInC = id;
-    int start = colCSCIndex[colInC];
-    int end = colCSCIndex[colInC + 1];
+    int stepIdx = rowInC / m;
+    int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
+
+    if (i < 0 || i >= k)
+        return;
+
+    // Convert to channelwise index.
+    // This is similar to rowwise to columnwise conversion
+    if (channelwise)
+    {
+        int pixel = i / numChannels;
+        int channel = i % numChannels;
+        int numPixels = k / numChannels;
+        i = channel * numPixels + pixel;
+    }
+
+    int start = colCSCIndex[rowInB];
+    int end = colCSCIndex[rowInB + 1];
 
     ElemType s = 0;
-    ElemType val = 0;
     for (int j = start; j<end; j++)  //j points to the value that are in the same row
     {
-        int i = rowIndex[j];  /// actually the column index because of transpose
-        val = bnzValues[j];   /// the b[][j] value
-        s = a[IDX2C(rowInC, colInC, m)] * val;
+        int colInC = rowIndex[j];  // the column index because of transpose
+        
+        // bnzValues[j] = the b[][j] value
+        if (!transposeA)
+            s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+        else
+            s = a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
 
-        atomicAdd(&c[IDX2C(rowInC, i, m)], alpha * s);
+        atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
     }
+}
+
+template<class ElemType>
+__global__ void _reshape(
+    int oldNumRows,                             // old row count
+    int oldNumCols,                             // old col count
+    int newNumRows,                             // new row count
+    int newNumCols,                             // new col count
+    const GPUSPARSE_INDEX_TYPE* oldRowIndex,    // old row index array
+    const GPUSPARSE_INDEX_TYPE* oldColumnIndex, // old column index array
+    GPUSPARSE_INDEX_TYPE* newRowIndex,          // new row index array
+    GPUSPARSE_INDEX_TYPE* newColumnIndex        // new column index array
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= newNumCols)
+        return;
+
+    int currentCol = id;
+    int oldColLower = (newNumRows * currentCol) / oldNumRows;
+    int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
+
+    // initialize to the end and then scan in the right direction in the for-loop
+    int currentColStart = oldColumnIndex[oldNumCols];
+
+    for (int oldCol = oldColLower; oldCol <= min(oldColUpper, oldNumCols); oldCol++)
+    {
+        int start = oldColumnIndex[oldCol];
+        int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+
+        for (int j = start; j < end; j++)  //j points to the value
+        {
+            int oldRow = oldRowIndex[j];
+            int index = (oldCol * oldNumRows + oldRow);
+            int newCol = index / newNumRows;
+            int newRow = index % newNumRows;
+
+            newRowIndex[j] = newRow;
+
+            if (newCol >= currentCol && currentColStart > j)
+                currentColStart = j;
+        }
+    }
+
+    newColumnIndex[currentCol] = currentColStart;
+
+    if (currentCol == (newNumCols - 1))
+        newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
 }
 
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and

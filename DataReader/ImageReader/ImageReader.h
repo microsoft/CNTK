@@ -10,6 +10,8 @@
 #include "DataReader.h"
 #include <random>
 #include <memory>
+#include <future>
+#include <array>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -47,6 +49,9 @@ public:
     void SetRandomSeed(unsigned int seed) override;
 
 private:
+    // Mini-batch format: NCHW (default, cuDNN) or NHWC (legacy).
+    enum class DataFormat { NCHW, NHWC };
+
     unsigned int m_seed;
     std::mt19937 m_rng;
 
@@ -59,7 +64,7 @@ private:
     size_t m_labDim;
 
     using StrIntPairT = std::pair<std::string, int>;
-    std::vector<StrIntPairT> files;
+    std::vector<StrIntPairT> m_files;
 
     size_t m_epochSize;
     size_t m_mbSize;
@@ -67,11 +72,18 @@ private:
 
     size_t m_epochStart;
     size_t m_mbStart;
+
+    bool m_prefetch;
+    std::future<size_t> m_mbPrefetchFut;
     std::vector<ElemType> m_featBuf;
     std::vector<ElemType> m_labBuf;
 
     bool m_imgListRand;
 
     MBLayoutPtr m_pMBLayout;
+    DataFormat m_mbFmt;
+
+private:
+    size_t ReadImages();
 };
 }}}

@@ -4081,7 +4081,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (k != l) 
             InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
-        c.Resize(m,n);
+        if (beta == 0)
+            c.Resize(m, n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
+
         ldc = (int)c.GetNumRows();
 
         if (sizeof(ElemType) == sizeof(double))
@@ -5546,5 +5550,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
     template void CPUMatrix<char>::SetValue(const char);
     template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char *pArray, size_t matrixFlags);
+    template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 
 }}}

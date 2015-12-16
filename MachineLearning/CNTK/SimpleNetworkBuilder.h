@@ -248,9 +248,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet = nullptr);
+        ComputationNetworkPtr BuildNetworkFromDescription();
+        ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet);      // legacy support of deprecated sequence-to-sequence implementation
 
-        ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // support for fseide's Microsoft-internal legacy tool "DBN.exe"
+        ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);    // legacy support for fseide's Microsoft-internal tool "DBN.exe"
 
         RNNTYPE RnnType(){ return m_rnnType; }
 

@@ -51,9 +51,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // log the device we are computing on
         if (net->GetDeviceId() < 0)
-            fprintf(stderr, "SGD using CPU.\n");
+            fprintf(stderr, "\nSGD using CPU.\n");
         else
-            fprintf(stderr, "SGD using GPU %d.\n", (int)net->GetDeviceId());
+            fprintf(stderr, "\nSGD using GPU %d.\n", (int)net->GetDeviceId());
 
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -133,24 +133,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto & labelNodes = net->LabelNodes();
         auto & criterionNodes = GetTrainCriterionNodes(net);
 
+        fprintf(stderr, "\nTraining criterion node(s):\n");
+        for (const auto & node : criterionNodes)
+            fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+
         // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
         std::vector<ComputationNodeBasePtr> evaluationNodes;
         {
             auto originalEvaluationNodes = GetEvalCriterionNodes(net);
             set<ComputationNodeBasePtr> criteriaLogged; // set to make sure we don't double-log criteria
-            for (const auto & crit : criterionNodes)
-                criteriaLogged.insert(crit);
-            for (const auto & eval : originalEvaluationNodes)
-                if (criteriaLogged.insert(eval).second)
-                    evaluationNodes.push_back(eval);
+            for (const auto & node : criterionNodes)
+                criteriaLogged.insert(node);
+            for (const auto & node : originalEvaluationNodes)
+                if (criteriaLogged.insert(node).second)
+                    evaluationNodes.push_back(node);
+
+            if (!evaluationNodes.empty())
+            {
+                fprintf(stderr, "\nEvaluation criterion node(s):\n");
+                for (const auto & node : evaluationNodes)
+                    fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+            }
         }
 
-        // allocate memory for backward computation
-        fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
-        for (int i = 0; i < criterionNodes.size(); i++)
-            net->AllocateGradientMatrices(criterionNodes[i]);
-        // give the layout something to validate with (some code below validates the network before actually receiving data)
-        // Note: yak!
+        std::vector<ComputationNodeBasePtr> additionalNodesToEvaluate;
+        auto& outputNodes = net->OutputNodes();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
+        
+        auto preComputeNodesList = net->GetNodesRequiringPreComputation();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
+
+        // allocate memory for forward and backward computation
+        net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
 
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -179,24 +193,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
+        // TODO: Should this be done in SGD::Adapt()?
+        // TODO: Redo this leveraging that we now have shared_ptrs. It is probably even OK if both networks share feature nodes.
+        // TODO: Then we can also share the MBLayout; which currently is copied by value.
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
+            // replace input nodes in ref network by input nodes of the main network
             refFeatureNodes.resize(featureNodes.size());
             for (size_t i = 0; i < featureNodes.size(); i++)
             {
-                //we need to keep this info to handle deletion
+                // we need to keep this info to undo this later
+                // TODO: After the change to shared_ptrs, this may no longer be necessary.
                 refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
+            refNet->CompileNetwork();
 
-            refNet->RebuildNetwork(refNode);
+            // allocate memory for forward computation
+            refNet->AllocateAllMatrices({ refNode }, {}, nullptr);
         }
 
-        //initializing weights and gradient holder
-        //only one criterion so far TODO: support multiple ones?
-        // BUGBUG: fails here in validation--MBLayout not set yet
-        auto & learnableNodes = net->LearnableNodes(criterionNodes[0]);
+        // initializing weights and gradient holder
+        // only one criterion so far TODO: support multiple ones?
+        auto & learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -483,9 +503,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         else
                         {
                             lrControlCriterion = vScore[0]; // the first one is the training criterion
+                        }
                     }
                 }
-            }
             }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
@@ -515,9 +535,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_loadBestModel)
                     {
                         auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
-                        fprintf(stderr, "Loaded previous model with best training criterion value: %ls.\n", bestModelPath.c_str());
-                        net->LoadPersistableParametersFromFile(bestModelPath, m_validateAfterModelReloading);
-                        net->ResetEvalTimeStamp();
+                        fprintf(stderr, "Loading previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
+                        net->ReloadPersistableParameters<ElemType>(bestModelPath);
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
                                            /*out*/ learnRatePerSample,
@@ -797,9 +816,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
-                                                                              useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+                                                                          useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
                 break;  // end of epoch
+
+            // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+            // Must not touch them.
+
+            if (!wasDataRead)
+                actualMBSize = 0;   // (undefined if !wasDataRead)
 
             nSamplesSinceLastModelSync += actualMBSize;
 
@@ -808,11 +833,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: We should do this right after the GetMinibatch() call, since that's where these changed.
             //       Need to check whether that would cause unintended side effects.
             // TODO: original code did not call this for actualMBSize == 0
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             if (actualMBSize > 0)
             {
+                assert(wasDataRead);
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
                     LogicError("cannot pass gradient checker");
@@ -848,8 +874,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (actualNumSubminibatches > 1)
                     {
                         smbDispatcher.GetSubMinibatchToNet(ismb);   // get sub-minibatch from full-size one
-                        ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                        ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                        ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                        ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                     }
 
                     // ===========================================================
@@ -882,8 +908,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             } // if (actualMBSize > 0)
 
             // for progress and statistics, we should only count frames that are not gaps
-            size_t numSamplesWithLabel = net->GetNumSamplesWithLabel(actualMBSize);
-
+            size_t numSamplesWithLabel = wasDataRead ? net->GetNumSamplesWithLabel(actualMBSize) : 0;
 
             // Sum of actualMBSize across all nodes when using parallel training
             size_t aggregateNumSamples = actualMBSize;
@@ -894,6 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // accumulate criterion values (objective, eval)
                 if (actualMBSize != 0)
                 {
+                    assert(wasDataRead);
                     // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->Value(),
                                                           0, 0, localEpochCriterion, 0, 0);
@@ -906,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                //distributed gradient aggregation
+                // distributed gradient aggregation
                 if (learnParamsGradients.size() == 0)
                 {
                     learnParamsGradients.reserve(learnableNodes.size());
@@ -930,7 +956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                //prepare the header
+                // prepare the header
                 m_gradHeader->numEvalNode = evaluationNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
@@ -1049,36 +1075,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // progress tracing for compute cluster management
                     double mbProg = 0.0;
+                    int mbProgNumPrecision = 2;
                     if (m_maxComputedEpochSize != 0)
                     {
-                        mbProg = (double)numMBsRun / ((double)m_maxComputedEpochSize / (double)tunedMBSize);
-                    }                    
+                        double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
+                        mbProg = (double)numMBsRun / numMBPerEpoch;
+                        mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)m_numMBsToShowResult));
+                        mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
+                    }
                     wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
 
                     // progress tracing for regular log
-#if 1
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2.4f%%]: SamplesSeen = %d; TrainLossPerSample = " +
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d, %2." + std::to_string(mbProgNumPrecision) + "f%%]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, mbProg * 100, numSamplesLastMBs, trainLossPerSample);
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                    SGDTrace(stderr, formatString.c_str(),
-                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                             numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
-#endif
                 }
                 else
                 {
-#if 1
                     string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d]: SamplesSeen = %d; TrainLossPerSample = " +
                                           GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#else
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-#endif
                     SGDTrace(stderr, formatString.c_str(),
                              prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
                              numMBsRun, numSamplesLastMBs, trainLossPerSample);
@@ -1093,17 +1110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
-#if 1
                 string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f\n";
                 SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
-#else
-                double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
-                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
-                                      GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
-                SGDTrace(stderr, formatString.c_str(),
-                         totalTimeInMBs, totalTimePerSample,
-                         (int)(numSamplesLastMBs / totalTimeInMBs));
-#endif
 
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
@@ -1141,7 +1149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(EndDataType::endDataSentence);
 
-            // Attemps to compute the error signal for the whole utterance, which will
+            // Attempts to compute the error signal for the whole utterance, which will
             // be fed to the neural network as features. Currently it is a workaround
             // for the two-forward-pass sequence and ctc training, which allows
             // processing more utterances at the same time. Only used in Kaldi2Reader.
@@ -1237,7 +1245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
             for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
             {
-                if (!origNet->NodeNameExist(sequenceFeatureNodes[i]->NodeName()))
+                if (!origNet->NodeNameExists(sequenceFeatureNodes[i]->NodeName()))
                 {
                     addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
                     origNet->AddFeatureNode(sequenceFeatureNodes[i]);
@@ -1253,7 +1261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             replacedCriterionNodes.push_back(origCriterionNodes[0]);
             origNet->ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
-            origNet->ResetEvalTimeStamp();
+            origNet->ResetEvalTimeStamps();
         }
 
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
@@ -1292,13 +1300,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
     // So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
+    // TODO: merge them into one.
     static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
     // TODO: test this, then remove this comment
 
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
     {
-        fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
         {
             tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
@@ -1311,7 +1319,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetEvalCriterionNodes(ComputationNetworkPtr net)
     {
-        fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
         {
             tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);
@@ -1365,8 +1372,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             net->ForwardProp(nodes);
         }
@@ -1419,13 +1426,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
         {
-            //largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
+            // largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
             learnRatePerSample = largestPrevLearnRatePerSample / 0.618f / 0.618f;
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
-        net->ResetEvalTimeStamp();
+        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double learnRate = learnRatePerSample;
         size_t dummyMinibatchSize = 0;
@@ -1585,8 +1591,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
-        net->ResetEvalTimeStamp();
+        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double dummyLearnRate;
         double dummtPrevCriterion;
@@ -1599,6 +1604,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                            /*out*/ dummyMinibatchSize);
     }
 
+    // AdaptiveMinibatchSizing() -- choose the largest feasible minibatch size
+    // This is necessary for data-parallel operation. The aim is to minimize model updates, and hence bandwidth
+    // This implements
+    //    F. Seide, H. Fu, J. Droppo, G. Li, and D. Yu:
+    //    "On Parallelizability of Stochastic Gradient Descent for Speech DNNs"
+    //    In Proc. ICASSP 2014.
     template<class ElemType>
     size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                                   ComputationNetworkPtr refNet,
@@ -1819,7 +1830,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: use GetMinibatchIntoNetwork().
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
             auto & outputNodes = net->OutputNodes();
             if (outputNodes.empty())
@@ -2104,7 +2115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
                        needAveMultiplier);
-        node->UpdateEvalTimeStamp();
+        node->BumpEvalTimeStamp();
     }
 
     template<class ElemType>
@@ -2310,7 +2321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double eOrg = node->Value()(irow, icol);
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
 
                 net->ForwardProp(criterionNodes[npos]);
                 net->Backprop(criterionNodes[npos]);
@@ -2333,7 +2344,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Value()(irow, icol) = (ElemType)ePos;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
                 //criterionNode should be a scalar
 
@@ -2342,7 +2353,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Value()(irow, icol) = (ElemType)eNeg;
                 node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
-                node->UpdateEvalTimeStamp();
+                node->BumpEvalTimeStamp();
                 net->ForwardProp(criterionNodes[npos]);
 
                 // criterionNode should be a scalar

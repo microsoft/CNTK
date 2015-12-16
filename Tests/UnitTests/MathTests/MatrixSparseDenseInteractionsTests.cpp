@@ -180,6 +180,7 @@ namespace Microsoft
                     bool transposeA = false, transposeB = false;
                     float alpha = 2.4f;
                     float beta = 0.0f;
+
                     Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mBdense, transposeB, beta, mCdense);
                     Matrix<float>::MultiplyAndWeightedAdd(alpha, mAsparse, transposeA, mBsparse, transposeB, beta, mCsparse);
                     mCsparse.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);

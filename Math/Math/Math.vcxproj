@@ -156,12 +156,13 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="CommonMatrix.h" />
+    <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="TensorView.h" />
     <None Include="ClassDiagram.cd" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
@@ -189,6 +190,7 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />
     <ClCompile Include="dllmain.cpp">
@@ -206,8 +208,10 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp">
-      <PrecompiledHeader></PrecompiledHeader>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="TensorView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h" />

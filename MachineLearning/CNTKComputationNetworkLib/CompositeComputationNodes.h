@@ -64,6 +64,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(tmpMat, child->Gradient());
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ParallelNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The ParallelNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
         /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
@@ -406,7 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
-            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
@@ -493,7 +508,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
-            size_t numNewSamples = Input(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
             size_t totalNumSamples = m_numSamples + numNewSamples;
             if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
@@ -887,6 +902,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
                 ig += g;
             }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The TimeReverseNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // The TimeReverseNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override

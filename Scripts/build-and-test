@@ -7,7 +7,7 @@ CLEAN_AFTER=0
 CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
 FLAVORS="debug:release"
-TARGETS="CPU:GPU"
+TARGETS="cpu:gpu"
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -23,6 +23,7 @@ case $key in
     echo "  -b|--build-only - just build, do not run"
     echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
     echo "  -t|--targets <target1:target2...> - which target to run (by default $TARGETS)"
+    echo "                                      On Linux: if 'cpu' is included, also do CPU-only builds"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
@@ -48,11 +49,11 @@ case $key in
     BUILD=1
     ;;
     -f|--flavors)
-    FLAVORS="$2"
+    FLAVORS="${2,,}"
     shift # past argument
     ;;
     -t|--targets)
-    TARGETS="$2"
+    TARGETS="${2,,}"
     shift # past argument
     ;;
     -o|--output-directory)
@@ -141,7 +142,7 @@ fi
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
-    cp Demos/Simple/Simple.config $CONF_FILE || exit $?
+    cp Demos/Simple2d/Config/Simple.config $CONF_FILE || exit $?
 
     # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
     # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
@@ -156,40 +157,55 @@ fi
 flavorArray=(${FLAVORS//:/ })
 targetArray=(${TARGETS//:/ })
 
-# Step 2 -- Build the project debug and release, if requested
+# Step 2 -- Build the project for all requested flavors and targets
 if [[ $BUILD == 1 ]]; then
-    # Step 2 -- Perform necessary builds
     for FLAVOR in "${flavorArray[@]}"
     do
-        # Our make is too noisy right now and it is difficult to spot
-        # issues from stdout and stderr. In the quiet mode these are
-        # redirected to a file where they could be examined after the fact
-        if [[ $QUIET_BUILD == 1 ]]; then
-            exec 6>$BUILD_FILE.$FLAVOR.out || exit $?
-            exec 7>$BUILD_FILE.$FLAVOR.err || exit $?
-        else
-            exec 6>&1 || exit $?
-            exec 7>&2 || exit $?
-        fi
+        for TARGET in "${targetArray[@]}"
+        do
+           echo "============ Building CNTK $TARGET/$FLAVOR (clean=$CLEAN_BEFORE)  ============"
 
-        echo "============ Building CNTK $FLAVOR (clean=$CLEAN_BEFORE)  ============"
+           if [[ $OS == "Windows_NT" && $TARGET == "cpu" ]]; then
+               echo "============ WARNING: skipping - target 'cpu' is not yet supported on Windows ============"
+               continue
+           fi
 
-        if [[ $OS == "Windows_NT" ]]; then
-            if [[ $CLEAN_BEFORE == 1 ]]; then
-                msbuild.exe /property:Configuration=$FLAVOR /t:Clean 1>&6 2>&7 || exit $?
+            # Our make is too noisy right now and it is difficult to spot
+            # issues from stdout and stderr. In the quiet mode these are
+            # redirected to a file where they could be examined after the fact
+            if [[ $QUIET_BUILD == 1 ]]; then
+                exec 6>$BUILD_FILE.$FLAVOR.out || exit $?
+                exec 7>$BUILD_FILE.$FLAVOR.err || exit $?
+            else
+                exec 6>&1 || exit $?
+                exec 7>&2 || exit $?
             fi
-            msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
-        else
-            BUILD_DIR=build/$FLAVOR
-            ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR
-            if [[ $CLEAN_BEFORE == 1 ]]; then
-                make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+
+            if [[ $OS == "Windows_NT" ]]; then
+                if [[ $CLEAN_BEFORE == 1 ]]; then
+                    msbuild.exe /property:Configuration=$FLAVOR /t:Clean 1>&6 2>&7 || exit $?
+                fi
+                msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
+            else
+                if [[ $TARGET == "cpu" ]]; then
+                    CUDAOPT=no
+                    BUILD_DIR=build/cpu/$FLAVOR
+                else
+                    CUDAOPT=yes
+                    BUILD_DIR=build/$FLAVOR
+                    # TODO should be build/$TARGET/$FLAVOR, but need to make changes elsewhere
+                fi
+                ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR --cuda=$CUDAOPT
+                if [[ $CLEAN_BEFORE == 1 ]]; then
+                    make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+                fi
+                make -C $BUILD_DIR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
+
             fi
-            make -C $BUILD_DIR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
-        fi
-        if [[ $QUIET_BUILD == 1 ]]; then
-          chmod a+r $BUILD_FILE.*
-        fi
+            if [[ $QUIET_BUILD == 1 ]]; then
+              chmod a+r $BUILD_FILE.*
+            fi
+        done
     done
 fi
 
@@ -197,21 +213,23 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
-    echo "============ cp Demos/Simple/Simple.config $CONF_FILE  ============"
-    echo "============ cd $CNTK_ROOT/Demos  ============"
+    echo "============ cp Demos/Simple2d/Config/Simple.config $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Demos/Simple2d/Data  ============"
 
     for TARGET in "${targetArray[@]}"
     do
         # These sed scripts are simply toggling DeviceNumber argument in the config file
         # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
-        if [[ $TARGET == CPU ]]; then
-            sed -i -e 's/^DeviceNumber.*/DeviceNumber=-1/g' $CONF_FILE || exit $?
+        if [[ $TARGET == cpu ]]; then
+            sed -i -e 's/^deviceId.*/deviceId=-1/g' $CONF_FILE || exit $?
         else
-            sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $CONF_FILE || exit $?
+            sed -i -e 's/^deviceId.*/deviceId=Auto/g' $CONF_FILE || exit $?
         fi
 
         for FLAVOR in "${flavorArray[@]}"
         do
+            # TODO on Linux, for target CPU also run CPU-only tests
+
             if [[ $FLAVOR == "debug" ]]; then
                 FLAVOR_DIR="$DEBUG_DIR"
             else
@@ -219,7 +237,7 @@ if [[ $RUN == 1 ]]; then
             fi
             OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.out"
 
-            BIN_PATH=$CNTK_ROOT/$FLAVOR_DIR/$BIN_NAME 
+            BIN_PATH=$CNTK_ROOT/$PREFIX_DIR/$FLAVOR_DIR/$BIN_NAME 
             if ! [[ -f $BIN_PATH ]]; then
                 echo "============ ERROR: CNTK did not build properly for flavor ($FLAVOR)  ============"
                 echo "Missing file: $BIN_PATH"
@@ -232,18 +250,18 @@ if [[ $RUN == 1 ]]; then
                 echo "============ Running $BIN_PATH configFile=$CONF_FILE for ($FLAVOR) ($TARGET) ============"
             fi
             echo "============ output in ($OUT_FILE) ============"
-            cd $CNTK_ROOT/Demos
+            cd $CNTK_ROOT/Demos/Simple2d/Data
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
-                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" OutputDir="`cygpath -w $OUTPUT_DIR`" &>$OUT_FILE || exit $?
             else
                 time $BIN_PATH configFile=$CONF_FILE &>$OUT_FILE || exit $?
             fi
             chmod a+r $RUN_FILE.*
 
             # Check if execution was successful
-            grep -q "Using $TARGET" "$OUT_FILE" || {
+            grep -q "Using ${TARGET^^}" "$OUT_FILE" || {
                 echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET) ============"
                 exit 1
             }
@@ -261,12 +279,13 @@ fi
 if [[ $CLEAN_AFTER == 1 ]]; then
     rm -rf models
     cd $CNTK_ROOT
-    for FLAVOR in debug release
+    for FLAVOR in "${flavorArray[@]}"
     do
         echo "============ Cleaning up CNTK $FLAVOR  ============"
         if [[ $OS == "Windows_NT" ]]; then
             msbuild.exe /property:Configuration=$FLAVOR /t:clean 1>&6 2>&7 || exit $?
         else
+            # TODO needs -C added; clean for all targets
             make BUILDTYPE=$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
         fi
     done

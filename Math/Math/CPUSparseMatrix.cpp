@@ -633,11 +633,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
-
-        if (c.GetNumRows() != m || c.GetNumCols() != n) 
-        {
-            c.Resize(m,n);
-        }         
+        
+        if (beta == 0)
+            c.Resize(m, n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
 
         if (beta == 0)
         {

@@ -114,8 +114,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int npos = 0; npos < nbrSamples; npos++)
                 {
-                    featureNodes[npos]->UpdateEvalTimeStamp();
-                    labelNodes[npos]->UpdateEvalTimeStamp();
+                    featureNodes[npos]->BumpEvalTimeStamp();
+                    labelNodes[npos]->BumpEvalTimeStamp();
 
                     m_net->ForwardProp(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
 
@@ -268,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
                 {
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featNodes);
                 }
 
                 auto preader = dataReaders.begin();
@@ -481,7 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     /// only on the encoder part of the networks
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featNodes);
                 }
 
                 auto ptrreader = readers.begin();
@@ -600,7 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
             }
 
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
             net.StartEvaluateMinibatchLoop(batchComputeNodes);  // TODO: Is this correct? There is no StartMinibatchLoop() for a reader.
 
@@ -676,7 +676,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 // note: GetMinibatchIntoNetwork() will also fetch the MBLayout although we don't need ithere. This should not hurt.
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
                 //actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
 
                 vector<size_t> best_path;
@@ -769,7 +769,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
-            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
+            // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+            //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -779,7 +780,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
+                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+                    //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -789,7 +791,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);
@@ -938,7 +940,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
 
-            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));   // BUGBUG: huh? How can the entire batch be start frames?
+            // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+            //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));   // BUGBUG: huh? How can the entire batch be start frames?
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -948,7 +951,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
+                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+                    //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -959,7 +963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);

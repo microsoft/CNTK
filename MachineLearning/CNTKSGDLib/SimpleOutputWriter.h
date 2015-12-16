@@ -50,6 +50,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     outputNodes.push_back(m_net->GetNodeFromName(outputNodeNames[i]));
             }
 
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
             //specify feature value nodes
             std::vector<ComputationNodeBasePtr>& featureNodes = m_net->FeatureNodes();
             std::vector<ComputationNodeBasePtr>& labelNodes = m_net->LabelNodes();
@@ -73,8 +76,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize;
             while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
                 //size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
                 //dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
@@ -138,6 +141,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 outputStreams.push_back(new ofstream(wtocharpath(outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
 #endif
 
+            // allocate memory for forward computation
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
             //specify feature value nodes
             auto & featureNodes = m_net->FeatureNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
@@ -157,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize;
             while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
-                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

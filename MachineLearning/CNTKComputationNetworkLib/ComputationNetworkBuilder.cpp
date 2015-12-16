@@ -29,7 +29,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     using namespace std;
 
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
-    // This function only creates nodes that accept (m_deviceId, nodeName).
     template<class ElemType, class... _Types>
     static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstring & nodeType, _Types&&... _Args)
     {
@@ -96,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == L"Delay")                                              return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-        else return nullptr;
+        else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
     }
 
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
@@ -104,18 +103,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, class... _Types>
     static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring & nodeType, _Types&&... _Args)
     {
-        // try first those that accept the standard two constructor arguments
-        auto newNode = CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
-        if (newNode) return newNode;
         // check more types
-        else if (nodeType == OperationNameOf(AveragePoolingNode))	return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ConvolutionNode))	        return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SparseInputValue))	        return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(InputValue))	        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LearnableParameter))	return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MaxPoolingNode))	        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
+        if      (nodeType == OperationNameOf(AveragePoolingNode)) return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ConvolutionNode))	  return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SparseInputValue))	  return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(InputValue))	  return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LearnableParameter)) return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MaxPoolingNode))	  return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
         //else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-        else return nullptr;
+        else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+        else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
     }
 
     // this function is called from SimpleNetworkBuilder and old NDL
@@ -610,6 +607,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(net.GetDeviceId(), nodeName), dictionary, input);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input, 
+        const ComputationNodePtr scale, const ComputationNodePtr bias, const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev,
+        bool eval, bool spatial, double expAvgFactor, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, eval, spatial, expAvgFactor), 
+            input, scale, bias, runMean, runInvStdDev);
     }
 
     template class ComputationNetworkBuilder<float>;

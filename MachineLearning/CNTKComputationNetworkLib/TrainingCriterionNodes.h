@@ -729,9 +729,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
-                    continue;
                 FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+
+                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps        --TODO: use FrameRange version of Is()
+                if (Input(0)->GetMBLayout()->IsGap(fr))     // skip gaps
+                    continue;
 
                 Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
                 size_t c_t = (size_t)lbl_t(1, 0);
@@ -786,9 +788,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
                 for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
                 {
-                    if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
-                        continue;
                     FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+
+                    //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                    if (Input(0)->GetMBLayout()->IsGap(fr))  // skip gaps
+                        continue;
 
                     Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
                     size_t y_t = (size_t)lbl_t(0, 0);       // word index
@@ -841,9 +845,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t sz = 0;
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
-                    continue;
                 FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                if (Input(0)->GetMBLayout()->IsGap(fr))  // skip gaps
+                    continue;
 
                 const Matrix<ElemType> & lbl_t = Input(0)->ValueFor(fr);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
@@ -865,9 +870,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                if (Input(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
-                    continue;
                 FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                if (Input(0)->GetMBLayout()->IsGap(fr))  // skip gaps
+                    continue;
 
                 const Matrix<ElemType> & lbl_t = Input(0)->ValueFor(fr);
                 size_t y_t = (size_t)lbl_t(0, 0);     // current word token index

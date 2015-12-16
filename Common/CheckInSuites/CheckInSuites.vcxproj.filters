@@ -294,9 +294,6 @@
     <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.config">
       <Filter>ExampleSetups\LM\LSTMLM</Filter>
     </None>
-    <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.nce.config.txt">
-      <Filter>ExampleSetups\LM\LSTMLM</Filter>
-    </None>
     <None Include="..\..\ExampleSetups\LM\LSTMLM\lstmlmconfig.txt">
       <Filter>ExampleSetups\LM\LSTMLM</Filter>
     </None>
@@ -341,9 +338,6 @@
     </None>
     <None Include="..\..\ExampleSetups\LM\RNNLM\rnnlm.ndl">
       <Filter>ExampleSetups\LM\RNNLM</Filter>
-    </None>
-    <None Include="..\..\ExampleSetups\NDLExamples.ndl">
-      <Filter>ExampleSetups</Filter>
     </None>
     <None Include="..\..\ExampleSetups\SLU\conlleval.pl">
       <Filter>ExampleSetups\SLU</Filter>
@@ -480,9 +474,6 @@
     <None Include="SLU\atis.train.apos.pred.pos.head.IOB.simple">
       <Filter>CheckInSuites\SLU</Filter>
     </None>
-    <None Include="SLU\Expected.log">
-      <Filter>CheckInSuites\SLU</Filter>
-    </None>
     <None Include="SLU\globals.config">
       <Filter>CheckInSuites\SLU</Filter>
     </None>
@@ -518,6 +509,9 @@
     </None>
     <None Include="runall.bat">
       <Filter>CheckInSuites</Filter>
+    </None>
+    <None Include="..\..\ExampleSetups\NdlExamples\NDLExamples.ndl">
+      <Filter>ExampleSetups</Filter>
     </None>
   </ItemGroup>
 </Project>

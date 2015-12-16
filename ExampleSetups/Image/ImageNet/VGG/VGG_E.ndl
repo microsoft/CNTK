@@ -1,0 +1,98 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    ImageW = 224
+    ImageH = 224
+    ImageC = 3
+    LabelDim = 1000
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
+    labels = Input(LabelDim, tag = label)
+    
+    # Kernels width and height.
+    kW = 3
+    kH = 3
+    # Kernel stride.
+    hs = 1
+    vs = 1
+    
+    # Pooling settings.
+    poolW = 2
+    poolH = 2
+    poolhs = 2
+    poolvs = 2
+    
+    # Initial parameter values.
+    conv1WScale = 0.03
+    conv1BValue = 0
+    conv2WScale = 0.03
+    conv2BValue = 0
+    conv3WScale = 0.03
+    conv3BValue = 0
+    conv4WScale = 0.03
+    conv4BValue = 0
+    conv5WScale = 0.03
+    conv5BValue = 0
+    conv6WScale = 0.03
+    conv6BValue = 0
+    conv7WScale = 0.03
+    conv7BValue = 0
+    conv8WScale = 0.03
+    conv8BValue = 0
+    fc1WScale = 0.03
+    fc1BValue = 0
+    fc2WScale = 0.03
+    fc2BValue = 0
+    fc3WScale = 0.03
+    fc3BValue = 0
+]
+
+DNN=[
+    cMap1 = 64
+    conv1 = ConvReLULayer(features, cMap1, 27, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv2 = ConvReLULayer(conv1, cMap1, 576, kW, kH, hs, vs, conv1WScale, conv1BValue)
+
+    pool1 = MaxPooling(conv2, poolW, poolH, poolhs, poolvs)
+
+    cMap3 = 128
+    conv3 = ConvReLULayer(pool1, cMap3, 576, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv4 = ConvReLULayer(conv3, cMap3, 1152, kW, kH, hs, vs, conv1WScale, conv1BValue)
+   
+    pool2 = MaxPooling(conv4, poolW, poolH, poolhs, poolvs)
+
+    cMap5 = 256
+    conv5 = ConvReLULayer(pool2, cMap5, 1152, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv6 = ConvReLULayer(conv5, cMap5, 2304, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv7 = ConvReLULayer(conv6, cMap5, 2304, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv8 = ConvReLULayer(conv7, cMap5, 2304, kW, kH, hs, vs, conv1WScale, conv1BValue)
+
+    pool3 = MaxPooling(conv8, poolW, poolH, poolhs, poolvs)
+
+    cMap9 = 512
+    conv9 = ConvReLULayer(pool3, cMap9, 2304, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv10 = ConvReLULayer(conv9, cMap9, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv11 = ConvReLULayer(conv10, cMap9, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv12 = ConvReLULayer(conv11, cMap9, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+
+    pool4 = MaxPooling(conv12, poolW, poolH, poolhs, poolvs)
+
+    cMap13 = 512
+    conv13 = ConvReLULayer(pool4, cMap13, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv14 = ConvReLULayer(conv13, cMap13, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv15 = ConvReLULayer(conv14, cMap13, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+    conv16 = ConvReLULayer(conv15, cMap13, 4608, kW, kH, hs, vs, conv1WScale, conv1BValue)
+
+    pool5 = MaxPooling(conv16, poolW, poolH, poolhs, poolvs)
+
+    hiddenDim = 4096
+    h1 = DnnReLULayer(25088, hiddenDim, pool5, fc1WScale, fc1BValue)
+    h1_d = Dropout(h1)
+    h2 = DnnReLULayer(hiddenDim, hiddenDim, h1_d, fc2WScale, fc2BValue)
+    h2_d = Dropout(h2)
+    ol = DnnLayer(hiddenDim, labelDim, h2_d, fc3WScale, fc3BValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]

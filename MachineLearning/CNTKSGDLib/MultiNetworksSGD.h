@@ -51,7 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_autoLearnRateSearchType;
         using SGDBase::m_minLearnRate;
         using SGDBase::m_loadBestModel;
-        using SGDBase::m_validateAfterModelReloading;
+        //using SGDBase::m_validateAfterModelReloading;
         using SGDBase::m_continueReduce;
         using SGDBase::m_reduceLearnRateIfImproveLessThan;
         using SGDBase::m_epochSize;
@@ -243,8 +243,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->Value();
 
             //initializing weights and gradient holder
-            std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
-            std::list<ComputationNodeBasePtr> & decoderLearnableNodes = decoderNet->LearnableNodes(decoderCriterionNodes[0]);
+            const std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableParameterNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
+            const std::list<ComputationNodeBasePtr> & decoderLearnableNodes = decoderNet->LearnableParameterNodes(decoderCriterionNodes[0]);
             std::list<ComputationNodeBasePtr> learnableNodes;
             for (auto nodeIter = encoderLearnableNodes.begin(); nodeIter != encoderLearnableNodes.end(); nodeIter++)
                 learnableNodes.push_back(*nodeIter);
@@ -392,12 +392,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (m_loadBestModel)
                         {
-                            encoderNet->LoadPersistableParametersFromFile(GetEncoderModelNameForEpoch(i - 1),
-                                false);
-                            decoderNet->LoadPersistableParametersFromFile(GetDecoderModelNameForEpoch(i - 1),
-                                m_validateAfterModelReloading);
-                            encoderNet->ResetEvalTimeStamp();
-                            decoderNet->ResetEvalTimeStamp();
+                            encoderNet->ReloadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
+                            decoderNet->ReloadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
 
                             size_t dummyMinibatchSize = 0;
                             this->LoadCheckPointInfo(i - 1,
@@ -527,7 +523,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         ComputationNodeBasePtr pptr = *ptr;
 
-                        std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                        const std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableParameterNodes(pptr);  //only one criterion so far TODO: support multiple ones?
                         for (auto nodeIter = eachLearnableNodes.begin(); nodeIter != eachLearnableNodes.end(); nodeIter++)
                         {
                             ComputationNodeBasePtr node = *nodeIter;
@@ -541,7 +537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         ComputationNodeBasePtr pptr = *ptr;
 
-                        std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                        const std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableParameterNodes(pptr);  //only one criterion so far TODO: support multiple ones?
                         for (auto nodeIter = eachLearnableNodes.begin(); nodeIter != eachLearnableNodes.end(); nodeIter++)
                         {
                             ComputationNodeBasePtr node = *nodeIter;
@@ -550,8 +546,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    nets[i]->BuildAndValidateSubNetwork(*ptr);
+                //for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
+                //    nets[i]->BuildAndValidateSubNetwork(*ptr);
             }
 
 
@@ -725,8 +721,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             //persist model and check-point info
                             for (size_t k = 0; k < iNumNetworks; k++)
                             {
-                                nets[k]->LoadPersistableParametersFromFile(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)), false);
-                                nets[k]->ResetEvalTimeStamp();
+                                nets[k]->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                                nets[k]->ResetEvalTimeStamps();
                             }
 
                             size_t dummyLr = 0;
@@ -887,9 +883,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < iNumNetworks; i++)
                 {
-                    ComputationNetwork::UpdateEvalTimeStamps(*featureNodes[i]);
+                    ComputationNetwork::BumpEvalTimeStamp(*featureNodes[i]);
                     if (labelNodes[i]->size() > 0)
-                        ComputationNetwork::UpdateEvalTimeStamps(*labelNodes[i]);
+                        ComputationNetwork::BumpEvalTimeStamp(*labelNodes[i]);
                 }
 
                 endReadMBTime = clock();
@@ -1023,10 +1019,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = iNumNetworks - 1; i >= 0; i--)
             {
                 /// check decoder learnable parameters
-                std::list<ComputationNodeBasePtr> & learnableNodes =
+                const std::list<ComputationNodeBasePtr> & learnableNodes =
                     (evaluationNodes[i]->size() == 0 && pairNodes[i]->size() > 0) ?
-                        nets[i]->LearnableNodes((*pairNodes[i])[0])
-                        : nets[i]->LearnableNodes((*evaluationNodes[i])[0]);
+                        nets[i]->LearnableParameterNodes((*pairNodes[i])[0])
+                        : nets[i]->LearnableParameterNodes((*evaluationNodes[i])[0]);
 
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
@@ -1053,7 +1049,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().SetValue(irow, icol, (ElemType)ePos);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
 
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 
@@ -1068,7 +1064,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                         node->Value().SetValue(irow, icol, (ElemType)eNeg);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 
@@ -1084,7 +1080,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->Value().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                         node->Value().SetValue(irow, icol, (ElemType)eOrg);
                         node->Value().TransferToDeviceIfNotThere(deviceId, true);
-                        node->UpdateEvalTimeStamp();
+                        node->BumpEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
                         localEpochEvalErrors.SetValue(0);
 

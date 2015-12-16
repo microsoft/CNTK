@@ -384,7 +384,9 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     if (m_traceLevel > 0)
         fprintf(stderr, "Reading UCI file %ls\n", file.c_str());
 
-    m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels);
+    // Simple heuristic to ensure buffer size and avoid breaking existing experiments.
+    size_t bufSize = max(dimFeatures * 16, (size_t)256 * 1024);
+    m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
     if (m_labelType != labelNone)
@@ -937,7 +939,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     size_t currSubsetSize = currSubsetEndCol - currSubsetStartCol;
     // create the respective MBLayout
     // Every sample is returned as a sequence of 1 frame.
-    m_pMBLayout->Init(currSubsetSize, 1);
+    m_pMBLayout->InitAsFrameMode(currSubsetSize);
 
     // if we are writing out to the caching writer, do it now
     if (m_cachingWriter && (m_subsetNum == 0))

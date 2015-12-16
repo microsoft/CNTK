@@ -44,6 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::SetComputeDeviceId;
         using B::SetMatrixName;
         using B::SetNzCount;
+        using B::Clear;
         // without this, base members would require to use thi-> in GCC
     public:
         GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR, const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
@@ -69,9 +70,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // in memory format is always in the following order:
         // Non-zero data elements, Full index locations, compressed index locations
         // In CSR row data is compressed, in CSC col data is compressed
-        inline const ElemType* NzValues() const {return m_pArray;}
-        inline ElemType* NzValues() {return m_pArray;}
-        inline size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
+        // Special Note: for the matrix may be a read-only column slice view of another
+        // matrix (only supported for CSC format today) and hence the NzValues needs
+        // to be offset accordingly.
+        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
         { 
@@ -134,6 +138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
         inline ElemType* BufferPointer() const { return m_pArray; }
+        inline size_t GetNumElemAllocated() const { return m_elemSizeAllocated; }
+        inline size_t GetSizeElemAllocated() const { return sizeof(ElemType)*m_elemSizeAllocated; }
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
         GPUSPARSE_INDEX_TYPE* RowLocation() const 
@@ -163,7 +169,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_format == matrixFormatSparseCSC || m_format == matrixFormatSparseCSR);
 
             return (m_format&matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
-        } 
+        }
+        GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const;
         GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
         {
             //not a valid function for other formats
@@ -181,6 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
         void SetValue(const GPUMatrix<ElemType>& denseMatrix);
 
+        void Reshape(const size_t numRows, const size_t numCols);
         void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); //matrix format will affect the size to allocate
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
@@ -224,9 +232,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
 
         //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
-        void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
+        void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const;
 
-        void GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
+        void GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &numElemAllocated, size_t &nz, size_t &numRows, size_t &numCols) const;
 
         void ConvertToSparseFormat(MatrixFormat newFormat);
         void ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const;
@@ -281,8 +289,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs, 
             const bool transposeB, GPUSparseMatrix<ElemType>& c);
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
-        static void ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs, 
-            ElemType beta, GPUMatrix<ElemType>& c, size_t colStep, bool padding);
+        static void ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs,
+            const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+        static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);
         ElemType Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier);
@@ -322,9 +331,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);
 
     private:
-        void performInplaceFunction(const int kind);
+        void performElementWiseFunction(const ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-        void Clear();
+        void ReleaseMemory();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
 
         size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;

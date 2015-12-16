@@ -62,13 +62,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         // TODO: Split into separate test case WI# 82
         CPUMatrix<float> cpuMatrix1 = CPUMatrix<float>::RandomUniform(429, 1024, -1, 1, IncrementCounter());
         CPUMatrix<float> cpuMatrix2 = CPUMatrix<float>::RandomUniform(429, 1024, -2, 2, IncrementCounter());
-        CPUMatrix<float> cpuMatrix3 = CPUMatrix<float>::RandomUniform(429, 1024, -3, 1, IncrementCounter());
+        CPUMatrix<float> cpuMatrix3 = CPUMatrix<float>::RandomUniform(1024, 1024, -3, 1, IncrementCounter());
         CPUMatrix<float> copyCpuMatrix3(cpuMatrix3);
         CPUMatrix<float>::MultiplyAndAdd(cpuMatrix1, true, cpuMatrix2, false, cpuMatrix3);
 
         SingleMatrix singleMatrix1(429, 1024, cpuMatrix1.GetArray(), matrixFlagNormal);
         SingleMatrix singleMatrix2(429, 1024, cpuMatrix2.GetArray(), matrixFlagNormal);
-        SingleMatrix singleMatrix3(429, 1024, copyCpuMatrix3.GetArray(), matrixFlagNormal);
+        SingleMatrix singleMatrix3(1024, 1024, copyCpuMatrix3.GetArray(), matrixFlagNormal);
         SingleMatrix::MultiplyAndAdd(singleMatrix1, true, singleMatrix2, false, singleMatrix3);
         foreach_coord(i, j, singleMatrix3)
         {
