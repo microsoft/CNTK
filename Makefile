@@ -37,7 +37,7 @@ endif
 ifneq ("$(wildcard $(BUILD_TOP)/Config.make)","")
   include $(BUILD_TOP)/Config.make
 else
-  $(error Cannot fine $(BUILD_TOP)/Config.make.  Please see the README file for configuration instructions.)
+  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see the README file for configuration instructions.)
 endif
 
 ifndef BUILDTYPE
@@ -56,7 +56,8 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKActionsLib MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
+SOURCEDIR:= Source
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript)
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -193,13 +194,13 @@ CNTKMATH:=cntkmath
 
 
 ########################################
-# Build info 
+# Build info
 ########################################
 
-BUILDINFO:= MachineLearning/CNTK/buildinfo.h
-GENBUILD:=Scripts/genrate_build_info 
+BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
+GENBUILD:=Tools/generate_build_info
 
-$(BUILDINFO): Scripts/genrate_build_info
+$(BUILDINFO): $(GENBUILD)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@$(GENBUILD) $(BUILD_TOP)/Config.make
 
@@ -210,36 +211,37 @@ $(BUILDINFO): Scripts/genrate_build_info
 
 # Define all sources that need to be built
 COMMON_SRC =\
-	Common/Config.cpp \
-	Common/DataReader.cpp \
-	Common/DataWriter.cpp \
-	Common/DebugUtil.cpp \
-	Common/Eval.cpp \
-	Common/File.cpp \
-	Common/TimerUtility.cpp \
-	Common/fileutil.cpp \
+	$(SOURCEDIR)/Common/Config.cpp \
+	$(SOURCEDIR)/Common/DataReader.cpp \
+	$(SOURCEDIR)/Common/DataWriter.cpp \
+	$(SOURCEDIR)/Common/DebugUtil.cpp \
+	$(SOURCEDIR)/Common/Eval.cpp \
+	$(SOURCEDIR)/Common/File.cpp \
+	$(SOURCEDIR)/Common/TimerUtility.cpp \
+	$(SOURCEDIR)/Common/fileutil.cpp \
 
 MATH_SRC =\
-	Math/Math/CPUMatrix.cpp \
-	Math/Math/CPUSparseMatrix.cpp \
-	Math/Math/MatrixQuantizer.cpp \
-	Math/Math/MatrixQuantizerCPU.cpp \
-	Math/Math/QuantizedMatrix.cpp \
-	Math/Math/Matrix.cpp \
-	Math/Math/CUDAPageLockedMemAllocator.cpp \
-	Math/Math/ConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/CPUMatrix.cpp \
+	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
+	$(SOURCEDIR)/Math/MatrixQuantizer.cpp \
+	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
+	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
+	$(SOURCEDIR)/Math/Matrix.cpp \
+	$(SOURCEDIR)/Math/TensorView.cpp \
+	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
+	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
-	Math/Math/GPUMatrix.cu \
-	Math/Math/GPUSparseMatrix.cu \
-	Math/Math/GPUWatcher.cu \
-	Math/Math/MatrixQuantizerGPU.cu \
-	Math/Math/CuDnnConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/GPUMatrix.cu \
+	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
+	$(SOURCEDIR)/Math/GPUWatcher.cu \
+	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
+	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cpp \
 
 else
 MATH_SRC +=\
-	Math/Math/NoGPU.cpp
+	$(SOURCEDIR)/Math/NoGPU.cpp
 
 endif
 
@@ -255,7 +257,7 @@ RPATH=-Wl,-rpath,
 
 $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
@@ -264,9 +266,9 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 ########################################
 
 BINARYREADER_SRC =\
-	DataReader/BinaryReader/BinaryFile.cpp \
-	DataReader/BinaryReader/BinaryReader.cpp \
-	DataReader/BinaryReader/BinaryWriter.cpp \
+	$(SOURCEDIR)/Readers/BinaryReader/BinaryFile.cpp \
+	$(SOURCEDIR)/Readers/BinaryReader/BinaryReader.cpp \
+	$(SOURCEDIR)/Readers/BinaryReader/BinaryWriter.cpp \
 
 BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 
@@ -284,18 +286,18 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 HTKMLFREADER_SRC =\
-	DataReader/HTKMLFReader/DataReader.cpp \
-	DataReader/HTKMLFReader/DataWriter.cpp \
-	DataReader/HTKMLFReader/HTKMLFReader.cpp \
-	DataReader/HTKMLFReader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataReader.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 
-HTKMLREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
+HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
-HTKMLREADER:=$(LIBDIR)/HTKMLFReader.so
-ALL+=$(HTKMLREADER)
-SRC+=$(HTKMLREADER_SRC)
+HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.so
+ALL+=$(HTKMLFREADER)
+SRC+=$(HTKMLFREADER_SRC)
 
-$(LIBDIR)/HTKMLFReader.so: $(HTKMLREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -304,9 +306,9 @@ $(LIBDIR)/HTKMLFReader.so: $(HTKMLREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 LMSEQUENCEREADER_SRC =\
-	DataReader/LMSequenceReader/Exports.cpp \
-	DataReader/LMSequenceReader/SequenceParser.cpp \
-	DataReader/LMSequenceReader/SequenceReader.cpp \
+	$(SOURCEDIR)/Readers/LMSequenceReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/LMSequenceReader/SequenceParser.cpp \
+	$(SOURCEDIR)/Readers/LMSequenceReader/SequenceReader.cpp \
 
 LMSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LMSEQUENCEREADER_SRC))
 
@@ -323,9 +325,9 @@ $(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 LUSEQUENCEREADER_SRC =\
-	DataReader/LUSequenceReader/Exports.cpp \
-	DataReader/LUSequenceReader/LUSequenceParser.cpp \
-	DataReader/LUSequenceReader/LUSequenceReader.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceParser.cpp \
+	$(SOURCEDIR)/Readers/LUSequenceReader/LUSequenceReader.cpp \
 
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 
@@ -342,9 +344,9 @@ $(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 UCIFASTREADER_SRC =\
-	DataReader/UCIFastReader/Exports.cpp \
-	DataReader/UCIFastReader/UCIFastReader.cpp \
-	DataReader/UCIFastReader/UCIParser.cpp \
+	$(SOURCEDIR)/Readers/UCIFastReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/UCIFastReader/UCIFastReader.cpp \
+	$(SOURCEDIR)/Readers/UCIFastReader/UCIParser.cpp \
 
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 
@@ -362,10 +364,10 @@ $(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
 
 ifdef KALDI_PATH
 KALDIREADER_SRC = \
-	DataReader/KaldiReader/DataReader.cpp \
-	DataReader/KaldiReader/DataWriter.cpp \
-	DataReader/KaldiReader/HTKMLFReader.cpp \
-	DataReader/KaldiReader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/KaldiReader/DataReader.cpp \
+	$(SOURCEDIR)/Readers/KaldiReader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFWriter.cpp \
 
 KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
 
@@ -386,12 +388,12 @@ $(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 
 
 KALDI2READER_SRC = \
-	DataReader/Kaldi2Reader/DataReader.cpp \
-	DataReader/Kaldi2Reader/DataWriter.cpp \
-	DataReader/Kaldi2Reader/HTKMLFReader.cpp \
-	DataReader/Kaldi2Reader/HTKMLFWriter.cpp \
-	DataReader/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp \
-	DataReader/Kaldi2Reader/UtteranceDerivativeBuffer.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/DataReader.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/DataWriter.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/HTKMLFReader.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/HTKMLFWriter.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp \
+	$(SOURCEDIR)/Readers/Kaldi2Reader/UtteranceDerivativeBuffer.cpp \
 
 KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
 
@@ -411,9 +413,9 @@ endif
 
 ifdef OPENCV_PATH
 IMAGEREADER_SRC =\
-	DataReader/ImageReader/Exports.cpp \
-	DataReader/ImageReader/ImageReader.cpp \
-	
+	$(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
 IMAGEREADER:=$(LIBDIR)/ImageReader.so
@@ -433,44 +435,44 @@ endif
 ########################################
 
 CNTK_SRC =\
-	MachineLearning/CNTK/CNTK.cpp \
-	MachineLearning/CNTK/ModelEditLanguage.cpp \
-	MachineLearning/CNTK/NetworkDescriptionLanguage.cpp \
-	MachineLearning/CNTK/SimpleNetworkBuilder.cpp \
-	MachineLearning/CNTK/SynchronousExecutionEngine.cpp \
-	MachineLearning/CNTK/tests.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNode.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetwork.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEvaluation.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkAnalysis.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkEditing.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
-	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkScripting.cpp \
-	MachineLearning/CNTKSGDLib/Profiler.cpp \
-	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/CNTKActionsLib/TrainActions.cpp \
-	MachineLearning/CNTKActionsLib/EvalActions.cpp \
-	MachineLearning/CNTKActionsLib/OtherActions.cpp \
-	MachineLearning/CNTKActionsLib/EsotericActions.cpp \
-	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
-	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
-	BrainScript/BrainScriptEvaluator.cpp \
-	BrainScript/BrainScriptParser.cpp \
-	BrainScript/BrainScriptTest.cpp \
-	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
-	Common/BestGpu.cpp \
-	Common/MPIWrapper.cpp \
+	$(SOURCEDIR)/CNTK/CNTK.cpp \
+	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
+	$(SOURCEDIR)/CNTK/NetworkDescriptionLanguage.cpp \
+	$(SOURCEDIR)/CNTK/SimpleNetworkBuilder.cpp \
+	$(SOURCEDIR)/CNTK/SynchronousExecutionEngine.cpp \
+	$(SOURCEDIR)/CNTK/tests.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
+	$(SOURCEDIR)/SGDLib/Profiler.cpp \
+	$(SOURCEDIR)/SGDLib/SGD.cpp \
+	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
+	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
+	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
+	$(SOURCEDIR)/ActionsLib/EsotericActions.cpp \
+	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
+	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
+	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
+	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
+	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
+	$(SOURCEDIR)/CNTK/BrainScript/ExperimentalNetworkBuilder.cpp \
+	$(SOURCEDIR)/Common/BestGpu.cpp \
+	$(SOURCEDIR)/Common/MPIWrapper.cpp \
 
 
 ifdef CUDA_PATH
 CNTK_SRC +=\
-	Math/Math/cudalatticeops.cu \
-	Math/Math/cudalattice.cpp \
-	Math/Math/cudalib.cpp \
+	$(SOURCEDIR)/Math/cudalatticeops.cu \
+	$(SOURCEDIR)/Math/cudalattice.cpp \
+	$(SOURCEDIR)/Math/cudalib.cpp \
 
 else
 CNTK_SRC +=\
-	MachineLearning/CNTKSequenceTrainingLib/latticeNoGPU.cpp \
+	$(SOURCEDIR)/SequenceTrainingLib/latticeNoGPU.cpp \
 
 endif
 
@@ -503,26 +505,26 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 .PHONY: force clean buildall all
 
 force:	$(BUILDINFO)
-	
+
 
 clean:
 	@echo $(SEPARATOR)
 	@rm -rf $(OBJDIR)
 	@rm -rf $(ALL)
-	@echo finished cleaning up the project 
+	@echo finished cleaning up the project
 
 buildall : $(ALL)
 	@echo $(SEPARATOR)

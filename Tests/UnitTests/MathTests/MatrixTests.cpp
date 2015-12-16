@@ -4,9 +4,9 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include "../../../Math/Math/Matrix.h"
-#include "../../../Math/Math/CPUMatrix.h"
-#include "../../../Math/Math/Helpers.h"
+#include "../../../Source/Math/Matrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
+#include "../../../Source/Math/Helpers.h"
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
