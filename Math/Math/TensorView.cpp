@@ -27,7 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // cast a matrix as a tensor
     template<class ElemType>
-    TensorView<ElemType>::TensorView(const Matrix<ElemType> & sob) :
+    TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
         m_sob(sob), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
     template<class ElemType>
@@ -53,12 +53,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // elementwise operations
     // -------------------------------------------------------------------
 
+    static bool Matches(size_t d1, size_t d2) { return d1 == 1 || d2 == 1 || d1 == d2; }    // do two dimensions match?
+
     template<class ElemType>
-    void TensorView<ElemType>::DoBinaryOpOf(const TensorView & a, const TensorView & b, TensorView & c, int op/*will become an enum later*/)
+    void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, int op/*will become an enum later*/)
     {
         TensorView & c = *this;
 
+        // TODO: an int matrix type would come in handy now... We can also use a vector<vector>.
+
         // massage TensorShapes
+        // Note that TensorShapes here may be shapes are stored or shapes with stride magic applied.
         auto as = a.GetShape().GetDims();
         auto bs = b.GetShape().GetDims();
         auto cs = c.GetShape().GetDims();
@@ -67,38 +72,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Trailing dimensions broadcast.
         // E.g. A(J) vs. B(J x T) will broadcast A(:) to all T columns.
         // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
-        let dims = max(max(as.size(), bs.size()), cs.size());
+        auto dims = max(max(as.size(), bs.size()), cs.size());
         as.resize(dims, 1);
         bs.resize(dims, 1);
         cs.resize(dims, 1);
 
-        // compatibility check
-        // Each participant can broadcast. Non-broadcasting dimensions must match.
+        // determine operation shape (max over all dimensions)
+        decltype(as) os(dims);
+        for (size_t k = 0; k < dims; k++)
+            os[k] = max(max(as[k], bs[k]), cs[k]);
+
+        // dimension compatibility check
+        // Each participant can broadcast. Non-broadcasting dimensions must match the operation dimension.
         for (size_t k = 0; k < dims; k++)
         {
-            dim = as[k];
-            if (dim == 1)
-                dim = bs[k];
-            else if (bs[k] != 1 && dim != bs[k])
-                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs (%d vs. %d)", (int)dim, (int)bs[k]);
-            else if (cs[k] != 1 && dim != 1 && dim != cs[k])
-                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between inputs and output (%d vs. %d)", (int)dim, (int)cs[k]);
+            if (!Matches(as[k], os[k]) || !Matches(bs[k], os[k]) || !Matches(cs[k], os[k]))
+                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs and output (%d vs. %d vs. %d)", (int)as[k], (int)bs[k], (int)cs[k]);
         }
 
         // flatten consecutive dimensions
         // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
+        // After this, as, bs, and cs no longer match the TensorShape objects.
+        for (size_t k = 1; k < dims; k++)
+        {
+            // check if stored without gaps to skip
+            if (!a.GetShape().CanFlatten(k) || !b.GetShape().CanFlatten(k) || !c.GetShape().CanFlatten(k))
+                continue;
+            // check if they are either all broadcasting or all not broadcasting
+            if ((as[k] != os[k] || as[k - 1] != os[k - 1]) && (as[k] != 1 || as[k - 1] != 1))
+                continue;
+            if ((bs[k] != os[k] || bs[k - 1] != os[k - 1]) && (bs[k] != 1 || bs[k - 1] != 1))
+                continue;
+            if ((cs[k] != os[k] || cs[k - 1] != os[k - 1]) && (cs[k] != 1 || cs[k - 1] != 1))
+                continue;
+            // merge the dimensions
+            as[k] *= as[k - 1]; as[k - 1] = 1;
+            bs[k] *= bs[k - 1]; bs[k - 1] = 1;
+            cs[k] *= cs[k - 1]; cs[k - 1] = 1;
+            // BUGBUG: Must update multipliers as well
+        }
+
+        // remove singleton dimensions
+        size_t j = 0;
+        for (size_t k = 0; k < dims; k++)
+        {
+            if (as[k] == 1 && bs[k] == 1 && cs[k] == 1) // skip all-singleton dimensions
+                continue;
+            as[j] = as[k];
+            bs[j] = bs[k];
+            cs[j] = cs[k];
+            os[j] = os[k];
+            j++;
+        }
+        // note: if op is a scalar, then we end up with 0 dimensions here
+        dims = j;
+        as.resize(dims);
+        bs.resize(dims);
+        cs.resize(dims);
+        os.resize(dims);
+        let as1 = TensorShape(as);   // BUGBUG: We just lost stride info.
+        let bs1 = TensorShape(bs);
+        let cs1 = TensorShape(cs);
+        let os1 = TensorShape(os);
 
         // determine inverse broadcasting dimensions
         // TODO: describe the resulting for loop as a set of tensor dims and strides as well.
         vector<bool> cBroadcasts(dims);
         for (size_t k = 0; k < dims; k++)
-            cBroadcasts[k] = cs[k] != 1 && dim == 1;
+            cBroadcasts[k] = cs1[k] == 1 && (as1[k] != 1 || bs1[k] != 1);
 
         // now perform the operation
+        fprintf(stderr, "Op %d: %s op %s -> %s via %s\n", (int)op, string(as1).c_str(), string(bs1).c_str(), string(cs1).c_str(), string(os1).c_str());
         // :)
+        beta; alpha;
     }
 
     // simple test function for testing stuff
+    // Call as: Microsoft::MSR::CNTK::TensorView<float>::Test();
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
@@ -110,8 +160,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape s3(13, 1, 21);
         let t1 = TensorView<ElemType>(m1, s1); t1;
         let t2 = TensorView<ElemType>(m2, s2); t2;
-        let t3 = TensorView<ElemType>(m3, s3); t3;
-        Add(m1, m2, m3);
+        auto t3 = TensorView<ElemType>(m3, s3); t3;
+        t3.DoSumOf(0, t1, t2, 1);
     }
 
     template class TensorView<float>;

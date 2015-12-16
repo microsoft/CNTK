@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
 
         const Matrix<ElemType> & GetSOB() const { return m_sob; }
-        const std::vector<size_t> & GetDims() const { return m_shape.GetDims(); }
+        const TensorShape & GetShape() const { return m_shape; }
 
         // -------------------------------------------------------------------
         // elementwise operations
@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
 
-        void DoBinaryOpOf(const TensorView & a, const TensorView & b, TensorView & c, int op/*will become an enum later*/);
+        void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, int op/*will become an enum later*/);
 
         // -------------------------------------------------------------------
         // sob members
