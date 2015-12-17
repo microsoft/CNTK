@@ -4794,7 +4794,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
     }
-        
+
     template<class ElemType>
     bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
     {
@@ -4936,148 +4936,144 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			InvalidArgument("The input matrix dimensions do not match.");
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            InvalidArgument("The input matrix dimensions do not match.");
 
-		if (a.GetNumRows() != 1)
-			InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+        if (a.GetNumRows() != 1)
+            InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
-		DecideAndMoveToRightDevice(a, b, *this);
-		if (!(a.GetMatrixType() == b.GetMatrixType()))
-			NOT_IMPLEMENTED;
+        DecideAndMoveToRightDevice(a, b, *this);
+        if (!(a.GetMatrixType() == b.GetMatrixType()))
+            NOT_IMPLEMENTED;
 
         this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-		DISPATCH_MATRIX_ON_FLAG(this,
-			this,
-			this->m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
-			this->m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
-		return *this;
-	}
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
+            this->m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+        return *this;
+    }
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber)
+    {
+        InnerProductWithShiftNeg(a, b, *this, isColWise, shift, negnumber);
+        return *this;
+    }
 
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber)
-	{
-		InnerProductWithShiftNeg(a, b, *this, isColWise, shift, negnumber);
-		return *this;
-	}
-	template<class ElemType>
-	void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("InnerProduct:  one of the input matrix is empty.");
+    template<class ElemType>
+    void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("InnerProduct:  one of the input matrix is empty.");
 
-		DecideAndMoveToRightDevice(a, b, c);
+        DecideAndMoveToRightDevice(a, b, c);
 
-		if (a.GetMatrixType() != b.GetMatrixType())
-			NOT_IMPLEMENTED;
+        if (a.GetMatrixType() != b.GetMatrixType())
+            NOT_IMPLEMENTED;
 
         c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-		DISPATCH_MATRIX_ON_FLAG(&c,
-			&c,
-			CPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise, shift, negnumber),
-			GPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, negnumber),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            &c,
+            CPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise, shift, negnumber),
+            GPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, negnumber),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
-	}
-
-
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
-	{
-		if (a.IsEmpty())
-			LogicError("GetARowByIndex: Matrix is empty.");
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
+    {
+        if (a.IsEmpty())
+            LogicError("GetARowByIndex: Matrix is empty.");
 
 
-		//WARNING: a and this must have same type
-		if (!(GetMatrixType() == a.GetMatrixType()))
-			NOT_IMPLEMENTED;
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
 
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 
-		DISPATCH_MATRIX_ON_FLAG(this,
-			this,
-			this->m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
-			this->m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
+            this->m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
 
-		return *this;
-	}
+        return *this;
+    }
 
-	template<class ElemType>
-	void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("InnerProduct:  one of the input matrix is empty.");
+    template<class ElemType>
+    void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("InnerProduct:  one of the input matrix is empty.");
 
-		DecideAndMoveToRightDevice(a, b, c);
+        DecideAndMoveToRightDevice(a, b, c);
 
-		if (a.GetMatrixType() != b.GetMatrixType())
-			NOT_IMPLEMENTED;
+        if (a.GetMatrixType() != b.GetMatrixType())
+            NOT_IMPLEMENTED;
 
         c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-		DISPATCH_MATRIX_ON_FLAG(&c,
-			&c,
-			CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, shift, bFirstmatrixfixed),
-			GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, bFirstmatrixfixed),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            &c,
+            CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, shift, bFirstmatrixfixed),
+            GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, bFirstmatrixfixed),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
-	}
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("AssignElementProductOfWithShift: Matrix is empty.");
 
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("AssignElementProductOfWithShift: Matrix is empty.");
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            InvalidArgument("The input matrix dimensions do not match.");
 
-		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			InvalidArgument("The input matrix dimensions do not match.");
+        if (a.GetNumRows() != 1)
+            InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
-		if (a.GetNumRows() != 1)
-			InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
-
-		DecideAndMoveToRightDevice(a, b, *this);
-		if (!(a.GetMatrixType() == b.GetMatrixType()))
-			NOT_IMPLEMENTED;
+        DecideAndMoveToRightDevice(a, b, *this);
+        if (!(a.GetMatrixType() == b.GetMatrixType()))
+            NOT_IMPLEMENTED;
 
         this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-		DISPATCH_MATRIX_ON_FLAG(this,
-			this,
-			this->m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
-			this->m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
-		return *this;
-	}
-
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
+            this->m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+        return *this;
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-        Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-        const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+                                               Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+                                               const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
     {
         DecideAndMoveToRightDevice(alpha, beta);
         functionValues._transferToDevice(alpha.GetDeviceId());
@@ -5134,54 +5130,69 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold)
-	{
-		DecideAndMoveToRightDevice(*this, label, gamma);
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold)
+    {
+        DecideAndMoveToRightDevice(*this, label, gamma);
 
-		if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
-			LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
-		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+        if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
+            LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
+        this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
-		DISPATCH_MATRIX_ON_FLAG(this,
-			this,
-			this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
-			this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+            this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
 
-		return *this;
-	}
+        return *this;
+    }
 
-	/// <summary> c = alpha * (a-b)</summary>
-	/// if a, b, c  must have same dim 
-	/// <param name="alpha">Scalar</param>
-	/// <param name="a">Input matrix</param>
-	/// <param name="b">Input matrix</param>
-	/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-	template<class ElemType>
-	Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
-		const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
-	{
-		DecideAndMoveToRightDevice(label, dnnoutput, gamma);
+    /// <summary> c = alpha * (a-b)</summary>
+    /// if a, b, c  must have same dim 
+    /// <param name="alpha">Scalar</param>
+    /// <param name="a">Input matrix</param>
+    /// <param name="b">Input matrix</param>
+    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+        const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+    {
+        DecideAndMoveToRightDevice(label, dnnoutput, gamma);
 
-		if (!(label.GetMatrixType() == gamma.GetMatrixType()))
-			NOT_IMPLEMENTED;
+        if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+            NOT_IMPLEMENTED;
 
-		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+        this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
 
-		DISPATCH_MATRIX_ON_FLAG(this,
-			this,
-			this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
-			this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
-			NOT_IMPLEMENTED,
-			NOT_IMPLEMENTED
-			);
-		return *this;
-	}
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+            this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+        return *this;
+    }
 #pragma endregion Static BLAS Functions
+
+    template<class ElemType>
+    void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+                                    const array<size_t, 3> & offsets,
+                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+            NOT_IMPLEMENTED, //m_GPUMatrix->TensorOp(beta, offsets, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
     template class Matrix<float>; 
     template class Matrix<double>;    
