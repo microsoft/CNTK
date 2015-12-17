@@ -112,12 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "MPIWrapper: initializing MPI\n"); 
             fflush(stderr);
 
-			int flag = 0;
-			MPI_Initialized(&flag);
-			if (!flag)
-			{
-				MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
-			}
+            MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
             MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
             MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
             m_numNodesInUse = m_numMPINodes;
