@@ -72,16 +72,6 @@ namespace Microsoft {
 
 
     // -----------------------------------------------------------------------
-    // ElementWiseOperator -- This enum represents which function to apply. It needs to be outside of GPUMatrix, because it is also used in GPUSparseMatrix
-    // -----------------------------------------------------------------------
-
-    enum ElementWiseOperator
-    {
-        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinearRectifierDerivative, opCosine, opNegativeSine, opSigmoidDerivative
-    };
-
-
-    // -----------------------------------------------------------------------
     // GPUMatrix
     // -----------------------------------------------------------------------
 

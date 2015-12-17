@@ -41,6 +41,28 @@ MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
+    // -----------------------------------------------------------------------
+    // ElementWiseOperator -- This enum represents which function to apply.
+    // This is shared between all matrix types and tensors.
+    // -----------------------------------------------------------------------
+
+    enum ElementWiseOperator
+    {
+        // binary
+        opSum, opDifference, opElementWiseProduct, opElementWiseQuotient,
+        opLogSum, opMax, opMin,
+        opEQ, opNE, opGT, opLT, opGE, opLE,
+        // unary (or binary with constant parameter)
+        opNegate, opNot,
+        opSaturate, opAbs,
+        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine
+        // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
+    };
+
+    // -----------------------------------------------------------------------
+    // various enums to describe 
+    // -----------------------------------------------------------------------
+
     enum MatrixFlagBitPosition
     {
         bitPosRowMajor = 0, // row major matrix
@@ -76,6 +98,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         matrixFlagSetValueOnDevice = 1<<bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
     };
 
+    // -----------------------------------------------------------------------
+    // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class BaseMatrix

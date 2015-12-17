@@ -779,7 +779,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        ComputationNode() { }
     public:
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
         using ComputationNodeBase::SetDims;
@@ -1084,6 +1083,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
+
+        std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
 
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
