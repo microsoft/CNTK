@@ -16,6 +16,7 @@
 #include <sstream>  // TODO: this should go away once we update the parameter parsing
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
+#include <omp.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -400,6 +401,10 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
 
     m_prefetch = config(L"prefetch", true);
 
+    int cthread = config(L"numCPUThreads", 0);
+    if (cthread > 0)
+        omp_set_num_threads(cthread);
+
     m_epochStart = 0;
     m_mbStart = 0;
 }
@@ -412,10 +417,15 @@ void ImageReader<ElemType>::Destroy()
 }
 
 template<class ElemType>
-void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+void ImageReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples)
 {
     assert(mbSize > 0);
+    assert(numSubsets > 0);
+    assert(subsetNum < numSubsets);
     assert(requestedEpochSamples > 0);
+
+    m_subsetNum = subsetNum;
+    m_numSubsets = numSubsets;
 
     if (m_imgListRand)
         std::shuffle(m_files.begin(), m_files.end(), m_rng);
@@ -505,10 +515,15 @@ size_t ImageReader<ElemType>::ReadImages()
     
     std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
 
+    size_t actualMBSize = mbLim - m_mbStart;
+    size_t iStart = actualMBSize * m_subsetNum / m_numSubsets;
+    size_t iLim = actualMBSize * (m_subsetNum + 1) / m_numSubsets;
+    size_t subsetSize = iLim - iStart;
+
 #pragma omp parallel for ordered schedule(dynamic)
-    for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
+    for (long long i = 0; i < static_cast<long long>(subsetSize); i++)
     {
-        const auto& p = m_files[i + m_mbStart];
+        const auto& p = m_files[m_mbStart + iStart + i];
         cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
         if (!img.data)
             RuntimeError("Cannot read image file %s", p.first.c_str());
@@ -522,7 +537,7 @@ size_t ImageReader<ElemType>::ReadImages()
         m_labBuf[m_labDim * i + p.second] = 1;
     }
 
-    return mbLim - m_mbStart;
+    return subsetSize;
 }
 
 template class ImageReader<double>;
