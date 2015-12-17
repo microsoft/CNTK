@@ -39,7 +39,12 @@ public:
     virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
 #endif
     void Destroy() override;
-    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+    bool SupportsDistributedMBRead() const { return true; }
+    void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override
+    {
+        return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    }
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
     bool DataEnd(EndDataType endDataType) override;
 
@@ -72,6 +77,9 @@ private:
 
     size_t m_epochStart;
     size_t m_mbStart;
+
+    size_t m_subsetNum;
+    size_t m_numSubsets;
 
     bool m_prefetch;
     std::future<size_t> m_mbPrefetchFut;
