@@ -1089,6 +1089,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 			if (useASGD && g_mpi->NumNodesInUse() > 1)
 			{
+				// Determine if any samples were processed across any of the ranks
+				if (useDistributedMBReading)
+				{
+					noMoreSamplesToProcess = !wasDataRead;
+				}
+
 				size_t processedSamples = 0;
 				if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync)
 				{
