@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // flatten consecutive dimensions
         // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
         // After this, as, bs, and cs no longer match the TensorShape objects.
-        fprintf(stderr, "Pre-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+        //fprintf(stderr, "Pre-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
         for (size_t k = 1; k < dims; k++)
         {
             for (size_t i = 0; i < N; i++)
@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             opDims = TensorShape(opDims).Flatten(k).GetDims();  // (ugh)
         nope:;
         }
-        fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+        //fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // remove singleton dimensions
         vector<bool> toDrop(dims, false);
@@ -132,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             shapes[i] = shapes[i].DropSingletonDims(toDrop);
         opDims = TensorShape(opDims).DropSingletonDims(toDrop).GetDims();    // (ugh)
         // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
-        fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+        //fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // determine broadcasting; that is, set strides to 0 for 1-dimensions
         // To be more precise, we should only set actually broadcasting dimensions to 0.
@@ -140,6 +140,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Do we need to allow other strides at this point in time? If not, broadcasting becomes a bit vector.
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].WithBroadcastStrides();
+
+        fprintf(stderr, "Op %d: %s  op  %s  ->  %s  via  %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // determine inverse broadcasting dimensions
         // Inverse broadcasting dims are actual for loops in the kernel, whereas broadcasting input dims are handled by the thread index.
@@ -161,10 +163,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //     - map dimensions (regular) for output
         //     - save result
 
+        // separate out the inverse-broadcasting dimensions
+        // Any singleton dimension in the result tensor is inverse-broadcasting, because there must be at least one non-1 dimension
+        // in one of the inputs, otherwise the entire dimension would have been optimized away above.
+        vector<bool> isReducingDim(dims);    // true for each inverse-broadcasting dimension
+        for (size_t k = 0; k < dims; k++)
+            isReducingDim[k] = shapes.back()[k] == 1;
+
+        // form the regular (non-inverse-broadcasting) dims
+        array<vector<ptrdiff_t>, N> regularStrides;
+        for (size_t i = 0; i < N; i++)
+            regularStrides[i] = shapes[i].DropSingletonDims(isReducingDim).GetStrides();
+        auto regularOpDims = TensorShape(opDims).DropSingletonDims(isReducingDim).GetDims();    // (ugh)
+
+        // form the inverse-broadcasting dims
+        vector<bool> isRegularDim(dims);    // true for each inverse-broadcasting dimension
+        for (size_t k = 0; k < dims; k++)
+            isRegularDim[k] = !isReducingDim[k];   // (no way to do this more nicely?)
+        array<vector<ptrdiff_t>, N> reducingStrides;
+        for (size_t i = 0; i < N; i++)
+            reducingStrides[i] = shapes[i].DropSingletonDims(isRegularDim).GetStrides();
+        auto reducingOpDims = TensorShape(opDims).DropSingletonDims(isReducingDim).GetDims();    // (ugh)
+
         // now perform the operation
-        fprintf(stderr, "Op %d: %s  op  %s  ->  %s  via  %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
-        // :)
-        beta; alpha;
+        array<size_t, N> offsets = { a.GetShape().GetOffset(), b.GetShape().GetOffset(), c.GetShape().GetOffset() };
+        c.GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // simple test function for testing stuff

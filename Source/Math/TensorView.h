@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // accessors
         // -------------------------------------------------------------------
 
-        const Matrix<ElemType> & GetSOB() const { return *m_sob; }
+        Matrix<ElemType> & GetSOB() const { return *m_sob; }
         const TensorShape & GetShape() const { return m_shape; }
 
         // -------------------------------------------------------------------

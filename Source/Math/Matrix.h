@@ -16,10 +16,10 @@
 #include "CommonMatrix.h"
 #include <limits.h>
 #include <memory>   // for shared_ptr
+#include <array>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
-
 
     enum CurrentDataLocation
     {
@@ -458,6 +458,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
+
+        void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 3> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
     public:
         void Read(File& stream);
         void Write(File& stream) const;
