@@ -467,7 +467,6 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
 
     m_pMBLayout->InitAsFrameMode(mbSize);
 
-    m_mbStart += mbSize;
     // It is safe to run prefetching with just one buffer as SetValue is synchronous so there will be no race.
     m_mbPrefetchFut = std::async(GetLaunchPolicy(m_prefetch), [this]() { return ReadImages(); });
 
@@ -537,6 +536,7 @@ size_t ImageReader<ElemType>::ReadImages()
         m_labBuf[m_labDim * i + p.second] = 1;
     }
 
+    m_mbStart += actualMBSize;
     return subsetSize;
 }
 
