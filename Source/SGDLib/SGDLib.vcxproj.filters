@@ -150,7 +150,7 @@
     <ClInclude Include="IComputationNetBuilder.h">
       <Filter>MultiNetworks</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\MultiversoWrapper.h">
+    <ClInclude Include="..\Common\Include\MultiversoWrapper.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
   </ItemGroup>
