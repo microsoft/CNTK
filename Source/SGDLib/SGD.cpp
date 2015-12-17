@@ -1173,13 +1173,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
                 }
 
-                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f";
-                SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
-
 				string statcis_formatString = "; ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
 									GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " + 
 									GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n" ;
 				SGDTrace(stderr, statcis_formatString.c_str(), readTime, computeTime, commTime);
+
+                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; SamplesPerSecond = %.1f";
+                SGDTrace(stderr, formatString.c_str(), totalTimeInMBs, numSamplesLastMBs / totalTimeInMBs);
+
                 // progress tracing for compute cluster management
                 if (wasProgressPrinted)
                 {
