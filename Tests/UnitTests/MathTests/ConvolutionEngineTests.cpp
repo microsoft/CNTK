@@ -6,11 +6,11 @@
 #include "stdafx.h"
 #include <algorithm>
 #include <array>
-#include "../../../Math/Math/Matrix.h"
-#include "../../../Math/Math/CPUMatrix.h"
-#include "../../../Math/Math/GPUMatrix.h"
-#include "../../../Math/Math/ConvolutionEngine.h"
-#include "../../../Math/Math/CuDnnConvolutionEngine.h"
+#include "../../../Source/Math/Matrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
+#include "../../../Source/Math/GPUMatrix.h"
+#include "../../../Source/Math/ConvolutionEngine.h"
+#include "../../../Source/Math/CuDnnConvolutionEngine.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 {

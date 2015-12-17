@@ -179,8 +179,8 @@ core
 # =========================
 # prebuild file 
 # =========================
-MachineLearning/CNTK/buildinfo.h
-MachineLearning/CNTK/buildinfo.h$$
+Source/CNTK/buildinfo.h
+Source/CNTK/buildinfo.h$$
 
 
 *.lyx#
