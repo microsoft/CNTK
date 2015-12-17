@@ -107,24 +107,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
 
-        void Save(File& fstream) const
+        // verify that this refers to a dense matrix (no strides)
+        void VerifyIsDense() const
         {
             if (m_offset != 0)
-                LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
+                LogicError("TensorShape: A dense TensorShape expected. Offset %d not allowed.", (int)m_offset);
+            ptrdiff_t mul = 1;
+            for (size_t k = 0; k < m_dims.size(); k++)  // (TODO: we can save one multiplication here)
+            {
+                if (m_steps[k] != mul)
+                    LogicError("TensorShape: A dense TensorShape expected. Dimension %d is not.", (int)k);
+                mul *= (ptrdiff_t)m_dims[k];
+            }
+        }
+
+        void Save(File& fstream) const
+        {
+            VerifyIsDense();
             // saving as 32-bit ints. This allows to continue to support the old format (size_t W, H, C)
             fstream << (uint32_t)m_dims.size();
-            ptrdiff_t mul = 1;
-            for (size_t k = 0; k < m_dims.size(); k++)
+            for (auto dim : m_dims)
             {
-                auto dim = m_dims[k];
                 if (dim > UINT32_MAX)
                     LogicError("TensorShape::Save(): Tensor dimensions %s out of bounds (> 4G).", string(*this).c_str());
                 fstream << (uint32_t)dim;
-                if (m_steps[k] != mul)
-                    LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
-                mul *= (ptrdiff_t)dim;
             }
         }
+
         void Load(File& fstream)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
@@ -180,6 +189,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return true;
             else
                 return m_steps[k] == m_steps[k - 1] * (ptrdiff_t)m_dims[k - 1];
+        }
+
+        // editing functions
+        // These all create new TensorShape objects.
+        TensorShape Pad(size_t numDims) const               // append singleton dimensions
+        {
+            VerifyIsDense();
+            if (numDims < GetNumDims())
+                LogicError("PadDims: Cannot drop a shorten the dimensions.");
+            else if (numDims == GetNumDims())
+                return *this;
+            auto dims = GetDims();
+            dims.resize(numDims, 1);
+            return TensorShape(dims);
+        }
+        TensorShape Concat(const TensorShape & other) const // concatenate
+        {
+            auto dims = GetDims();
+            auto otherDims = other.GetDims();
+            dims.insert(dims.end(), otherDims.begin(), otherDims.end());
+            return TensorShape(dims);
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".

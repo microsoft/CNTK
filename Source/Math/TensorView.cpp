@@ -26,11 +26,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // construction
     // -------------------------------------------------------------------
 
-    // cast a matrix as a tensor
+    // cast a matrix as a TensorView
     template<class ElemType>
     TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
-        m_sob(sob), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
+        m_sob(&sob), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
+    // reshape a TensorView
     template<class ElemType>
     TensorView<ElemType>::TensorView(const TensorView<ElemType> & other, const TensorShape & shape) :
         m_sob(other.m_sob), m_shape(shape)
@@ -40,14 +41,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Use the multipliers instead?
         size_t i;
         size_t rowDim = 1;
-        for (i = 0; i < m_shape.size() && rowDim < m_sob.GetNumRows(); i++)
+        for (i = 0; i < m_shape.size() && rowDim < m_sob->GetNumRows(); i++)
             rowDim *= m_shape[i];
         // first i dimensions match matrix row dimension
         size_t colDim = 1;
         for (; i < m_shape.size(); i++)
             colDim *= m_shape[i];
-        if (rowDim != m_sob.GetNumRows() || colDim != m_sob.GetNumCols())
-            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob.GetNumRows(), (int)m_sob.GetNumCols());
+        if (rowDim != m_sob->GetNumRows() || colDim != m_sob->GetNumCols())
+            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob->GetNumRows(), (int)m_sob->GetNumCols());
     }
 
     // -------------------------------------------------------------------
@@ -57,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static bool Matches(size_t d1, size_t d2) { return d1 == 1 || d2 == 1 || d1 == d2; }    // do two dimensions match?
 
     template<class ElemType>
-    void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, int op/*will become an enum later*/)
+    void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
     {
         TensorView & c = *this;
 
@@ -110,6 +111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             as[k] *= as[k - 1]; as[k - 1] = 1;
             bs[k] *= bs[k - 1]; bs[k - 1] = 1;
             cs[k] *= cs[k - 1]; cs[k - 1] = 1;
+            os[k] *= os[k - 1]; os[k - 1] = 1;
             // BUGBUG: Must update multipliers as well
         }
 

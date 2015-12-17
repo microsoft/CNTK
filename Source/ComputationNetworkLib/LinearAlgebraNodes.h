@@ -20,6 +20,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "TensorView.h"
 #include "ComputationNode.h"
 #include "ConvolutionalNodes.h"
 
@@ -129,6 +130,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
+#if 0       // TODO: use #if 0 until this is working
+            auto args = GetTensorsForwardBinary(fr);
+            args[2].DoSumOf(0.0f, args[0], args[1], 1.0f);
+#else
             Matrix<ElemType> functionValues = ValueForToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
@@ -185,6 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+#endif
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
 #endif
