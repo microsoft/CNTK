@@ -5205,5 +5205,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void Matrix<char>::SetValue(const char);
     template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
     template bool Matrix<char>::IsEmpty() const;
+    template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 
 }}}

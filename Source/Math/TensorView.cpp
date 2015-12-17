@@ -60,92 +60,109 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
     {
+#define N 3     // later make this a template parameter. N=1 is possible for generators, such as constants.
+        array<TensorShape, N> shapes;
         TensorView & c = *this;
 
-        // TODO: Turn the inner meat here into a function template using a std::array<., N-nariness>. Nullary ops are generators, e.g. constants.
+        shapes[0] = a.GetShape();
+        shapes[1] = b.GetShape();
+        shapes[2] = c.GetShape();       // last one is the output
 
         // massage TensorShapes
         // Note that TensorShapes here may be shapes are stored or shapes with stride magic applied.
-        auto as = a.GetShape().GetDims();
-        auto bs = b.GetShape().GetDims();
-        auto cs = c.GetShape().GetDims();
 
         // expand ones to make tensors compatible
         // Trailing dimensions broadcast.
         // E.g. A(J) vs. B(J x T) will broadcast A(:) to all T columns.
         // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
-        auto dims = max(max(as.size(), bs.size()), cs.size());
-        as.resize(dims, 1);
-        bs.resize(dims, 1);
-        cs.resize(dims, 1);
+        size_t dims = 0;
+        for (size_t i = 0; i < N; i++)
+            if (dims < shapes[i].GetNumDims())
+                dims = shapes[i].GetNumDims();
+        for (size_t i = 0; i < N; i++)
+            shapes[i] = shapes[i].Pad(dims);
 
         // determine operation shape (max over all dimensions)
-        decltype(as) os(dims);
+        vector<size_t> opDims(dims, 0);
         for (size_t k = 0; k < dims; k++)
-            os[k] = max(max(as[k], bs[k]), cs[k]);
+            for (size_t i = 0; i < N; i++)
+                opDims[k] = max(opDims[k], shapes[i][k]);
 
         // dimension compatibility check
         // Each participant can broadcast. Non-broadcasting dimensions must match the operation dimension.
         for (size_t k = 0; k < dims; k++)
-        {
-            if (!Matches(as[k], os[k]) || !Matches(bs[k], os[k]) || !Matches(cs[k], os[k]))
-                InvalidArgument("Binary tensor operation: Dimension %d is incompatible between the two inputs and output (%d vs. %d vs. %d)", (int)dims, (int)as[k], (int)bs[k], (int)cs[k]);
-        }
+            for (size_t i = 0; i < N; i++)
+                if (!Matches(shapes[i][k], opDims[k]))
+                    InvalidArgument("Binary tensor operation: Dimension %d is incompatible between input %d and output (%s vs. %s)", (int)k, (int)shapes[i][k], string(shapes[i]).c_str(), string(TensorShape(opDims)).c_str());
 
         // flatten consecutive dimensions
         // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
         // After this, as, bs, and cs no longer match the TensorShape objects.
+        fprintf(stderr, "Pre-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
         for (size_t k = 1; k < dims; k++)
         {
-            // check if stored without gaps to skip
-            if (!a.GetShape().CanFlatten(k) || !b.GetShape().CanFlatten(k) || !c.GetShape().CanFlatten(k))
-                continue;
-            // check if they are either all broadcasting or all not broadcasting
-            if ((as[k] != os[k] || as[k - 1] != os[k - 1]) && (as[k] != 1 || as[k - 1] != 1))
-                continue;
-            if ((bs[k] != os[k] || bs[k - 1] != os[k - 1]) && (bs[k] != 1 || bs[k - 1] != 1))
-                continue;
-            if ((cs[k] != os[k] || cs[k - 1] != os[k - 1]) && (cs[k] != 1 || cs[k - 1] != 1))
-                continue;
-            // merge the dimensions
-            as[k] *= as[k - 1]; as[k - 1] = 1;
-            bs[k] *= bs[k - 1]; bs[k - 1] = 1;
-            cs[k] *= cs[k - 1]; cs[k - 1] = 1;
-            os[k] *= os[k - 1]; os[k - 1] = 1;
-            // BUGBUG: Must update multipliers as well
+            for (size_t i = 0; i < N; i++)
+            {
+                // check if stored without gaps to skip
+                if (!shapes[i].CanFlatten(k))
+                    goto nope;
+                // check if they are either all broadcasting or all not broadcasting
+                if ((shapes[i][k] != opDims[k] || shapes[i][k - 1] != opDims[k - 1]) && (shapes[i][k] != 1 || shapes[i][k - 1] != 1))
+                    goto nope;
+            }
+            // these dimensions can be merged
+            for (size_t i = 0; i < N; i++)
+                shapes[i] = shapes[i].Flatten(k);               // TODO: overdoing the immutable thingy much?
+            opDims = TensorShape(opDims).Flatten(k).GetDims();  // (ugh)
+        nope:;
         }
+        fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // remove singleton dimensions
-        size_t j = 0;
+        vector<bool> toDrop(dims, false);
         for (size_t k = 0; k < dims; k++)
         {
-            if (as[k] == 1 && bs[k] == 1 && cs[k] == 1) // skip all-singleton dimensions
-                continue;
-            as[j] = as[k];
-            bs[j] = bs[k];
-            cs[j] = cs[k];
-            os[j] = os[k];
-            j++;
+            for (size_t i = 0; i < N; i++)
+                if (shapes[i][k] != 1)
+                    goto neither;
+            toDrop[k] = true;           // found an all-singleton dimensions
+        neither:;
         }
-        // note: if op is a scalar, then we end up with 0 dimensions here
-        dims = j;
-        as.resize(dims);
-        bs.resize(dims);
-        cs.resize(dims);
-        os.resize(dims);
-        let as1 = TensorShape(as);   // BUGBUG: We just lost stride info.
-        let bs1 = TensorShape(bs);
-        let cs1 = TensorShape(cs);
-        let os1 = TensorShape(os);
+        for (size_t i = 0; i < N; i++)
+            shapes[i] = shapes[i].DropSingletonDims(toDrop);
+        opDims = TensorShape(opDims).DropSingletonDims(toDrop).GetDims();    // (ugh)
+        // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
+        fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+
+        // determine broadcasting; that is, set strides to 0 for 1-dimensions
+        // To be more precise, we should only set actually broadcasting dimensions to 0.
+        // But since dimensions that are 1 across all args are eliminated, any 1 must be some form of broadcasting.
+        // TODO: Do we need to allow other strides at this point in time? If not, broadcasting becomes a bit vector.
+        for (size_t i = 0; i < N; i++)
+            shapes[i] = shapes[i].WithBroadcastStrides();
 
         // determine inverse broadcasting dimensions
-        // TODO: describe the resulting for loop as a set of tensor dims and strides as well.
-        vector<bool> cBroadcasts(dims);
-        for (size_t k = 0; k < dims; k++)
-            cBroadcasts[k] = cs1[k] == 1 && (as1[k] != 1 || bs1[k] != 1);
+        // Inverse broadcasting dims are actual for loops in the kernel, whereas broadcasting input dims are handled by the thread index.
+        // For regular input dims:
+        //  - determine number of steps (product over opDims[.])
+        //  - launch that many kernels
+        //  - pass in:
+        //     - total number of steps
+        //     - strides for all inputs (with stride magic), separated by regular and inverse broadcasting dimensions
+        //     - opDim (no stride magic allowed) for regular broadcasting dimensions
+        //     - reverse broadcasting dimensions
+        //     - opcodes for elementwise op and reduction op
+        //  - in each kernel:
+        //     - map thread index to dimensions (regular broadcasting ones)
+        //     - for-loop over inverse broadcasting dimensions
+        //        - map dimensions (including inverse broadcasting) for every input
+        //        - perform op on the input values
+        //        - accumulate
+        //     - map dimensions (regular) for output
+        //     - save result
 
         // now perform the operation
-        fprintf(stderr, "Op %d: %s op %s -> %s via %s\n", (int)op, string(as1).c_str(), string(bs1).c_str(), string(cs1).c_str(), string(os1).c_str());
+        fprintf(stderr, "Op %d: %s  op  %s  ->  %s  via  %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
         // :)
         beta; alpha;
     }
@@ -155,9 +172,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
-        Matrix<ElemType> m1(0); m1.Resize(1, 42);
-        Matrix<ElemType> m2(0); m2.Resize(13, 1);
-        Matrix<ElemType> m3(0); m3.Resize(13, 21);
+        Matrix<ElemType> m1(-1); m1.Resize(1, 42);
+        Matrix<ElemType> m2(-1); m2.Resize(13, 1);
+        Matrix<ElemType> m3(-1); m3.Resize(13, 21);
         TensorShape s1(1, 2, 21);
         TensorShape s2(13, 1);
         TensorShape s3(13, 1, 21);
