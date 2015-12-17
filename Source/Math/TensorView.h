@@ -68,8 +68,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // sob members
         // -------------------------------------------------------------------
 
-        Matrix<ElemType> * m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. Pointer instead of ref so this object is copyable.
-        TensorShape m_shape;            // the meta-data that describes the data's shape and/or access pattern
+        Matrix<ElemType> * m_sob;   // Storage OBject that holds the data that is being viewed with this TensorView. Pointer instead of ref so this object is copyable.
+        TensorShape m_shape;        // the meta-data that describes the data's shape and/or access pattern
         // TODO: use a reference here or not? With a reference, we can hide more info in here such as cuDNN handles
     };
 

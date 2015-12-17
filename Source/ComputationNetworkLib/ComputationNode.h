@@ -1520,7 +1520,7 @@ protected: \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetImageLayout; using Base::GetTensorsForwardBinary; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
