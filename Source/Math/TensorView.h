@@ -51,12 +51,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // -------------------------------------------------------------------
         // elementwise operations
-        // Result goes into 'this'.
+        // Result goes into 'this', and can optionally be added to the existing value.
         // E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b).
         //  and c.DoDiffOf(0, c, a, 1) means c -= a.
         // All operators support elementwise in-place operations, i.e. a, b, and c
         // may all reference the same underlying SOB.
-        // If beta == 0, c is not read out.
+        // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
         void DoSumOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, 0); }

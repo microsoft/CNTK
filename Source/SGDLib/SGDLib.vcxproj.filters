@@ -115,16 +115,16 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\MatrixQuantizer.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\QuantizedMatrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="SimpleEvaluator.h">
       <Filter>Eval</Filter>
@@ -182,7 +182,7 @@
     <Filter Include="from ComputationNetworkLib\Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKMath">
+    <Filter Include="from Math">
       <UniqueIdentifier>{4c82e709-ff3e-43ab-b94c-763e300b637e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Data Reading">

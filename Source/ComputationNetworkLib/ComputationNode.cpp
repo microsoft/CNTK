@@ -9,6 +9,7 @@
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
+#include "DataTensor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -189,4 +190,28 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     }
 
     ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
+
+    // -----------------------------------------------------------------------
+    // register a boxed version of TensorShape with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    // e.g.
+    // new TensorShape [ dims = 13:42 ]
+    class BoxedTensorShape : public BoxOf<TensorShape>
+    {
+        // create a TensorShape from config
+        static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
+        {
+            const auto & valp = config[L"dims"];
+            if (valp.Is<ConfigArray>())
+                return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
+            else
+                return TensorShape(std::vector<size_t>(1, (size_t)valp));       // single element
+        }
+    public:
+        BoxedTensorShape(const IConfigRecordPtr configp) : BoxOf<TensorShape>(TensorShapeFromConfig(*configp)) { }
+    };
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensoShape(L"TensorShape");
+
 }}}

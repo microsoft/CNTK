@@ -122,10 +122,10 @@
       <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\Matrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\CPUMatrix.h">
-      <Filter>from CNTKMath</Filter>
+      <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\ScriptableObjects.h">
       <Filter>Common\Include</Filter>
@@ -139,29 +139,65 @@
     <ClInclude Include="..\Common\Include\ProgressTracing.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
-    <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
-    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h" />
-    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h" />
-    <ClInclude Include="..\SGDLib\SGD.h" />
-    <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />
-    <ClInclude Include="..\SGDLib\SimpleOutputWriter.h" />
-    <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h" />
-    <ClInclude Include="..\ComputationNetworkLib\ComputationNetworkBuilder.h" />
-    <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
-    <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h" />
     <ClInclude Include="BrainScript\BrainScriptEvaluator.h">
       <Filter>BrainScript</Filter>
     </ClInclude>
     <ClInclude Include="BrainScript\BrainScriptParser.h">
       <Filter>BrainScript</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\SimpleOutputWriter.h">
+      <Filter>from SGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\SGD.h">
+      <Filter>from SGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\SimpleEvaluator.h">
+      <Filter>from SGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\ComputationNetworkBuilder.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\DataReaderHelpers.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h">
+      <Filter>from ComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -200,13 +236,10 @@
     <Filter Include="from ComputationNetworkLib\Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKSGDLib">
+    <Filter Include="from SGDLib">
       <UniqueIdentifier>{d3d5900a-8c5e-45f1-a2b7-f82f0e31994d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKSGDLib\SGD Parallelization">
-      <UniqueIdentifier>{8531d7fb-a673-491a-988a-012c92fafbfd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="from CNTKSGDLib\SGD">
+    <Filter Include="from SGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
     </Filter>
     <Filter Include="Model Building, from old NDL">
@@ -215,7 +248,7 @@
     <Filter Include="Model Building, Standard Models">
       <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>
     </Filter>
-    <Filter Include="from CNTKMath">
+    <Filter Include="from Math">
       <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
     </Filter>
     <Filter Include="MPI Interfacing">
