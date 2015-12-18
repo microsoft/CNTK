@@ -9,12 +9,13 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "File.h"
-
+#include "CPUMatrix.h"
+#include "TensorOps.h"
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
 #include <math.h>
-#include "CPUMatrix.h"
+
 #include <random>
 #include <chrono>
 #include <exception>
@@ -4304,7 +4305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (sample_id == 0)
                 sample_prob = -sample_prob;
             double score_noise = log_num_noise_samples + sample_prob;
-            double z = logadd(score, score_noise);
+            double z = LogAdd(score, score_noise);
             double logprob = score - z;
             double logprob_noise = score_noise - z;
             tmp(sample_id, instance_id) = (ElemType)-std::exp(logprob);
@@ -5258,32 +5259,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Static BLAS Functions
 
-    template<typename ElemType>
-    ElemType logadd_(ElemType x, ElemType y)
-    {
-        if (x < y)
-        {
-            ElemType temp = x; x = y; y = temp;
-        }
-        ElemType diff = y - x; 
-        if (diff < (ElemType)MINLOGEXP)
-        {
-            return (x < (ElemType)LSMALL) ? (ElemType)LZERO : x;
-        }
-        else
-        {
-            ElemType z = exp_(diff);
-            return x + log_((ElemType)1.0 + z);
-        }
-    }
-    double logadd(double x, double y) { return logadd_(x, y); }
+    // 'double' version of LogAdd
+    double LogAddD(double x, double y) { return LogAdd(x, y); }
 
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
     {
         ElemType fAlpha = (ElemType)LZERO;
         for (int k = 0; k < GetNumElements(); k++)
-            fAlpha = (ElemType) logadd(fAlpha, m_pArray[k]);
+            fAlpha = (ElemType) LogAddD(fAlpha, m_pArray[k]);
         return fAlpha;
     }
 
@@ -5330,7 +5314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fSum = (ElemType)LZERO;
             for (int j = 0; j < iNumLab; j++)
             {
-                fSum = (ElemType)logadd((double)fSum, alpha(j, t));
+                fSum = (ElemType)LogAddD(fSum, alpha(j, t));
             }
 
             fTmp = alpha(k, t) - fSum;
@@ -5343,10 +5327,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fSum = (ElemType)LZERO;
                 for (int m = 0; m < iNumLab; m++)
                 {
-                    fSum = (ElemType)logadd((double)fSum, alpha(m, t) + pair_scores(j, m));
+                    fSum = (ElemType)LogAddD(fSum, alpha(m, t) + pair_scores(j, m));
                 }
 
-                fTmp = (ElemType)logadd(fTmp, beta(j, t + 1) + alpha(k, t) + pair_scores(j, k) - fSum);
+                fTmp = (ElemType)LogAddD(fTmp, beta(j, t + 1) + alpha(k, t) + pair_scores(j, k) - fSum);
             }
             beta(k, t) = fTmp;
         }
@@ -5455,7 +5439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     else{
                         fTmp2 = a(k, 0);
                     }
-                    fSum = (ElemType)logadd(fSum, fTmp2 + pair_scores(j, k));
+                    fSum = (ElemType)LogAddD(fSum, fTmp2 + pair_scores(j, k));
                 }
 
                 fTmp -= fSum;
@@ -5536,6 +5520,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // TensorView support
     // -----------------------------------------------------------------------
+
+    // To save time, this makes extensive use of templates and macros.
 
     // perform loop over reduction index m
     // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
@@ -5654,43 +5640,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType>
-    static inline ElemType Sigmoid(ElemType z)
-    {
-        if (z >= 0)
-            return 1 / (1 + exp_(-z));
-        else
-        {
-            ElemType v = exp_(z);
-            return v / (1 + v);
-        }
-    }
-    template<class ElemType>
-    static inline ElemType SigmoidDerivative(ElemType z)
-    {
-        ElemType v = Sigmoid(z);
-        return v * (1 - v);
-    }
-    template<class ElemType>
-    static inline ElemType LinearRectifierDerivative(ElemType z)
-    {
-        return z > 0 ? (ElemType)1 : 0;
-    }
-    template<class ElemType>
-    static inline ElemType Sqrt(ElemType z)
-    {
-        return sqrt_(max(0, z));
-    }
-
-    // define a static function for every operation
-#define DefUnaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a) { return expr; }
-
-    DefUnaryOp(Copy, a);
-    DefUnaryOp(Negate, -a); DefUnaryOp(Not, !a);
-    DefUnaryOp(Abs, fabs_(a));
-    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(SigmoidDerivative, SigmoidDerivative(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, log_(a)); DefUnaryOp(LinearRectifierDerivative, LinearRectifierDerivative(a)); DefUnaryOp(Cosine, cos_(a)); DefUnaryOp(NegativeSine, -sin_(a));
-    //DefUnaryOp(SaturateBetaAlpha); DefUnaryOp(SumAlpha); DefUnaryOp(SubDifferenceToAlpha); DefUnaryOp(SubDifferenceFromAlpha);
-
     // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
     template<class ElemType>
@@ -5699,28 +5648,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
     {
+        #define CaseUnaryTensorOp(oper) \
+            case ElementWiseOperator::op ## oper: \
+                return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2> & pp) { return Op ## oper((*(pp[0]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+
         array<ElemType*, 2> pointers = { a.m_pArray, m_pArray };
-#define CaseUnaryTensorOp(oper) \
-        case ElementWiseOperator::op ## oper: \
-            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2> & pp) { return Op ## oper((*(pp[0]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
         switch (op)
         {
-        CaseUnaryTensorOp(Copy);
-        CaseUnaryTensorOp(Negate); CaseUnaryTensorOp(Not);
-        CaseUnaryTensorOp(Abs);
-        CaseUnaryTensorOp(Sigmoid); CaseUnaryTensorOp(SigmoidDerivative); CaseUnaryTensorOp(Tanh); CaseUnaryTensorOp(Sqrt); CaseUnaryTensorOp(Exp); CaseUnaryTensorOp(Log); CaseUnaryTensorOp(LinearRectifierDerivative); CaseUnaryTensorOp(Cosine); CaseUnaryTensorOp(NegativeSine);
-        // functions with lambda arguments--these are different
-        //CaseUnaryTensorOp(SaturateBetaAlpha); CaseUnaryTensorOp(SumAlpha); CaseUnaryTensorOp(SubDifferenceToAlpha); CaseUnaryTensorOp(SubDifferenceFromAlpha);
+        ForAllUnaryOps(CaseUnaryTensorOp);
         default: LogicError("TensorUnaryOp: Unknown op code %d.", (int)op);
         }
     }
-
-    // define a static function for every operation
-#define DefBinaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b) { return expr; }
-
-    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementWiseProduct, a*b); DefBinaryOp(ElementWiseQuotient, a / b);
-    DefBinaryOp(LogSum, logadd_(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
-    DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
 
     // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
@@ -5730,23 +5668,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
     {
+        #define CaseBinaryTensorOp(oper) \
+            case ElementWiseOperator::op ## oper: \
+                return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return Op ## oper((*(pp[0])), (*(pp[1]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+
         array<ElemType*, 3> pointers = { a.m_pArray, b.m_pArray, m_pArray };
-#define CaseBinaryTensorOp(oper) \
-        case ElementWiseOperator::op ## oper: \
-            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return Op ## oper((*(pp[0])), (*(pp[1]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
         switch (op)
         {
-        CaseBinaryTensorOp(Sum); CaseBinaryTensorOp(Difference); CaseBinaryTensorOp(ElementWiseProduct); CaseBinaryTensorOp(ElementWiseQuotient);
-        CaseBinaryTensorOp(LogSum); CaseBinaryTensorOp(Max); CaseBinaryTensorOp(Min);
-        CaseBinaryTensorOp(EQ); CaseBinaryTensorOp(NE); CaseBinaryTensorOp(GT); CaseBinaryTensorOp(LT); CaseBinaryTensorOp(GE); CaseBinaryTensorOp(LE);
+        ForAllBinaryOps(CaseBinaryTensorOp);
         default: LogicError("TensorBinaryOp: Unknown op code %d.", (int)op);
         }
     }
-
-    // define a static function for every operation
-#define DefTernaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b, ElemType c) { return expr; }
-
-    DefTernaryOp(Cond, a ? b : c);
 
     // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
@@ -5756,18 +5688,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides)
     {
+        #define CaseTernaryTensorOp(oper) \
+            case ElementWiseOperator::op ## oper: \
+                return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 4> & pp) { return Op ## oper((*(pp[0])), (*(pp[1])), (*(pp[2]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+
         array<ElemType*, 4> pointers = { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray };
-#define CaseTernaryTensorOp(oper) \
-        case ElementWiseOperator::op ## oper: \
-            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 4> & pp) { return Op ## oper((*(pp[0])), (*(pp[1])), (*(pp[2]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
         switch (op)
         {
-        CaseTernaryTensorOp(Cond);
+        ForAllTernaryOps(CaseTernaryTensorOp);
         default: LogicError("TensorTernaryOp: Unknown op code %d.", (int)op);
         }
     }
 
-    // The explicit instantiation part
+    // -----------------------------------------------------------------------
+    // explicit instantiations
+    // -----------------------------------------------------------------------
+
     template class MATH_API CPUMatrix<float>;
     template class MATH_API CPUMatrix<double>;
 

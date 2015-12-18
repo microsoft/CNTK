@@ -9154,7 +9154,7 @@ L
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha_{t}\left(i\right) & \leftarrow & h_{it}+logadd_{k}\left(\delta_{t-1}(k)+\eta a_{ki}\right)\\
+\alpha_{t}\left(i\right) & \leftarrow & h_{it}+LogAdd{k}\left(\delta_{t-1}(k)+\eta a_{ki}\right)\\
 \mathbf{\frac{\partial R}{\partial\delta_{t-1}(i)}} & \leftarrow & \sum_{j}\frac{\partial C_{logadd}}{\partial\delta_{t}(j)}\frac{\exp(\delta_{t-1}(i)+a_{i,j})}{\sum_{k}\exp(\delta_{t-1}(k)+a_{k,j})}\\
 \mathbf{\frac{\partial R}{\partial\delta_{T}(i)}} & \leftarrow & \frac{\exp(\delta_{T}(i))}{\sum_{k}\exp(\delta_{T}(k))}\\
 \frac{\partial R}{\partial h_{t}(i)} & \leftarrow & l_{t}(i)-\frac{\partial R}{\partial\delta_{t}(i)}\\

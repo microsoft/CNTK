@@ -4887,6 +4887,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return x - y * floor(x / y);
     }
 
+    // TODO: use static LogAdd() as defined in TensorOps.h
+    //       Not doing this currently because that one uses ElemType for all ops, while this one uses double inside. Must compare before making this change.
     template<class ElemType>
     ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
     {

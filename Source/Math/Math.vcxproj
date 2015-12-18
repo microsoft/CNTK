@@ -162,6 +162,7 @@
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
     <None Include="ClassDiagram.cd" />
     <None Include="GPUWatcher.cu" />
