@@ -5621,7 +5621,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
                                             const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
     {
-        size_t dims = regularOpDims.size();
+        size_t dims = reducingOpDims.size();
         switch (dims)
         {
         case 2: return TensorOpIteration<ElemType, N, OPFN, 1, k>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
