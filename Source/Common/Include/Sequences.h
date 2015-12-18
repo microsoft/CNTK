@@ -109,14 +109,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numTimeSteps = numTimeSteps;
             // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
 #if 1
-            if (m_distanceToStart.GetNumRows() != m_numParallelSequences || m_distanceToStart.GetNumCols() != m_numTimeSteps)   // sanity check for debugging a regression
+            if ((m_distanceToStart.GetNumRows() != m_numParallelSequences || m_distanceToStart.GetNumCols() != m_numTimeSteps) && m_numTimeSteps > 0)   // sanity check for debugging a regression
                 fprintf(stderr, "MBLayout::Init: Resizing m_distanceToStart from %d x %d to %d x %d\n",
                         (int)m_distanceToStart.GetNumRows(), (int)m_distanceToStart.GetNumCols(), (int)m_numParallelSequences, (int)m_numTimeSteps); // (I really want to know about actual allocations, but this is a necessary condition for them)
 #endif
             m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
             m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_distanceToNearestStart.assign(m_numTimeSteps, SIZE_MAX);
-            m_distanceToNearestEnd.assign(m_numTimeSteps, SIZE_MAX);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_distanceToNearestEnd.assign(m_numTimeSteps,   PTRDIFF_MAX);
             m_timeStepHasGap.assign(m_numTimeSteps, false);
             m_columnsValidityMask.Resize(0, 0);     // invalidate
             // reset state
@@ -190,8 +190,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
             // remember it
-#if 1
-            auto cap = m_sequences.capacity();  // some sanity check for debugging a speed regression
+#ifdef _DEBUG
+            auto cap = m_sequences.capacity();  // Some sanity check for debugging a speed regression. This should only show up during the first minibatches, and growing only.
             m_sequences.push_back(seqDesc);
             if (cap != m_sequences.capacity())
                 fprintf(stderr, "AddSequence: m_sequences was reallocated from capacity %d to %d\n", (int)cap, (int)m_sequences.capacity());
@@ -218,8 +218,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // update the nearest sentence boundaries, minimum over all parallel sequences
                 // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
-                size_t distanceToStart = (size_t)((ptrdiff_t)t - beginTime);
-                size_t distanceToEnd = endTime - 1 - t;
+                ptrdiff_t distanceToStart = (ptrdiff_t)t - beginTime;
+                ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
                 m_distanceToStart(s, t) = (float)distanceToStart;
                 m_distanceToEnd(s, t) = (float)distanceToEnd;
                 // and the aggregate
@@ -355,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // m_distanceToNearestStart = [ 0  1  2  3  4 ]
         // m_distanceToNearestEnd   = [ 2  1  0  1  0 ]
         Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); value<0 stands for gap
-        vector<size_t> m_distanceToNearestStart, m_distanceToNearestEnd;    // [t]    (does not store info about gaps; consult m_timeStepHasGap[] vector instead)
+        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (does not store info about gaps; consult m_timeStepHasGap[] vector instead)
 
         vector<bool> m_timeStepHasGap;                                      // [t] true if at least one gap in time step t
 
@@ -551,7 +551,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (s == SIZE_MAX)                      // aggregate requested
         {
             // determine flags from aggregate vectors
-            assert(m_distanceToNearestStart[t] != SIZE_MAX);    // (sanity check)
+            // Note: We allow that all parallel sequences contain gaps (m_distanceToNearestStart[t] == PTRDIFF_MAX)
+            // because that makes implementation of the reader easier for truncated BPTT (it knows too late that there are not that many frames left).
             auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
             if (distanceToStart < -fr.m_timeOffset)
                 return true;
