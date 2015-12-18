@@ -200,21 +200,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m3(-1);
         {
             m1.SetValue(2, 3, { 1, 2, 3,
-                                4, 5, 6 });
-            m2.SetValue(2, 1, { 13,
-                                42 });
+                                14, 15, 6 });
+            m2.SetValue(2, 1, { 42,
+                                13 });
+
+            // broadcasting of an input
             m3.Resize(2, 3);
             TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
             m3.Print();
-        }
-        {
+
+            TensorView(m3).DoMaxOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+
+            TensorView(m3).DoGTOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+
+            // reduction over columns
             m3.Resize(2, 1);
             TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
             m3.Print();
-        }
-        {
+
+            // reduction over rows
             m3.Resize(1, 3);
             TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+
+            TensorView(m3).DoLogSumOf(0, TensorView(m1), TensorView(m2), 1);
             m3.Print();
         }
         {

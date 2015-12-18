@@ -56,7 +56,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
-        void DoSumOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::opSum); }
+#define DeclareBinaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
+
+        DeclareBinaryTensorOp(Sum); DeclareBinaryTensorOp(Difference); DeclareBinaryTensorOp(ElementWiseProduct); DeclareBinaryTensorOp(ElementWiseQuotient);
+        DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
+        DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
 
         static void Test();
 

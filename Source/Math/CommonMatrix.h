@@ -53,11 +53,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
         // unary (or binary with constant parameter)
+        opCopy,
         opNegate, opNot,
         opSaturate, opAbs,
+        opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
         opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine
         // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
     };
+
+    // declare float and double versions of a func under f_
+    // e.g. exp_ -> exp(double), expf(float)
+#define OverloadUnaryMathFns(func) \
+    static inline float func ## _(float arg) { return func ## f(arg); } \
+    static inline double func ## _(double arg) { return func(arg); }
+
+    OverloadUnaryMathFns(exp); OverloadUnaryMathFns(log);
+    OverloadUnaryMathFns(tanh); OverloadUnaryMathFns(cos); OverloadUnaryMathFns(sin);
 
     // -----------------------------------------------------------------------
     // various enums to describe 
