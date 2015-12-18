@@ -62,11 +62,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ForAllUnaryOps(DeclareUnaryTensorOp);
         ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
-        //DeclareUnaryTensorOp(Copy);
-        //DeclareUnaryTensorOp(Negate); DeclareUnaryTensorOp(Not);
-        //DeclareUnaryTensorOp(Abs);
-        //DeclareUnaryTensorOp(Sigmoid); DeclareUnaryTensorOp(SigmoidDerivative); DeclareUnaryTensorOp(Tanh); DeclareUnaryTensorOp(Sqrt); DeclareUnaryTensorOp(Exp); DeclareUnaryTensorOp(Log); DeclareUnaryTensorOp(LinearRectifierDerivative); DeclareUnaryTensorOp(Cosine); DeclareUnaryTensorOp(NegativeSine);
-        //DeclareUnaryTensorOp(SaturateBetaAlpha); DeclareUnaryTensorOp(SumAlpha); DeclareUnaryTensorOp(SubDifferenceToAlpha); DeclareUnaryTensorOp(SubDifferenceFromAlpha);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
@@ -74,9 +69,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllBinaryOps(DeclareBinaryTensorOp);
-        //DeclareBinaryTensorOp(Sum); DeclareBinaryTensorOp(Difference); DeclareBinaryTensorOp(ElementWiseProduct); DeclareBinaryTensorOp(ElementWiseQuotient);
-        //DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
-        //DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
 #pragma pop_macro("DeclareBinaryTensorOp")
 
 #pragma push_macro("DeclareTernaryTensorOp")

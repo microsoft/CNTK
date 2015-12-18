@@ -22,7 +22,7 @@
 #include <thread>
 #include<iostream>
 #include <algorithm>
-#ifdef     _WIN32
+#ifdef _WIN32
 #include <Windows.h>
 #else
 #ifndef max
@@ -5530,7 +5530,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // reduction case (non-reduction case is specialized)
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
             for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
@@ -5554,7 +5554,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpReduction<ElemType, OPFN, N, -1>
     {
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &)
+                                    const vector<size_t> &, const array<vector<ptrdiff_t>, N> &)
         {
             return opfn(pointers);          // finally we are doing some work!!!
         }
@@ -5565,8 +5565,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             // non-scalar case: still nested result loops left
             array<ptrdiff_t, N> strides;
@@ -5589,8 +5589,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 3, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 3> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5618,8 +5618,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 2, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 2> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5644,8 +5644,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, N, vectorizable, m, -1>
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                const vector<size_t> &, const array<vector<ptrdiff_t>, N> &,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             // we are at element level for the result: perform the op (there may still be reduction)
             ElemType val = alpha * TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
@@ -5661,8 +5661,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor operation with k+1 dimensions (-1 means scalar)
     template<class ElemType, typename OPFN, size_t N, int k>
     static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, const OPFN & opfn,
-                                        const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                                        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
     {
         size_t dims = reducingOpDims.size();
         switch (dims)
@@ -5688,9 +5688,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This function now expands into different k.
     template<class ElemType, typename OPFN, size_t N>
     static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                               const std::array<size_t, N> & offsets,
-                               const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                               const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                               const array<size_t, N> & offsets,
+                               const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                               const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
     {
         for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
             pointers[i] += offsets[i];
@@ -5710,9 +5710,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 2> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
+                                       const array<size_t, 2> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
     {
         #define CaseUnaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5730,9 +5730,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 3> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
+                                       const array<size_t, 3> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
     {
         #define CaseBinaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5750,9 +5750,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 4> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides)
+                                       const array<size_t, 4> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
     {
         #define CaseTernaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
