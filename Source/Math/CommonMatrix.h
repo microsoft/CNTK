@@ -48,16 +48,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum ElementWiseOperator
     {
+        // unary (or binary with constant parameter)
+        opCopy,
+        opNegate, opNot,
+        opAbs,
+        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine,
+        // these are not implemented yet:
+        opSaturateBetaAlpha, opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
         // binary
         opSum, opDifference, opElementWiseProduct, opElementWiseQuotient,
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
-        // unary (or binary with constant parameter)
-        opCopy,
-        opNegate, opNot,
-        opSaturate, opAbs,
-        opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
-        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine
+        // ternary
+        opCond
         // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
     };
 
@@ -67,6 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline float func ## _(float arg) { return func ## f(arg); } \
     static inline double func ## _(double arg) { return func(arg); }
 
+    OverloadUnaryMathFns(fabs); OverloadUnaryMathFns(sqrt);
     OverloadUnaryMathFns(exp); OverloadUnaryMathFns(log);
     OverloadUnaryMathFns(tanh); OverloadUnaryMathFns(cos); OverloadUnaryMathFns(sin);
 

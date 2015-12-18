@@ -57,17 +57,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static bool Matches(size_t d1, size_t d2) { return d1 == 1 || d2 == 1 || d1 == d2; }    // do two dimensions match?
 
-    template<class ElemType>
-    void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
+    template<class ElemType, size_t N>
+    static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N> & offsets,
+                                      vector<size_t> & regularOpDims,
+                                      array<vector<ptrdiff_t>, N> & regularStrides,
+                                      vector<size_t> & reducingOpDims,
+                                      array<vector<ptrdiff_t>, N> & reducingStrides)
     {
-#define N 3     // later make this a template parameter. N=1 is possible for generators, such as constants.
-        array<TensorShape, N> shapes;
-        TensorView & c = *this;
-
-        shapes[0] = a.GetShape();
-        shapes[1] = b.GetShape();
-        shapes[2] = c.GetShape();       // last one is the output
-
         // massage TensorShapes
         // Note that TensorShapes here may be shapes are stored or shapes with stride magic applied.
 
@@ -131,6 +127,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].DropDims(toDrop);
         opDims = TensorShape(opDims).DropDims(toDrop).GetDims();    // (ugh)
+        dims = opDims.size();   // #dims has changed
+        for (size_t i = 0; i < N; i++)
+            assert(dims == shapes[i].size());
         // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
         //fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
@@ -141,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].WithBroadcastStrides();
 
-        fprintf(stderr, "Op %d: %s  op  %s  ->  %s  via  %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
+        //fprintf(stderr, "%s  op  %s  ->  %s  via  %s\n", string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // determine inverse broadcasting dimensions
         // Inverse broadcasting dims are actual for loops in the kernel, whereas broadcasting input dims are handled by the thread index.
@@ -171,23 +170,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             isReducingDim[k] = shapes.back()[k] == 1;
 
         // form the regular (non-inverse-broadcasting) dims
-        array<vector<ptrdiff_t>, N> regularStrides;
         for (size_t i = 0; i < N; i++)
             regularStrides[i] = shapes[i].DropDims(isReducingDim).GetStrides();
-        auto regularOpDims = TensorShape(opDims).DropDims(isReducingDim).GetDims();    // (ugh)
+        regularOpDims = TensorShape(opDims).DropDims(isReducingDim).GetDims();    // (ugh)
 
         // form the inverse-broadcasting dims
         vector<bool> isRegularDim(dims);    // true for each inverse-broadcasting dimension
         for (size_t k = 0; k < dims; k++)
             isRegularDim[k] = !isReducingDim[k];   // (no way to do this more nicely?)
-        array<vector<ptrdiff_t>, N> reducingStrides;
         for (size_t i = 0; i < N; i++)
             reducingStrides[i] = shapes[i].DropDims(isRegularDim).GetStrides();
-        auto reducingOpDims = TensorShape(opDims).DropDims(isRegularDim).GetDims();    // (ugh)
+        reducingOpDims = TensorShape(opDims).DropDims(isRegularDim).GetDims();    // (ugh)
+
+        for (size_t i = 0; i < N; i++)
+            offsets[i] = shapes[i].GetOffset();
+    }
+
+    template<class ElemType>
+    void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op)
+    {
+        // prepare all tensor descriptor information as needed for execution
+        array<size_t, 2> offsets;
+        array<vector<ptrdiff_t>, 2> regularStrides, reducingStrides;
+        vector<size_t> regularOpDims, reducingOpDims;
+        PrepareTensorOperands<ElemType,2>(array<TensorShape, 2> { a.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
         // now perform the operation
-        array<size_t, N> offsets = { a.GetShape().GetOffset(), b.GetShape().GetOffset(), c.GetShape().GetOffset() };
-        c.GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
+    template<class ElemType>
+    void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
+    {
+        array<size_t, 3> offsets;
+        array<vector<ptrdiff_t>, 3> regularStrides, reducingStrides;
+        vector<size_t> regularOpDims, reducingOpDims;
+        PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3> { a.GetShape(), b.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+        GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
+    template<class ElemType>
+    void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op)
+    {
+        array<size_t, 4> offsets;
+        array<vector<ptrdiff_t>, 4> regularStrides, reducingStrides;
+        vector<size_t> regularOpDims, reducingOpDims;
+        PrepareTensorOperands<ElemType, 4>(array<TensorShape, 4> { a.GetShape(), b.GetShape(), c.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+        GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // simple test function for testing stuff
@@ -204,8 +235,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m2.SetValue(2, 1, { 42,
                                 13 });
 
-            // broadcasting of an input
+            // unary ops
             m3.Resize(2, 3);
+            TensorView(m3).DoSqrtOf(0, TensorView(m1), 1);
+            m3.Print();
+
+            // broadcasting of an input
             TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
             m3.Print();
 

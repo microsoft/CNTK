@@ -335,10 +335,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
 
+        void TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 2> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
         void TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 3> & offsets,
                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+        void TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 4> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
 
         static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
         static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);
