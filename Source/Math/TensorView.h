@@ -56,6 +56,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
+#define DeclareUnaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, ElemType alpha) { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op ## oper); }
+
+        DeclareUnaryTensorOp(Copy);
+        DeclareUnaryTensorOp(Negate); DeclareUnaryTensorOp(Not);
+        DeclareUnaryTensorOp(Abs);
+        DeclareUnaryTensorOp(Sigmoid); DeclareUnaryTensorOp(SigmoidDerivative); DeclareUnaryTensorOp(Tanh); DeclareUnaryTensorOp(Sqrt); DeclareUnaryTensorOp(Exp); DeclareUnaryTensorOp(Log); DeclareUnaryTensorOp(LinearRectifierDerivative); DeclareUnaryTensorOp(Cosine); DeclareUnaryTensorOp(NegativeSine);
+        DeclareUnaryTensorOp(SaturateBetaAlpha); DeclareUnaryTensorOp(SumAlpha); DeclareUnaryTensorOp(SubDifferenceToAlpha); DeclareUnaryTensorOp(SubDifferenceFromAlpha);
+
 #define DeclareBinaryTensorOp(oper) \
         void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
 
@@ -63,11 +72,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
         DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
 
+#define DeclareTernaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha) { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op ## oper); }
+
+        DeclareTernaryTensorOp(Cond);
+
         static void Test();
 
     private:
 
+        void DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op);
         void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op);
+        void DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op);
 
         // -------------------------------------------------------------------
         // sob members

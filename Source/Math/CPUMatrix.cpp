@@ -5582,6 +5582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
                                 const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
         {
+            // TODO: if leading dim is all-ones, we can hard-code the loop and hope the compiler vectorizes for us
             // non-scalar case: still nested result loops left
             array<ptrdiff_t, N> strides;
             for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
@@ -5635,7 +5636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This function now expands into different k.
     template<class ElemType, typename OPFN, size_t N>
     static inline void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                        const std::array<size_t, 3> & offsets,
+                                        const std::array<size_t, N> & offsets,
                                         const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
                                         const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
     {
@@ -5653,14 +5654,75 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType>
+    static inline ElemType Sigmoid(ElemType z)
+    {
+        if (z >= 0)
+            return 1 / (1 + exp_(-z));
+        else
+        {
+            ElemType v = exp_(z);
+            return v / (1 + v);
+        }
+    }
+    template<class ElemType>
+    static inline ElemType SigmoidDerivative(ElemType z)
+    {
+        ElemType v = Sigmoid(z);
+        return v * (1 - v);
+    }
+    template<class ElemType>
+    static inline ElemType LinearRectifierDerivative(ElemType z)
+    {
+        return z > 0 ? (ElemType)1 : 0;
+    }
+    template<class ElemType>
+    static inline ElemType Sqrt(ElemType z)
+    {
+        return sqrt_(max(0, z));
+    }
+
     // define a static function for every operation
-#define DefOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b) { return expr; }
+#define DefUnaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a) { return expr; }
 
-    DefOp(Sum, a + b); DefOp(Difference, a - b); DefOp(ElementWiseProduct, a*b); DefOp(ElementWiseQuotient, a / b);
-    DefOp(LogSum, logadd_(a, b)); DefOp(Max, a > b ? a : b); DefOp(Min, a < b ? a : b);
-    DefOp(EQ, a == b); DefOp(NE, a != b); DefOp(GT, a > b); DefOp(LT, a < b); DefOp(GE, a >= b); DefOp(LE, a <= b);
+    DefUnaryOp(Copy, a);
+    DefUnaryOp(Negate, -a); DefUnaryOp(Not, !a);
+    DefUnaryOp(Abs, fabs_(a));
+    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(SigmoidDerivative, SigmoidDerivative(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, log_(a)); DefUnaryOp(LinearRectifierDerivative, LinearRectifierDerivative(a)); DefUnaryOp(Cosine, cos_(a)); DefUnaryOp(NegativeSine, -sin_(a));
+    //DefUnaryOp(SaturateBetaAlpha); DefUnaryOp(SumAlpha); DefUnaryOp(SubDifferenceToAlpha); DefUnaryOp(SubDifferenceFromAlpha);
 
-    // perform binary operation 'op' on a and b giving c, reinterpreting the matrices as tensors as specified by the dims and strides
+    // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+    // This maps 'op' to a lambda.
+    template<class ElemType>
+    void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+                                       const std::array<size_t, 2> & offsets,
+                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
+                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
+    {
+        array<ElemType*, 2> pointers = { a.m_pArray, m_pArray };
+#define CaseUnaryTensorOp(oper) \
+        case ElementWiseOperator::op ## oper: \
+            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2> & pp) { return Op ## oper((*(pp[0]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+        switch (op)
+        {
+        CaseUnaryTensorOp(Copy);
+        CaseUnaryTensorOp(Negate); CaseUnaryTensorOp(Not);
+        CaseUnaryTensorOp(Abs);
+        CaseUnaryTensorOp(Sigmoid); CaseUnaryTensorOp(SigmoidDerivative); CaseUnaryTensorOp(Tanh); CaseUnaryTensorOp(Sqrt); CaseUnaryTensorOp(Exp); CaseUnaryTensorOp(Log); CaseUnaryTensorOp(LinearRectifierDerivative); CaseUnaryTensorOp(Cosine); CaseUnaryTensorOp(NegativeSine);
+        // functions with lambda arguments--these are different
+        //CaseUnaryTensorOp(SaturateBetaAlpha); CaseUnaryTensorOp(SumAlpha); CaseUnaryTensorOp(SubDifferenceToAlpha); CaseUnaryTensorOp(SubDifferenceFromAlpha);
+        default: LogicError("TensorUnaryOp: Unknown op code %d.", (int)op);
+        }
+    }
+
+    // define a static function for every operation
+#define DefBinaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b) { return expr; }
+
+    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementWiseProduct, a*b); DefBinaryOp(ElementWiseQuotient, a / b);
+    DefBinaryOp(LogSum, logadd_(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
+    DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
+
+    // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
@@ -5671,13 +5733,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         array<ElemType*, 3> pointers = { a.m_pArray, b.m_pArray, m_pArray };
 #define CaseBinaryTensorOp(oper) \
         case ElementWiseOperator::op ## oper: \
-            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return Op ## oper(*(pp[0]), *(pp[1])); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return Op ## oper((*(pp[0])), (*(pp[1]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
         switch (op)
         {
         CaseBinaryTensorOp(Sum); CaseBinaryTensorOp(Difference); CaseBinaryTensorOp(ElementWiseProduct); CaseBinaryTensorOp(ElementWiseQuotient);
         CaseBinaryTensorOp(LogSum); CaseBinaryTensorOp(Max); CaseBinaryTensorOp(Min);
         CaseBinaryTensorOp(EQ); CaseBinaryTensorOp(NE); CaseBinaryTensorOp(GT); CaseBinaryTensorOp(LT); CaseBinaryTensorOp(GE); CaseBinaryTensorOp(LE);
-        default: LogicError("TensorNnaryOp: Unknown op code %d.", (int)op);
+        default: LogicError("TensorBinaryOp: Unknown op code %d.", (int)op);
+        }
+    }
+
+    // define a static function for every operation
+#define DefTernaryOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b, ElemType c) { return expr; }
+
+    DefTernaryOp(Cond, a ? b : c);
+
+    // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+    // This maps 'op' to a lambda.
+    template<class ElemType>
+    void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+                                       const std::array<size_t, 4> & offsets,
+                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
+                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides)
+    {
+        array<ElemType*, 4> pointers = { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray };
+#define CaseTernaryTensorOp(oper) \
+        case ElementWiseOperator::op ## oper: \
+            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 4> & pp) { return Op ## oper((*(pp[0])), (*(pp[1])), (*(pp[2]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+        switch (op)
+        {
+        CaseTernaryTensorOp(Cond);
+        default: LogicError("TensorTernaryOp: Unknown op code %d.", (int)op);
         }
     }
 
