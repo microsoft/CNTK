@@ -235,8 +235,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m2.SetValue(2, 1, { 42,
                                 13 });
 
-            // unary ops
-            m3.Resize(2, 3);
+            m3.Resize(m1);
+
+            // regular zip  (just add m1 to itself)
+            TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m1), 1);
+            m3.Print();
+
+            // unary op
             TensorView(m3).DoSqrtOf(0, TensorView(m1), 1);
             m3.Print();
 

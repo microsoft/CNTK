@@ -6,9 +6,8 @@
 
 // TODO:
 //  - remove empty-matrix checks: if an op is well-defined with empty matrices, then do it
-//  - Resize() must be cheap if it does nothing  (I already did that for CPU, still to be done for GPU)
-//  - an overload for Resize() to match another matrix
-//  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
+//  - Resize() must be cheap if it does nothing  (I already did that for CPU; already done for GPU?)
+
 #pragma once
 
 #include "Basics.h"
@@ -170,6 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void Resize(const Matrix<ElemType>& other) { Resize(other.GetNumRows(), other.GetNumCols()); }
         void VerifySize(size_t rows, size_t cols)
         {
             m_baseMatrix->VerifySize(rows, cols);
