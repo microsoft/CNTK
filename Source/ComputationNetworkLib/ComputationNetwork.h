@@ -159,7 +159,7 @@ public:
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
-    void MarkValueNonSharableNodes(const ComputationNodeBasePtr& rootNode);
+    void MarkValueNonSharableNodes();
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
