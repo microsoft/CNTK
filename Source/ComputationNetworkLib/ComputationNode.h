@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MarkValueNonSharable(){ m_valueSharable = false; }
         virtual void MarkValueSharable() { m_valueSharable = true;    }
-        bool isValueSharable() { return m_valueSharable;  }
+        bool isValueSharable() const { return m_valueSharable;  }
         
     protected:  // TODO: should be fully encapsulated here
 
@@ -462,8 +462,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
-        // sometimes, it is necessary to know whether it is a particular node (e.g., learnable parameter)
-        virtual bool isLearnableParameter() const { return false; }
 
     protected:
     public:     // ...the following should be protected, but nodes inquire about their children, requiring public access
@@ -547,7 +545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
         bool IsOutputNeededDuringBackprop() const 
         {
-            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
+            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop || !isValueSharable();
         }
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
