@@ -181,6 +181,8 @@ core
 # =========================
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
+MachineLearning/CNTK/buildinfo.h
+MachineLearning/CNTK/buildinfo.h$$
 
 
 *.lyx#
