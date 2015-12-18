@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // cast a matrix as a tensor
     template<class ElemType>
     TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
-        m_sob(sob), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
+        m_sob(sob), m_shape(TensorShape(std::vector<size_t> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
     template<class ElemType>
     TensorView<ElemType>::TensorView(const TensorView<ElemType> & other, const TensorShape & shape) :
