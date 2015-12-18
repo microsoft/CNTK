@@ -226,9 +226,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
-        Matrix<ElemType> m1(-1);
-        Matrix<ElemType> m2(-1);
-        Matrix<ElemType> m3(-1);
+        const DEVICEID_TYPE deviceId = 1; // -1
+        Matrix<ElemType> m1(deviceId);
+        Matrix<ElemType> m2(deviceId);
+        Matrix<ElemType> m3(deviceId);
         {
             m1.SetValue(5, 3, { 1, 2, 3,
                                 14, 15, 6,

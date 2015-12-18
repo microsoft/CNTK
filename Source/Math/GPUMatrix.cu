@@ -15,6 +15,8 @@
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"
 #include "GPUSparseMatrix.h"
+#include "CommonMatrix.h"
+#include "TensorOps.h"
 #include "device_launch_parameters.h"
 #include <assert.h>
 #include <cuda.h>
@@ -1166,12 +1168,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!(matrixFlags&matrixFormatRowMajor))
                 {
-                    CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(), 
-                        (matrixFlags&matrixFlagSetValueOnDevice)?cudaMemcpyDeviceToDevice:cudaMemcpyHostToDevice));
+                    CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
                 }
-                else
+                else        // row major: must transpose (this is not meant to be efficient, but very useful for defining inline matrices for test code)
                 {
-                    RuntimeError("Row major isn't implemented");
+                    vector<ElemType> transposed(GetNumElements());
+                    for (size_t i = 0; i < numRows; i++) for (size_t j = 0; j < numCols; j++)
+                        transposed[i + numRows * j] = pArray[j + numCols * i];
+                    CUDA_CALL(cudaMemcpy(m_pArray, transposed.data(), sizeof(ElemType)*GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
                 }
             }
         }
@@ -4449,6 +4453,248 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         CUDA_CALL(cudaFree(d_zeta));
     };
+
+    // -----------------------------------------------------------------------
+    // TensorView support
+    // -----------------------------------------------------------------------
+
+    // BUGBUG: This is a stub that currently is just the CPU code. This is not functional yet.
+
+    // To save time, this makes extensive use of templates and macros.
+
+#if 0
+    // perform loop over reduction index m
+    // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
+    template<class ElemType, typename size_t N, int m>
+    struct TensorOpReduction
+    {
+        // reduction case (non-reduction case is specialized)
+        static inline ElemType Loop(array<ElemType*, N> pointers, ElementWiseOperator op,
+                                    const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+        {
+            array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
+            for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
+                strides[i] = reducingStrides[i][(size_t)m];
+            ElemType aggregate = 0;
+            for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
+            {
+                // need to descend into one loop deeper
+                aggregate += TensorOpReduction<ElemType, N, m - 1>::Loop(pointers, op, reducingOpDims, reducingStrides);
+                // advance the pointers
+                for (size_t i = 0; i < N - 1; i++)
+                    pointers[i] += strides[i];      // note: last pointer (result) is unused and untouched here
+            }
+            return aggregate;
+        }
+    };
+
+    // perform loop over reduction index m
+    // This is the specialized version for m = -1, which terminates the recursion.
+    template<class ElemType, typename size_t N>
+    struct TensorOpReduction<ElemType, N, -1>
+    {
+        static inline ElemType Loop(array<ElemType*, N> pointers, ElementWiseOperator op,
+                                    const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &)
+        {
+            return op(pointers);          // finally we are doing some work!!!
+        }
+    };
+
+    // perform loop over regular index k and reducing index m for N operands (counting the output)
+    template<class ElemType, typename size_t N, int m, int k>
+    struct TensorOpIteration
+    {
+        static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
+                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
+                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+        {
+            // non-scalar case: still nested result loops left
+            array<ptrdiff_t, N> strides;
+            for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
+                strides[i] = regularStrides[i][(size_t)k];
+            for (size_t dim = regularOpDims[(size_t)k]; dim--> 0;)
+            {
+                // need to descend into one loop deeper
+                TensorOpIteration<ElemType, N, m, k - 1>::Loop(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                // advance the pointers
+                for (size_t i = 0; i < N; i++)
+                    pointers[i] += strides[i];
+            }
+        }
+    };
+
+    template<class ElemType, typename size_t N, int m>
+    struct TensorOpIteration<ElemType, N, m, -1>
+    {
+        static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
+                                const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &,
+                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+        {
+            // we are at element level for the result: perform the op (there may still be reduction)
+            ElemType val = alpha * TensorOpReduction<ElemType, N, m>::Loop(pointers, op, reducingOpDims, reducingStrides);
+            // combine with previous value in target matrix, then write it out
+            auto * pout = pointers.back();
+            if (beta != 0)
+                val += beta * *pout;
+            *pout = val;
+            return;
+        }
+    };
+#endif
+
+    // simple fixed-size arrays for passing dimension information by value
+    template<typename T, size_t N>
+    struct FixedArray
+    {
+        T m_data[N];
+        __device__ __host__ size_t size() const { return N; }
+        __device__ __host__ T & operator[](size_t n) { return m_data[n]; }
+        template<class VEC>
+        FixedArray(const VEC & data)
+        {
+            assert(data.size() == N);
+            for (size_t n = 0; n < N; n++)
+            {
+                m_data[n] = (T)data[n];
+                if (m_data[n] != data[n])
+                    InvalidArgument("FixedArray: Dimensions out of range, too few bits.");
+            }
+        }
+    };
+
+    template<typename T, size_t N, size_t K>    // N = which input/output; K = index depth
+    struct FixedMatrix
+    {
+        T m_data[N][K];
+        __device__ __host__ size_t getNumRows() const { return N; }
+        __device__ __host__ size_t getNumCols() const { return K; }
+        __device__ __host__ T & operator()(size_t n, size_t k) { return m_data[n][k]; }
+        template<class VEC2>
+        FixedMatrix(const VEC2 & data)
+        {
+            assert(data.size() == N);
+            for (size_t n = 0; n < N; n++)
+            {
+                assert(data[n].size() == K);
+                for (size_t k = 0; k < K; k++)
+                {
+                    m_data[n][k] = (T)data[n][k];
+                    if (m_data[n][k] != data[n][k])
+                        InvalidArgument("FixedArray: Dimensions out of range, too few bits.");
+                }
+            }
+        }
+    };
+
+    // specialized versions with 0 elements, to keep template code consistent
+    template<typename T>
+    struct FixedArray<T, 0>
+    {
+        __device__ __host__ size_t size() const { return 0; }
+        template<class VEC>
+        FixedArray(const VEC & data) { assert(data.size() == 0); }
+    };
+
+    template<typename T, size_t N>
+    struct FixedMatrix<T, N, 0>
+    {
+        __device__ __host__ size_t getNumRows() const { return N; }
+        __device__ __host__ size_t getNumCols() const { return 0; }
+        template<class VEC2>
+        FixedMatrix(const VEC2 & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); }
+    };
+
+    // launch tensor op with CUDA
+    // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
+    template<class ElemType, typename size_t N, int M, int K>
+    static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op,
+                               const vector<size_t> & regularOpDimVector, const array<vector<ptrdiff_t>, N> & regularStrideVectors,
+                               const vector<size_t> & reducingOpDimVector, const array<vector<ptrdiff_t>, N> & reducingStrideVectors)
+    {
+        // copy all parameters to CUDA-compatible data structures
+        FixedArray<ElemType*, N> pointers(pointerVector);
+        FixedArray<unsigned int, K> regularOpDims(regularOpDimVector);
+        FixedMatrix<int, N, K> regularStrides(regularStrideVectors);
+        FixedArray<unsigned int, M> reducingOpDims(reducingOpDimVector);
+        FixedMatrix<int, N, M> reducingStrides(reducingStrideVectors);
+        
+        sin((pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, beta, alpha, op, 1.0f));
+    }
+
+    // tensor operation with k+1 dimensions (-1 means scalar)
+    template<class ElemType, typename size_t N, int K>
+    static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
+                                        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                                        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+    {
+        size_t dims = reducingOpDims.size();
+        switch (dims)
+        {
+        case 2: return LaunchTensorOp<ElemType, N, 2, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 1: return LaunchTensorOp<ElemType, N, 1, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 0: return LaunchTensorOp<ElemType, N, 0, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        default: LogicError("TensorOp: %d non-flattened reduction dimensions are not supported.", (int)dims);
+        }
+    }
+
+    // tensor operation, generalized in number of arguments
+    // This function now expands into different k. It also eliminates the offsets by adding them to the pointers.
+    template<class ElemType, typename size_t N>
+    static void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
+                               const array<size_t, N> & offsets,
+                               const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                               const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+    {
+        for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
+            pointers[i] += offsets[i];
+        size_t dims = regularOpDims.size();
+        switch (dims)
+        {
+        case 4: return TensorOpWithRegularLoop<ElemType, N, 4>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 3: return TensorOpWithRegularLoop<ElemType, N, 3>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 2: return TensorOpWithRegularLoop<ElemType, N, 2>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 1: return TensorOpWithRegularLoop<ElemType, N, 1>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        case 0: return TensorOpWithRegularLoop<ElemType, N, 0>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        default: LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)dims);
+        }
+    }
+
+    // entry points from Matrix.cpp:
+
+    // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+    // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
+    template<class ElemType>
+    void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+                                       const array<size_t, 2> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+    {
+        return TensorOpN(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
+    // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+    template<class ElemType>
+    void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+                                       const array<size_t, 3> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+    {
+        return TensorOpN(beta, array<ElemType*, 3> { a.m_pArray, b.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
+    // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+    template<class ElemType>
+    void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+                                       const array<size_t, 4> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
+    {
+        return TensorOpN(beta, array<ElemType*, 4> { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
+    // -----------------------------------------------------------------------
+    // explicit instantiations
+    // -----------------------------------------------------------------------
 
     template class GPUMatrix<float>;
     template class GPUMatrix<double>;

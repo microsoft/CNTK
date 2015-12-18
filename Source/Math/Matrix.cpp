@@ -5184,7 +5184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-            NOT_IMPLEMENTED, //m_GPUMatrix->TensorOp(beta, offsets, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5201,7 +5201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-            NOT_IMPLEMENTED, //m_GPUMatrix->TensorOp(beta, offsets, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5218,7 +5218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-            NOT_IMPLEMENTED, //m_GPUMatrix->TensorOp(beta, offsets, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
