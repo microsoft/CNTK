@@ -230,10 +230,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m2(-1);
         Matrix<ElemType> m3(-1);
         {
-            m1.SetValue(2, 3, { 1, 2, 3,
-                                14, 15, 6 });
-            m2.SetValue(2, 1, { 42,
-                                13 });
+            m1.SetValue(5, 3, { 1, 2, 3,
+                                14, 15, 6,
+                                4, 5, 16,
+                                41, 5, 1,
+                                1.8, 4.5, 7 });
+            m2.SetValue(5, 1, { 42,
+                                13,
+                                1968,
+                                3.1415f,
+                                7 });
 
             m3.Resize(m1);
 
@@ -256,7 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m3.Print();
 
             // reduction over columns
-            m3.Resize(2, 1);
+            m3.Resize(5, 1);
             TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
             m3.Print();
 
