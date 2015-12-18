@@ -5256,27 +5256,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-
 #pragma endregion Static BLAS Functions
 
-    double logadd(double x, double y)
+    template<typename ElemType>
+    ElemType logadd_(ElemType x, ElemType y)
     {
-        double temp, diff, z; 
-    
-        if (x < y) {
-            temp = x; x = y; y = temp;
-        }
-        diff = y - x; 
-        if (diff < MINLOGEXP)
+        if (x < y)
         {
-            return (x < LSMALL)?LZERO:x;
+            ElemType temp = x; x = y; y = temp;
+        }
+        ElemType diff = y - x; 
+        if (diff < (ElemType)MINLOGEXP)
+        {
+            return (x < (ElemType)LSMALL) ? (ElemType)LZERO : x;
         }
         else
         {
-            z = exp(diff);
-            return x + log(1.0 + z);
+            ElemType z = exp_(diff);
+            return x + log_((ElemType)1.0 + z);
         }
     }
+    double logadd(double x, double y) { return logadd_(x, y); }
 
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
@@ -5546,8 +5546,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
                                     const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
         {
-            array<ptrdiff_t, N> strides;
-            for (size_t i = 0; i < N; i++)      // N = a small constant, this will be unrolled
+            array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
+            for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
                 strides[i] = reducingStrides[i][(size_t)m];
             ElemType aggregate = 0;
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
@@ -5555,8 +5555,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // need to descend into one loop deeper
                 aggregate += TensorOpReduction<ElemType, N, OPFN, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
                 // advance the pointers
-                for (size_t i = 0; i < N; i++)
-                    pointers[i] += strides[i];
+                for (size_t i = 0; i < N - 1; i++)
+                    pointers[i] += strides[i];      // note: last pointer (result) is unused and untouched here
             }
             return aggregate;
         }
@@ -5653,7 +5653,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // define a static function for every operation
+#define DefOp(op, expr) template<class ElemType> static inline ElemType Op ## op(ElemType a, ElemType b) { return expr; }
+
+    DefOp(Sum, a + b); DefOp(Difference, a - b); DefOp(ElementWiseProduct, a*b); DefOp(ElementWiseQuotient, a / b);
+    DefOp(LogSum, logadd_(a, b)); DefOp(Max, a > b ? a : b); DefOp(Min, a < b ? a : b);
+    DefOp(EQ, a == b); DefOp(NE, a != b); DefOp(GT, a > b); DefOp(LT, a < b); DefOp(GE, a >= b); DefOp(LE, a <= b);
+
     // perform binary operation 'op' on a and b giving c, reinterpreting the matrices as tensors as specified by the dims and strides
+    // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                                        const std::array<size_t, 3> & offsets,
@@ -5661,12 +5669,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
     {
         array<ElemType*, 3> pointers = { a.m_pArray, b.m_pArray, m_pArray };
+#define CaseBinaryTensorOp(oper) \
+        case ElementWiseOperator::op ## oper: \
+            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return Op ## oper(*(pp[0]), *(pp[1])); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
         switch (op)
         {
-        case ElementWiseOperator::opSum:
-            return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3> & pp) { return *(pp[0]) + *(pp[1]); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        default:
-            LogicError("TensorNnaryOp: Unknown op code %d.", (int)op);
+        CaseBinaryTensorOp(Sum); CaseBinaryTensorOp(Difference); CaseBinaryTensorOp(ElementWiseProduct); CaseBinaryTensorOp(ElementWiseQuotient);
+        CaseBinaryTensorOp(LogSum); CaseBinaryTensorOp(Max); CaseBinaryTensorOp(Min);
+        CaseBinaryTensorOp(EQ); CaseBinaryTensorOp(NE); CaseBinaryTensorOp(GT); CaseBinaryTensorOp(LT); CaseBinaryTensorOp(GE); CaseBinaryTensorOp(LE);
+        default: LogicError("TensorNnaryOp: Unknown op code %d.", (int)op);
         }
     }
 
