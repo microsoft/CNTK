@@ -358,6 +358,7 @@ struct latticefunctionskernels
             size_t state1step0to1 = te;                     // inflection point from state 0 to 1, record in state 1
             size_t state2step0to1 = te;                     // inflection point from state 0 to 1, record in state 2
             size_t state2step1to2 = te;                     // inflection point from state 1 to 2, record in state 2
+			size_t state2step0to2 = te;
 
             //now we only support transition from -1 to 0 or 2 for sil
             float pathscore0 = fwscore ;                     // log pp in state 0
@@ -400,16 +401,20 @@ struct latticefunctionskernels
                         pathscore2 = pathscore12;
                         state2step0to1 = state1step0to1;                                        // record the inflection point
                         state2step1to2 = t;                                                     // record the inflection point
+						state2step0to2 = te;
                         if (isSil)
                             backptrmatrix (2, t-ts-1) = 1;
                     }
-                    if (isSil)                                                                  // only silence have path from 0 to 2
+                    //if (isSil)                                                                  // only silence have path from 0 to 2
                     {
                         const float pathscore02 = pathscore0 + getlogtransp(transP,0,2);          // log pp from state 0 to 2
                         if (pathscore02 >= pathscore2)                                          // if state 0->2
                         {
                             pathscore2 = pathscore02;
-                            backptrmatrix (2, t-ts-1) = 0;
+                            if (isSil)
+                            	backptrmatrix (2, t-ts-1) = 0;
+							state2step0to2 = t;		
+							state2step1to2 = te;
                         }
                     }
 
@@ -495,6 +500,21 @@ struct latticefunctionskernels
 
             if (!isSil)
             {
+				if (state2step0to2 < te)
+				{
+					state2step0to2 += alignindex - ts;
+					for (size_t t = alignindex; t < alignindex + numframes; t++)    // set the final alignment
+					{
+						size_t senoneid;
+						if (t < state2step0to2)                                     // in state 0
+							senoneid = senoneid0;						
+						else                                                        // in state 2
+							senoneid = senoneid2;
+						alignresult[t] = (unsigned short)senoneid;
+					}
+				}
+				else
+            {
                 state2step0to1 += alignindex - ts;                              // convert to align measure
                 state2step1to2 += alignindex - ts;
                 for (size_t t = alignindex; t < alignindex + numframes; t++)    // set the final alignment
@@ -508,6 +528,7 @@ struct latticefunctionskernels
                         senoneid = senoneid2;
                     alignresult[t] = (unsigned short) senoneid;
                 }
+            }
             }
             else                                                                        // for silence
             {
