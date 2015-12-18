@@ -64,15 +64,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
     };
 
-    // declare float and double versions of a func under f_
-    // e.g. exp_ -> exp(double), expf(float)
-#define OverloadUnaryMathFns(func) \
-    static inline float func ## _(float arg) { return func ## f(arg); } \
-    static inline double func ## _(double arg) { return func(arg); }
+    // helper to apply a C macro for all operations of each kind
+#define ForAllUnaryOps(Macro) \
+    Macro(Copy); \
+    Macro(Negate); Macro(Not); \
+    Macro(Abs); \
+    Macro(Sigmoid); Macro(SigmoidDerivative); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifierDerivative); Macro(Cosine); Macro(NegativeSine);
 
-    OverloadUnaryMathFns(fabs); OverloadUnaryMathFns(sqrt);
-    OverloadUnaryMathFns(exp); OverloadUnaryMathFns(log);
-    OverloadUnaryMathFns(tanh); OverloadUnaryMathFns(cos); OverloadUnaryMathFns(sin);
+#define ForAllParameterizedUnaryOps(Macro) \
+    Macro(SaturateBetaAlpha); Macro(SumAlpha); Macro(SubDifferenceToAlpha); Macro(SubDifferenceFromAlpha);
+
+#define ForAllBinaryOps(Macro) \
+    Macro(Sum); Macro(Difference); Macro(ElementWiseProduct); Macro(ElementWiseQuotient); \
+    Macro(LogSum); Macro(Max); Macro(Min); \
+    Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE);
+
+#define ForAllTernaryOps(Macro) \
+    Macro(Cond);
 
     // -----------------------------------------------------------------------
     // various enums to describe 

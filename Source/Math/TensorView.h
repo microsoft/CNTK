@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-// This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor.
+// This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor. [fseide]
 
 #pragma once
 
@@ -56,26 +56,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
+#pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper) \
         void Do ## oper ## Of(ElemType beta, const TensorView & a, ElemType alpha) { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op ## oper); }
 
-        DeclareUnaryTensorOp(Copy);
-        DeclareUnaryTensorOp(Negate); DeclareUnaryTensorOp(Not);
-        DeclareUnaryTensorOp(Abs);
-        DeclareUnaryTensorOp(Sigmoid); DeclareUnaryTensorOp(SigmoidDerivative); DeclareUnaryTensorOp(Tanh); DeclareUnaryTensorOp(Sqrt); DeclareUnaryTensorOp(Exp); DeclareUnaryTensorOp(Log); DeclareUnaryTensorOp(LinearRectifierDerivative); DeclareUnaryTensorOp(Cosine); DeclareUnaryTensorOp(NegativeSine);
-        DeclareUnaryTensorOp(SaturateBetaAlpha); DeclareUnaryTensorOp(SumAlpha); DeclareUnaryTensorOp(SubDifferenceToAlpha); DeclareUnaryTensorOp(SubDifferenceFromAlpha);
+        ForAllUnaryOps(DeclareUnaryTensorOp);
+        ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
+        //DeclareUnaryTensorOp(Copy);
+        //DeclareUnaryTensorOp(Negate); DeclareUnaryTensorOp(Not);
+        //DeclareUnaryTensorOp(Abs);
+        //DeclareUnaryTensorOp(Sigmoid); DeclareUnaryTensorOp(SigmoidDerivative); DeclareUnaryTensorOp(Tanh); DeclareUnaryTensorOp(Sqrt); DeclareUnaryTensorOp(Exp); DeclareUnaryTensorOp(Log); DeclareUnaryTensorOp(LinearRectifierDerivative); DeclareUnaryTensorOp(Cosine); DeclareUnaryTensorOp(NegativeSine);
+        //DeclareUnaryTensorOp(SaturateBetaAlpha); DeclareUnaryTensorOp(SumAlpha); DeclareUnaryTensorOp(SubDifferenceToAlpha); DeclareUnaryTensorOp(SubDifferenceFromAlpha);
+#pragma pop_macro("DeclareUnaryTensorOp")
 
+#pragma push_macro("DeclareBinaryTensorOp")
 #define DeclareBinaryTensorOp(oper) \
         void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
 
-        DeclareBinaryTensorOp(Sum); DeclareBinaryTensorOp(Difference); DeclareBinaryTensorOp(ElementWiseProduct); DeclareBinaryTensorOp(ElementWiseQuotient);
-        DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
-        DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
+        ForAllBinaryOps(DeclareBinaryTensorOp);
+        //DeclareBinaryTensorOp(Sum); DeclareBinaryTensorOp(Difference); DeclareBinaryTensorOp(ElementWiseProduct); DeclareBinaryTensorOp(ElementWiseQuotient);
+        //DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
+        //DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
+#pragma pop_macro("DeclareBinaryTensorOp")
 
+#pragma push_macro("DeclareTernaryTensorOp")
 #define DeclareTernaryTensorOp(oper) \
         void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha) { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op ## oper); }
 
-        DeclareTernaryTensorOp(Cond);
+        ForAllTernaryOps(DeclareTernaryTensorOp);
+#pragma pop_macro("DeclareTernaryTensorOp")
 
         static void Test();
 
