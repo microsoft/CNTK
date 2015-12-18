@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <memory>   // for shared_ptr
 #include <array>
+#include <initializer_list>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -200,6 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags = matrixFlagNormal);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
+        void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) { std::vector<ElemType> vals(l); assert(vals.size() == numRows * numCols); SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor); } // SetValue(2,3, {1,2,3,  4,5,6});
         static ElemType MakeNan(size_t payload);
         void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,

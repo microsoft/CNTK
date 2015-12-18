@@ -129,8 +129,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         neither:;
         }
         for (size_t i = 0; i < N; i++)
-            shapes[i] = shapes[i].DropSingletonDims(toDrop);
-        opDims = TensorShape(opDims).DropSingletonDims(toDrop).GetDims();    // (ugh)
+            shapes[i] = shapes[i].DropDims(toDrop);
+        opDims = TensorShape(opDims).DropDims(toDrop).GetDims();    // (ugh)
         // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
         //fprintf(stderr, "Post-drop: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
@@ -173,8 +173,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // form the regular (non-inverse-broadcasting) dims
         array<vector<ptrdiff_t>, N> regularStrides;
         for (size_t i = 0; i < N; i++)
-            regularStrides[i] = shapes[i].DropSingletonDims(isReducingDim).GetStrides();
-        auto regularOpDims = TensorShape(opDims).DropSingletonDims(isReducingDim).GetDims();    // (ugh)
+            regularStrides[i] = shapes[i].DropDims(isReducingDim).GetStrides();
+        auto regularOpDims = TensorShape(opDims).DropDims(isReducingDim).GetDims();    // (ugh)
 
         // form the inverse-broadcasting dims
         vector<bool> isRegularDim(dims);    // true for each inverse-broadcasting dimension
@@ -182,8 +182,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             isRegularDim[k] = !isReducingDim[k];   // (no way to do this more nicely?)
         array<vector<ptrdiff_t>, N> reducingStrides;
         for (size_t i = 0; i < N; i++)
-            reducingStrides[i] = shapes[i].DropSingletonDims(isRegularDim).GetStrides();
-        auto reducingOpDims = TensorShape(opDims).DropSingletonDims(isReducingDim).GetDims();    // (ugh)
+            reducingStrides[i] = shapes[i].DropDims(isRegularDim).GetStrides();
+        auto reducingOpDims = TensorShape(opDims).DropDims(isRegularDim).GetDims();    // (ugh)
 
         // now perform the operation
         array<size_t, N> offsets = { a.GetShape().GetOffset(), b.GetShape().GetOffset(), c.GetShape().GetOffset() };
@@ -195,16 +195,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
-        Matrix<ElemType> m1(-1); m1.Resize(1, 42);
-        Matrix<ElemType> m2(-1); m2.Resize(13, 1);
-        Matrix<ElemType> m3(-1); m3.Resize(13, 21);
-        TensorShape s1(1, 2, 21);
-        TensorShape s2(13, 1);
-        TensorShape s3(13, 1, 21);
-        let t1 = TensorView<ElemType>(m1, s1); t1;
-        let t2 = TensorView<ElemType>(m2, s2); t2;
-        auto t3 = TensorView<ElemType>(m3, s3); t3;
-        t3.DoSumOf(0, t1, t2, 1);
+        Matrix<ElemType> m1(-1);
+        Matrix<ElemType> m2(-1);
+        Matrix<ElemType> m3(-1);
+        {
+            m1.SetValue(2, 3, { 1, 2, 3,
+                                4, 5, 6 });
+            m2.SetValue(2, 1, { 13,
+                                42 });
+            m3.Resize(2, 3);
+            TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+        }
+        {
+            m3.Resize(2, 1);
+            TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+        }
+        {
+            m3.Resize(1, 3);
+            TensorView(m3).DoSumOf(0, TensorView(m1), TensorView(m2), 1);
+            m3.Print();
+        }
+        {
+            m1.Resize(1, 42);
+            m2.Resize(13, 1);
+            m3.Resize(13, 21);
+            TensorShape s1(1, 2, 21);
+            TensorShape s2(13, 1);
+            TensorShape s3(13, 1, 21);
+            let t1 = TensorView<ElemType>(m1, s1); t1;
+            let t2 = TensorView<ElemType>(m2, s2); t2;
+            auto t3 = TensorView<ElemType>(m3, s3); t3;
+            t3.DoSumOf(0, t1, t2, 1);
+            m3.Print();
+        }
     }
 
     template class TensorView<float>;

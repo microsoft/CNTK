@@ -227,19 +227,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             result.m_strides[k] = /*result.m_dims[k - 1] *, it's 1 */ result.m_strides[k - 1];
             return result;
         }
-        TensorShape DropSingletonDims(const std::vector<bool> & toDrop) const  // flatten [k] with [k-1] if toFlatten[k] is set
+        TensorShape DropDims(const std::vector<bool> & toDrop) const  // remove dimension
         {
+            // this deletes a dimension while retaining strides
+            // This implies a slice to [0] for this dimension.
             TensorShape result = *this;
             size_t j = 0;
             for (size_t k = 0; k < size(); k++)
             {
                 if (toDrop[k])
-                {
-                    if (result.m_dims[k] != 1)
-                        LogicError("DeropSingletonDims() cannot drop non-singleton dimensions.");
-                    else
-                        continue;
-                }
+                    continue;
                 else
                 {
                     // example
