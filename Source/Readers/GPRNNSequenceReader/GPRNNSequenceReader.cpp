@@ -369,7 +369,7 @@ namespace Microsoft {
                             {
                                 m_labelInfo[index].readerMode = ReaderMode::Class;
                             }
-                            else 
+                            else
                             {
                                 m_labelInfo[index].readerMode = ReaderMode::Plain;
                             }
@@ -634,7 +634,6 @@ namespace Microsoft {
 
                 // now get the labels
                 LabelInfo& featIn = m_labelInfo[labelInfoIn];
-                LabelInfo& labelIn = m_labelInfo[labelInfoOut];
 
                 // see how many we already read
                 std::vector<SequencePosition> seqPos;
@@ -723,13 +722,17 @@ namespace Microsoft {
                                 )
                             {
                                 mSentenceBeginAt[k] = i;
-                                if (!mIgnoreSentenceBeginTag)   // ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
-                                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceStart);
+                                if (mIgnoreSentenceBeginTag)   // ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                                    LogicError("BatchLUSequenceReader: ignoresentencebegintag option disabled, not supported by latest architecture changes.");
+                                // create the sequence entry in the MBLayout
+                                m_pMBLayout->AddSequence(seq, k, 0, seqLen);
+                                // and the gap behind if any
+                                if (seqLen < mMaxSentenceLength)
+                                    m_pMBLayout->AddGap(k, seqLen, mMaxSentenceLength);
                             }
                             if (i == seqLen - 1)    // last token in the sequence
                             {
                                 mSentenceEndAt[k] = i;
-                                m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceEnd);
                             }
 
                             if (i < seqLen)         // valid token
@@ -776,7 +779,7 @@ namespace Microsoft {
                             }
                             else
                             {
-                                LogicError("GPRNNSequenceReader do not support NULL INPUT, please change the config");
+                                LogicError("GPRNNSequenceReader do not support Different Length Sequence, please change the config");
                             }
                         }
                     }
@@ -834,7 +837,6 @@ namespace Microsoft {
 
                 // actual size is the size of the next seqence
                 size_t actualmbsize = 0;
-                size_t lablsize = 0;
 
                 // figure out the size of the next sequence
                 actualmbsize = m_labelIdData.size();
@@ -907,15 +909,18 @@ namespace Microsoft {
                                 size_t featIndex = contextAtPosI[word_pos];
                                 if (t > mSentenceEndAt[s] || featIndex >= maxFeatureIndex)
                                 {
-                                    if (!m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
+                                    /*if (!m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))    // verify that these are marked as NoInput
                                         LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
+                                        */
                                     continue;
                                 }
 
+                                /*
                                 if (m_pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))
                                 {
-                                    LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
+                                LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
                                 }
+                                */
                                 if (features != nullptr)
                                 {
                                     if (t > mSentenceEndAt[s])
@@ -1206,7 +1211,7 @@ namespace Microsoft {
             {
 
                 bool useWordMap = readerConfig(L"usewordmap", false);
-                
+
                 if (!useWordMap)
                 {
                     return;
