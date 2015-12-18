@@ -340,18 +340,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // helper functions for common cases
-    private:
-        // determine number of columns from a child and/or layout
-        size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
-        {
-            size_t childCols = child->GetNumCols();     // this is what the child says
-            if (!m_pMBLayout)                           // no layout: copy from child
-                return childCols;
-            size_t cols = m_pMBLayout->GetNumCols();    // layout: get it from there, but validate against child
-            if (childCols != cols)
-                RuntimeError("%ls %ls operation: Mismatch in number of columns", OperationName().c_str(), NodeName().c_str());
-            return cols;
-        }
     protected:
         void ValidateUnaryMap(bool isFinalValidationPass);
         void ValidateUnaryReduce(bool isFinalValidationPass);

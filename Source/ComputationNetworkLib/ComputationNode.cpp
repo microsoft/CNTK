@@ -43,13 +43,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all are consistent: install it
         LinkToMBLayout(pMBLayout);
     }
+
     // single input that maps its input element-wise (e.g. Sigmoid)
     void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     {
         assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        SetDims(m_inputs[0]->GetNumRows(), DetermineNumCols(m_inputs[0]));
+        SetDims(m_inputs[0]);
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus

@@ -529,7 +529,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::~Matrix(void)
     {
-        this->Clear();
+        Clear();
     }
 
     template<class ElemType>
@@ -652,14 +652,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (GetMatrixType() == MatrixType::DENSE)
         { 
-                for (size_t i = this->GetNumCols()-1; i >= -numShift; i--)
-                {
-                    Matrix<ElemType> inp = this->ColumnSlice(i + numShift, 1);
-                    Matrix<ElemType> out = this->ColumnSlice(i, 1) ; 
-                    out = inp;
-                }
-                for (size_t i = 0; i < min(this->GetNumCols(), -numShift); i++)
-                    this->ColumnSlice(i, 1).SetValue(0);
+            for (size_t i = GetNumCols() - 1; i >= -numShift; i--)
+            {
+                Matrix<ElemType> inp = ColumnSlice(i + numShift, 1);
+                Matrix<ElemType> out = ColumnSlice(i, 1);
+                out = inp;
+            }
+            for (size_t i = 0; i < min(GetNumCols(), -numShift); i++)
+                ColumnSlice(i, 1).SetValue(0);
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
@@ -1029,8 +1029,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->Get00Element(), 
-            return this->m_GPUMatrix->Get00Element(), 
+            return m_CPUMatrix->Get00Element(), 
+            return m_GPUMatrix->Get00Element(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1071,7 +1071,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             LogicError("Transpose: Matrix is empty.");
 
-        Matrix<ElemType> c(this->GetNumCols(), this->GetNumRows(), (DEVICEID_TYPE)this->GetDeviceId());
+        Matrix<ElemType> c(GetNumCols(), GetNumRows(), (DEVICEID_TYPE)GetDeviceId());
         c.AssignTransposeOf(*this);
         return c;
     }
@@ -1084,10 +1084,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix),
+            m_CPUMatrix->AssignTransposeOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignTransposeOf(*a.m_GPUMatrix),
             NOT_IMPLEMENTED,
-            this->m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignTransposeOf(*a.m_GPUSparseMatrix)
             );
 
         return *this;
@@ -1149,8 +1149,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val),
-            this->m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val),
+            m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val),
+            m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1164,8 +1164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->SetColumn(colPointer,colInd), 
-            this->m_GPUMatrix->SetColumn(colPointer,colInd), 
+            m_CPUMatrix->SetColumn(colPointer,colInd), 
+            m_GPUMatrix->SetColumn(colPointer,colInd), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1189,8 +1189,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
-            this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),
+            m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
+            m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1202,16 +1202,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this == &deepCopyFrom)
             return;
 
-        this->m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
+        m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
         DecideAndMoveToRightDevice(deepCopyFrom, *this);
-        this->SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
+        SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
 
         DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
             this,
-            this->m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
-            this->m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
-            this->m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
-            this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix)
+            m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+            m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+            m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
+            m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix)
             );
     }
 
@@ -1391,8 +1391,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nullptr,
             ScaleAndAdd((1-momentum) * learnRatePerSample, gradients, momentum, *this); functionValues -= *this, 
             ScaleAndAdd((1-momentum) * learnRatePerSample, gradients, momentum, *this); functionValues -= *this, 
-            if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*this->m_CPUMatrix, momentum); ScaleAndAdd(-learnRatePerSample, gradients, functionValues),
-            if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*this->m_GPUMatrix, momentum); ScaleAndAdd(-learnRatePerSample, gradients, functionValues)
+            if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum); ScaleAndAdd(-learnRatePerSample, gradients, functionValues),
+            if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum); ScaleAndAdd(-learnRatePerSample, gradients, functionValues)
             );
     }
 
@@ -1402,17 +1402,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
-        ElemType aveMultiplier = 1.0f;
-
         DISPATCH_MATRIX_ON_FLAG(&gradients,
             &gradients,
-            aveMultiplier = m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
-            aveMultiplier = m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU),
-            aveMultiplier = gradients.m_CPUSparseMatrix->Adagrad(*this->m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
-            aveMultiplier = gradients.m_GPUSparseMatrix->Adagrad(*this->m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU)
+            return m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
+            return m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU),
+            return gradients.m_CPUSparseMatrix->Adagrad(*m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
+            return gradients.m_GPUSparseMatrix->Adagrad(*m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU)
             );
-
-        return aveMultiplier;
     }
 
     template<class ElemType>
@@ -1449,17 +1445,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
-        ElemType aveMultiplier = 1.0f;
-
         DISPATCH_MATRIX_ON_FLAG(this,
             &gradients,
-            aveMultiplier = m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU),
-            aveMultiplier = m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU),
+            return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU),
+            return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-
-        return aveMultiplier;
     }
 
     template<class ElemType>
@@ -1610,8 +1602,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->operator+=(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->operator+=(*a.m_GPUMatrix), 
+            m_CPUMatrix->operator+=(*a.m_CPUMatrix), 
+            m_GPUMatrix->operator+=(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
 
@@ -1631,7 +1623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 &c,
                 c += (*this)(0,0), 
-                c += (this->m_GPUMatrix->Get00Element()),   // BUGBUG: efficiency
+                c += (m_GPUMatrix->Get00Element()),   // BUGBUG: efficiency
                 c += (*this)(0,0), 
                 NOT_IMPLEMENTED
                 );
@@ -1697,8 +1689,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows), 
-            this->m_GPUMatrix->AssignRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows), 
+            m_CPUMatrix->AssignRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows), 
+            m_GPUMatrix->AssignRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1717,8 +1709,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
-            this->m_GPUMatrix->AssignToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            m_CPUMatrix->AssignToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            m_GPUMatrix->AssignToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1738,8 +1730,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
-            this->m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1759,8 +1751,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddWithRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
-            this->m_GPUMatrix->AddWithRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            m_CPUMatrix->AddWithRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            m_GPUMatrix->AddWithRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1842,8 +1834,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignRepeatOf(*a.m_CPUMatrix, numRowRepeats, numColRepeats),
-            this->m_GPUMatrix->AssignRepeatOf(*a.m_GPUMatrix, numRowRepeats, numColRepeats),
+            m_CPUMatrix->AssignRepeatOf(*a.m_CPUMatrix, numRowRepeats, numColRepeats),
+            m_GPUMatrix->AssignRepeatOf(*a.m_GPUMatrix, numRowRepeats, numColRepeats),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1862,8 +1854,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddToRowRepeatValuesOf(*a.m_CPUMatrix, numRepeats),
-            this->m_GPUMatrix->AddToRowRepeatValuesOf(*a.m_GPUMatrix, numRepeats),
+            m_CPUMatrix->AddToRowRepeatValuesOf(*a.m_CPUMatrix, numRepeats),
+            m_GPUMatrix->AddToRowRepeatValuesOf(*a.m_GPUMatrix, numRepeats),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1885,8 +1877,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignPositiveAndShiftedNegSample(*a.m_CPUMatrix, posNumber, negNumber, shiftNumber),
-            this->m_GPUMatrix->AssignPositiveAndShiftedNegSample(*a.m_GPUMatrix, posNumber, negNumber, shiftNumber),
+            m_CPUMatrix->AssignPositiveAndShiftedNegSample(*a.m_CPUMatrix, posNumber, negNumber, shiftNumber),
+            m_GPUMatrix->AssignPositiveAndShiftedNegSample(*a.m_GPUMatrix, posNumber, negNumber, shiftNumber),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1908,8 +1900,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddFoldedPositiveAndShiftedNegSample(*a.m_CPUMatrix, posNumber, negNumber, shiftNumber),
-            this->m_GPUMatrix->AddFoldedPositiveAndShiftedNegSample(*a.m_GPUMatrix, posNumber, negNumber, shiftNumber),
+            m_CPUMatrix->AddFoldedPositiveAndShiftedNegSample(*a.m_CPUMatrix, posNumber, negNumber, shiftNumber),
+            m_GPUMatrix->AddFoldedPositiveAndShiftedNegSample(*a.m_GPUMatrix, posNumber, negNumber, shiftNumber),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -1928,8 +1920,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignDifferenceOf(alpha,*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignDifferenceOf(alpha,*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignDifferenceOf(alpha,*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignDifferenceOf(alpha,*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1948,8 +1940,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignDifferenceOf(*a.m_CPUMatrix, alpha), 
-            this->m_GPUMatrix->AssignDifferenceOf(*a.m_GPUMatrix, alpha), 
+            m_CPUMatrix->AssignDifferenceOf(*a.m_CPUMatrix, alpha), 
+            m_GPUMatrix->AssignDifferenceOf(*a.m_GPUMatrix, alpha), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1969,8 +1961,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            *this->m_CPUMatrix -= *a.m_CPUMatrix, 
-            *this->m_GPUMatrix -= *a.m_GPUMatrix, 
+            *m_CPUMatrix -= *a.m_CPUMatrix, 
+            *m_GPUMatrix -= *a.m_GPUMatrix, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2019,7 +2011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator* (ElemType alpha) const
     {
-        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (DEVICEID_TYPE)this->m_preferredDeviceId);
+        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (DEVICEID_TYPE)m_preferredDeviceId);
         Scale(alpha, *this, c);
         return c;
     }
@@ -2081,7 +2073,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
                 c.AssignProductOf((*this)(0,0), a), 
-                c.AssignProductOf(this->m_GPUMatrix->Get00Element(), a),       // BUGBUG: efficiency
+                c.AssignProductOf(m_GPUMatrix->Get00Element(), a),       // BUGBUG: efficiency
                 c.AssignProductOf((*this)(0,0), a), 
                 NOT_IMPLEMENTED
                 );
@@ -2104,7 +2096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            Matrix<ElemType> c(this->GetNumRows(), a.GetNumCols(), (DEVICEID_TYPE)GetPreferredDeviceId());
+            Matrix<ElemType> c(GetNumRows(), a.GetNumCols(), (DEVICEID_TYPE)GetPreferredDeviceId());
             Multiply(*this, a, c);
             return c;
         }
@@ -2185,15 +2177,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignElementProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignElementProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
+            m_CPUMatrix->AssignElementProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
+            m_GPUMatrix->AssignElementProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
+
         return *this;
     }
 
@@ -2217,8 +2210,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            this->m_CPUMatrix->AddElementProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
-            this->m_GPUMatrix->AddElementProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
+            m_CPUMatrix->AddElementProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
+            m_GPUMatrix->AddElementProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2246,8 +2239,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignElementDivisionOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignElementDivisionOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
+            m_CPUMatrix->AssignElementDivisionOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
+            m_GPUMatrix->AssignElementDivisionOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2274,8 +2267,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->ColumnElementMultiplyWith(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->ColumnElementMultiplyWith(*a.m_GPUMatrix), 
+            m_CPUMatrix->ColumnElementMultiplyWith(*a.m_CPUMatrix), 
+            m_GPUMatrix->ColumnElementMultiplyWith(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2300,8 +2293,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
        
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->RowElementMultiplyWith(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->RowElementMultiplyWith(*a.m_GPUMatrix), 
+            m_CPUMatrix->RowElementMultiplyWith(*a.m_CPUMatrix), 
+            m_GPUMatrix->RowElementMultiplyWith(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2326,8 +2319,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->RowElementDivideBy(*a.m_CPUMatrix),
-            this->m_GPUMatrix->RowElementDivideBy(*a.m_GPUMatrix),
+            m_CPUMatrix->RowElementDivideBy(*a.m_CPUMatrix),
+            m_GPUMatrix->RowElementDivideBy(*a.m_GPUMatrix),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -2354,8 +2347,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->ColumnElementDivideBy(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->ColumnElementDivideBy(*a.m_GPUMatrix), 
+            m_CPUMatrix->ColumnElementDivideBy(*a.m_CPUMatrix), 
+            m_GPUMatrix->ColumnElementDivideBy(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2370,10 +2363,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->ElementInverse(), 
-            this->m_GPUMatrix->ElementInverse(), 
+            m_CPUMatrix->ElementInverse(), 
+            m_GPUMatrix->ElementInverse(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->ElementInverse()
+            m_GPUSparseMatrix->ElementInverse()
             );
                 
         return (*this);
@@ -2386,14 +2379,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("AssignElementInverseOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignElementInverseOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignElementInverseOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignElementInverseOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignElementInverseOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignElementInverseOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignElementInverseOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2404,10 +2397,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceSigmoid(), 
-            this->m_GPUMatrix->InplaceSigmoid(), 
+            m_CPUMatrix->InplaceSigmoid(), 
+            m_GPUMatrix->InplaceSigmoid(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceSigmoid()
+            m_GPUSparseMatrix->InplaceSigmoid()
             );
                 
         return (*this);
@@ -2421,10 +2414,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSigmoidOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignSigmoidOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignSigmoidOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignSigmoidOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignSigmoidOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignSigmoidOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2436,10 +2429,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceLinearRectifierDerivative(), 
-            this->m_GPUMatrix->InplaceLinearRectifierDerivative(), 
+            m_CPUMatrix->InplaceLinearRectifierDerivative(), 
+            m_GPUMatrix->InplaceLinearRectifierDerivative(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceLinearRectifierDerivative()
+            m_GPUSparseMatrix->InplaceLinearRectifierDerivative()
             );
                 
         return (*this);
@@ -2453,10 +2446,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignLinearRectifierDerivativeOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignLinearRectifierDerivativeOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignLinearRectifierDerivativeOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignLinearRectifierDerivativeOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignLinearRectifierDerivativeOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignLinearRectifierDerivativeOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2468,8 +2461,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceSigmoidDerivative(), 
-            this->m_GPUMatrix->InplaceSigmoidDerivative(), 
+            m_CPUMatrix->InplaceSigmoidDerivative(), 
+            m_GPUMatrix->InplaceSigmoidDerivative(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2485,8 +2478,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSigmoidDerivativeOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignSigmoidDerivativeOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignSigmoidDerivativeOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignSigmoidDerivativeOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2506,8 +2499,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignNumOfDiff(*a.m_CPUMatrix, *b.m_CPUMatrix, searchInCol), 
-            this->m_GPUMatrix->AssignNumOfDiff(*a.m_GPUMatrix, *b.m_GPUMatrix, searchInCol), 
+            m_CPUMatrix->AssignNumOfDiff(*a.m_CPUMatrix, *b.m_CPUMatrix, searchInCol), 
+            m_GPUMatrix->AssignNumOfDiff(*a.m_GPUMatrix, *b.m_GPUMatrix, searchInCol), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2520,10 +2513,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceTanh(), 
-            this->m_GPUMatrix->InplaceTanh(), 
+            m_CPUMatrix->InplaceTanh(), 
+            m_GPUMatrix->InplaceTanh(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceTanh()
+            m_GPUSparseMatrix->InplaceTanh()
             );
                 
         return (*this);        
@@ -2537,10 +2530,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignTanhOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignTanhOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignTanhOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignTanhOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignTanhOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignTanhOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2552,8 +2545,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceLogSoftmax(isColWise), 
-            this->m_GPUMatrix->InplaceLogSoftmax(isColWise), 
+            m_CPUMatrix->InplaceLogSoftmax(isColWise), 
+            m_GPUMatrix->InplaceLogSoftmax(isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2571,8 +2564,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignLogSoftmaxOf(*a.m_CPUMatrix,isColWise), 
-            this->m_GPUMatrix->AssignLogSoftmaxOf(*a.m_GPUMatrix,isColWise), 
+            m_CPUMatrix->AssignLogSoftmaxOf(*a.m_CPUMatrix,isColWise), 
+            m_GPUMatrix->AssignLogSoftmaxOf(*a.m_GPUMatrix,isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2586,8 +2579,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceHardmax(isColWise),
-            this->m_GPUMatrix->InplaceHardmax(isColWise),
+            m_CPUMatrix->InplaceHardmax(isColWise),
+            m_GPUMatrix->InplaceHardmax(isColWise),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -2605,8 +2598,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignHardmaxOf(*a.m_CPUMatrix, isColWise),
-            this->m_GPUMatrix->AssignHardmaxOf(*a.m_GPUMatrix, isColWise),
+            m_CPUMatrix->AssignHardmaxOf(*a.m_CPUMatrix, isColWise),
+            m_GPUMatrix->AssignHardmaxOf(*a.m_GPUMatrix, isColWise),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -2619,10 +2612,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceSqrt(), 
-            this->m_GPUMatrix->InplaceSqrt(), 
+            m_CPUMatrix->InplaceSqrt(), 
+            m_GPUMatrix->InplaceSqrt(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceSqrt()
+            m_GPUSparseMatrix->InplaceSqrt()
             );
                 
         return *this;        
@@ -2639,10 +2632,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSqrtOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignSqrtOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignSqrtOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignSqrtOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignSqrtOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignSqrtOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2654,10 +2647,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceExp(), 
-            this->m_GPUMatrix->InplaceExp(), 
+            m_CPUMatrix->InplaceExp(), 
+            m_GPUMatrix->InplaceExp(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceExp()
+            m_GPUSparseMatrix->InplaceExp()
             );
                 
         return *this;        
@@ -2675,10 +2668,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignExpOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignExpOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignExpOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignExpOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignExpOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignExpOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2690,10 +2683,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            this->m_CPUMatrix->InplaceAbs(), 
-            this->m_GPUMatrix->InplaceAbs(), 
+            m_CPUMatrix->InplaceAbs(), 
+            m_GPUMatrix->InplaceAbs(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceAbs()
+            m_GPUSparseMatrix->InplaceAbs()
             );
                 
         return *this;        
@@ -2710,10 +2703,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignAbsOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignAbsOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignAbsOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignAbsOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignAbsOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignAbsOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2725,10 +2718,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceLog(), 
-            this->m_GPUMatrix->InplaceLog(), 
+            m_CPUMatrix->InplaceLog(), 
+            m_GPUMatrix->InplaceLog(), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->InplaceLog()
+            m_GPUSparseMatrix->InplaceLog()
             );
                 
         return *this;           
@@ -2740,7 +2733,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceLog10(), 
+            m_CPUMatrix->InplaceLog10(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -2760,10 +2753,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignLogOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignLogOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignLogOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignLogOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignLogOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignLogOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2780,10 +2773,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignLog10Of(*a.m_CPUMatrix), 
+            m_CPUMatrix->AssignLog10Of(*a.m_CPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignLogOf(*a.m_GPUSparseMatrix)
+            m_GPUSparseMatrix->AssignLogOf(*a.m_GPUSparseMatrix)
             );
                 
         return *this;
@@ -2795,8 +2788,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceCosine(), 
-            this->m_GPUMatrix->InplaceCosine(), 
+            m_CPUMatrix->InplaceCosine(), 
+            m_GPUMatrix->InplaceCosine(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2815,8 +2808,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignCosineOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignCosineOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignCosineOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignCosineOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2830,8 +2823,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceNegativeSine(), 
-            this->m_GPUMatrix->InplaceNegativeSine(), 
+            m_CPUMatrix->InplaceNegativeSine(), 
+            m_GPUMatrix->InplaceNegativeSine(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2850,8 +2843,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignNegativeSineOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignNegativeSineOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignNegativeSineOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignNegativeSineOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -2878,10 +2871,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceTruncate(threshold), 
-            this->m_GPUMatrix->InplaceTruncate(threshold),
-            this->m_CPUSparseMatrix->InplaceTruncate(threshold),
-            this->m_GPUSparseMatrix->InplaceTruncate(threshold)
+            m_CPUMatrix->InplaceTruncate(threshold), 
+            m_GPUMatrix->InplaceTruncate(threshold),
+            m_CPUSparseMatrix->InplaceTruncate(threshold),
+            m_GPUSparseMatrix->InplaceTruncate(threshold)
             );
 
         return *this;
@@ -2898,7 +2891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED,
-            this->m_GPUSparseMatrix->InplaceTranspose()
+            m_GPUSparseMatrix->InplaceTranspose()
             );
     }
 
@@ -2915,10 +2908,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceSoftThreshold(threshold),
-            this->m_GPUMatrix->InplaceSoftThreshold(threshold),
-            this->m_CPUSparseMatrix->InplaceSoftThreshold(threshold),
-            this->m_GPUSparseMatrix->InplaceSoftThreshold(threshold)
+            m_CPUMatrix->InplaceSoftThreshold(threshold),
+            m_GPUMatrix->InplaceSoftThreshold(threshold),
+            m_CPUSparseMatrix->InplaceSoftThreshold(threshold),
+            m_GPUSparseMatrix->InplaceSoftThreshold(threshold)
             );
 
         return *this;
@@ -2943,10 +2936,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceTruncateBottom(threshold), 
-            this->m_GPUMatrix->InplaceTruncateBottom(threshold), 
-            this->m_CPUSparseMatrix->InplaceTruncateBottom(threshold),
-            this->m_GPUSparseMatrix->InplaceTruncateBottom(threshold)
+            m_CPUMatrix->InplaceTruncateBottom(threshold), 
+            m_GPUMatrix->InplaceTruncateBottom(threshold), 
+            m_CPUSparseMatrix->InplaceTruncateBottom(threshold),
+            m_GPUSparseMatrix->InplaceTruncateBottom(threshold)
             );
                 
         return *this;
@@ -2974,17 +2967,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*this) = a;
                 return *this;
             }
-            }
+        }
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignTruncateBottomOf(*a.m_CPUMatrix, threshold), 
-            this->m_GPUMatrix->AssignTruncateBottomOf(*a.m_GPUMatrix, threshold), 
+            m_CPUMatrix->AssignTruncateBottomOf(*a.m_CPUMatrix, threshold), 
+            m_GPUMatrix->AssignTruncateBottomOf(*a.m_GPUMatrix, threshold), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignTruncateBottomOf(*a.m_GPUSparseMatrix, threshold)
+            m_GPUSparseMatrix->AssignTruncateBottomOf(*a.m_GPUSparseMatrix, threshold)
             );
                 
         return *this;
@@ -3010,10 +3003,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceTruncateTop(threshold), 
-            this->m_GPUMatrix->InplaceTruncateTop(threshold), 
-            this->m_CPUSparseMatrix->InplaceTruncateTop(threshold),
-            this->m_GPUSparseMatrix->InplaceTruncateTop(threshold)
+            m_CPUMatrix->InplaceTruncateTop(threshold), 
+            m_GPUMatrix->InplaceTruncateTop(threshold), 
+            m_CPUSparseMatrix->InplaceTruncateTop(threshold),
+            m_GPUSparseMatrix->InplaceTruncateTop(threshold)
             );
                 
         return *this;
@@ -3032,7 +3025,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*this) = a;
                 return *this;
             }
-            }
+        }
         else
         {
             if (!isfinite(threshold))
@@ -3040,17 +3033,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*this) = a;
                 return *this;
             }
-            }
+        }
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignTruncateTopOf(*a.m_CPUMatrix, threshold), 
-            this->m_GPUMatrix->AssignTruncateTopOf(*a.m_GPUMatrix, threshold), 
+            m_CPUMatrix->AssignTruncateTopOf(*a.m_CPUMatrix, threshold), 
+            m_GPUMatrix->AssignTruncateTopOf(*a.m_GPUMatrix, threshold), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->AssignTruncateTopOf(*a.m_GPUSparseMatrix, threshold)
+            m_GPUSparseMatrix->AssignTruncateTopOf(*a.m_GPUSparseMatrix, threshold)
             );
                 
         return *this;
@@ -3065,10 +3058,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->SetToZeroIfAbsLessThan(threshold), 
-            this->m_GPUMatrix->SetToZeroIfAbsLessThan(threshold), 
+            m_CPUMatrix->SetToZeroIfAbsLessThan(threshold), 
+            m_GPUMatrix->SetToZeroIfAbsLessThan(threshold), 
             NOT_IMPLEMENTED, 
-            this->m_GPUSparseMatrix->SetToZeroIfAbsLessThan(threshold)
+            m_GPUSparseMatrix->SetToZeroIfAbsLessThan(threshold)
             );
                 
         return *this;
@@ -3083,13 +3076,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->SumOfElements(), 
-            return this->m_GPUMatrix->SumOfElements(), 
-            return this->m_CPUSparseMatrix->SumOfElements(),
-            return this->m_GPUSparseMatrix->SumOfElements()
+            return m_CPUMatrix->SumOfElements(), 
+            return m_GPUMatrix->SumOfElements(), 
+            return m_CPUSparseMatrix->SumOfElements(),
+            return m_GPUSparseMatrix->SumOfElements()
             );
-                
-            }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignSumOfElements(const Matrix<ElemType>& a)
@@ -3097,7 +3089,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             LogicError("AssignSumOfElements: Matrix a is empty.");        
 
-        //WARNING: a and this must have same type
+        // WARNING: a and this must have same type
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
@@ -3105,8 +3097,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSumOfElements(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignSumOfElements(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignSumOfElements(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignSumOfElements(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3117,18 +3109,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DeviceBoundNumber<ElemType> Matrix<ElemType>::Sum_AsDeviceBoundNum() const
     {
-                DeviceBoundNumber<ElemType> result;
+        DeviceBoundNumber<ElemType> result;
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            ElemType* val = new ElemType; *val = this->m_CPUMatrix->SumOfElements(); result.ShallowCopyFrom(val,-1); return result, 
+            ElemType* val = new ElemType; *val = m_CPUMatrix->SumOfElements(); result.ShallowCopyFrom(val,-1); return result, 
             return m_GPUMatrix->Sum_AsDeviceBoundNum(), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
-            );    
-
-        return result;
-            }
+            );
+    }
 
     //sum of all elements
     template<class ElemType>
@@ -3139,12 +3129,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->SumOfAbsElements(), 
-            return this->m_GPUMatrix->SumOfAbsElements(), 
+            return m_CPUMatrix->SumOfAbsElements(), 
+            return m_GPUMatrix->SumOfAbsElements(), 
             NOT_IMPLEMENTED, 
-            return this->m_GPUSparseMatrix->SumOfAbsElements()
+            return m_GPUSparseMatrix->SumOfAbsElements()
             );                
-            }
+    }
 
     //sum of all elements
     template<class ElemType>
@@ -3155,8 +3145,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->LogAddSumOfElements(),
-            return this->m_GPUMatrix->LogAddSumOfElements(),
+            return m_CPUMatrix->LogAddSumOfElements(),
+            return m_GPUMatrix->LogAddSumOfElements(),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -3195,12 +3185,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
-            this->m_CPUMatrix->VectorNorm1(*c.m_CPUMatrix,isColWise), 
-            this->m_GPUMatrix->VectorNorm1(*c.m_GPUMatrix,isColWise), 
+            m_CPUMatrix->VectorNorm1(*c.m_CPUMatrix,isColWise), 
+            m_GPUMatrix->VectorNorm1(*c.m_GPUMatrix,isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );                
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise)
@@ -3220,12 +3210,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
-            this->m_CPUMatrix->VectorNorm2(*c.m_CPUMatrix,isColWise), 
-            this->m_GPUMatrix->VectorNorm2(*c.m_GPUMatrix,isColWise), 
+            m_CPUMatrix->VectorNorm2(*c.m_CPUMatrix,isColWise), 
+            m_GPUMatrix->VectorNorm2(*c.m_GPUMatrix,isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );                
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignVectorNorm2Of(Matrix<ElemType>& a, const bool isColWise)
@@ -3245,12 +3235,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
-            this->m_CPUMatrix->VectorNormInf(*c.m_CPUMatrix,isColWise), 
-            this->m_GPUMatrix->VectorNormInf(*c.m_GPUMatrix,isColWise), 
+            m_CPUMatrix->VectorNormInf(*c.m_CPUMatrix,isColWise), 
+            m_GPUMatrix->VectorNormInf(*c.m_GPUMatrix,isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );                
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignVectorNormInfOf(Matrix<ElemType>& a, const bool isColWise)
@@ -3286,8 +3276,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignKhatriRaoProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignKhatriRaoProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
+            m_CPUMatrix->AssignKhatriRaoProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix), 
+            m_GPUMatrix->AssignKhatriRaoProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3318,8 +3308,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddColumnReshapeProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix, transposeAColumn), 
-            this->m_GPUMatrix->AddColumnReshapeProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix, transposeAColumn), 
+            m_CPUMatrix->AddColumnReshapeProductOf(*a.m_CPUMatrix,*b.m_CPUMatrix, transposeAColumn), 
+            m_GPUMatrix->AddColumnReshapeProductOf(*a.m_GPUMatrix,*b.m_GPUMatrix, transposeAColumn), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3342,12 +3332,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->FrobeniusNorm(), 
-            return this->m_GPUMatrix->FrobeniusNorm(), 
-            return this->m_CPUSparseMatrix->FrobeniusNorm(),
-            return this->m_GPUSparseMatrix->FrobeniusNorm()
+            return m_CPUMatrix->FrobeniusNorm(), 
+            return m_GPUMatrix->FrobeniusNorm(), 
+            return m_CPUSparseMatrix->FrobeniusNorm(),
+            return m_GPUSparseMatrix->FrobeniusNorm()
             );                
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignFrobeniusNormOf(const Matrix<ElemType>& a)
@@ -3355,7 +3345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             LogicError("AssignFrobeniusNormOf: Matrix a is empty.");
 
-        this->Resize(1,1);
+        Resize(1,1);
 
         //WARNING: a and this must have same type
         if (! (GetMatrixType() == a.GetMatrixType()))
@@ -3365,8 +3355,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignFrobeniusNormOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignFrobeniusNormOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignFrobeniusNormOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignFrobeniusNormOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3382,12 +3372,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->MatrixNormInf(), 
-            return this->m_GPUMatrix->MatrixNormInf(), 
+            return m_CPUMatrix->MatrixNormInf(), 
+            return m_GPUMatrix->MatrixNormInf(), 
             NOT_IMPLEMENTED, 
-            return this->m_GPUSparseMatrix->MatrixNormInf()
+            return m_GPUSparseMatrix->MatrixNormInf()
             );                
-        }
+    }
 
     template<class ElemType>
     ElemType Matrix<ElemType>::MatrixNorm1() const
@@ -3397,13 +3387,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->MatrixNorm1(), 
-            return this->m_GPUMatrix->MatrixNorm1(), 
+            return m_CPUMatrix->MatrixNorm1(), 
+            return m_GPUMatrix->MatrixNorm1(), 
             NOT_IMPLEMENTED, 
-            return this->m_GPUSparseMatrix->MatrixNorm1()
+            return m_GPUSparseMatrix->MatrixNorm1()
             );
-                
-        }
+    }
 
     template<class ElemType>
     ElemType Matrix<ElemType>::MatrixNorm0() const
@@ -3413,12 +3402,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return this->m_CPUMatrix->MatrixNorm0(), 
-            return this->m_GPUMatrix->MatrixNorm0(), 
+            return m_CPUMatrix->MatrixNorm0(), 
+            return m_GPUMatrix->MatrixNorm0(), 
             NOT_IMPLEMENTED, 
-            return this->m_GPUSparseMatrix->MatrixNorm0()
+            return m_GPUSparseMatrix->MatrixNorm0()
             );               
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignSignOf(const Matrix<ElemType>& a)
@@ -3435,8 +3424,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSignOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AssignSignOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AssignSignOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AssignSignOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3456,8 +3445,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AddSignOf(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->AddSignOf(*a.m_GPUMatrix), 
+            m_CPUMatrix->AddSignOf(*a.m_CPUMatrix), 
+            m_GPUMatrix->AddSignOf(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3478,12 +3467,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &maxValues,
-            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise); maxIndexes.SetDataLocation(CPU, DENSE),
-            this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise); maxIndexes.SetDataLocation(GPU, DENSE),
+            m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise); maxIndexes.SetDataLocation(CPU, DENSE),
+            m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise); maxIndexes.SetDataLocation(GPU, DENSE),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
-
     }
 
     template<class ElemType>
@@ -3498,8 +3486,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &maxValues,
-            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise, topK); maxIndexes.SetDataLocation(CPU, DENSE),
-            this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise, topK); maxIndexes.SetDataLocation(GPU, DENSE),
+            m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise, topK); maxIndexes.SetDataLocation(CPU, DENSE),
+            m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise, topK); maxIndexes.SetDataLocation(GPU, DENSE),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -3517,12 +3505,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &minValues,
-            this->m_CPUMatrix->VectorMin(*minIndexes.m_CPUMatrix,*minValues.m_CPUMatrix,isColWise); minIndexes.SetDataLocation(CPU, DENSE), 
-            this->m_GPUMatrix->VectorMin(*minIndexes.m_GPUMatrix,*minValues.m_GPUMatrix,isColWise); minIndexes.SetDataLocation(GPU, DENSE), 
+            m_CPUMatrix->VectorMin(*minIndexes.m_CPUMatrix,*minValues.m_CPUMatrix,isColWise); minIndexes.SetDataLocation(CPU, DENSE), 
+            m_GPUMatrix->VectorMin(*minIndexes.m_GPUMatrix,*minValues.m_GPUMatrix,isColWise); minIndexes.SetDataLocation(GPU, DENSE), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-                
         }
 
 #pragma endregion Member BLAS Functions
@@ -3532,7 +3519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     wchar_t* Matrix<ElemType>::GetMatrixName() const
     {
-        return this->m_baseMatrix->GetMatrixName();
+        return m_baseMatrix->GetMatrixName();
     }
 
     template<class ElemType>
@@ -3542,23 +3529,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (GetMatrixType() == MatrixType::DENSE)
             {
-                this->m_CPUMatrix->SetMatrixName(s);
-                this->m_GPUMatrix->SetMatrixName(s);
+                m_CPUMatrix->SetMatrixName(s);
+                m_GPUMatrix->SetMatrixName(s);
         }
             else if (GetMatrixType() == MatrixType::SPARSE)
             {
-                this->m_CPUSparseMatrix->SetMatrixName(s);
-                this->m_GPUSparseMatrix->SetMatrixName(s);
+                m_CPUSparseMatrix->SetMatrixName(s);
+                m_GPUSparseMatrix->SetMatrixName(s);
             }
         }
         else
         {
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
-                this->m_CPUMatrix->SetMatrixName(s), 
-                this->m_GPUMatrix->SetMatrixName(s), 
-                this->m_CPUSparseMatrix->SetMatrixName(s), 
-                this->m_GPUSparseMatrix->SetMatrixName(s)
+                m_CPUMatrix->SetMatrixName(s), 
+                m_GPUMatrix->SetMatrixName(s), 
+                m_CPUSparseMatrix->SetMatrixName(s), 
+                m_GPUSparseMatrix->SetMatrixName(s)
                 );
         }
     }
@@ -3578,8 +3565,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );                
     }
 
-    //if different and prefered devices are the same, move to preferred device. 
-    //other wise GPU>CPU and if both are GPU move to a's preferred device
+    // bring two matrices onto the same device
+    // If different and prefered devices are the same, move to preferred device. 
+    // Otherwise GPU takes precedence over CPU, and if both are GPU move to a's device.
+    // The inputs are only distinguished in that a's GPU takes precedence over b's in case they differ.
+    // TODO: This is called somewhat inconsistently, sometimes with a=*this, sometimes with b=*this.
+    template<class ElemType>
+    void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b)
+    {
+        int deviceIdA = a.GetDeviceId(), deviceIdB = b.GetDeviceId();
+        if (deviceIdA == deviceIdB)
+            return;
+
+        int preferredDeviceIdA = a.GetPreferredDeviceId(), preferredDeviceIdB = b.GetPreferredDeviceId();
+
+        if (preferredDeviceIdA == preferredDeviceIdB)   // both prefer the same device: move to preferred
+        {
+            a._transferToDevice(preferredDeviceIdA);
+            b._transferToDevice(preferredDeviceIdA);
+        }
+        else if (deviceIdA != CPUDEVICE)                // one of them lives on GPU: use that
+        {
+            b._transferToDevice(deviceIdA);
+        }
+        else
+        {
+            a._transferToDevice(deviceIdB);
+        }
+    }
+
+    // same but for 3 matrices
+    // If b and c are both on the same GPU then a will be forced to go there; otherwise a's GPU takes precedence, then b's.
     template<class ElemType>
     void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b, const Matrix<ElemType> &c)
     {
@@ -3589,17 +3605,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int preferredDeviceIdA = a.GetPreferredDeviceId(), preferredDeviceIdB = b.GetPreferredDeviceId(), preferredDeviceIdC = c.GetPreferredDeviceId();
 
-        if (preferredDeviceIdA == preferredDeviceIdB && preferredDeviceIdA == preferredDeviceIdC) //move to preferred
+        if (preferredDeviceIdA == preferredDeviceIdB && preferredDeviceIdA == preferredDeviceIdC)
         {
             a._transferToDevice(preferredDeviceIdA);
             b._transferToDevice(preferredDeviceIdA);
             c._transferToDevice(preferredDeviceIdA);
         }
-        else if (deviceIdB == deviceIdC && deviceIdB != CPUDEVICE)
+        else if (deviceIdB == deviceIdC && deviceIdB != CPUDEVICE)  // TODO: why not the other two combinations?
         {
-            a._transferToDevice(deviceIdB);
+            a._transferToDevice(deviceIdB);             // 'a' is outvoted
         }
-        else if (deviceIdA != CPUDEVICE) //use it
+        else if (deviceIdA != CPUDEVICE)                // one of them lives on GPU: use that
         {
             b._transferToDevice(deviceIdA);
             c._transferToDevice(deviceIdA);
@@ -3616,30 +3632,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    //if different and prefered devices are the same, move to preferred device. 
-    //other wise GPU>CPU and if both are GPU move to a's preferred device
+    // same but for 4 matrices
     template<class ElemType>
-    void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b)
+    void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b, const Matrix<ElemType> &c, const Matrix<ElemType> &d)
     {
-        int deviceIdA = a.GetDeviceId(), deviceIdB = b.GetDeviceId();
-        if (deviceIdA == deviceIdB)
-            return;
-
-        int preferredDeviceIdA = a.GetPreferredDeviceId(), preferredDeviceIdB = b.GetPreferredDeviceId();
-
-        if (preferredDeviceIdA == preferredDeviceIdB) //move to preferred
-        {
-            a._transferToDevice(preferredDeviceIdA);
-            b._transferToDevice(preferredDeviceIdA);
-        }
-        else if (deviceIdA != CPUDEVICE) //use it
-            {
-            b._transferToDevice(deviceIdA);
-            }
-            else 
-            {                             
-            a._transferToDevice(deviceIdB);
-        }
+        // this function is only called for one operator, so for now we keep it imple
+        DecideAndMoveToRightDevice(a, b, c);
+        d._transferToDevice(a.GetDeviceId());   // BUGBUG: Is this correct in case a,b,c share the same preferredDevice?
     }
 
     template<class ElemType>
@@ -3649,7 +3648,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (to_id == from_id)  //nothing to do
             return;
 
-        if (this->OwnBuffer())
+        if (OwnBuffer())
             _transferFromDeviceToDevice(from_id,  to_id, ismoved, emptyTransfer);
         else
             RuntimeError("Cannot move externally owned matrices to the preferred device.");
@@ -3844,16 +3843,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())
             LogicError("Print: Matrix is empty.");
-        DEVICEID_TYPE orgdevice = this->GetDeviceId();
+        DEVICEID_TYPE orgdevice = GetDeviceId();
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false), 
-            this->m_CPUSparseMatrix->Print(matrixName), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false)
+            m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
+            _transferToDevice(CPUDEVICE, false, false); m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false), 
+            m_CPUSparseMatrix->Print(matrixName), 
+            _transferToDevice(CPUDEVICE, false, false); m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false)
             );
-                
     }
 
     template<class ElemType>
@@ -4009,11 +4007,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax)
     {
-        this->Resize(1, 1);
-        if (this->GetDeviceId() < 0)
-            a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *this->m_CPUMatrix);
+        Resize(1, 1);
+        if (GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *m_CPUMatrix);
         else
-            a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *this->m_GPUMatrix);
+            a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *m_GPUMatrix);
         return *this;
     }
 
@@ -4023,11 +4021,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //if (a.GetMatrixType() != MatrixType::SPARSE)
         //    NOT_IMPLEMENTED;
 
-        this->Resize(1, 1);
-        if (this->GetDeviceId() < 0)
-            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *this->m_CPUMatrix);
+        Resize(1, 1);
+        if (GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *m_CPUMatrix);
         else
-            a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *this->m_GPUMatrix);
+            a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *m_GPUMatrix);
         return *this;
     }
 
@@ -4037,24 +4035,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
             LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
-        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())        
+        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != GetDeviceId())        
             NOT_IMPLEMENTED;
         
-        this->Resize(1, 1);
+        Resize(1, 1);
 
-        if (this->GetDeviceId() < 0)
+        if (GetDeviceId() < 0)
         {
             size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
             a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix,
-                *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+                *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *m_CPUMatrix);
         }
         else
         {
             size_t sampleCount = a.m_GPUMatrix->GetNumElements() / a.m_GPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
             a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix,
-                *bias.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
+                *bias.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *m_GPUMatrix);
         }
         return *this;
     }
@@ -4065,13 +4063,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
             LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
-        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
+        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != GetDeviceId())
             NOT_IMPLEMENTED;
 
         assert(tmp.GetNumRows() == a.GetNumRows() / 2);
-        if (this->GetDeviceId() < 0)
+        if (GetDeviceId() < 0)
         {
-            //samples                           gradient           hidden               embedding            embedding/hidden
+            // samples                         gradient          hidden          embedding                   embedding/hidden
             a.m_CPUMatrix->AssignNCEDerivative(*tmp.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, inputIndex, *m_CPUMatrix);
         }
         else
@@ -4496,7 +4494,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-
     }
 
     /// <summary>c += alpha * (a-b)</summary>
@@ -4617,7 +4614,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             *c.m_GPUSparseMatrix = (*a.m_GPUSparseMatrix)*alpha
             );
-                
     }
 
     /// <summary>Matrix-scalar multiply with col-major matrices: a = alpha * a</summary>
@@ -4636,7 +4632,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             GPUSparseMatrix<ElemType>::Scale(alpha,*a.m_GPUSparseMatrix)
             );
-                
     }
 
     /// <summary>Matrix scalar matrix multiply with col-major matrices: a = alpha[0,0] * a</summary>
@@ -4660,7 +4655,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-                
     }
 
     template<class ElemType>
@@ -4683,7 +4677,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-                
     }
 
     template<class ElemType>
@@ -4695,7 +4688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(a,b);        
 
         if (a.GetMatrixType() == b.GetMatrixType())
-            {
+        {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
                 return CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix,*b.m_CPUMatrix), 
@@ -4703,9 +4696,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );                
-            }
-            else
-            {
+        }
+        else
+        {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
                 NOT_IMPLEMENTED, 
@@ -4722,7 +4715,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || b.IsEmpty())
             LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
 
-        this->Resize(1,1);       
+        Resize(1,1);       
 
         DecideAndMoveToRightDevice(a, b, *this);        
     
@@ -4732,8 +4725,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             DISPATCH_MATRIX_ON_FLAG(&a,
                 this,
-                this->m_CPUMatrix->SetValue(CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix,*b.m_CPUMatrix)), 
-                this->m_GPUMatrix->AssignInnerProductOfMatrices(*a.m_GPUMatrix,*b.m_GPUMatrix), 
+                m_CPUMatrix->SetValue(CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix,*b.m_CPUMatrix)), 
+                m_GPUMatrix->AssignInnerProductOfMatrices(*a.m_GPUMatrix,*b.m_GPUMatrix), 
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );                
@@ -4955,12 +4948,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
-            this->m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
+            m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
+            m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5012,8 +5005,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
-            this->m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
+            m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
+            m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5060,12 +5053,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
-            this->m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
+            m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
+            m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5139,12 +5132,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
             LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
-        this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+        SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
-            this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+            m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+            m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5167,13 +5160,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(label.GetMatrixType() == gamma.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
-
+        SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
-            this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+            m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+            m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -5187,6 +5179,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
                                     const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
     {
+        DecideAndMoveToRightDevice(*this, a);
+
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
@@ -5202,6 +5196,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
                                     const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
     {
+        DecideAndMoveToRightDevice(*this, a, b);
+
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
@@ -5217,6 +5213,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
                                     const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
     {
+        DecideAndMoveToRightDevice(*this, a, b, c);
+
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
