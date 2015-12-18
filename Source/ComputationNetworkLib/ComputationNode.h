@@ -545,7 +545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
         bool IsOutputNeededDuringBackprop() const 
         {
-            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop || !isValueSharable();
+            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop ;
         }
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
@@ -912,7 +912,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //don't release matrices that need to be used in the gradient computation
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
         {
-            if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE))
+            if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && isValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
 
