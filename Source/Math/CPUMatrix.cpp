@@ -5517,11 +5517,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numThreads;
     }
 
-    // -----------------------------------------------------------------------
+    // =======================================================================
     // TensorView support
-    // -----------------------------------------------------------------------
+    // =======================================================================
 
     // To save time, this makes extensive use of templates and macros.
+
+    // -----------------------------------------------------------------------
+    // function to compute the value for a given output location (perform reduction if needed)
+    // -----------------------------------------------------------------------
 
     // perform loop over reduction index m
     // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
@@ -5559,6 +5563,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return opfn(pointers);          // finally we are doing some work!!!
         }
     };
+
+    // -----------------------------------------------------------------------
+    // perform loop over regular index k for N-nary operations (N counting the output)
+    // -----------------------------------------------------------------------
 
     // perform loop over regular index k and reducing index m for N operands (counting the output)
     template<class ElemType, typename OPFN, size_t N, bool vectorizable, int m, int k>
@@ -5648,15 +5656,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             // we are at element level for the result: perform the op (there may still be reduction)
-            ElemType val = alpha * TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+            ElemType val = TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+            // scale
+            val *= alpha;
             // combine with previous value in target matrix, then write it out
             auto * pout = pointers.back();
             if (beta != 0)
                 val += beta * *pout;
+            // save
             *pout = val;
             return;
         }
     };
+
+    // -----------------------------------------------------------------------
+    // map runtime parameters N to template parameters
+    // -----------------------------------------------------------------------
 
     // tensor operation with k+1 dimensions (-1 means scalar)
     template<class ElemType, typename OPFN, size_t N, int k>
@@ -5705,6 +5720,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         default: LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)dims);
         }
     }
+
+    // -----------------------------------------------------------------------
+    // entry points from Matrix.cpp; also map op to a lambda
+    // -----------------------------------------------------------------------
 
     // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
@@ -5766,9 +5785,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // -----------------------------------------------------------------------
+    // =======================================================================
     // explicit instantiations
-    // -----------------------------------------------------------------------
+    // =======================================================================
 
     template class MATH_API CPUMatrix<float>;
     template class MATH_API CPUMatrix<double>;
