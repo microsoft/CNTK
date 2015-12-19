@@ -764,13 +764,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
         size_t numSubminibatchesNeeded = 0; 
-        if (m_maxSamplesInRAM < SIZE_MAX)   // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
+        if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1)   // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
         {
-            // into how many pieces would we need to break the minibatch?
-            // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
-            size_t estimatedMBSize = tunedMBSize * numParallelSequences; 
-            numSubminibatchesNeeded = (size_t)std::ceil((float)estimatedMBSize / m_maxSamplesInRAM);             
+            if (m_maxSamplesInRAM < SIZE_MAX)
+            {
+                // into how many pieces would we need to break the minibatch?
+                // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
+                size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
+                size_t estimatedMBSize = tunedMBSize * numParallelSequences;
+                numSubminibatchesNeeded = (size_t)std::ceil((float)estimatedMBSize / m_maxSamplesInRAM);
+            }
+            if (m_numSubminiBatches > 1)
+            {
+                numSubminibatchesNeeded = m_numSubminiBatches;
+            }
         }
         // this is non-trivial, we need a manager object to handle this
         if (numSubminibatchesNeeded > 1)
@@ -800,7 +807,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchesNeeded > 1)
         {
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            if (m_maxSamplesInRAM < SIZE_MAX)
+                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            else
+                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
         }
         fprintf(stderr, ".\n");
 
@@ -2484,6 +2494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         m_truncated = configSGD(L"truncated", false);
         m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+        m_numSubminiBatches = configSGD(L"numSubminibatches", (size_t)1);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
