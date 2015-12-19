@@ -4578,7 +4578,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t k = 1/*done with k=0 already*/; k < dim; k++)
             {
                 // bump the pointers
-                for (size_t i = 0; i < dim; i++)
+                for (size_t i = 0; i < N; i++)
                     pointers[i] += reducingStrides(i,(size_t)m);
                 ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
                 agg += val;
@@ -4636,7 +4636,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const FixedArray<unsigned int, K> & /*regularOpStrides*/, const FixedMatrix<int, N, K> & /*regularStrides*/,
                                        const FixedArray<unsigned int, M> & reducingOpDims, const FixedMatrix<int, N, M> & reducingStrides)
         {
-#if 1
             // compute the operation for this output coordinate
             // This may still involve a reduction over inverse-broadcasting dimensions.
             ElemType val = TensorOpReduce<ElemType, N, M, M - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
@@ -4648,10 +4647,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 val += beta * *pout;
             // save
             *pout = val;
-#else
-            auto * pout = pointers[N - 1];
-            *pout = 42;
-#endif
         }
     };
 
