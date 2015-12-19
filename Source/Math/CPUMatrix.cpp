@@ -9,20 +9,20 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "File.h"
+
 #include "CPUMatrix.h"
 #include "TensorOps.h"
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
 #include <math.h>
-
 #include <random>
 #include <chrono>
 #include <exception>
 #include <thread>
 #include<iostream>
 #include <algorithm>
-#ifdef _WIN32
+#ifdef     _WIN32
 #include <Windows.h>
 #else
 #ifndef max
@@ -352,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -385,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long n = (long)a.GetNumCols();        // note: OpenMP requires loop indices to be long, not size_t
         long k = (long)a.GetNumRows();
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //memory copy might be faster?
@@ -429,7 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -470,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -501,7 +501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long i = 0; i < m_numRows; i++)
         {
             diag(0, (size_t)i) = us(i, i);
@@ -539,7 +539,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<sliceNumCols; j++)
         {
             for (int i = 0; i < inputMatrices.size(); i++)
@@ -576,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long q = 0; q < numColRepeats; q++)
         {
             for (long p = 0; p < numRowRepeats; p++)
@@ -620,7 +620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -686,7 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -720,7 +720,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {     
             long m=(long)GetNumElements();
-#pragma omp parallel for
+            // 2-way thread parallelism is sufficient for the memory bound 
+            // operation of just setting the values of an array.
+            const unsigned SETVALUE_NUM_THREADS = 2;
+#pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
             //four-way unrolling
             for (long i=0; i<(m & ~3); i+=4)
             {
@@ -778,7 +781,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -803,7 +806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -828,7 +831,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -936,7 +939,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -975,7 +978,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long m=(long)GetNumRows();
             if (vector.GetNumRows() == 1) //row vector
             {
-#pragma omp parallel for
+#pragma omp parallel for     
                 //four-way unrolling
                 for (long i=0; i<(m & ~3); i+=4)
                 {
@@ -992,7 +995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-#pragma omp parallel for
+#pragma omp parallel for     
                 //four-way unrolling
                 for (long i=0; i<(m & ~3); i+=4)
                 {
@@ -1165,7 +1168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType a0, a1, a2, a3;
 
         //disable omp here because aveMultiper needs to be added atomically. however, it seems the result is incorrect even if rmp atomic and amp critical are used.
-//#pragma omp parallel for
+//#pragma omp parallel for     
         for (long i = 0; i<(n & ~3); i += 4)  //four-way unrolling
         {
             a[i] += d_v[i] * d_v[i];
@@ -1496,7 +1499,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1597,7 +1600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1626,7 +1629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1817,7 +1820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1854,7 +1857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1922,7 +1925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1957,7 +1960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             ElemType v = a(0,j);
@@ -1992,7 +1995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us = *this;
 
         long m = (long)GetNumRows(), n = (long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             ElemType v = a(0, j);
@@ -2033,7 +2036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long m=(long)GetNumRows(), n=(long)GetNumCols();
 
         ElemType smallValue = EPS_IN_INVERSE;
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             for (long i=0; i<m; i++)
@@ -2134,7 +2137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2173,7 +2176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2221,7 +2224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2388,7 +2391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2428,7 +2431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2468,7 +2471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2621,7 +2624,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2661,7 +2664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType locTHresholdNeg = -locThresholdPos; 
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2709,7 +2712,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         long m = (long)GetNumElements();
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
         {
             if (m_pArray[i] > threshold)
@@ -4388,7 +4391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ElemType v = alpha*a(0,0);
             long m=(long)c.GetNumRows(), n=(long)c.GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
             for (long j=0; j<n; j++)
             {
                 //four-way unrolling
@@ -4498,7 +4501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("AddScaledDifference:  Input matrix a is empty.");
 
         long m=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -4537,7 +4540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             c.Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -4635,7 +4638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.Resize(m,n);
 
         long size=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(size & ~3); i+=4)
         {
@@ -4945,7 +4948,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool bHas = false;
 
         bool isvFinite = std::isfinite(v);
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j < mat.GetNumElements(); j++)
         {
 #pragma omp flush(bHas)
@@ -4993,7 +4996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
-        //#pragma omp parallel for
+        //#pragma omp parallel for     
 
         for (long j = 0; j < n; j++)
         {
@@ -5248,7 +5251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
         long n = (long)GetNumCols();  // a and b are of size (1,n)
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             us(0, j) = a(0, j) * b(0, (j + shift) % n);
@@ -5256,6 +5259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         return *this;
     }
+
 
 #pragma endregion Static BLAS Functions
 
@@ -5788,7 +5792,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
     // explicit instantiations
     // =======================================================================
-
     template class MATH_API CPUMatrix<float>;
     template class MATH_API CPUMatrix<double>;
 
