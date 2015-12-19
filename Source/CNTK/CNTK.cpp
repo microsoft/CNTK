@@ -11,25 +11,8 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
-#include "Actions.h"
-#include <string>
-#include <chrono>
-#include <algorithm>
-#if defined(_WIN32)
-#include "io.h"
-#endif
-#include "buildinfo.h"
-#include "hostname.h"
-#ifdef LEAKDETECT
-#include "vld.h" // for memory leak detection
-#endif
-#include <vector>
-#include <iostream>
-#include <queue>
-#include <set>
-#include <memory>
-
 #include "Basics.h"
+#include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
 #include "DataReader.h"
@@ -53,6 +36,23 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+
+#include <string>
+#include <chrono>
+#include <algorithm>
+#if defined(_WIN32)
+#include "io.h"
+#endif
+#include "buildinfo.h"
+#include "hostname.h"
+#ifdef LEAKDETECT
+#include "vld.h" // for memory leak detection
+#endif
+#include <vector>
+#include <iostream>
+#include <queue>
+#include <set>
+#include <memory>
 
 #ifndef let
 #define let const auto

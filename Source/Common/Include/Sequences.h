@@ -108,31 +108,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
             // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
-            // PTRDIFF_MAX indicates not initialized (also in the matrix, which is stored as float).
-            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToStart.SetValue((float)PTRDIFF_MAX);
-            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps); m_distanceToEnd.SetValue((float)PTRDIFF_MAX);
+#if 1
+            if ((m_distanceToStart.GetNumRows() != m_numParallelSequences || m_distanceToStart.GetNumCols() != m_numTimeSteps) && m_numTimeSteps > 0)   // sanity check for debugging a regression
+                fprintf(stderr, "MBLayout::Init: Resizing m_distanceToStart from %d x %d to %d x %d\n",
+                        (int)m_distanceToStart.GetNumRows(), (int)m_distanceToStart.GetNumCols(), (int)m_numParallelSequences, (int)m_numTimeSteps); // (I really want to know about actual allocations, but this is a necessary condition for them)
+#endif
+            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
             m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
-            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_distanceToNearestEnd.assign(m_numTimeSteps,   PTRDIFF_MAX);
             m_timeStepHasGap.assign(m_numTimeSteps, false);
+            m_columnsValidityMask.Resize(0, 0);     // invalidate
             // reset state
             m_numFramesDeclared = 0;
             m_numGapFrames = 0;
             m_sequences.clear();
             m_writable = true;
-        }
-
-        // short-hand to initialize an MBLayout for the common case of frame mode
-        // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
-        void InitAsFrameMode(size_t numSamples)
-        {
-            Init(numSamples, 1);
-            SequenceInfo seqInfo { 0, 0, 0, 1 };
-            for (size_t s = 0; s < numSamples; s++)
-            {
-                seqInfo.seqId = seqInfo.s = s;
-                AddSequence(seqInfo);
-            }
-            Lock();
         }
 
         // -------------------------------------------------------------------
@@ -199,7 +190,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
             // remember it
+#ifdef _DEBUG
+            auto cap = m_sequences.capacity();  // Some sanity check for debugging a speed regression. This should only show up during the first minibatches, and growing only.
             m_sequences.push_back(seqDesc);
+            if (cap != m_sequences.capacity())
+                fprintf(stderr, "AddSequence: m_sequences was reallocated from capacity %d to %d\n", (int)cap, (int)m_sequences.capacity());
+#else
+            m_sequences.push_back(seqDesc);
+#endif
 
             // create all the cached fast-lookup information
             const auto seqId = seqDesc.seqId;
@@ -212,7 +210,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_numGapFrames += (e - b);
                 for (size_t t = b; t < e; t++)
                 {
-                    //Set(s, t, MinibatchPackingFlags::NoInput);
                     m_timeStepHasGap[t] = true;
                     m_distanceToStart(s, t) = -1;   // start flags also encode gaps
                 }
@@ -220,20 +217,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else for (size_t t = b; t < e; t++)
             {
                 // update the nearest sentence boundaries, minimum over all parallel sequences
-                // -1 in distanceToStart(,) stands for a gap
-                assert(m_distanceToStart(s, t) != -1);  // gaps not allowed to overlap
                 // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
-                ptrdiff_t distanceToStart = t - beginTime;
-                if (m_distanceToStart(s, t) > (float)distanceToStart)
-                    m_distanceToStart(s, t) = (float)distanceToStart;
+                ptrdiff_t distanceToStart = (ptrdiff_t)t - beginTime;
+                ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
+                m_distanceToStart(s, t) = (float)distanceToStart;
+                m_distanceToEnd(s, t) = (float)distanceToEnd;
+                // and the aggregate
                 if (m_distanceToNearestStart[t] > distanceToStart)
                     m_distanceToNearestStart[t] = distanceToStart;
-                ptrdiff_t distanceToEnd = endTime - 1 - t;
-                if (m_distanceToEnd(s, t) > (float) distanceToEnd)
-                    m_distanceToEnd(s, t) = (float) distanceToEnd;
                 if (m_distanceToNearestEnd[t] > distanceToEnd)
                     m_distanceToNearestEnd[t] = distanceToEnd;
             }
+        }
+
+        // short-hand to initialize an MBLayout for the common case of frame mode
+        // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
+        // This function provides an efficient short-cut implementation of AddSequence(t, t, 0, 1) for every sample t.
+        void InitAsFrameMode(size_t numSamples)
+        {
+            Init(numSamples, 1);
+
+            // create sequences array
+            SequenceInfo virginSeqInfo = { 0, 0, 0, 1 };
+            m_sequences.resize(numSamples, virginSeqInfo);  // pass it here since otherwise STL will initialize everything to 0 unnecessarily
+
+            // update sequence indices
+            for (size_t s = 0; s < numSamples; s++)
+            {
+                // remember it
+                auto & seqDesc = m_sequences[s];
+                seqDesc.seqId = s;
+                seqDesc.s = s;
+            }
+            m_numFramesDeclared = numSamples;
+
+            // create all the cached fast-lookup information
+            m_distanceToStart.SetValue(0);
+            m_distanceToEnd.SetValue(0);
+            m_distanceToNearestStart[0] = 0;
+            m_distanceToNearestEnd[0] = 0;
+
+            Lock();
         }
 
         // mark a range of frames in a parallel sequence as invalid
@@ -330,10 +354,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //                              2  1  0  .  . ]          // (last two time steps undefined)
         // m_distanceToNearestStart = [ 0  1  2  3  4 ]
         // m_distanceToNearestEnd   = [ 2  1  0  1  0 ]
-        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); value<0 stands for gap, PTRDIFF_MAX for 'not initialized'
-        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (value<0 does NOT stand for gap; consult m_timeStepHasGap[] vector instead)
+        Matrix<float> m_distanceToStart, m_distanceToEnd;                   // (s,t); value<0 stands for gap
+        vector<ptrdiff_t> m_distanceToNearestStart, m_distanceToNearestEnd; // [t]    (does not store info about gaps; consult m_timeStepHasGap[] vector instead)
 
-        vector<bool> m_timeStepHasGap;                                      // [t]
+        vector<bool> m_timeStepHasGap;                                      // [t] true if at least one gap in time step t
 
         // Cached mask indicating the validity of each column in the MBLayout
         // TODO: We actually just need a boolean matrix for this.
@@ -527,6 +551,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (s == SIZE_MAX)                      // aggregate requested
         {
             // determine flags from aggregate vectors
+            // Note: We allow that all parallel sequences contain gaps (m_distanceToNearestStart[t] == PTRDIFF_MAX)
+            // because that makes implementation of the reader easier for truncated BPTT (it knows too late that there are not that many frames left).
             auto distanceToStart = (ptrdiff_t)m_distanceToNearestStart[t];
             if (distanceToStart < -fr.m_timeOffset)
                 return true;
@@ -557,7 +583,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
     inline size_t MBLayout::GetActualNumSamples() const
     {
-#if 1       // sanity check  --TODO: delete this after a while
+#if 0       // sanity check  --TODO: delete this after a while
         size_t n = GetNumCols();
         if (HasGaps())
         {

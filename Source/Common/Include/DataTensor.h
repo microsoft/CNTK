@@ -107,24 +107,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
 
-        void Save(File& fstream) const
+        // verify that this refers to a dense matrix (no strides)
+        void VerifyIsDense() const
         {
             if (m_offset != 0)
-                LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
+                LogicError("TensorShape: A dense TensorShape expected. Offset %d not allowed.", (int)m_offset);
+            for (size_t k = 0; k < m_dims.size(); k++)  // (TODO: we can save one multiplication here)
+            {
+                ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
+                if (m_strides[k] != stride)
+                    LogicError("TensorShape: A dense TensorShape expected. Dimension %d is not.", (int)k);
+            }
+        }
+
+        void Save(File& fstream) const
+        {
+            VerifyIsDense();
             // saving as 32-bit ints. This allows to continue to support the old format (size_t W, H, C)
             fstream << (uint32_t)m_dims.size();
-            ptrdiff_t mul = 1;
-            for (size_t k = 0; k < m_dims.size(); k++)
+            for (auto dim : m_dims)
             {
-                auto dim = m_dims[k];
                 if (dim > UINT32_MAX)
                     LogicError("TensorShape::Save(): Tensor dimensions %s out of bounds (> 4G).", string(*this).c_str());
                 fstream << (uint32_t)dim;
-                if (m_steps[k] != mul)
-                    LogicError("TensorShape::Save(): Cannot serialize TensorShape for slices.");
-                mul *= (ptrdiff_t)dim;
             }
         }
+
         void Load(File& fstream)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
@@ -154,8 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // accessors
         size_t GetDim(size_t k) const { return m_dims[k]; }
         size_t GetNumDims() const { return m_dims.size(); }
-        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; }
-        ptrdiff_t GetStep(size_t k) const { return m_steps[k]; }
+        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
         size_t GetOffset() const { return m_offset; }
 
         // vector-like accessors
@@ -163,11 +170,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t size() const { return GetNumDims(); }
 
         const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
+        const std::vector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
         size_t GetNumChannels() const { return m_dims[0]; }
         size_t GetWidth()       const { return m_dims[1]; }
         size_t GetHeight()      const { return m_dims[2]; }
+
+        // indexing
+        // Determines the offset into the underlying element array for a given multi-dimensional index.
+        // This function is for reference. Probably not often used.
+        size_t Locate(const std::vector<size_t> & index) const
+        {
+            ptrdiff_t location = m_offset;
+            for (size_t k = 0; k < index.size(); k++)
+            {
+                size_t dim = k < size() ? m_dims[k] : 1;        // dimensions are bottomless
+                if (index[k] >= dim)
+                    LogicError("Locate: Tensor index[%d]=%d exceeds bound %d.", (int)k, (int)index[k], (int)dim);
+                location += (ptrdiff_t)index[k] * m_strides[k]; // strides may be negative
+            }
+            if (location < 0 || (size_t)location >= m_allocation)
+                LogicError("Locate: Tensor index out of bounds.");
+            return (size_t)location;
+        }
 
         // helpers for tensor operations
         bool CanFlatten(size_t k) const     // can dims k and k-1 be flattened into a single vector? (do they form a matrix without stride)
@@ -179,66 +205,145 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_dims[k] == 1 || m_dims[k - 1] == 1)   // both are broadcasting or scalar--we don't care about stride in this case
                 return true;
             else
-                return m_steps[k] == m_steps[k - 1] * (ptrdiff_t)m_dims[k - 1];
+                return m_strides[k] == m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1];
+        }
+        // editing functions
+        // These all create new TensorShape objects.
+        TensorShape Flatten(size_t k) const  // flatten [k] with [k-1]
+        {
+            TensorShape result = *this;
+            if (!CanFlatten(k))
+                LogicError("Flatten() cannot flatten dimensions with gaps");
+            // We reshape local (I x J) sub-matrices to (1 x I*J) sub-matrices.
+            // We merge to right so that we can merge multiple by looping left-to-right.
+            //   m_dims    =   I   J    K     L
+            //   m_strides =   1   I    I*J   I*J*K
+            // flattening J and K
+            //   m_dims    =   I   1    J*K   L
+            //   m_strides =   1   I    I     I*J*K
+            // TODO: rethink whether this is correct for example of negative strides
+            result.m_dims[k] *= result.m_dims[k - 1];
+            result.m_dims[k - 1] = 1;
+            result.m_strides[k] = /*result.m_dims[k - 1] *, it's 1 */ result.m_strides[k - 1];
+            return result;
+        }
+        TensorShape DropDims(const std::vector<bool> & toDrop) const  // remove dimension
+        {
+            // this deletes a dimension while retaining strides
+            // This implies a slice to [0] for this dimension.
+            TensorShape result = *this;
+            size_t j = 0;
+            for (size_t k = 0; k < size(); k++)
+            {
+                if (toDrop[k])
+                    continue;
+                else
+                {
+                    // example
+                    //   m_dims    =   I   1    J   K
+                    //   m_strides =   1   I    I   I*J
+                    // dropping the second dimension
+                    //   m_dims    =   I   %    J   K
+                    //   m_strides =   1   %    I   I*J
+                    result.m_dims[j] = result.m_dims[k];
+                    result.m_strides[j] = result.m_strides[k];
+                    j++;
+                }
+            }
+            result.m_dims.resize(j);
+            result.m_strides.resize(j);
+            return result;
+        }
+        TensorShape WithBroadcastStrides() const  // flatten [k] with [k-1] if toFlatten[k] is set
+        {
+            TensorShape result = *this;
+            for (size_t k = 0; k < size(); k++)
+                if (result.m_dims[k] == 1)
+                    result.m_strides[k] = 0;
+            return result;
+        }
+        TensorShape Pad(size_t numDims) const               // append singleton dimensions
+        {
+            VerifyIsDense();
+            if (numDims < GetNumDims())
+                LogicError("Pad() cannot drop a shorten the dimensions.");
+            else if (numDims == GetNumDims())
+                return *this;
+            auto dims = GetDims();
+            dims.resize(numDims, 1);
+            return TensorShape(dims);
+        }
+        TensorShape Concat(const TensorShape & other) const // concatenate
+        {
+            auto dims = GetDims();
+            auto otherDims = other.GetDims();
+            dims.insert(dims.end(), otherDims.begin(), otherDims.end());
+            return TensorShape(dims);
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
         operator std::string() const
         {
             std::string s;
-            for (const auto & dim : m_dims)
+            for (size_t k = 0; k < size(); k++)
             {
                 if (!s.empty())
                     s.append(" x ");
-                s.append(std::to_string(dim));
+                s.append(std::to_string(m_dims[k]));
             }
+#ifdef _DEBUG   // also emit the strides, easier for debugging
+            s.append(" {");
+            for (size_t k = 0; k < size(); k++)
+            {
+                if (k > 0)
+                    s.append(",");
+                s.append(std::to_string(m_strides[k]));
+            }
+            s.append("}");
+#endif
             return s;
         }
 
     private:
-        // reset m_steps and m_offset to represent a canonical no-strides tensor
+        // reset m_strides and m_offset to represent a canonical no-strides tensor
         void InitAsNoSlice()
         {
             m_offset = 0;
-            m_steps.resize(m_dims.size());
-            ptrdiff_t mul = 1;
+            m_strides.resize(m_dims.size());
             for (size_t k = 0; k < m_dims.size(); k++)
-            {
-                m_steps[k] = (ptrdiff_t)mul;
-                mul *= m_dims[k];
-            }
+                m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
+            m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t)m_strides.back();
         }
 
     private:
         std::vector<size_t> m_dims;     // dimensions of tensor or tensor slice. The size of the box.
-        std::vector<ptrdiff_t> m_steps; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
+        std::vector<ptrdiff_t> m_strides; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
         size_t m_offset;                // offset to element(0,0,...,0). May be non-0 in case of slicing.
-        // For a regular tensor, there are no strides, m_steps[k] = m_steps[k-1] * m_dims[k-1]. This is how TensorShapes are created from dimensions.
+        size_t m_allocation;            // allocation size of original dense tensor
+        // For a regular tensor, there are no strides, m_strides[k] = m_strides[k-1] * m_dims[k-1]. This is how TensorShapes are created from dimensions.
         // For views into existing tensors, we do stride shenanigans to implement broadcasting (plus magic tricks). Examples:
         // To traverse a 5 x 10 matrix with column order reversed:
         //  - op.dims = (5 x 10)
         //  - m_offset points to element (0,9)
-        //  - m_steps[0] = 1            // regular forward iteration within each column
-        //  - m_steps[1] = -5           // backward iteration over columns
+        //  - m_strides = (1, -5)       // backward iteration over columns
         // To compute matrix C(13 x 42) = vector A(13 x 1) + matrix B(13 x 42):
         //  - op = sum
         //  - op.dims = (13 x 42)
-        //  - *.m_steps[0] = 1          // forward iteration through each column
-        //  - C.m_steps[1] = 13         // forward iteration over columns of B--defines the for loop
-        //  - B.m_steps[1] = 13         // forward iteration over columns of B--iterates in sync with C
-        //  - A.m_steps[1] = 0          // A, however, is stuck in column 0 forever
+        //  - C.m_strides = (1, 13)     // forward iteration over columns of B--defines the for loop
+        //  - B.m_strides = (1, 13)     // forward iteration over columns of B--iterates in sync with C
+        //  - A.m_strides = (1, 0)      // A, however, is stuck in column 0 forever
         // Matrix product: C(I x K) = A(I x J) * B(J x K)   --Note: Likely not RAM-bandwidth efficient!
         //  - op = mul
         //  - op.dims   = (I x J x K)   // iteration dimensions
-        //  - C.m_steps = (1, 0, I)     // inverse broadcasting for inner dimension
-        //  - A.m_steps = (1, I, 0)
-        //  - B.m_steps = (0, 1, J)
+        //  - C.m_strides = (1, 0, I)   // inverse broadcasting for inner dimension
+        //  - A.m_strides = (1, I, 0)
+        //  - B.m_strides = (0, 1, J)
         // Convolution of time signals (without padding): Y(T-N+1) = X(T) * H(N):   --Note: Likely not RAM-bandwidth efficient!
         //  - op = mul
         //  - op.dims   = (T-N+1 x N)   // iteration dimensions
-        //  - Y.m_steps = (1, 0)        // inverse broadcasting: this sums up the individual products
-        //  - X.m_steps = (1, 1)        // shift window by 1 for each output sample
-        //  - H.m_steps = (0, -1)       // reuse for each output sample; iterate in reverse order for convolution
+        //  - Y.m_strides = (1, 0)      // inverse broadcasting: this sums up the individual products
+        //  - X.m_strides = (1, 1)      // shift window by 1 for each output sample
+        //  - H.m_strides = (0, -1)     // reuse for each output sample; iterate in reverse order for convolution
         //  - H.m_offset = N - 1        // begin with last element (reverse order for convolution)
         // TODO: double-check all these
         // TODO: Does the same trick work for 2D images?

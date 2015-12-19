@@ -13,6 +13,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    using namespace std;
+
     // -----------------------------------------------------------------------
     // subroutines for Validate() implementations
     // -----------------------------------------------------------------------
@@ -41,13 +43,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all are consistent: install it
         LinkToMBLayout(pMBLayout);
     }
+
     // single input that maps its input element-wise (e.g. Sigmoid)
     void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     {
         assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        SetDims(m_inputs[0]->GetNumRows(), DetermineNumCols(m_inputs[0]));
+        SetDims(m_inputs[0]);
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus
@@ -139,6 +142,61 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // -----------------------------------------------------------------------
+    // tensor helpers
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    static TensorShape GetSampleShape(const ComputationNode<ElemType> * node)
+    {
+        // TODO: use actual ImageLayout. While those are not yet inferred properly, maybe use it if its dims match numRows?
+        if (node->HasMBLayout())                        // if we have a layout, that dimension is not part of the sample shape
+            return TensorShape(node->GetNumRows());
+        else
+            return TensorShape(node->GetNumRows(), node->GetNumCols());
+    }
+
+    template<class ElemType>
+    std::vector<TensorView<ElemType>> ComputationNode<ElemType>::GetTensorsForwardBinary(const FrameRange & fr)
+    {
+        const size_t N = 3;     // 2 inputs and 1 output
+        // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
+        // TODO: move this into a helper function
+        // get tensor shapes
+        vector<ComputationNode<ElemType>*> nodes;
+        for (size_t i = 0; i < N; i++)
+            nodes.push_back(i < N-1 ? Input(i).get() : this);
+        vector<Matrix<ElemType>> values;
+        vector<TensorShape> shapes;
+        for (size_t i = 0; i < N; i++)
+        {
+            values.push_back(nodes[i]->ValueFor(i < N-1 ? fr.AllowBroadcast() : fr));   // no broadcasting for now allowed for output
+            shapes.push_back(GetSampleShape(nodes[i]));
+        }
+        // pad
+        size_t dims = 0;
+        for (size_t i = 0; i < N; i++)
+            if (dims < shapes[i].GetNumDims())
+                dims = shapes[i].GetNumDims();
+        for (size_t i = 0; i < N; i++)
+            shapes[i] = shapes[i].Pad(dims);
+        // concatenate MBLayout dims
+        // TODO: Is it possible that the output has no layout, but inputs have? Then we lost dimensions. Tensor constructor will catch that, though.
+        if (HasMBLayout())
+        {
+            for (size_t i = 0; i < N; i++)
+            {
+                auto sm = nodes[i]->HasMBLayout() ? TensorShape(GetNumParallelSequences(), GetNumTimeSteps()) : TensorShape(1, 1);
+                shapes[i] = shapes[i].Concat(sm);
+            }
+        }
+        // perform operation
+        std::vector<TensorView<ElemType>> tensors;
+        for (size_t i = 0; i < N; i++)
+            tensors.push_back(TensorView<ElemType>(values[i], shapes[i]));
+        return tensors;
+    }
+
+    // -----------------------------------------------------------------------
     // others
     // -----------------------------------------------------------------------
 
@@ -171,6 +229,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
+
+    template class ComputationNode<float>;
+    template class ComputationNode<double>;
 
     template class LearnableParameter<float>;
     template class LearnableParameter<double>;

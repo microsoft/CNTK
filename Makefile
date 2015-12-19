@@ -315,6 +315,7 @@ LMSEQUENCEREADER_SRC =\
 	$(SOURCEDIR)/Readers/LMSequenceReader/Exports.cpp \
 	$(SOURCEDIR)/Readers/LMSequenceReader/SequenceParser.cpp \
 	$(SOURCEDIR)/Readers/LMSequenceReader/SequenceReader.cpp \
+	$(SOURCEDIR)/Readers/LMSequenceReader/SequenceWriter.cpp \
 
 LMSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LMSEQUENCEREADER_SRC))
 
