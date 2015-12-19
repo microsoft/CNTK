@@ -4611,17 +4611,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // template-recursive version loops over indices
         static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                       const FixedArray<unsigned int, K> & regularOpDims,  const FixedMatrix<int, N, K> & regularStrides,
+                                       const FixedArray<unsigned int, K> & regularOpStrides,  const FixedMatrix<int, N, K> & regularStrides,
                                        const FixedArray<unsigned int, M> & reducingOpDims, const FixedMatrix<int, N, M> & reducingStrides)
         {
             // map id (location on grid) to index[k]
-            size_t index = id / regularOpDims[(size_t)k];   // this dimension
-            id = index % id;                        // remaining dimensions inside this
+            size_t stride = regularOpStrides[(size_t)k];
+            size_t index = id / stride;             // this dimension
+            id = id % stride;                       // remaining dimensions inside this
             // apply this index to the pointers
             for (size_t i = 0; i < N; i++)
                 pointers[i] += index * regularStrides(i,(size_t)k);    // now this dimension is taken care of
             // process the previous index
-            TensorOpElement<ElemType, N, M, K, k - 1>::Compute(id, beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+            TensorOpElement<ElemType, N, M, K, k - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
         }
     };
 
@@ -4632,9 +4633,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // template-recursion-teminating version computes the actual value for this output location
         // now the pointers point to the right element
         static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                       const FixedArray<unsigned int, K> & /*regularOpDims*/, const FixedMatrix<int, N, K> & /*regularStrides*/,
+                                       const FixedArray<unsigned int, K> & /*regularOpStrides*/, const FixedMatrix<int, N, K> & /*regularStrides*/,
                                        const FixedArray<unsigned int, M> & reducingOpDims, const FixedMatrix<int, N, M> & reducingStrides)
         {
+#if 1
             // compute the operation for this output coordinate
             // This may still involve a reduction over inverse-broadcasting dimensions.
             ElemType val = TensorOpReduce<ElemType, N, M, M - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
@@ -4646,6 +4648,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 val += beta * *pout;
             // save
             *pout = val;
+#else
+            auto * pout = pointers[N - 1];
+            *pout = 42;
+#endif
         }
     };
 
@@ -4656,37 +4662,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // the top-level kernel
     template<class ElemType, size_t N, int M, int K>
     __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
-                                    FixedArray<unsigned int, K> regularOpDims, FixedMatrix<int, N, K> regularStrides,
+                                    FixedArray<unsigned int, K> regularOpStrides, FixedMatrix<int, N, K> regularStrides,
                                     FixedArray<unsigned int, M> reducingOpDims, FixedMatrix<int, N, M> reducingStrides, CUDA_LONG numElements)
     {
         CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
         if (id >= numElements)
             return;
-        TensorOpElement<ElemType, N, M, K, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        TensorOpElement<ElemType, N, M, K, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // launch tensor op with CUDA
     // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
     template<class ElemType, size_t N, int M, int K>
     static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op,
-                               const vector<size_t> & regularOpDimVector, const array<vector<ptrdiff_t>, N> & regularStrideVectors,
+                               const vector<size_t> & regularOpDims, const array<vector<ptrdiff_t>, N> & regularStrideVectors,
                                const vector<size_t> & reducingOpDimVector, const array<vector<ptrdiff_t>, N> & reducingStrideVectors)
     {
         // copy all parameters to CUDA-compatible data structures
         FixedArray<ElemType*, N> pointers(pointerVector);
-        FixedArray<unsigned int, K> regularOpDims(regularOpDimVector);
+        vector<size_t> regularOpStrideVector;    // kernel needs the strides for converting thread index back to multi-dimensional tensor index
+        size_t numElements = 1;
+        for (size_t k = 0; k < regularOpDims.size(); k++)
+        {
+            regularOpStrideVector.push_back(numElements);
+            numElements *= regularOpDims[k];
+        }
+        FixedArray<unsigned int, K> regularOpStrides(regularOpStrideVector);
         FixedMatrix<int, N, K> regularStrides(regularStrideVectors);
         FixedArray<unsigned int, M> reducingOpDims(reducingOpDimVector);
         FixedMatrix<int, N, M> reducingStrides(reducingStrideVectors);
         
-        size_t numElements = 1;
-        for (size_t k = 0; k < regularOpDimVector.size(); k++)
-            numElements *= regularOpDimVector[k];   // (note: cannot use regularOpDims[], will fail for K==0)
         CUDA_LONG NN = (CUDA_LONG)numElements;
         int blocksPerGrid = (int)ceil(1.0*NN / threadsPerBlock);
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _launchTensorOp<ElemType, N, M, K> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides, NN);
+        _launchTensorOp<ElemType, N, M, K> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, NN);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
