@@ -165,13 +165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<ComputationNode<ElemType>*> nodes;
         for (size_t i = 0; i < N; i++)
             nodes.push_back(i < N-1 ? Input(i).get() : this);
-        vector<Matrix<ElemType>> values;
         vector<TensorShape> shapes;
         for (size_t i = 0; i < N; i++)
-        {
-            values.push_back(nodes[i]->ValueFor(i < N-1 ? fr.AllowBroadcast() : fr));   // no broadcasting for now allowed for output
             shapes.push_back(GetSampleShape(nodes[i])); // this strips the column dimension in case of MBLayout
-        }
         // pad
         size_t dims = 0;
         for (size_t i = 0; i < N; i++)
@@ -193,7 +189,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // perform operation
         std::vector<TensorView<ElemType>> tensors;
         for (size_t i = 0; i < N; i++)
-            tensors.push_back(TensorView<ElemType>(values[i], shapes[i]));
+        {
+            auto slice = nodes[i]->ValueFor(i < N - 1 ? fr.AllowBroadcast() : fr);
+            tensors.push_back(TensorView<ElemType>(slice, shapes[i]));
+        }
         return tensors;
     }
 
