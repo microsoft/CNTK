@@ -4490,7 +4490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct FixedArray<T, 0>
     {
         __device__ __host__ size_t size() const { return 0; }
-        template<class VEC> FixedArray(const VEC & data) { assert(data.size() == 0); }
+        template<class VEC> FixedArray(const VEC & data) { assert(data.size() == 0); UNUSED(data); }
     };
 
     template<typename T, size_t N, size_t K>    // N = which input/output; K = index depth
@@ -4521,7 +4521,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         __device__ __host__ size_t getNumRows() const { return N; }
         __device__ __host__ size_t getNumCols() const { return 0; }
-        template<typename U> FixedMatrix(const array<vector<U>, N> & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); }
+        template<typename U> FixedMatrix(const array<vector<U>, N> & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); UNUSED(data); }
     };
 
     // -----------------------------------------------------------------------
