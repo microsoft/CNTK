@@ -164,7 +164,6 @@
     <ClInclude Include="CPUMatrix.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
-    <None Include="ClassDiagram.cd" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>

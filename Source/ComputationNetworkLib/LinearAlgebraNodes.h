@@ -130,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-#if 0       // TODO: use #if 0 until this is working
+#if 1       // TODO: use #if 0 until this is working
             auto args = GetTensorsForwardBinary(fr);
             args[2].DoSumOf(0.0f, args[0], args[1], 1.0f);
 #else
