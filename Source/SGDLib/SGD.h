@@ -157,7 +157,11 @@ protected:
     // To mitigate this issue, we adopt the sub-minibatch implementation, where 
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
     // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
-
+    size_t m_numSubminiBatches; 
+    // alternative method to specify how to split minibatches into subminibatches 
+    // default is 1, which means no subminibatch is used 
+    // if m_maxTempMemSizeInSamples = SIZE_MAX (which means users do not specify the option) and m_numSubminiBatches > 1 
+    // we divide one minibatch to m_numSubminiBatches subMinibatches 
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
