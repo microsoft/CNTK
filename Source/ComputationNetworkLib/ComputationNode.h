@@ -941,7 +941,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // Release the Value matrix only if the output value is needed during backprop
                 // since in the case it isn't used, we release it during forward prop itself
-                if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE)
+                if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && isValueSharable())
                     ReleaseMatrixToPool(m_value, matrixPool);
             }
         }

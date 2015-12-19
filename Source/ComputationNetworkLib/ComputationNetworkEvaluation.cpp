@@ -736,7 +736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
                     {
                         // not found, means it is a leaf node (we are at eval order )
-                        assert(child->IsLeaf());
+                        assert(child->IsLeaf() || child->IsPartOfLoop());
                         if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child)!= allLearnableParameters.end())
                         {
                             allLeafDescendentsAreParameters[ChildName] = true; 
