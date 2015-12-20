@@ -5,8 +5,8 @@
 //
 #include "stdafx.h"
 
-#include "../../../Math/Math/CPUMatrix.h"
-#include "../../../Math/Math/GPUMatrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
+#include "../../../Source/Math/GPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 

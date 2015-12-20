@@ -6,7 +6,7 @@
 // Tests for sparse and dense matrix interaction should go here
 //
 #include "stdafx.h"
-#include "../../../Math/Math/Matrix.h"
+#include "../../../Source/Math/Matrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -180,6 +180,7 @@ namespace Microsoft
                     bool transposeA = false, transposeB = false;
                     float alpha = 2.4f;
                     float beta = 0.0f;
+
                     Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mBdense, transposeB, beta, mCdense);
                     Matrix<float>::MultiplyAndWeightedAdd(alpha, mAsparse, transposeA, mBsparse, transposeB, beta, mCsparse);
                     mCsparse.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);

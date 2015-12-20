@@ -5,8 +5,8 @@
 //
 #include "stdafx.h"
 #include "../../Common/Include/Basics.h"
-#include "../../Math/Math/CPUMatrix.h"
-#include "../../Math/Math/GPUMatrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
+#include "../../../Source/Math/GPUMatrix.h"
 #include "../../Common/Include/fileutil.h"
 #include "../../Common/Include/File.h"
 // ToDo: CPP files directly included, use common library in the future if possible 

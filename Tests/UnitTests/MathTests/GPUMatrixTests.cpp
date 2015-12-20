@@ -6,7 +6,7 @@
 // GPUMatrix unit tests should go here
 //
 #include "stdafx.h"
-#include "../../../Math/Math/GPUMatrix.h"
+#include "../../../Source/Math/GPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
