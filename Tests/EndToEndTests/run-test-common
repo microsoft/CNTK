@@ -18,6 +18,7 @@ LogFileName=
 ConfigDir=$TEST_DIR
 RunDir=$TEST_RUN_DIR
 DataDir=$TEST_DATA_DIR
+OutputDir=$TEST_RUN_DIR
 
 MPIMode=0
 MPIArgs=
@@ -66,9 +67,10 @@ cntkrun()
     ConfigDir=$(cygpath -aw $ConfigDir)
     RunDir=$(cygpath -aw $RunDir)
     DataDir=$(cygpath -aw $DataDir)
+    OutputDir=$(cygpath -aw $OutputDir)
   fi
 
-  CNTKArgs="configFile=$ConfigDir/$configFileName currentDirectory=$DataDir RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
+  CNTKArgs="configFile=$ConfigDir/$configFileName currentDirectory=$DataDir RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir OutputDir=$OutputDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
   if [ "$LogFileName" != "" ]; then
     CNTKArgs="$CNTKArgs stderr=$RunDir/$LogFileName"
   fi

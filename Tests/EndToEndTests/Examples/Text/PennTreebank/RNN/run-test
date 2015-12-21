@@ -1,0 +1,9 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../Examples/Text/PennTreebank/Config
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun rnn.config "train=[SGD=[maxEpochs=1]] train=[epochSize=4096]]" || exit $?
+
