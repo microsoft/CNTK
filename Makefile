@@ -345,9 +345,9 @@ $(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 GPRNNSEQUENCEREADER_SRC =\
-	DataReader/GPRNNSequenceReader/Exports.cpp \
-	DataReader/GPRNNSequenceReader/GPRNNSequenceParser.cpp \
-	DataReader/GPRNNSequenceReader/GPRNNSequenceReader.cpp \
+	$(SOURCEDIR)/Readers/GPRNNSequenceReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/GPRNNSequenceReader/GPRNNSequenceParser.cpp \
+	$(SOURCEDIR)/Readers/GPRNNSequenceReader/GPRNNSequenceReader.cpp \
 
 GPRNNSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(GPRNNSEQUENCEREADER_SRC))
 
