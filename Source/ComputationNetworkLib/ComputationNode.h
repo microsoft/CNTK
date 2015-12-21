@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName())               // convenience macro
 
-        virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
+        virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimensions from MBLayout. Override to update temps.
 
         virtual void BeginForwardProp() = 0;                    // called beforefirst iteration step of ForwardProp()
         virtual void ForwardProp(const FrameRange &) = 0;       // forward prop for one minibatch

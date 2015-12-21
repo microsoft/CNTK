@@ -1080,26 +1080,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomSeed = (unsigned long)CreateUniqId();
         }
 
-        void BackpropToMap(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                InvalidArgument("Dropout operation only takes one input.");
-            BackpropToS(m_dropoutRate, Input(0)->Gradient(), *m_maskOfDropout, Gradient());
-        }
-
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
-            {
-                sliceMask = DataFor(*m_maskOfDropout, fr);
-            }
-
-            BackpropToS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
+                sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad += sliceOutputGrad;
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -1117,83 +1106,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        /*TODO: merge with call site*/void BackpropToS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        virtual void UpdateFunctionMBSize() override
         {
-            if (dropoutRate > 0)
-            {
-                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
-            }
-            else
-            {
-                inputGradientValues += gradientValues;
-            }
+            Base::UpdateFunctionMBSize();
+            // resize temporaries to their proper size
+            if (m_dropoutRate > 0)
+                m_maskOfDropout->Resize(Input(0)->Value());
         }
 
-        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            ForwardPropS(m_dropoutRate, m_randomSeed, Value(), *m_maskOfDropout, Input(0)->Value());
-        }
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-            Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                SetDims(Input(0));
-                m_maskOfDropout->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
-                sliceMask = DataFor(*m_maskOfDropout, fr);
-            }
-
-            sliceOutputValue = ValueFor(fr);
-
-            ForwardPropS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
-        }
-
-        /*TODO: merge with call site*/void ForwardPropS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
-        {
-            if (dropoutRate > 0)
-            {
-                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
-
-                maskOfDropout.SetUniformRandomMask((ElemType)dropoutRate, (ElemType)(1.0 / (1.0 - dropoutRate)), randomSeed);
-                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
-
-                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
-#if NANCHECK
-                functionValues.HasNan("DropOut");
-#endif
+                // determine drop-out mask for this minibatch
+                auto sliceMask = DataFor(*m_maskOfDropout, fr);
+                sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate))/*pre-scaled*/, m_randomSeed);
+                m_randomSeed += 1073807359;  // 1073807359 is a very large prime number to avoid collision with other dropout nodes
+                // apply dropout mask
+                sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             }
             else
             {
-                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override Value() to return the input; which now breaks stuff.
-                functionValues.SetValue(inputFunctionValues);
+                sliceOutputValue.SetValue(sliceInput0Value);
             }
         }
-
-        //virtual const Matrix<ElemType>& Value() const override
-        //{
-        //    if (m_dropoutRate > 0)
-        //        return *m_value;
-        //    else
-        //        return Input(0)->Value();
-        //}
-        //
-        //virtual Matrix<ElemType>& Value() override
-        //{
-        //    if (m_dropoutRate > 0)
-        //        return *m_value;
-        //    else
-        //        return Input(0)->Value();
-        //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
+        // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
         void SetDropoutRate(const double val)
         {
             if (val < 0 || val >= 1)

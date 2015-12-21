@@ -7,9 +7,13 @@ Note: Below, the current dir is sometimes set to be the data directory. This all
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\QuickE2E\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\QuickE2E  DataDir=.  DeviceId=auto  makeMode=false
 
+Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../QuickE2E/cntk.config  stderr=../RunDir/QuickE2E/models/cntkSpeech.dnn.log  RunDir=../RunDir/QuickE2E  DataDir=.  DeviceId=auto  makeMode=false
+
 --- Speech\LSTM\Truncated:
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  makeMode=false
+
+Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../LSTM/cntk.config  stderr=../RunDir/LSTM/Truncated/models/cntkSpeech.dnn.log  RunDir=../RunDir/LSTM/Truncated  NdlDir=../LSTM  DataDir=.  DeviceId=auto  makeMode=false
 
 Using full BrainScript configuration
 
