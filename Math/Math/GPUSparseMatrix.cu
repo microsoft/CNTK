@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors and Destructor
 
 #ifdef NO_SYNC
-    template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = true;
+    template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = false;
 #else
     template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = true;
 #endif
