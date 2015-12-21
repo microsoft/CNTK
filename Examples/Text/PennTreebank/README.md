@@ -6,19 +6,19 @@ Note: The data is not checked into the repository currently since a license is r
 
 ## Overview
 
-| | |
-|:--------|:---|
-Data:     |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
-Purpose:  |Showcase how to train a recurrent network for text data.
-Network:  |SimpleNetworkBuilder for recurrent network with two hidden layers.
-Training: |Stochastic gradient descent with adjusted learning rate.
-Comments: |The provided configuration file performs class based RNN training.
+|Data:     |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
+|:---------|:---|
+|Purpose:  |Showcase how to train a recurrent network for text data.
+|Network:  |SimpleNetworkBuilder for recurrent network with two hidden layers.
+|Training: |Stochastic gradient descent with adjusted learning rate.
+|Comments: |The provided configuration file performs class based RNN training.
 
 ## Running the example
 
 ### Getting the data
 
-The data for this example is already contained in the folder Demos/Text/Data/.
+The data is not checked into the repository currently since a license is required for the penn treebank data.
+Please visit https://www.cis.upenn.edu/~treebank/
 
 ### Setup
 
@@ -34,16 +34,16 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 ### Run
 
-Run the example from the Demos/Text/Data folder using:
+Run the example from the Text/Data folder using:
 
 `cntk configFile=../Config/rnn.config`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
-e.g. running from the Demos/Text folder using:
+e.g. running from the Text folder using:
 
 `cntk configFile=Config/rnn.config currentDirectory=Data`
 
-The output folder will be created inside Demos/Text/.
+The output folder will be created inside Text/.
 
 ## Details
 
