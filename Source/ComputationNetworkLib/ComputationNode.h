@@ -315,6 +315,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
         virtual void VerifyDimsMatch() const = 0;     // verify that m_value dimensions match ours
 
+    protected:
+        TensorShape GetSampleShape() const;
+        size_t DetermineElementwiseTensorRank() const;
+        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
+    public:
+
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
 
@@ -1072,8 +1078,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
+    protected:
         std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
 
+    public:
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
         {

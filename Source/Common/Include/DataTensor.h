@@ -161,13 +161,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // accessors
         size_t GetDim(size_t k) const { return m_dims[k]; }
-        size_t GetNumDims() const { return m_dims.size(); }
+        size_t GetRank() const { return m_dims.size(); }
         size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
         size_t GetOffset() const { return m_offset; }
 
         // vector-like accessors
         size_t operator[](size_t k) const { return GetDim(k); }
-        size_t size() const { return GetNumDims(); }
+        size_t size() const { return GetRank(); }
 
         const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
         const std::vector<ptrdiff_t> & GetStrides() const { return m_strides; }
@@ -265,9 +265,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape Pad(size_t numDims) const               // append singleton dimensions
         {
             VerifyIsDense();
-            if (numDims < GetNumDims())
+            if (numDims < GetRank())
                 LogicError("Pad() cannot drop a shorten the dimensions.");
-            else if (numDims == GetNumDims())
+            else if (numDims == GetRank())
                 return *this;
             auto dims = GetDims();
             dims.resize(numDims, 1);
