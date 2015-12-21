@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-// This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor.
+// This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor. [fseide]
 
 #pragma once
 
@@ -29,25 +29,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // cast a matrix storage object (SOB) as a TensorView (without shape change)
         TensorView(Matrix<ElemType> & sob);
         // reshape a TensorView
-        TensorView(const TensorView<ElemType> & sob, const TensorShape & shape);
+        TensorView(const TensorView<ElemType> & other, const TensorShape & shape);
         // reinterpret a SOB as a TensorView with a given TensorShape
         TensorView(Matrix<ElemType> & sob, const TensorShape & shape) :
             TensorView(TensorView(sob)/*cast as a TensorView*/, shape/*with a shape*/)
         { }
         // copy constructor
         TensorView(const TensorView<ElemType> & other) :
-            TensorView(other.m_sob, other.m_shape)
+            m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
         { }
-        // assignment is forbidden since we contain a reference
-        // If you ever need this, change the reference to a pointer.
-        void operator=(const TensorView & other) = delete;  // since we have a reference
-
-        // -------------------------------------------------------------------
-        // accessors
-        // -------------------------------------------------------------------
-
-        const Matrix<ElemType> & GetSOB() const { return m_sob; }
-        const TensorShape & GetShape() const { return m_shape; }
 
         // -------------------------------------------------------------------
         // elementwise operations
@@ -59,20 +49,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
-        void DoSumOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, 0); }
+#pragma push_macro("DeclareUnaryTensorOp")
+#define DeclareUnaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, ElemType alpha) { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op ## oper); }
+
+        ForAllUnaryOps(DeclareUnaryTensorOp);
+        ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
+#pragma pop_macro("DeclareUnaryTensorOp")
+
+#pragma push_macro("DeclareBinaryTensorOp")
+#define DeclareBinaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
+
+        ForAllBinaryOps(DeclareBinaryTensorOp);
+#pragma pop_macro("DeclareBinaryTensorOp")
+
+#pragma push_macro("DeclareTernaryTensorOp")
+#define DeclareTernaryTensorOp(oper) \
+        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha) { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op ## oper); }
+
+        ForAllTernaryOps(DeclareTernaryTensorOp);
+#pragma pop_macro("DeclareTernaryTensorOp")
 
         static void Test();
 
     private:
 
-        void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, int op/*will become an enum later*/);
+        void DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op);
+        void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op);
+        void DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op);
+
+        // -------------------------------------------------------------------
+        // accessors
+        // -------------------------------------------------------------------
+
+        const Matrix<ElemType> & GetSOB() const { return m_sob; }
+        Matrix<ElemType> &       GetSOB()       { return m_sob; }
+        const TensorShape & GetShape() const { return m_shape; }
 
         // -------------------------------------------------------------------
         // sob members
         // -------------------------------------------------------------------
 
-        Matrix<ElemType> & m_sob; // Storage OBject that holds the data that is being viewed with this TensorView
-        TensorShape m_shape;            // the meta-data that describes the data's shape and/or access pattern
+        Matrix<ElemType> m_sob;     // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
+        TensorShape m_shape;        // the meta-data that describes the data's shape and/or access pattern
         // TODO: use a reference here or not? With a reference, we can hide more info in here such as cuDNN handles
     };
 
