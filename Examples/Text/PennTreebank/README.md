@@ -2,23 +2,26 @@
 
 ## License
 
-Note: The data is not checked into the repository currently since a license is required for the penn treebank data.
+CNTK distribution contains a subset of the data of The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/):
+
+Marcus, Mitchell, Beatrice Santorini, and Mary Ann Marcinkiewicz. Treebank-2 LDC95T7. Web Download. Philadelphia: Linguistic Data Consortium, 1995.
+
+See License.md in the root level folder of the CNTK repository for full license information.
 
 ## Overview
 
-|Data:     |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
+|Data      |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
 |:---------|:---|
-|Purpose:  |Showcase how to train a recurrent network for text data.
-|Network:  |SimpleNetworkBuilder for recurrent network with two hidden layers.
-|Training: |Stochastic gradient descent with adjusted learning rate.
-|Comments: |The provided configuration file performs class based RNN training.
+|Purpose   |Showcase how to train a recurrent network for text data.
+|Network   |SimpleNetworkBuilder for recurrent network with two hidden layers.
+|Training  |Stochastic gradient descent with adjusted learning rate.
+|Comments  |The provided configuration file performs class based RNN training.
 
 ## Running the example
 
 ### Getting the data
 
-The data is not checked into the repository currently since a license is required for the penn treebank data.
-Please visit https://www.cis.upenn.edu/~treebank/
+The data for this example is already contained in the folder PennTreebank/Data/.
 
 ### Setup
 
