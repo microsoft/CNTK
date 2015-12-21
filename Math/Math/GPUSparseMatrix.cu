@@ -137,11 +137,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_elemSizeAllocated, deepCopy.m_format, true, false);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
         m_sliceViewOffset = 0; // reset to zero as we only start copying starting from the offset in the source matrix
 
-        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
@@ -1062,6 +1062,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+                if (do_sync)    CUDA_CALL(cudaDeviceSynchronize());
             }
             else
             {
@@ -1937,6 +1938,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    bool GPUSparseMatrix<ElemType>::IsValid() const
+    {
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        PrepareDevice();
+        long *res = new long[3];
+        res[0] = 1;
+        res[1] = 0;
+        res[2] = 0;
+        long *d_res = nullptr;
+        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 3));
+        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 3, cudaMemcpyHostToDevice));
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / threadsPerBlock);
+        _isValid<ElemType> << <blocksPerGrid, threadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
+        fprintf(stderr, "[DEBUG] Rows=%d Cols=%d NZ=%d res[0]=%d res[1]=%d res[2]=%d\n", GetNumRows(), GetNumCols(), GetNumElemAllocated(), res[0], res[1], res[2]);
+        if (res[0] == 1)
+            return true;
+        else
+            return false;
+    }
+
+    template<class ElemType>
     bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, 
         const ElemType threshold)
     {
@@ -1957,9 +1989,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int blocksPerGrid =(int)ceil(1.0*a.GetNumNZElements()/threadsPerBlock); 
         _areEqual<ElemType><<<blocksPerGrid,threadsPerBlock>>>(a.NzValues(),b.NzValues(),(CUDA_LONG)a.GetNumNZElements(),threshold,d_res);        
-        _areEqual<int><<<blocksPerGrid,threadsPerBlock>>>(a.ColLocation(),b.ColLocation(),(CUDA_LONG)a.GetNumNZElements(),(int)threshold,d_res+1);
-        blocksPerGrid =(int)ceil((1.0*a.GetNumRows()+1.0)/threadsPerBlock); 
-        _areEqual<int><<<blocksPerGrid,threadsPerBlock>>>(a.RowLocation(),b.RowLocation(),(CUDA_LONG)a.GetNumRows()+1,(int)threshold,d_res+2);
+        _areEqual<int> << <blocksPerGrid, threadsPerBlock >> >(a.MajorIndexLocation(), b.MajorIndexLocation(), (CUDA_LONG)a.GetNumNZElements(), (int)threshold, d_res + 1);
+        blocksPerGrid = (int)ceil((1.0*a.SecondaryIndexSize() + 1.0) / threadsPerBlock);
+        _areEqual<int> << <blocksPerGrid, threadsPerBlock >> >(a.SecondaryIndexLocation(), b.SecondaryIndexLocation(), (CUDA_LONG)a.GetNumRows() + 1, (int)threshold, d_res + 2);
 
         CUDA_CALL(cudaMemcpy(res,d_res,sizeof(long)*3,cudaMemcpyDeviceToHost));        
         if (res[0]*res[1]*res[2]==1)

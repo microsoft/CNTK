@@ -353,7 +353,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
-        
+
+        bool IsValid() const;
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
         static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);

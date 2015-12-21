@@ -3138,6 +3138,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    bool Matrix<ElemType>::IsValid() const
+    {
+        if (m_currentDataLocation == CurrentDataLocation::GPU && GetMatrixType() == MatrixType::SPARSE)
+        {
+            return this->m_GPUSparseMatrix->IsValid();
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return false;
+    }
+
+    template<class ElemType>
     bool Matrix<ElemType>::IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
     {
         return AreEqual(*this, a, threshold);
