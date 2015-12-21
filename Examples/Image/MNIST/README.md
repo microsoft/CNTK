@@ -4,10 +4,10 @@
 
 |Data:     |The MNIST database (http://yann.lecun.com/exdb/mnist/) of handwritten digits.
 |:---------|:---
-|Purpose:  |This example demonstrates usage of the NDL (Network Description Language) to define networks.
-|Network:  |NDLNetworkBuilder, simple feed forward and convolutional networks, cross entropy with softmax.
-|Training: |Stochastic gradient descent both with and without momentum.
-|Comments: |There are two config files, details are provided below.
+|Purpose   |This example demonstrates usage of the NDL (Network Description Language) to define networks.
+|Network   |NDLNetworkBuilder, simple feed forward and convolutional networks, cross entropy with softmax.
+|Training  |Stochastic gradient descent both with and without momentum.
+|Comments  |There are two config files, details are provided below.
 
 ## Running the example
 

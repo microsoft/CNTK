@@ -1,0 +1,11 @@
+dataDir: ../../../../../../Examples/Other/Simple2d/Data
+
+tags:
+     # TODO: create new leg for Example-related e2e tests?
+     - examples (flavor=='debug') & (device=='cpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+
