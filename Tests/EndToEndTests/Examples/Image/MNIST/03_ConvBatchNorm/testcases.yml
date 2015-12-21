@@ -1,0 +1,11 @@
+dataDir: ../../../../Image/Data
+
+tags:
+     # TODO: create new leg for Example-related e2e tests?
+     - examples (flavor=='debug')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - ^COMPLETED
+

@@ -10,11 +10,11 @@
 #
 # ---- Adding the tests: -------
 # File system organization:
-#   Each test suite (e.g. Speech) has its own directory inside Tests
+#   Each test suite (e.g. Speech) has its own directory inside EndToEndTests
 #   Each test (e.g. QuickE2E) has its own directory within test suite
 #
 # Each test directory has a following components:
-#    - testcases.yml - main test confuguration file, whcih defines all test cases
+#    - testcases.yml - main test configuration file, which defines all test cases
 #    - run-test - (run-test) script
 #    - baseline*.txt - baseline files whith a captured expected output of run-test script
 #
@@ -40,7 +40,7 @@
 #   .....
 #
 # ----- pattern language --------
-# Multpile patterns of the same testcase are matching a *single* line of text
+# Multiple patterns of the same testcase are matching a *single* line of text
 # Pattern is essentiually a substring which has to be found in a line
 # if pattern starts with ^ then matching is constrained to look only at the beginning of the line
 #
@@ -544,6 +544,8 @@ def runCommand(args):
   if len(args.test) > 0:
      testsToRun = []
      for name in args.test:
+       if name[len(name)-1] == '/':
+         name = name[:-1]
        if name.lower() in Test.allTestsIndexedByFullName:
          testsToRun.append(Test.allTestsIndexedByFullName[name.lower()])
        else:

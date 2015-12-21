@@ -7,6 +7,8 @@ The data uses the format required by the HTKMLFReader. For details please refer 
 The [AN4 dataset](http://www.speech.cs.cmu.edu/databases/an4) is a part of CMU audio databases. 
 This modified version of dataset is distributed under the terms of a AN4 license which can be found in 'AdditionalFiles/AN4.LICENSE.html'
 
+See License.md in the root level folder of the CNTK repository for full license information.
+
 ## Overview
 
 |Data:     |Speech data from the CMU Audio Database aka AN4 (http://www.speech.cs.cmu.edu/databases/an4)
