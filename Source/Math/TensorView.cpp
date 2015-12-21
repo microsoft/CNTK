@@ -73,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
         size_t dims = 0;
         for (size_t i = 0; i < N; i++)
-            if (dims < shapes[i].GetNumDims())
-                dims = shapes[i].GetNumDims();
+            if (dims < shapes[i].GetRank())
+                dims = shapes[i].GetRank();
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].Pad(dims);
 
