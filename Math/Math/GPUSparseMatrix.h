@@ -239,6 +239,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ConvertToSparseFormat(MatrixFormat newFormat);
         void ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const;
 
+        bool IsValid() const;
+
     public:
         GPUSparseMatrix<ElemType>& ElementInverse ();
         GPUSparseMatrix<ElemType>& AssignElementInverseOf (const GPUSparseMatrix<ElemType>& a);

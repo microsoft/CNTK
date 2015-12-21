@@ -1250,7 +1250,7 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     size_t nz)
 {
     CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (N >= nz)
+    if (N >= nz || N < aColCSCIndex[0])
         return;
 
     size_t col;
@@ -1273,9 +1273,6 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     // compute index for the a and b/c tensors
     size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
 
-    cColCSCIndex[col] = aColCSCIndex[col];
-    cColCSCIndex[col + 1] = aColCSCIndex[col + 1];
-
     int rowIdx = start;
     for (size_t na_i = start; na_i < end; na_i++)
     {
@@ -1295,6 +1292,14 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
 
     cnzValues[rowIdx] = anzValues[N];
     cRowIndex[rowIdx] = nc;
+
+    if (N == nz - 1)
+    {
+        for (int i = 0; i <= T; i++)
+        {
+            cColCSCIndex[i] = aColCSCIndex[i];
+        }
+    }
 }
 
 template<class ElemType>
@@ -2707,25 +2712,70 @@ __global__ void _sparseCSRElemMulDense(
     }
 }
 
+template<class ElemType>
+__global__ void _isValid(
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int rows,
+    const int cols,
+    const int nz,
+    long* d_res
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    int start = colCSCIndex[id];
+    int end = colCSCIndex[id + 1];
+    d_res[0] = 1;
+
+    if (start > end)
+    {
+        d_res[0] = -1;
+        d_res[1] = id;
+        d_res[2] = start;
+    }
+    else if (end > nz)
+    {
+        d_res[0] = -2;
+        d_res[1] = end;
+        d_res[2] = nz;
+    }
+    else
+    {
+        for (int j = start; j < end; j++)  //j points to the value
+        {
+            if (rowIndex[j] >= rows)
+            {
+                d_res[0] = -3;
+                d_res[1] = rowIndex[j];
+                d_res[2] = rows;
+                break;
+            }
+        }
+    }
+}
+
 
 //c = alpha * op(a) * op(b) + beta*c
 // TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    int m,                  // rowDense
-    int k,                  // colDense
-    int n,                  // colSparse
-    int numChannels,        // input num channels
-    int numSteps,           // convolution num steps
-    int horizontalSubsample,// convolution step size
-    bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
-    ElemType alpha,
+    const int m,                  // rowDense
+    const int k,                  // colDense
+    const int n,                  // colSparse
+    const int numChannels,        // input num channels
+    const int numSteps,           // convolution num steps
+    const int horizontalSubsample,// convolution step size
+    const bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
+    const ElemType alpha,
     const ElemType* a,      //dense
-    bool transposeA,
+    const bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType beta,
+    const ElemType beta,
     ElemType* c  //dense target
     )
 {
@@ -2850,7 +2900,7 @@ __global__ void _reshape(
     int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
 
     // initialize to the end and then scan in the right direction in the for-loop
-    int currentColStart = oldColumnIndex[oldNumCols];
+    int currentColStart = oldColumnIndex[min(oldColUpper, oldNumCols)];
 
     for (int oldCol = oldColLower; oldCol <= min(oldColUpper, oldNumCols); oldCol++)
     {
@@ -2864,7 +2914,8 @@ __global__ void _reshape(
             int newCol = index / newNumRows;
             int newRow = index % newNumRows;
 
-            newRowIndex[j] = newRow;
+            if (newCol == currentCol)
+                newRowIndex[j] = newRow;
 
             if (newCol >= currentCol && currentColStart > j)
                 currentColStart = j;
