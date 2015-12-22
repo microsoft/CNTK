@@ -295,6 +295,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
+        // Currently called from:
+        //  - Validate()   --intended
+        //  - LearnableParameterNode (init, load)
+        //  - InputValue (init, load)
+        //  - DelayedValueNodeBase (Init())
+        // only changes col dim:
+        //  - ResizeAllFeatureNodes()
+        // use a different name for these:
+        //  - ReshapeNode::UpdateFunctionMBSize()    --??
+        //  - various unit tests
+        //  - ComputationNetwork::FixupInputMinibatchSize()
+        //  - TimeReverseNode (first step--deprecate and/or move to UpdateMB... function)
+        //  - StrideTimesNode
+        //  - PairNetworkNode
+        //  - LSTMNode
+        //  - MultiNetworks-
         void SetDims(size_t rows, size_t cols)
         {
             m_numRows = rows;
@@ -302,6 +318,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // actual memory allocation happens elsewhere
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
+        void SetDims(const TensorShape & sampleLayout, size_t cols)
+        {
+            m_sampleLayout = sampleLayout;
+            m_numRows = m_sampleLayout.GetNumElements();
+            m_numCols = cols;
+        }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
         {
@@ -470,9 +492,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
-                    if (IsInputAnImage(i))  //image
+                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout.GetWidth() != 1 || child->m_sampleLayout.GetNumChannels() != 1))  // looks like an image: use WHC notation
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
                                 child->m_sampleLayout.GetWidth(), child->m_sampleLayout.GetHeight(), child->m_sampleLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
+                    else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
+                        fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
@@ -513,9 +537,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
 
+        // TODO: Remove this.
+        // used from:
+        //  - Plus/Minus/ElementTimesNode --> replace by max dim over inputs. Make this standard behavior for all binary element-wise ops.
         bool IsInputAnImage(const size_t index) const
         {
-            return m_inputs[index]->m_sampleLayout.GetWidth() != 1 || m_inputs[index]->m_sampleLayout.GetNumChannels() != 1;
+            return m_inputs[index]->m_sampleLayout.IsInputAnImage();
         }
 
         const TensorShape & GetImageLayout() const { return m_sampleLayout; }

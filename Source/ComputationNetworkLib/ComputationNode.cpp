@@ -148,8 +148,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
     TensorShape ComputationNodeBase::GetSampleShape() const
     {
-        // TODO: use actual ImageLayout. While those are not yet inferred properly, maybe use it if its dims match numRows?
-        if (HasMBLayout())                        // if we have a layout, that dimension is not part of the sample shape
+        // BUGBUG: sample layouts are not fully consistent (are they?), so we only use them if plausible
+        bool layoutPlausible = true;
+        // some code initializes it to 0 or SIZE_MAX
+        for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
+        {
+            if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
+                layoutPlausible = false;
+        }
+        // some code initializes it to (1,1,rowDim)
+        if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
+            layoutPlausible = false;
+        // check dimension
+        if (m_numRows != m_sampleLayout.GetNumElements())
+            layoutPlausible = false;
+        if (layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
+            return m_sampleLayout;
+        else if (HasMBLayout())                     // if we have a layout, that dimension is not part of the sample shape
+            return TensorShape(GetNumRows());
+        else if (GetNumCols() == 1)                 // 1-column matrix is a vector
             return TensorShape(GetNumRows());
         else
             return TensorShape(GetNumRows(), GetNumCols());
