@@ -26,7 +26,7 @@
 #include <sstream>
 #include <iostream>
 
-#define ENABLE_TENSORVIEW   // flip this switch once it is confirmed to be working
+// #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
 
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1

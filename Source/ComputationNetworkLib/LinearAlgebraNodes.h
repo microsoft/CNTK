@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoSumOf(0.0f, input0, input1, 1.0f);
 #else
-            Matrix<ElemType> functionValues = ValueForToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
