@@ -44,7 +44,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
 #ifdef ENABLE_TENSORVIEW
-            fprintf(stderr, "!");
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient = GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -124,9 +123,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
 #ifdef ENABLE_TENSORVIEW
-            // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats  --TODO: This is a stopgap
-            ValueForToDense(fr, false);
-
             size_t rank = DetermineElementwiseTensorRank();
             auto result = ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -216,6 +212,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+            ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
+#ifdef ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+
+            if (sign > 0)
+                inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
+            else
+                inputGradient.DoDifferenceOf(0.0f, inputGradient, gradient, 1.0f);
+#else
             Matrix<ElemType> gradientValues = GradientFor(fr);
 
             Matrix<ElemType> childGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
@@ -223,7 +234,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
             size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
 
-            ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
             if (colsc == colsp && rowsc == rowsp)                   // matching dimensions
             {
                 // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
@@ -252,10 +262,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+#endif
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
+#ifdef ENABLE_TENSORVIEW
+            fprintf(stderr,"#MINUS#");
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoDifferenceOf(0.0f, input0, input1, 1.0f);
+#else
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
@@ -280,6 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+#endif
         }
     };
 
@@ -680,12 +700,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
+#ifdef ENABLE_TENSORVIEW
+            fprintf(stderr, "#ETIMESS#");
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+#else
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
+#endif
         }
     };
 

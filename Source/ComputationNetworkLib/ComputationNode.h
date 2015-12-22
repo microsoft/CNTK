@@ -1163,13 +1163,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MaskMissingGradientColumnsToZero(fr);
             return GradientFor(fr);
         }
-        // special version that converts a sparse matrix as dense
-        // TODO: Is this the right thing to do? It changes the matrix type in-place.
-        Matrix<ElemType> ValueForToDense(const FrameRange & fr/*select frame or entire batch*/, bool keepValuesOnSwitch)
-        {
-            Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
-            return ValueFor(fr);
-        }
         // tensor variants
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
@@ -1551,7 +1544,7 @@ protected: \
     using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::ValueFor; using Base::ValueForToDense; using Base::Gradient; using Base::GradientFor; \
+    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
     using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
@@ -1625,6 +1618,14 @@ protected:    /* some boilerplate goes here */ \
             // the gradients of its input nodes
             UNREFERENCED_PARAMETER(childIndex);
             return false;
+        }
+
+        virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
+        {
+            Base::BeginForwardProp();
+            // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            // TODO: This is a stopgap. Is this the right thing to do? It changes the matrix type in-place.
+            Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
