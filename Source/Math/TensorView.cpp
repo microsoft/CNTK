@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t k = 0; k < dims; k++)
             for (size_t i = 0; i < N; i++)
                 if (!Matches(shapes[i][k], opDims[k]))
-                    InvalidArgument("Binary tensor operation: Dimension %d is incompatible between input %d and output (%s vs. %s)", (int)k, (int)shapes[i][k], string(shapes[i]).c_str(), string(TensorShape(opDims)).c_str());
+                    InvalidArgument("Binary tensor operation: Dimension %d of input [%d] is incompatible with operation dimensions (%s vs. %s)", (int)k, (int)i, string(shapes[i]).c_str(), string(TensorShape(opDims)).c_str());
 
         // flatten consecutive dimensions
         // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
