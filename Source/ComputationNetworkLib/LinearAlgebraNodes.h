@@ -671,6 +671,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ElementTimesNode (factor1, factor2)
+    //
+    // This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -686,6 +688,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#ifdef ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            // depending on inputIndex, inputs swap their meaning
+            // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
+            // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+            if (Input(1 - inputIndex)->GetNumCols() < GetNumCols())
+                Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+#else
             Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1-inputIndex)->ValueFor(fr);
@@ -694,9 +713,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
             // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
+#endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return true; }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
