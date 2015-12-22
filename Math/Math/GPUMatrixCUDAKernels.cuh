@@ -2733,8 +2733,8 @@ __global__ void _isValid(
     if (start > end)
     {
         d_res[0] = -1;
-        d_res[1] = id;
-        d_res[2] = start;
+        d_res[1] = start;
+        d_res[2] = end;
     }
     else if (end > nz)
     {
@@ -2746,7 +2746,7 @@ __global__ void _isValid(
     {
         for (int j = start; j < end; j++)  //j points to the value
         {
-            if (rowIndex[j] >= rows)
+            if (rowIndex[j] > rows)
             {
                 d_res[0] = -3;
                 d_res[1] = rowIndex[j];
@@ -2757,6 +2757,18 @@ __global__ void _isValid(
     }
 }
 
+template<class ElemType>
+__global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
+    GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int cols
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
+}
 
 //c = alpha * op(a) * op(b) + beta*c
 // TODO: This function can be further improved by loading the kernel in shared memory
@@ -2897,15 +2909,15 @@ __global__ void _reshape(
 
     int currentCol = id;
     int oldColLower = (newNumRows * currentCol) / oldNumRows;
-    int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
 
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
 
-    for (int oldCol = oldColLower; oldCol <= min(oldColUpper, oldNumCols); oldCol++)
+    for (int oldCol = oldColLower; oldCol <= oldNumCols; oldCol++)
     {
         int start = oldColumnIndex[oldCol];
         int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+        bool done = false;
 
         for (int j = start; j < end; j++)  //j points to the value
         {
@@ -2919,7 +2931,16 @@ __global__ void _reshape(
 
             if (newCol >= currentCol && currentColStart > j)
                 currentColStart = j;
+
+            if (newCol > currentCol)
+            {
+                done = true;
+                break;
+            }
         }
+
+        if (done)
+            break;
     }
 
     newColumnIndex[currentCol] = currentColStart;

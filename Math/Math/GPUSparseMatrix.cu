@@ -137,13 +137,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumElemAllocated(), deepCopy.m_format, true, false);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
         m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
-        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
-        CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocationWithSliceViewOffset(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
+
+        if (deepCopy.m_sliceViewOffset > 0)
+        {
+            int blocksPerGrid = (int)ceil(1.0*SecondaryIndexCount() / threadsPerBlock);
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
+                SecondaryIndexLocation(),
+                SecondaryIndexCount()
+                );
+
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
 
         m_externalBuffer = false;
         SetMatrixName(deepCopy.m_matrixName);
@@ -1960,7 +1975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
         CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
-        fprintf(stderr, "[DEBUG] Rows=%d Cols=%d NZ=%d res[0]=%d res[1]=%d res[2]=%d\n", GetNumRows(), GetNumCols(), GetNumElemAllocated(), res[0], res[1], res[2]);
+        
         if (res[0] == 1)
             return true;
         else
