@@ -40,12 +40,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
+            m_valueSharable = false; 
             m_sampleLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
+            m_valueSharable = false; 
             m_sampleLayout = ImageLayoutWHC(1, rows, 1);
             // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
             CreateMatrixIfNull(m_value); 
@@ -236,12 +238,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
+            CreateMatrixIfNull(m_value);
             if (isSparse)
                 ConvertToSparseMatrix();
 
             SetDims(rows, cols);
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
+            m_valueSharable = false; 
         }
     protected:
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
