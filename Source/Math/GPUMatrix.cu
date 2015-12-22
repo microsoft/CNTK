@@ -4533,7 +4533,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         static __device__ ElemType Compute(const FixedArray<ElemType*, 2> & pointers, ElementWiseOperator op)
         {
-#define CaseUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(*(pointers[0]))
+            ElemType a = *(pointers[0]);
+#define CaseUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a)
             switch (op)
             {
             ForAllUnaryOps(CaseUnaryTensorOp);
@@ -4542,7 +4543,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         static __device__ ElemType Compute(const FixedArray<ElemType*, 3> & pointers, ElementWiseOperator op)
         {
-#define CaseBinaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(*(pointers[0]), *(pointers[1]))
+            ElemType a = *(pointers[0]);
+            ElemType b = *(pointers[1]);
+#define CaseBinaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a,b)
             switch (op)
             {
             ForAllBinaryOps(CaseBinaryTensorOp);
@@ -4551,7 +4554,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         static __device__ ElemType Compute(const FixedArray<ElemType*, 4> & pointers, ElementWiseOperator op)
         {
-#define CaseTernaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(*(pointers[0]), *(pointers[1]), *(pointers[2]))
+            ElemType a = *(pointers[0]);
+            ElemType b = *(pointers[1]);
+            ElemType c = *(pointers[2]);
+#define CaseTernaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a,b,c)
             switch (op)
             {
             ForAllTernaryOps(CaseTernaryTensorOp);
@@ -4606,6 +4612,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // perform loop over regular index k for N-nary operations (N counting the output)
     // -----------------------------------------------------------------------
 
+    // The canonical case, vector op without reduction, is this PTX function:
+    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLy3ELi1ELi0EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IjXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IjXT1_EEENS9_IiXT0_EXT1_EEEi
+    //                                   float ^      ^ aggregate loop
+    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLy3ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IjXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IjXT1_EEENS9_IiXT0_EXT1_EEEi
+    //                                                    ^ input dims
+    // I see:
+    //  - size_t causes sign extend operations
+
     // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
     template<class ElemType, size_t N, int M, int K, int k>
     struct TensorOpElement
@@ -4624,6 +4638,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pointers[i] += index * regularStrides(i,(size_t)k);    // now this dimension is taken care of
             // process the previous index
             TensorOpElement<ElemType, N, M, K, k - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
+        }
+    };
+
+    // specialization for k=0 where stride is guaranteed to be 1
+    template<class ElemType, size_t N, int M, int K>
+    struct TensorOpElement<ElemType, N, M, K, /*k=*/0>
+    {
+        // template-recursive version loops over indices
+        static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
+                                       const FixedArray<unsigned int, K> & regularOpStrides,  const FixedMatrix<int, N, K> & regularStrides,
+                                       const FixedArray<unsigned int, M> & reducingOpDims, const FixedMatrix<int, N, M> & reducingStrides)
+        {
+            // map id (location on grid) to index[k]
+            size_t stride = regularOpStrides[(size_t)k];
+            size_t index = id;                      // this dimension
+            // apply this index to the pointers
+            for (size_t i = 0; i < N; i++)
+                pointers[i] += index * regularStrides(i,(size_t)k);    // now this dimension is taken care of
+            // process the previous index
+            TensorOpElement<ElemType, N, M, K, -1>::Compute(/*id*/0, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
         }
     };
 
