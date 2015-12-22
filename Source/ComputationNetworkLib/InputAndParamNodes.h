@@ -298,8 +298,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // some older files may have inconsistent tensor information
             if (rows != sampleLayout.GetNumElements())
             {
-                fprintf(stderr, "WARNING: %ls %ls operation has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
-                        NodeName().c_str(), OperationName().c_str(), string(sampleLayout).c_str(), (int)rows);
+                fprintf(stderr, "WARNING: %ls InputValue has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
+                        NodeName().c_str(), string(sampleLayout).c_str(), (int)rows);
                 sampleLayout = TensorShape(rows);
             }
             Init(sampleLayout, cols, m_isSparse);
