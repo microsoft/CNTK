@@ -1433,6 +1433,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         }
+
+		//request matrices needed to do node function value evaluation
+		virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+		{
+			Base::ReleaseMatricesAfterForwardProp(matrixPool);
+			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+		}
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticepair>> * getLatticePtr()
         {
@@ -1671,7 +1680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		/**
 		compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
 		*/
-		virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+		virtual void BackpropToNonLooping(size_t inputIndex) override
 		{
 			//auto t_start_time = Timer::MilliSecondElapsed();
 			if (inputIndex > 2)
@@ -1680,14 +1689,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			//left Node must be a scalar
 			if (inputIndex == 0)  //left derivative
 			{
-				ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+				BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
 			}
 			else if (inputIndex == 1)
 			{
-				FrameRange frameRange(Inputs(0)->GetMBLayout());
-				ComputeInputPartialRight(*m_softmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues(), *m_CTCposterior);
+				FrameRange frameRange(Input(0)->GetMBLayout());
+				BackpropToRight(*m_softmaxOfRight, Input(inputIndex)->Gradient(), Gradient(), *m_CTCposterior);
 				//MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues(), Inputs(0)->GetMBLayout(), frameRange);
-                Inputs(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
+                Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
 			}
 			else
 				throw std::runtime_error("CTCwithSoftmaxNode criterion only takes with respect to label, DNN output.");
@@ -1696,7 +1705,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			//m_partialtime += (t_end_time - t_start_time);
 		}
 
-		void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+		void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
 			const Matrix<ElemType>& gradientValues)
 		{
 #if DUMPOUTPUT
@@ -1713,7 +1722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		}
 
-		void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+		void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
 			const Matrix<ElemType> &CTCposterior)
 		{
 #if DUMPOUTPUT
@@ -1730,19 +1739,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 		}
 
-		virtual void EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
+		virtual void ForwardPropNonLooping() override   //-sum(left_i * log(softmax_i(right)))
 		{
 
-			m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues(), true);
+			m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value(), true);
 			m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
 			m_softmaxOfRight->InplaceExp();
 
 		
-			size_t sequenceNum = Inputs(1)->GetNumParallelSequences();
+			size_t sequenceNum = Input(1)->GetNumParallelSequences();
 			m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
 			m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-			m_GammaCal.doCTC(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
+			m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
             //m_GammaCal.doCTC_m(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap);
 			//m_CTCposterior->Print("posterior");
 
@@ -1767,7 +1776,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		{
 			InferImageDimsFromInput(0, false);
 
-			m_imageLayout = ImageLayout();
+			m_sampleLayout = TensorShape();
 		}
 
 
@@ -1789,12 +1798,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 		//request matrices needed to do node function value evaluation
-		virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+		virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
 		{
-			Base::RequestMatricesBeforeEval(matrixPool);
+			Base::RequestMatricesBeforeForwardProp(matrixPool);
 			RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
 			RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
 			RequestMatrixFromPool(m_CTCposterior, matrixPool);
+		}
+
+		virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+		{
+			Base::ReleaseMatricesAfterForwardProp(matrixPool);
+			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_CTCposterior, matrixPool);
 		}
 
 		std::vector<size_t> * getboundaryprt()

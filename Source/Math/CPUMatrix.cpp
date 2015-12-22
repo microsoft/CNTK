@@ -5266,8 +5266,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	{
 		if (isColWise)
 		{
-			alpha.SetValue(CNLOGZERO);
-			beta.SetValue(CNLOGZERO);
+			alpha.SetValue(LZERO);
+			beta.SetValue(LZERO);
 			auto &us = *this;
 			int s, s2;
 			size_t senoneid, t;
@@ -5284,14 +5284,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					senoneid = phoneseq[s];
 					alpha(s, 0) = prob(senoneid, 0);
 				}
-				alpha(senonenum - 1, 0) = CNLOGZERO;
+				alpha(senonenum - 1, 0) = LZERO;
 				//initialize beta
 				for (s = senonenum - 3; s< senonenum - 1; s++)
 				{
 					senoneid = phoneseq[s];
 					beta(s, framenum - 1) = prob(senoneid, framenum - 1);
 				}
-				beta(senonenum - 1, framenum - 1) = CNLOGZERO;
+				beta(senonenum - 1, framenum - 1) = LZERO;
 
 				//cal alpha
 				for (t = 1; t< framenum; t++)
@@ -5299,20 +5299,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					for (s = 1; s< senonenum - 1; s++)
 					{
 						senoneid = phoneseq[s];
-						x = CNLOGZERO;
+						x = LZERO;
 						for (s2 = s - 1; s2 <= s; s2++)
 						{
 							if (s2 > 0)
 							{
 								y = alpha(s2, t - 1);
-								x = logadd(x, y);
+								x = LogAddD(x, y);
 							}
 						}
 
 						if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != phoneseq[s - 2])
 						{
 							y = alpha(s - 2, t - 1);
-							x = logadd(x, y);
+							x = LogAddD(x, y);
 						}
 						if (senoneid != 65535)
 							ascore = prob(senoneid, t);
@@ -5323,11 +5323,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 				}
 				//exit senone
-				x = CNLOGZERO;
+				x = LZERO;
 				for (s2 = senonenum - 3; s2< senonenum - 1; s2++)
 				{
 					y = alpha(s2, framenum - 1);
-					x = logadd(x, y);
+					x = LogAddD(x, y);
 				}
 				alpha(senonenum - 1, framenum - 1) = (float)x;
 
@@ -5344,19 +5344,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					for (s = 1; s< senonenum - 1; s++)
 					{
 						senoneid = phoneseq[s];
-						x = CNLOGZERO;
+						x = LZERO;
 						for (s2 = s; s2 <= s + 1; s2++)
 						{
 							if (s2 < senonenum - 1)
 							{
 								y = beta(s2, t + 1);
-								x = logadd(x, y);
+								x = LogAddD(x, y);
 							}
 						}
 						if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != phoneseq[s + 2])
 						{
 							y = beta(s + 2, t + 1);
-							x = logadd(x, y);
+							x = LogAddD(x, y);
 						}
 
 						if (senoneid != 65535)
@@ -5370,11 +5370,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						break;
 				}
 				//entry senone
-				x = CNLOGZERO;
+				x = LZERO;
 				for (s2 = 1; s2<3; s2++)
 				{
 					y = beta(s2, 0);
-					x = logadd(x, y);
+					x = LogAddD(x, y);
 				}
 				beta(0, 0) = (float)x;
 				//beta.dump("beta");
@@ -5386,7 +5386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				for (t = 0; t< framenum; t++)
 				{
 					//cal zt
-					double Zt = CNLOGZERO;
+					double Zt = LZERO;
 					/*double Ct = LOGZERO;
 					double Dt = LOGZERO;
 					int alphaT = senonenum - 2 * framenum +  2 * t - 1;
@@ -5402,7 +5402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					for (s = 1; s < senonenum - 1; s++)
 					{
 						senoneid = phoneseq[s];
-						Zt = logadd(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+						Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
 
 						//- (float)Ct - (float)Dt
 
@@ -5462,7 +5462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         diff = y - x; 
 		if (diff < cnminLogExp)
         {
-			return (x < LSMALL) ? CNLOGZERO : x;
+			return (x < LSMALL) ? LZERO : x;
         }
         else
         {

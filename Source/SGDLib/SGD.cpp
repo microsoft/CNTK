@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
 
 
-		m_blankNum = configSGD(L"blankNum", (size_t)1);
+	
         // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
         std::vector<ComputationNodeBasePtr> evaluationNodes;
         {
@@ -192,6 +192,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto  hmm = node->gethmm();
             trainSetDataReader->GetHmmData(hmm);
         }
+
+		bool isCTCTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
+		if (isCTCTrainingCriterion)
+		{
+			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+			auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
+			auto  hmm = node->gethmm();
+			trainSetDataReader->GetHmmData(hmm);
+		}
+
 
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
@@ -307,7 +317,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
         }
-
+		if (isCTCTrainingCriterion)
+		{
+			ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum);
+		}
         // --- MAIN EPOCH LOOP
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
@@ -704,17 +717,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int numSamplesLastMBs = 0;
         std::vector<double> epochEvalErrorsLastMBs(epochEvalErrors.size(), 0);
 
-
-		bool isCTCTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
-        if (isCTCTrainingCriterion)
-		{
-			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
-			auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
-            auto  hmm = node->gethmm();
-            trainSetDataReader->GetHmmData(hmm);
-        }
-
-
         // initialize statistics
         size_t totalEpochSamples = 0;
 
@@ -834,13 +836,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))   // in case of distributed reading, we do a few more loops until all ranks have completed
                 break;  // end of epoch
 
-
-        // likewise for sequence training parameters
-        if (isSequenceTrainingCriterion)
-        {
-            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
-        }
-		ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum);
 
             // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
             // Must not touch them.
@@ -2533,6 +2528,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
         m_frameDropThresh =  configSGD(L"frameDropThresh",  1e-10);
         m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
+
+		//CTC parameter
+		m_blankNum = configSGD(L"blankNum", (size_t)1);
 
         m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 

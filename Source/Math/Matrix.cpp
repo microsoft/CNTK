@@ -5190,9 +5190,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			beta.Resize(phoneseq.size(), framenum);
 		}
 
-		alpha.SetValue(CNLOGZERO);
-		beta.SetValue(CNLOGZERO);
-		SetValue(CNLOGZERO);
+		alpha.SetValue(LZERO);
+		beta.SetValue(LZERO);
+		SetValue(LZERO);
 		SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
 
 
@@ -5238,9 +5238,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			Resize(prob.GetNumRows(), prob.GetNumCols());
 		}
 
-		alpha.SetValue(CNLOGZERO);
-		beta.SetValue(CNLOGZERO);
-		SetValue(CNLOGZERO);
+		alpha.SetValue(LZERO);
+		beta.SetValue(LZERO);
+		SetValue(LZERO);
 		SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
 
 

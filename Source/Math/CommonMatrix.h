@@ -34,6 +34,8 @@
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
+#define cnminLogExp -69
+
 /*<<<<<<< HEAD:Math/Math/CommonMatrix.h
 #define cnminLogExp -69
 #define CNLOGZERO -1e30
