@@ -560,22 +560,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VGG", "VGG", "{BC0D6DFF-80C
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{CCD56F12-BA17-4753-B5EE-4995FE682995}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{CCD56F12-BA17-4753-B5EE-4995FE682995}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple2d", "Simple2d", "{D2A060F1-128E-42A1-A0D0-3E3E1DFBC427}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Miscellaneous\Simple2d\README.md = Examples\Miscellaneous\Simple2d\README.md
+		Examples\Other\Simple2d\README.md = Examples\Other\Simple2d\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples", "{FC573A62-6DAE-40A4-8153-520C8571A007}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Miscellaneous\NdlExamples\NDLExamples.ndl = Examples\Miscellaneous\NdlExamples\NDLExamples.ndl
+		Examples\Other\NdlExamples\NDLExamples.ndl = Examples\Other\NdlExamples\NDLExamples.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{1E37CE40-556D-4693-B58C-F8D4CE349BB7}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Miscellaneous\Simple2d\Config\Multigpu.config = Examples\Miscellaneous\Simple2d\Config\Multigpu.config
-		Examples\Miscellaneous\Simple2d\Config\Simple.config = Examples\Miscellaneous\Simple2d\Config\Simple.config
+		Examples\Other\Simple2d\Config\Multigpu.config = Examples\Other\Simple2d\Config\Multigpu.config
+		Examples\Other\Simple2d\Config\Simple.config = Examples\Other\Simple2d\Config\Simple.config
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{BF1A621D-528B-4B84-AAFC-EF1455FC6830}"
