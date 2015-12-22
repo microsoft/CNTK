@@ -73,6 +73,9 @@
     <ClInclude Include="TensorOps.h">
       <Filter>Tensors</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\DataTensor.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

@@ -3742,9 +3742,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         a.PrepareDevice();
         cudaEvent_t done = nullptr;
-        int blocksPerGrid=1;  //only one element
+        int blocksPerGrid=1;  //only one element   --BUGBUG: then why not launch only 1 thread per block?
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _addElementToElement<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(a.m_pArray, (CUDA_LONG)a.LocateElement(ai, aj), c.m_pArray, (CUDA_LONG)c.LocateElement(ci, cj));
+        _addElementToElement<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock/*BUGBUG: should be 1?*/,0,t_stream>>>(a.m_pArray, (CUDA_LONG)a.LocateElement(ai, aj), c.m_pArray, (CUDA_LONG)c.LocateElement(ci, cj));
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));  
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
