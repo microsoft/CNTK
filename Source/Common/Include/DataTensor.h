@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape(      std::vector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
 
         // convenience constructors, e,g. for test code
-        TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
+        explicit TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
         TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
         TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
         TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }

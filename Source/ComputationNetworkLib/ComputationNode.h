@@ -335,10 +335,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
-        virtual void VerifyDimsMatch() const = 0;     // verify that m_value dimensions match ours
+        virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
 
+        const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
     protected:
-        TensorShape GetSampleShape() const;
+        // TODO: There are temporarily two confusing functions; either unify them, or name them better:
+        //  - GetSampleLayout() just reads out m_sampleLayout, which is the layout of matrix coluns
+        //  - GetSampleShape() makes up a sample layout in case of a bad m_sampleLayout, and includes columns in case of no MBLayout
+        TensorShape GetSampleShape() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
         TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
     public:

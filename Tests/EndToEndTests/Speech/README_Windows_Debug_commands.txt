@@ -45,6 +45,9 @@ COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\pu
 
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.config configName=02_Conv
 
+--- Image/QuickE2E:
+
+COMMAND:     configFile=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E\cntk.config  RunDir=$(SolutionDir)Tests\EndToEndTests\Image\_run  DataDir=$(SolutionDir)Tests\EndToEndTests\Image\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E  stderr=$(SolutionDir)Tests\EndToEndTests\RunDir\Image\QuickE2E\models\cntkImage.dnn.log  DeviceId=-1   makeMode=false
 
 Simple test
 -----------
