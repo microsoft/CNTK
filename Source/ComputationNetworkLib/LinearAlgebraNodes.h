@@ -5,6 +5,12 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "TensorView.h"
+#include "ComputationNode.h"
+#include "ConvolutionalNodes.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,12 +24,6 @@
 #include <sstream>
 #include <iostream>
 
-#include "Basics.h"
-#include "Matrix.h"
-#include "TensorView.h"
-#include "ComputationNode.h"
-#include "ConvolutionalNodes.h"
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
@@ -31,10 +31,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class PlusNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        using Base::ValueForToDense;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(PlusNode);
@@ -47,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef ENABLE_TENSORVIEW
             fprintf(stderr, "!");
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient      =                    GradientTensorFor(rank, fr);
+            auto gradient = GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
@@ -122,32 +121,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-#if DUMPOUTPUT
-            return true;
-#else
-            // The PlusNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-#endif
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The PlusNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
 #ifdef ENABLE_TENSORVIEW
-            size_t rank = DetermineElementwiseTensorRank();
             // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats  --TODO: This is a stopgap
             ValueForToDense(fr, false);
-            auto result =           ValueTensorFor(rank, fr);
+
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoSumOf(0.0f, input0, input1, 1.0f);
@@ -212,20 +193,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
 #endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: change to infer as maximum of the two
-            if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
         }
     };
 
