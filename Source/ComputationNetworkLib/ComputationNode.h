@@ -26,6 +26,8 @@
 #include <sstream>
 #include <iostream>
 
+#define ENABLE_TENSORVIEW   // flip this switch once it is confirmed to be working
+
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -1166,6 +1168,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
             return ValueFor(fr);
         }
+        // tensor variants
+        TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
+        {
+            return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
+        }
+        TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange & fr)
+        {
+            return TensorView<ElemType>(GradientFor(fr), GetTensorShape(rank, fr));
+        }
 
         // update the actual matrix allocation for m_value based on the node dimension
         void UpdateFunctionValuesSize()
@@ -1532,13 +1543,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // If you add new members to ComputationNode, please also add them here.
     // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
     // Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
-#define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
+#define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
     using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; using Base::MaskedValueFor; using Base::MaskedGradientFor; \
+    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
+    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
     using Base::m_inputSampleLayout; using Base::m_sampleLayout; \
