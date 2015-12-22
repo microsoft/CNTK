@@ -137,11 +137,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.m_format, true, false);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumElemAllocated(), deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
-        m_sliceViewOffset = 0; // reset to zero as we only start copying starting from the offset in the source matrix
+        m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
-        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
@@ -1062,7 +1062,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-                if (do_sync)    CUDA_CALL(cudaDeviceSynchronize());
             }
             else
             {
