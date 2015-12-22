@@ -29,26 +29,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // cast a matrix as a TensorView
     template<class ElemType>
     TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
-        m_sob(&sob), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
+        m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
     // reshape a TensorView
     template<class ElemType>
     TensorView<ElemType>::TensorView(const TensorView<ElemType> & other, const TensorShape & shape) :
-        m_sob(other.m_sob), m_shape(shape)
+        m_sob(other.m_sob.AsReference()), m_shape(shape)
     {
         // for now we enforce that tensor dimensions match dimensions of the underlying matrix storage object
         // This is for sanity checks. In the future, it may appropriate to reduce this check to just checking the total number of elements, to allow abuses.
         // TODO: Use the multipliers instead?
         size_t i;
         size_t rowDim = 1;
-        for (i = 0; i < m_shape.size() && rowDim < m_sob->GetNumRows(); i++)
+        for (i = 0; i < m_shape.size() && rowDim < m_sob.GetNumRows(); i++)
             rowDim *= m_shape[i];
         // first i dimensions match matrix row dimension
         size_t colDim = 1;
         for (; i < m_shape.size(); i++)
             colDim *= m_shape[i];
-        if (rowDim != m_sob->GetNumRows() || colDim != m_sob->GetNumCols())
-            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob->GetNumRows(), (int)m_sob->GetNumCols());
+        if (rowDim != m_sob.GetNumRows() || colDim != m_sob.GetNumCols())
+            LogicError("TensorView: Tensor dimensions %s do not match storage-object dims %d x %d", string(m_shape).c_str(), (int)m_sob.GetNumRows(), (int)m_sob.GetNumCols());
     }
 
     // -------------------------------------------------------------------
@@ -226,9 +226,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     /*static*/ void TensorView<ElemType>::Test()
     {
-        Matrix<ElemType> m1(-1);
-        Matrix<ElemType> m2(-1);
-        Matrix<ElemType> m3(-1);
+        const DEVICEID_TYPE deviceId = 0; // -1
+        Matrix<ElemType> m1(deviceId);
+        Matrix<ElemType> m2(deviceId);
+        Matrix<ElemType> m3(deviceId);
         {
             m1.SetValue(5, 3, { 1, 2, 3,
                                 14, 15, 6,

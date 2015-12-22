@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
             // allocate lookup tables (note: except at the start, these don't really allocate new memory most of the time)
-#if 1
+#if 0
             if ((m_distanceToStart.GetNumRows() != m_numParallelSequences || m_distanceToStart.GetNumCols() != m_numTimeSteps) && m_numTimeSteps > 0)   // sanity check for debugging a regression
                 fprintf(stderr, "MBLayout::Init: Resizing m_distanceToStart from %d x %d to %d x %d\n",
                         (int)m_distanceToStart.GetNumRows(), (int)m_distanceToStart.GetNumCols(), (int)m_numParallelSequences, (int)m_numTimeSteps); // (I really want to know about actual allocations, but this is a necessary condition for them)

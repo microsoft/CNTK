@@ -29,22 +29,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // cast a matrix storage object (SOB) as a TensorView (without shape change)
         TensorView(Matrix<ElemType> & sob);
         // reshape a TensorView
-        TensorView(const TensorView<ElemType> & sob, const TensorShape & shape);
+        TensorView(const TensorView<ElemType> & other, const TensorShape & shape);
         // reinterpret a SOB as a TensorView with a given TensorShape
         TensorView(Matrix<ElemType> & sob, const TensorShape & shape) :
             TensorView(TensorView(sob)/*cast as a TensorView*/, shape/*with a shape*/)
         { }
         // copy constructor
         TensorView(const TensorView<ElemType> & other) :
-            TensorView(*other.m_sob, other.m_shape)
+            m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
         { }
-
-        // -------------------------------------------------------------------
-        // accessors
-        // -------------------------------------------------------------------
-
-        Matrix<ElemType> & GetSOB() const { return *m_sob; }
-        const TensorShape & GetShape() const { return m_shape; }
 
         // -------------------------------------------------------------------
         // elementwise operations
@@ -62,11 +55,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ForAllUnaryOps(DeclareUnaryTensorOp);
         ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
-        //DeclareUnaryTensorOp(Copy);
-        //DeclareUnaryTensorOp(Negate); DeclareUnaryTensorOp(Not);
-        //DeclareUnaryTensorOp(Abs);
-        //DeclareUnaryTensorOp(Sigmoid); DeclareUnaryTensorOp(SigmoidDerivative); DeclareUnaryTensorOp(Tanh); DeclareUnaryTensorOp(Sqrt); DeclareUnaryTensorOp(Exp); DeclareUnaryTensorOp(Log); DeclareUnaryTensorOp(LinearRectifierDerivative); DeclareUnaryTensorOp(Cosine); DeclareUnaryTensorOp(NegativeSine);
-        //DeclareUnaryTensorOp(SaturateBetaAlpha); DeclareUnaryTensorOp(SumAlpha); DeclareUnaryTensorOp(SubDifferenceToAlpha); DeclareUnaryTensorOp(SubDifferenceFromAlpha);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
@@ -74,9 +62,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllBinaryOps(DeclareBinaryTensorOp);
-        //DeclareBinaryTensorOp(Sum); DeclareBinaryTensorOp(Difference); DeclareBinaryTensorOp(ElementWiseProduct); DeclareBinaryTensorOp(ElementWiseQuotient);
-        //DeclareBinaryTensorOp(LogSum); DeclareBinaryTensorOp(Max); DeclareBinaryTensorOp(Min);
-        //DeclareBinaryTensorOp(EQ); DeclareBinaryTensorOp(NE); DeclareBinaryTensorOp(GT); DeclareBinaryTensorOp(LT); DeclareBinaryTensorOp(GE); DeclareBinaryTensorOp(LE);
 #pragma pop_macro("DeclareBinaryTensorOp")
 
 #pragma push_macro("DeclareTernaryTensorOp")
@@ -95,10 +80,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op);
 
         // -------------------------------------------------------------------
+        // accessors
+        // -------------------------------------------------------------------
+
+        const Matrix<ElemType> & GetSOB() const { return m_sob; }
+        Matrix<ElemType> &       GetSOB()       { return m_sob; }
+        const TensorShape & GetShape() const { return m_shape; }
+
+        // -------------------------------------------------------------------
         // sob members
         // -------------------------------------------------------------------
 
-        Matrix<ElemType> * m_sob;   // Storage OBject that holds the data that is being viewed with this TensorView. Pointer instead of ref so this object is copyable.
+        Matrix<ElemType> m_sob;     // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
         TensorShape m_shape;        // the meta-data that describes the data's shape and/or access pattern
         // TODO: use a reference here or not? With a reference, we can hide more info in here such as cuDNN handles
     };

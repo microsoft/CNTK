@@ -9,13 +9,13 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "File.h"
+
 #include "CPUMatrix.h"
 #include "TensorOps.h"
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
 #include <math.h>
-
 #include <random>
 #include <chrono>
 #include <exception>
@@ -352,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -385,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long n = (long)a.GetNumCols();        // note: OpenMP requires loop indices to be long, not size_t
         long k = (long)a.GetNumRows();
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //memory copy might be faster?
@@ -429,7 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -470,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -501,7 +501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long i = 0; i < m_numRows; i++)
         {
             diag(0, (size_t)i) = us(i, i);
@@ -539,7 +539,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<sliceNumCols; j++)
         {
             for (int i = 0; i < inputMatrices.size(); i++)
@@ -576,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long q = 0; q < numColRepeats; q++)
         {
             for (long p = 0; p < numRowRepeats; p++)
@@ -620,7 +620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             //four-way unrolling
@@ -686,7 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -720,7 +720,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {     
             long m=(long)GetNumElements();
-#pragma omp parallel for
+            // 2-way thread parallelism is sufficient for the memory bound 
+            // operation of just setting the values of an array.
+            const unsigned SETVALUE_NUM_THREADS = 2;
+#pragma omp parallel for num_threads(SETVALUE_NUM_THREADS)
             //four-way unrolling
             for (long i=0; i<(m & ~3); i+=4)
             {
@@ -778,7 +781,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -803,7 +806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -828,7 +831,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this; 
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -936,7 +939,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         auto& us = *this;
         long m=(long)GetNumRows();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -975,7 +978,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long m=(long)GetNumRows();
             if (vector.GetNumRows() == 1) //row vector
             {
-#pragma omp parallel for
+#pragma omp parallel for     
                 //four-way unrolling
                 for (long i=0; i<(m & ~3); i+=4)
                 {
@@ -992,7 +995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-#pragma omp parallel for
+#pragma omp parallel for     
                 //four-way unrolling
                 for (long i=0; i<(m & ~3); i+=4)
                 {
@@ -1165,7 +1168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType a0, a1, a2, a3;
 
         //disable omp here because aveMultiper needs to be added atomically. however, it seems the result is incorrect even if rmp atomic and amp critical are used.
-//#pragma omp parallel for
+//#pragma omp parallel for     
         for (long i = 0; i<(n & ~3); i += 4)  //four-way unrolling
         {
             a[i] += d_v[i] * d_v[i];
@@ -1496,7 +1499,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1597,7 +1600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1626,7 +1629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1817,7 +1820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1854,7 +1857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1922,7 +1925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -1957,7 +1960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             ElemType v = a(0,j);
@@ -1992,7 +1995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us = *this;
 
         long m = (long)GetNumRows(), n = (long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             ElemType v = a(0, j);
@@ -2033,7 +2036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long m=(long)GetNumRows(), n=(long)GetNumCols();
 
         ElemType smallValue = EPS_IN_INVERSE;
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             for (long i=0; i<m; i++)
@@ -2134,7 +2137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2173,7 +2176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2221,7 +2224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2388,7 +2391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2428,7 +2431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2468,7 +2471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2621,7 +2624,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2661,7 +2664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType locTHresholdNeg = -locThresholdPos; 
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -2709,7 +2712,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         long m = (long)GetNumElements();
 
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
         {
             if (m_pArray[i] > threshold)
@@ -4388,7 +4391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ElemType v = alpha*a(0,0);
             long m=(long)c.GetNumRows(), n=(long)c.GetNumCols();
-#pragma omp parallel for
+#pragma omp parallel for     
             for (long j=0; j<n; j++)
             {
                 //four-way unrolling
@@ -4498,7 +4501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("AddScaledDifference:  Input matrix a is empty.");
 
         long m=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -4537,7 +4540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             c.Resize(a.GetNumRows(), a.GetNumCols());
 
         long m=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
@@ -4635,7 +4638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.Resize(m,n);
 
         long size=(long)c.GetNumElements();
-#pragma omp parallel for
+#pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(size & ~3); i+=4)
         {
@@ -4945,7 +4948,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool bHas = false;
 
         bool isvFinite = std::isfinite(v);
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j < mat.GetNumElements(); j++)
         {
 #pragma omp flush(bHas)
@@ -4993,7 +4996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
-        //#pragma omp parallel for
+        //#pragma omp parallel for     
 
         for (long j = 0; j < n; j++)
         {
@@ -5248,7 +5251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
         long n = (long)GetNumCols();  // a and b are of size (1,n)
-#pragma omp parallel for
+#pragma omp parallel for     
         for (long j = 0; j<n; j++)
         {
             us(0, j) = a(0, j) * b(0, (j + shift) % n);
@@ -5256,6 +5259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         return *this;
     }
+
 
 #pragma endregion Static BLAS Functions
 
@@ -5517,11 +5521,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numThreads;
     }
 
-    // -----------------------------------------------------------------------
+    // =======================================================================
     // TensorView support
-    // -----------------------------------------------------------------------
+    // =======================================================================
 
     // To save time, this makes extensive use of templates and macros.
+
+    // -----------------------------------------------------------------------
+    // function to compute the value for a given output location (perform reduction if needed)
+    // -----------------------------------------------------------------------
 
     // perform loop over reduction index m
     // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
@@ -5530,7 +5538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // reduction case (non-reduction case is specialized)
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
             for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
@@ -5554,19 +5562,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpReduction<ElemType, OPFN, N, -1>
     {
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &)
+                                    const vector<size_t> &, const array<vector<ptrdiff_t>, N> &)
         {
             return opfn(pointers);          // finally we are doing some work!!!
         }
     };
+
+    // -----------------------------------------------------------------------
+    // perform loop over regular index k for N-nary operations (N counting the output)
+    // -----------------------------------------------------------------------
 
     // perform loop over regular index k and reducing index m for N operands (counting the output)
     template<class ElemType, typename OPFN, size_t N, bool vectorizable, int m, int k>
     struct TensorOpIteration
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             // non-scalar case: still nested result loops left
             array<ptrdiff_t, N> strides;
@@ -5589,8 +5601,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 3, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 3> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5618,8 +5630,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 2, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 2> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
+                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5644,25 +5656,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, N, vectorizable, m, -1>
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const std::vector<size_t> &, const std::array<std::vector<ptrdiff_t>, N> &,
-                                const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                const vector<size_t> &, const array<vector<ptrdiff_t>, N> &,
+                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
         {
             // we are at element level for the result: perform the op (there may still be reduction)
-            ElemType val = alpha * TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+            ElemType val = TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+            // scale
+            val *= alpha;
             // combine with previous value in target matrix, then write it out
             auto * pout = pointers.back();
             if (beta != 0)
                 val += beta * *pout;
+            // save
             *pout = val;
             return;
         }
     };
 
+    // -----------------------------------------------------------------------
+    // map runtime parameters N to template parameters
+    // -----------------------------------------------------------------------
+
     // tensor operation with k+1 dimensions (-1 means scalar)
     template<class ElemType, typename OPFN, size_t N, int k>
     static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, const OPFN & opfn,
-                                        const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                                        const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                                        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                                        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
     {
         size_t dims = reducingOpDims.size();
         switch (dims)
@@ -5688,9 +5707,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This function now expands into different k.
     template<class ElemType, typename OPFN, size_t N>
     static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                               const std::array<size_t, N> & offsets,
-                               const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, N> & regularStrides,
-                               const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, N> & reducingStrides)
+                               const array<size_t, N> & offsets,
+                               const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
+                               const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
     {
         for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
             pointers[i] += offsets[i];
@@ -5706,13 +5725,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // entry points from Matrix.cpp; also map op to a lambda
+    // -----------------------------------------------------------------------
+
     // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 2> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides)
+                                       const array<size_t, 2> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
     {
         #define CaseUnaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5730,9 +5753,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 3> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides)
+                                       const array<size_t, 3> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
     {
         #define CaseBinaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5750,9 +5773,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This maps 'op' to a lambda.
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
-                                       const std::array<size_t, 4> & offsets,
-                                       const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
-                                       const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides)
+                                       const array<size_t, 4> & offsets,
+                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
+                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
     {
         #define CaseTernaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5766,10 +5789,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // -----------------------------------------------------------------------
+    // =======================================================================
     // explicit instantiations
-    // -----------------------------------------------------------------------
-
+    // =======================================================================
     template class MATH_API CPUMatrix<float>;
     template class MATH_API CPUMatrix<double>;
 

@@ -84,7 +84,6 @@
     <None Include="GPUWatcher.h">
       <Filter>GPU</Filter>
     </None>
-    <None Include="ClassDiagram.cd" />
     <None Include="GPUWatcher.cu">
       <Filter>GPU</Filter>
     </None>

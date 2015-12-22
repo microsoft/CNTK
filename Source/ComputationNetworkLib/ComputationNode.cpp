@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t N = 3;     // 2 inputs and 1 output
         // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
         // TODO: move this into a helper function
-        // get tensor shapes
+        // get sample shapes
         vector<ComputationNode<ElemType>*> nodes;
         for (size_t i = 0; i < N; i++)
             nodes.push_back(i < N-1 ? Input(i).get() : this);
@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t i = 0; i < N; i++)
         {
             values.push_back(nodes[i]->ValueFor(i < N-1 ? fr.AllowBroadcast() : fr));   // no broadcasting for now allowed for output
-            shapes.push_back(GetSampleShape(nodes[i]));
+            shapes.push_back(GetSampleShape(nodes[i])); // this strips the column dimension in case of MBLayout
         }
         // pad
         size_t dims = 0;
@@ -179,13 +179,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 dims = shapes[i].GetNumDims();
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].Pad(dims);
-        // concatenate MBLayout dims
+        // concatenate MBLayout dims (which we stripped above)
         // TODO: Is it possible that the output has no layout, but inputs have? Then we lost dimensions. Tensor constructor will catch that, though.
         if (HasMBLayout())
         {
             for (size_t i = 0; i < N; i++)
             {
-                auto sm = nodes[i]->HasMBLayout() ? TensorShape(GetNumParallelSequences(), GetNumTimeSteps()) : TensorShape(1, 1);
+                auto sm = nodes[i]->HasMBLayout() ? TensorShape(GetNumParallelSequences(), fr.IsAllFrames() ? GetNumTimeSteps() : 1) : TensorShape(1, 1);
+                // TODO: Can FrameRange ever refer to multiple time steps?
                 shapes[i] = shapes[i].Concat(sm);
             }
         }
