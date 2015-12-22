@@ -5543,7 +5543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
             for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
                 strides[i] = reducingStrides[i][(size_t)m];
-            ElemType aggregate = 0;
+            double/*ElemType*/ aggregate = 0;
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
             {
                 // need to descend into one loop deeper
@@ -5552,7 +5552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < N - 1; i++)
                     pointers[i] += strides[i];      // note: last pointer (result) is unused and untouched here
             }
-            return aggregate;
+            return (ElemType)aggregate;
         }
     };
 

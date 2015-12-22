@@ -4572,7 +4572,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                            const FixedArray<unsigned int, M> & reducingOpDims, const FixedMatrix<int, N, M> & reducingStrides)
         {
             // start with index 0
-            ElemType agg = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
+            // Using 'double' since we are memory-bound anyway.
+            double/*ElemType*/ aggregate = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
             // apply this index to the pointers
             size_t dim = reducingOpDims[m];
             for (size_t k = 1/*done with k=0 already*/; k < dim; k++)
@@ -4581,9 +4582,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < N; i++)
                     pointers[i] += reducingStrides(i,(size_t)m);
                 ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
-                agg += val;
+                aggregate += val;
             }
-            return agg;
+            return (ElemType)aggregate;
         }
     };
 
