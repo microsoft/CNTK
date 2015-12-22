@@ -203,6 +203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
+            // TODO: change to infer as maximum of the two
             if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
             else
@@ -319,6 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
+            // TODO: change to infer as maximum of the two
             if (IsInputAnImage(0))
                 InferImageDimsFromInput(0);
             else
@@ -544,10 +546,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()  
         {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
+            InferImageDimsFromInput(1, false); // the second one is the input since it's columnwise
 
-            //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
+            // after multiplication the structure is lost
+            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
 
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -683,7 +685,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
+            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
     };
 
@@ -741,6 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
+            // TODO: change to infer as maximum of the two
             if (IsInputAnImage(0))  // if conflict, give priority to child 0
                 InferImageDimsFromInput(0);
             else
@@ -1394,7 +1397,7 @@ private:
             InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
 
             // after transposition, the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumCols(), 1);
+            m_sampleLayout = TensorShape(Input(0)->GetNumCols());
         }
     };
 
@@ -1429,7 +1432,7 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_sampleLayout = ImageLayoutWHC(1, m_sampleLayout.GetHeight(), 1);
+            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
 
             if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -1732,7 +1735,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, m_value->GetNumRows(), 1);
+            m_sampleLayout = TensorShape(m_value->GetNumRows());
         }
     };
 
