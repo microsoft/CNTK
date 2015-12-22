@@ -236,7 +236,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
-            MarkValueNonSharable();
             if (isSparse)
                 ConvertToSparseMatrix();
 
