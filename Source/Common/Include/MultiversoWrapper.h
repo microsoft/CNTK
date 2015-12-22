@@ -1,13 +1,16 @@
 #pragma once
 
+
 // This uses Multiverso.h which requires 
 // the header files in ..\..\Multiverso\include
 // and the lib files in ..\..\Multiverso\x64
 #include "multiverso.h"
 #pragma comment(lib, "Multiverso.lib")
 
+#ifndef CPUONLY
 #include <cuda_runtime.h>
 #pragma comment (lib, "cudart.lib")     // for cudaMemcpyAsync()
+#endif
 
 
 #include "MPIWrapper.h"
@@ -23,6 +26,7 @@ namespace Microsoft {
 	namespace MSR {
 		namespace CNTK {
 
+#ifndef CPUONLY
 #define CudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 			inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
 			{
@@ -32,6 +36,7 @@ namespace Microsoft {
 					if (abort) exit(code);
 				}
 			}
+#endif
 
 			enum class AdjustLearningRateatBeginning : int
 			{
@@ -73,11 +78,13 @@ namespace Microsoft {
 					//CPU double buffer
 					_pPCache = new ElemType*[_nLocalCache];
 
+#ifndef CPUONLY
 					//GPU double buffer
 					_pPMatrixCache = new Matrix<ElemType>**[_nLocalCache];
 
 					//Communication Stream
 					CudaErrorCheck(cudaStreamCreate(&_commStream));
+#endif
 
 					_nCacheIdx = 0;
 					for (int i = 0; i < _nLocalCache; i++)
@@ -99,12 +106,18 @@ namespace Microsoft {
 
 					for (size_t i = 0; i < _nLocalCache; i++)
 					{
+#ifndef CPUONLY
 						CudaErrorCheck(cudaFreeHost(_pPCache[i]));
+#else
+						delete _pPCache[i];
+#endif
 					}
 					//CudaErrorCheck(cudaFreeHost(_pCache));
 					delete _pPCache;
+#ifndef CPUONLY
 					CudaErrorCheck(cudaStreamDestroy(_commStream));
 					//todo: delete _pMatri
+#endif
 
 					multiverso::FinishTrain();
 				}
@@ -122,12 +135,12 @@ namespace Microsoft {
 					{
 						ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 						Matrix<ElemType> &mat = node->Value();
-
+#ifndef CPUONLY
 						for (int j = 0; j < _nLocalCache; j++)
 							_pPMatrixCache[j][i] = new Matrix<ElemType>(mat);
+#endif
 
 						ElemType* px = _pPCache[0] + _vTableIdx[i];
-						//ElemType* px = _pCache + _vTableIdx[i];
 						mat.CopyToArray(px, _vTableLength[i]);
 					}
 					
@@ -138,8 +151,7 @@ namespace Microsoft {
 
 					for (int row = 0; row < _nClients; ++row)
 						_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
-					//_adaptor->Clock();
-					_adaptor->Barrier();
+					_adaptor->Barrier(); //should clock
 					_adaptor->BatchLoad(table_id, _pDelta, _pIdxEachServer, _pSizeEachServer);
 
 					memcpy(_pDelta, _pPCache[0], sizeof(ElemType) * _lTotalLength);
@@ -170,7 +182,7 @@ namespace Microsoft {
 						{
 							ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
-
+#ifndef CPUONLY
 							//CNTK model -> GPU buffer
 							//*_pPMatrixCache[_nCacheIdx][i] = mat;
 							CudaErrorCheck(cudaMemcpy(_pPMatrixCache[_nCacheIdx][i]->BufferPointer(),
@@ -184,10 +196,21 @@ namespace Microsoft {
 								_pPMatrixCache[_pCacheState[_nCacheIdx]][i]->BufferPointer(),
 								mat.GetNumElements() * sizeof(ElemType),
 								cudaMemcpyDeviceToDevice));
-						}
+#else
+							ElemType * px = _pPCache[_nCacheIdx] + _vTableIdx[i];
 
+							mat.CopyToArray(px, _vTableLength[i]);
+							
+							ElemType * py = _pPCache[_pCacheState[_nCacheIdx]] + _vTableIdx[i];
+							
+							mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), py);
+
+
+							delete px;
+#endif
+						}
+#ifndef CPUONLY
 						_pThread = new thread([&](){
-							//float t_factor = (float) 1.0 / _nClients;
 							float factor = getUpdateCoefficient();
 							int table_id = 0, t_cacheIdx = _nCacheIdx;
 							int deviceId = _pPMatrixCache[t_cacheIdx][0]->GetDeviceId();
@@ -218,13 +241,6 @@ namespace Microsoft {
 							//_adaptor->Clock();
 							_adaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
 
-							//for (int row = 0; row < _nClients; row++)
-							//{
-							//	ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
-							//	memcpy(_pPCache[t_cacheIdx] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-							//	//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-							//}
-
 							//CPU buffer -> GPU buffer
 							for (int widx = 0; widx < _nTableCnt; widx++)
 							{
@@ -241,6 +257,20 @@ namespace Microsoft {
 							CudaErrorCheck(cudaStreamSynchronize(_commStream));
 
 						});
+#else
+						_pThread = new thread([&](){
+							float factor = getUpdateCoefficient();
+							int table_id = 0, t_cacheIdx = _nCacheIdx;
+
+							transform(_pDelta, _pDelta + _lTotalLength, _pPCache[t_cacheIdx], _pDelta, std::minus<ElemType>());
+							for (int row = 0; row < g_mpi->NumNodesInUse(); row++)
+								_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
+
+
+							_adaptor->BatchLoad(table_id, _pPCache[t_cacheIdx], _pIdxEachServer, _pSizeEachServer);
+
+						});
+#endif
 					}
 					else
 					{
@@ -255,20 +285,11 @@ namespace Microsoft {
 						}
 
 						transform(_pDelta, _pDelta + _lTotalLength, _pPCache[0], _pDelta, std::minus<ElemType>());
-						//transform(_pDelta, _pDelta + _lTotalLength, _pCache, _pDelta, std::minus<ElemType>());
 
 						for (int row = 0; row < _nClients; row++)
 							_adaptor->Add(table_id, row, _pDelta + _pIdxEachServer[row], factor);
 
-						//_adaptor->Clock();
 						_adaptor->BatchLoad(table_id, _pPCache[0], _pIdxEachServer, _pSizeEachServer);
-
-						//for (int row = 0; row < _nClients; row++)
-						//{
-						//	ElemType *py = static_cast<ElemType*>(_adaptor->Get(table_id, row));
-						//	memcpy(_pPCache[0] + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-						//	//memcpy(_pCache + _pIdxEachServer[row], py, sizeof(ElemType) * _pSizeEachServer[row]);
-						//}
 
 						i = 0;
 
@@ -278,7 +299,6 @@ namespace Microsoft {
 							Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
 							ElemType * px = _pPCache[0] + _vTableIdx[i];
-							//ElemType * px = _pCache + _vTableIdx[i];
 
 							mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
 						}
@@ -324,6 +344,7 @@ namespace Microsoft {
 						idx += len;
 					}
 
+#ifndef CPUONLY
 					//pinned memory
 					//CudaErrorCheck(cudaMallocHost((void **)&_pCache, sizeof(ElemType) * _lTotalLength, cudaHostAllocPortable));
 					for (int i = 0; i < _nLocalCache; ++i)
@@ -334,6 +355,10 @@ namespace Microsoft {
 					//GPU memory cache
 					for (int i = 0; i < _nLocalCache; i++)
 						_pPMatrixCache[i] = new Matrix<ElemType>*[_nTableCnt];
+#else
+					for (int i = 0; i < _nLocalCache; i++)
+						_pPCache[i] = new ElemType[_lTotalLength + 1];
+#endif
 
 					multiverso::Init(localWorkerNumber);
 
@@ -396,7 +421,9 @@ namespace Microsoft {
 				//GPU double buffer
 				Matrix<ElemType> *** _pPMatrixCache;
 				int _nTableCnt;
+#ifndef CPUONLY
 				cudaStream_t _commStream;
+#endif
 			};
 		}
 	}
