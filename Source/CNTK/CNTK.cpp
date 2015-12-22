@@ -1667,6 +1667,9 @@ void PrintBuiltInfo()
 #ifdef _CUB_PATH_
     fprintf(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
 #endif 
+#ifdef _CUDNN_PATH_
+    fprintf(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+#endif
 #ifdef _GIT_EXIST
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
     fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
@@ -1885,7 +1888,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         RedirectStdErr(logpath);
     }
 
-    PrintBuiltInfo();
+    PrintBuiltInfo(); // this one goes to log file 
     std::string timestamp = TimeDateStamp();
 
     //dump config info
@@ -1960,10 +1963,11 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
-int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
+int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     try
     {
+        PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
         if (argc <= 1)
             InvalidArgument("No command-line argument given.");
         // detect legacy CNTK configuration
