@@ -27,11 +27,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
 
         // cast a matrix storage object (SOB) as a TensorView (without shape change)
-        TensorView(Matrix<ElemType> & sob);
+        TensorView(const Matrix<ElemType> & sob);
         // reshape a TensorView
         TensorView(const TensorView<ElemType> & other, const TensorShape & shape);
         // reinterpret a SOB as a TensorView with a given TensorShape
-        TensorView(Matrix<ElemType> & sob, const TensorShape & shape) :
+        TensorView(const Matrix<ElemType> & sob, const TensorShape & shape) :
             TensorView(TensorView(sob)/*cast as a TensorView*/, shape/*with a shape*/)
         { }
         // copy constructor

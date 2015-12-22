@@ -344,8 +344,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - GetSampleShape() makes up a sample layout in case of a bad m_sampleLayout, and includes columns in case of no MBLayout
         TensorShape GetSampleShape() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
-        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
     public:
+        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
 
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
@@ -1547,7 +1547,8 @@ protected: \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::GetImageLayout; using Base::GetTensorsForwardBinary; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetTensorsForwardBinary; using Base::DetermineElementwiseTensorRank; \
+    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
@@ -1562,7 +1563,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
-    using Base::Value;
+    using Base::Value; using Base::GetTensorShape;
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \

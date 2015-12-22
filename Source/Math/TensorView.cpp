@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // cast a matrix as a TensorView
     template<class ElemType>
-    TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
+    TensorView<ElemType>::TensorView(const Matrix<ElemType> & sob) :
         m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
     // reshape a TensorView

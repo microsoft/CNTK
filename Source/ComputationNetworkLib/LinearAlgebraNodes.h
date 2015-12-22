@@ -44,6 +44,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#if 1
+            fprintf(stderr, "!");
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient      = TensorView<ElemType>(                   GradientFor(fr),                  GetTensorShape(rank, fr));
+            auto inputGradient = TensorView<ElemType>(Input(inputIndex)->GradientFor(fr.AllowBroadcast()), Input(inputIndex)->GetTensorShape(rank, fr));
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+
+            inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
+#else
             Matrix<ElemType> gradientValues = GradientFor(fr);
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
@@ -107,6 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
+#endif
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -131,8 +144,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
 #if 1       // TODO: use #if 0 until this is working
+#if 1
+            size_t rank = DetermineElementwiseTensorRank();
+            // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            auto result = TensorView<ElemType>(   ValueForToDense(fr, false),                     GetTensorShape(rank, fr));
+            auto input0 = TensorView<ElemType>(Input(0)->ValueFor(fr.AllowBroadcast()), Input(0)->GetTensorShape(rank, fr));
+            auto input1 = TensorView<ElemType>(Input(1)->ValueFor(fr.AllowBroadcast()), Input(1)->GetTensorShape(rank, fr));
+            result.DoSumOf(0.0f, input0, input1, 1.0f);
+#else
             auto args = GetTensorsForwardBinary(fr);
             args[2].DoSumOf(0.0f, args[0], args[1], 1.0f);
+#endif
 #else
             Matrix<ElemType> functionValues = ValueForToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
