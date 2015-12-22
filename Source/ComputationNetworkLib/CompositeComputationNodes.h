@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The ParallelNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -911,7 +911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The TimeReverseNode does not require any of it's input's values for computing
             // the gradients of its input nodes

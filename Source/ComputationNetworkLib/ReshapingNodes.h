@@ -367,7 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The ReshapeNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -553,7 +553,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The RowSliceNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -640,7 +640,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The RowStackNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -811,7 +811,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The RowRepeatNode does not require any of it's input's values for computing
             // the gradients of its input nodes
