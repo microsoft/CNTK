@@ -1566,6 +1566,7 @@ protected: \
     using Base::Save; using Base::UpdateFunctionMBSize; \
     using Base::RequestMatricesBeforeForwardProp; using Base::ReleaseMatricesAfterForwardProp; \
     using Base::RequestMatricesBeforeBackprop; using Base::ReleaseMatricesAfterBackprop; \
+    using Base::InputUsedInComputingInputNodesGradients; using Base::OutputUsedInComputingInputNodesGradients; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryInputDims; using Base::ValidateInferInputDims; \
 public: \
     using Base::RequiresPreCompute; \
