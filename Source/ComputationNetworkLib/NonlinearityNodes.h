@@ -25,12 +25,12 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // NonlinearityNodeBase (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // NonlinearityNodeBase (input) -- abstract base class that holds what's shared
+    // between non-linearity nodes like Sigmoid
     // -----------------------------------------------------------------------
 
-    // shared base for all elemen-twise non-linearities
+    // shared base for all element-wise non-linearities
     // What this adds over a ComputationNode<ElemType> is a member m_gradientTemp for temp use by derived classes.
-    // TODO: Remove the Evaluate and Partial overrides from here entirely, as they don't really add value after all the code simplifications.
     template<class ElemType>
     class NonlinearityNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -52,6 +52,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto sliceInputGrad  = Input(0)->GradientFor(fr);   // ...to this one
             auto sliceInputValue  =  InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueFor(fr) : Matrix<ElemType>();
             auto sliceOutputValue = OutputUsedInComputingInputNodesGradients()  ?           ValueFor(fr) : Matrix<ElemType>();
+
+            // do the actual operation
             // TODO: Once all is unified then make the order of arguments more logical (in -> out)
             BackpropToV(*m_gradientTemp, sliceInputValue, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -139,9 +141,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
-#if NANCHECK
-            functionValues.HasNan("RectifiedLinear");
-#endif
 #if DUMPOUTPUT
             functionValues.Print("RectifiedLinearNode");
 #endif
@@ -305,9 +304,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignExpOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Exp");
-#endif
         }
     };
 
@@ -784,10 +780,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.Print("functionValues", 0, min(5, functionValues.GetNumRows() - 1), 0, min(10, functionValues.GetNumCols() - 1));
 
             functionValues.Print("GMMLogLikelihoodNode");
-#endif
-
-#if NANCHECK
-            functionValues.HasNan("GMMLogLikelihood");
 #endif
         }
 
