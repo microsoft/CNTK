@@ -255,12 +255,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(const TensorShape & sampleLayout, bool isSparse)
         {
             m_isSparse = isSparse;
+            CreateMatrixIfNull(m_value);
             if (isSparse)
                 ConvertToSparseMatrix();
 
             SetDims(sampleLayout, 0);
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
+            m_valueSharable = false; 
         }
     protected:
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & sampleLayout, bool isSparse) :
