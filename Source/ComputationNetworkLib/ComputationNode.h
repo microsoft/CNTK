@@ -824,8 +824,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Since the dimensions are read as well, this function also updates m_numRows/m_numCols.
         void LoadValue(File& fstream)
         {
-            // CreateMatrixIfNull(m_value);
-            MarkValueNonSharable(); 
+            CreateMatrixIfNull(m_value);
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
             SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
