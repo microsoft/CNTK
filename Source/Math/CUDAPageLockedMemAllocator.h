@@ -20,8 +20,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDAPageLockedMemAllocator(int deviceID);
 
         int GetDeviceId() const;
-        char* Malloc(size_t size) override;
-        void Free(char* p) override;
+        void* Malloc(size_t size) override;
+        void Free(void* p) override;
+        static void* Malloc(size_t size, int deviceId);
+        static void Free(void* p, int deviceId);
 
     private:
         int m_deviceID;
