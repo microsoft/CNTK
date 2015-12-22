@@ -255,7 +255,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(const TensorShape & sampleLayout, bool isSparse)
         {
             m_isSparse = isSparse;
-            MarkValueNonSharable();
             if (isSparse)
                 ConvertToSparseMatrix();
 
