@@ -180,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The Sigmoid node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -244,7 +244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The plus node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientTemp, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The plus node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -585,7 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientTemp, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The plus node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -750,7 +750,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The GMMLogLikelihoodNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1098,7 +1098,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The DropoutNode does not require any of it's input's values for computing
             // the gradients of its input nodes

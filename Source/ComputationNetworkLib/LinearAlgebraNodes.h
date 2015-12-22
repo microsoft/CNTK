@@ -203,11 +203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MinusNode (minuend, subtrahend)
     // -----------------------------------------------------------------------
 
-    // TODO: merge with PlusNode
     template<class ElemType>
-    class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class MinusNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"Minus"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(MinusNode);
@@ -255,21 +254,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
         }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The MinusNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The MinusNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             Matrix<ElemType> functionValues = ValueFor(fr);
@@ -297,20 +281,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
         }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: change to infer as maximum of the two
-            if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
-        }
     };
 
     template class MinusNode<float>; 
@@ -318,6 +288,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
+    //
+    // Identical to ElementTimesnNode with tensor lib (broadcasting). Can be removed.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -407,7 +379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The NegateNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -682,9 +654,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class ElementTimesNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"ElementTimes"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
@@ -704,12 +676,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
         }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The ElementTimesNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
@@ -720,20 +687,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
         }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, false/*allowMultiple*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: change to infer as maximum of the two
-            if (IsInputAnImage(0))  // if conflict, give priority to child 0
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
-        }
     };
 
     template class ElementTimesNode<float>; 
@@ -741,6 +694,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -890,6 +845,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ColumnElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1085,19 +1042,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        ///*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        //{
-        //    temp.AssignInnerProductOf(gradientValues, inputFunctionValues, false);
-        //    inputGradientValues += temp;
-        //}
-        //
-        ///*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        //{
-        //    temp.SetValue(gradientValues);
-        //    temp.ColumnElementMultiplyWith(inputFunctionValues);
-        //    inputGradientValues += temp;
-        //}
-
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
@@ -1198,7 +1142,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The SumElementsNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1234,6 +1178,7 @@ private:
     // -----------------------------------------------------------------------
     // SumColumnElementsNode (input)
     // sums up each column of the input
+    // TODO: This should be deprecated, in favor of a reduce node.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1262,7 +1207,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The SumColumnElementsNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1301,6 +1246,7 @@ private:
 
     // -----------------------------------------------------------------------
     // TransposeNode (input matrix)
+    // TODO: extend towards tensor transpose (swap 2 dimensions)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1342,7 +1288,7 @@ private:
 #endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The TransposeNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1499,7 +1445,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The DiagonalNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1567,6 +1513,7 @@ private:
             sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
             sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
             sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
+            // TODO: This formulation above allows to use the tensor lib for this, with automatic broadcasting.
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1729,6 +1676,8 @@ private:
 
     // -----------------------------------------------------------------------
     // CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
+    //
+    // TODO: Comment what this does and what the inputs are.
     // -----------------------------------------------------------------------
 
     template<class ElemType>

@@ -596,6 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Is the output value of the computation node needed for computing 
         // gradients of any of the input nodes
+        // Base-class version makes conservative assumption that it is. Override if not.
         virtual bool OutputUsedInComputingInputNodesGradients() const
         {
             return true;
@@ -603,6 +604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Is the output value of the specified  input node needed for computing
         // gradients of any of the input nodes
+        // Base-class version makes conservative assumption that it is. Override if not.
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
         {
             UNREFERENCED_PARAMETER(childIndex);
@@ -1617,7 +1619,7 @@ protected:    /* some boilerplate goes here */ \
 #endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
             // the gradients of its input nodes
