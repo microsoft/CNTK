@@ -181,6 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // heuristics used for pretty-printing
         // TODO: This will go away.
         bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
+        bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
         // indexing
         // Determines the offset into the underlying element array for a given multi-dimensional index.
