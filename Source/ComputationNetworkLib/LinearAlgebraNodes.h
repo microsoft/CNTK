@@ -1730,7 +1730,11 @@ private:
     // -----------------------------------------------------------------------
     // CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
     //
-    // TODO: Comment what this does and what the inputs are.
+    // Left and right forms pairs of positive samples. They are symmetric but usually
+    // the search key is used as the left. For example, Left is search query and right is document.
+    // The negative samples are formed on the fly by shifting the right side.
+    // The 'shift' indicates how many samples in the right node you should shift to form each negative sample pair.
+    // It is often choose to be one. 'Neg' indicates how many negative samples you want to generate.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
