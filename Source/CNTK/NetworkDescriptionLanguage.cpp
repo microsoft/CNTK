@@ -166,7 +166,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode)))
         ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ScaleNode)))
+    else if (EqualInsensitive(nodeType, L"Scale"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeNode)))
         ret = true;
@@ -178,9 +178,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode)))
         ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(RowElementTimesNode)))
+    else if (EqualInsensitive(nodeType, L"RowElementTimes"))
         ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ColumnElementTimesNode)))
+    else if (EqualInsensitive(nodeType, L"ColumnElementTimes"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DiagTimesNode)))
         ret = true;
