@@ -45,9 +45,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             assert(inputIndex == 0); inputIndex;
-            auto gradient = Input(0)->GradientFor(fr);
-            Matrix<ElemType> unused;
-            BackpropToV(*m_gradientTemp, Input(0)->ValueFor(fr), gradient, GradientFor(fr), unused);
+
+            // get the args
+            // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
+            auto sliceOutputGrad =           GradientFor(fr);   // propagate from this one...
+            auto gradient        = Input(0)->GradientFor(fr);   // ...to this one
+            auto sliceInputValue  =  InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueFor(fr) : Matrix<ElemType>();
+            auto sliceOutputValue = OutputUsedInComputingInputNodesGradients()  ?           ValueFor(fr) : Matrix<ElemType>();
+            // TODO: Once all is unified then make the order of arguments more logical (in -> out)
+            BackpropToV(*m_gradientTemp, sliceInputValue, gradient, sliceOutputGrad, sliceOutputValue);
         }
 
         // derived class implement the actual non-linear operation
@@ -169,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, Matrix<ElemType>(), sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -183,7 +189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient,                                              Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradient.AssignSigmoidDerivativeOf(functionValues);
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
@@ -225,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, Matrix<ElemType>(), sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -239,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient,                                              Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradient.AssignElementProductOf(functionValues, functionValues); // v .* v
             gradient.AssignDifferenceOf(1, gradient); // 1-v^2
@@ -283,7 +289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            BackpropToS2(*m_gradientTemp, sliceInputValue, sliceInputGrad, sliceOutputGrad);
+            BackpropToS2(*m_gradientTemp, sliceInputValue, sliceInputGrad, sliceOutputGrad, Matrix<ElemType>());
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -296,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/void BackpropToS2(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*virtual*/void BackpropToS2(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradient.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
 
@@ -387,7 +393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
-            BackpropToS2(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            BackpropToS2(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad, Matrix<ElemType>());
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -400,7 +406,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/void BackpropToS2(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*virtual*/void BackpropToS2(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradient.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
@@ -444,7 +450,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, Matrix<ElemType>(), sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -458,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient,                                              Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             Matrix<ElemType>& diff = *m_diff;
             gradient.AssignInnerProductOf(gradientValues, functionValues, true);
@@ -534,7 +540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            BackpropToS(*m_gradientTemp, Matrix<ElemType>(), sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -548,7 +554,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // should be:
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
         // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient,                                              Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             Matrix<ElemType>& softmax = *m_softmax;
             softmax.AssignExpOf(functionValues);
