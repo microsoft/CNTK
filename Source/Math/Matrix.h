@@ -6,9 +6,8 @@
 
 // TODO:
 //  - remove empty-matrix checks: if an op is well-defined with empty matrices, then do it
-//  - Resize() must be cheap if it does nothing  (I already did that for CPU, still to be done for GPU)
-//  - an overload for Resize() to match another matrix
-//  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
+//  - Resize() must be cheap if it does nothing  (I already did that for CPU; already done for GPU?)
+
 #pragma once
 
 #include "Basics.h"
@@ -16,10 +15,11 @@
 #include "CommonMatrix.h"
 #include <limits.h>
 #include <memory>   // for shared_ptr
+#include <array>
+#include <initializer_list>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
-
 
     enum CurrentDataLocation
     {
@@ -73,6 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void _transferToDevice(int id_to, bool ismoved=true, bool emptyTransfer=false) const; 
         static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
+        static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d);
         static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
     public:
@@ -168,14 +169,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void Resize(const Matrix<ElemType>& other) { Resize(other.GetNumRows(), other.GetNumCols()); }
         void VerifySize(size_t rows, size_t cols)
         {
             m_baseMatrix->VerifySize(rows, cols);
         }
 
-        Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
-        void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
-        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)   // get a reshaped reference
+        Matrix<ElemType> AsReference() const { return ColumnSlice(0, GetNumCols()); }   // get a reference (e.g. this is not resizable but can be reshaped)
+        void Reshape(const size_t numRows, const size_t numCols);                       // note: reshapes in place. To get a reshaped reference, use Reshaped()
+        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)           // get a reshaped reference
         {
             Matrix<ElemType> result = AsReference();
             result.Reshape(numRows, numCols);
@@ -200,6 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags = matrixFlagNormal);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
+        void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) { std::vector<ElemType> vals(l); assert(vals.size() == numRows * numCols); SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor); } // SetValue(2,3, {1,2,3,  4,5,6});
         static ElemType MakeNan(size_t payload);
         void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
@@ -376,7 +379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK) const;
         void VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>& minValues, const bool isColWise) const;
 
-        Matrix<ElemType>&  AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol = false); 
+        Matrix<ElemType>& AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol = false); 
 
         Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); //this method will resize(1,1) first
 
@@ -458,6 +461,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
+
+        void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 2> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
+        void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 3> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+        void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 4> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
     public:
         void Read(File& stream);
         void Write(File& stream) const;

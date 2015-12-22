@@ -347,18 +347,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // helper functions for common cases
-    private:
-        // determine number of columns from a child and/or layout
-        size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
-        {
-            size_t childCols = child->GetNumCols();     // this is what the child says
-            if (!m_pMBLayout)                           // no layout: copy from child
-                return childCols;
-            size_t cols = m_pMBLayout->GetNumCols();    // layout: get it from there, but validate against child
-            if (childCols != cols)
-                RuntimeError("%ls %ls operation: Mismatch in number of columns", OperationName().c_str(), NodeName().c_str());
-            return cols;
-        }
     protected:
         void ValidateUnaryMap(bool isFinalValidationPass);
         void ValidateUnaryReduce(bool isFinalValidationPass);
@@ -788,7 +776,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        ComputationNode() { }
     public:
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
         using ComputationNodeBase::SetDims;
@@ -1095,6 +1082,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
+        std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
+
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
         {
@@ -1283,6 +1272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
         // should only need one memory block per device
+        // Thread-safety could be achieved by changing this to a shared_ptr.
+        // When using the TensorView interface, one could instead just use a 1x1 matrix with a view that broadcasts its columns (stride 0).
         static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
         {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
@@ -1534,7 +1525,7 @@ protected: \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetImageLayout; using Base::GetTensorsForwardBinary; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
