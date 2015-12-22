@@ -1549,7 +1549,7 @@ protected: \
     using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
+    using Base::DataFor; using Base::ValueFor; using Base::ValueForToDense; using Base::Gradient; using Base::GradientFor; \
     using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
@@ -1584,6 +1584,63 @@ protected:    /* some boilerplate goes here */ \
 
 #define UsingComputationNodeMembersBoilerplate \
     ComputationNodeBoilerplate; UsingComputationNodeMembers
+
+    // =======================================================================
+    // a few standard base classes for N-nary operations
+    // =======================================================================
+
+    // -----------------------------------------------------------------------
+    // BinaryElementWiseNode (operand1, operand2)
+    //
+    // binary elementwise operations that are implemented with the tensor lib
+    //
+    // Derived clases only need to override ForwardProp() and BackpropTo().
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        BinaryElementWiseNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+#if DUMPOUTPUT
+            return true;
+#else
+            // By default, the BinaryElementWiseNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+#endif
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        {
+            // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            // TODO: change to infer as maximum of the two
+            if (IsInputAnImage(0))
+                InferImageDimsFromInput(0);
+            else
+                InferImageDimsFromInput(1);
+        }
+    };
+
+#define UsingBinaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 #pragma endregion base computation class
 
