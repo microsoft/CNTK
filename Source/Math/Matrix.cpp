@@ -4,7 +4,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "Basics.h"
 #include "Matrix.h"
 #include "CPUMatrix.h"

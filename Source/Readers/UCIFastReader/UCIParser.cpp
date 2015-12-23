@@ -6,7 +6,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "Basics.h"
 #include "UCIParser.h"
 #include <stdexcept>

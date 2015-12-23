@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "MatrixQuantizerGPU.h"
 #include "MatrixQuantizer_kernel.cu"
 #include "GPUMatrix.h"

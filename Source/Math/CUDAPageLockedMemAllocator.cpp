@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "CUDAPageLockedMemAllocator.h"
 #include "BestGpu.h"    // for CPUONLY
 #ifndef CPUONLY

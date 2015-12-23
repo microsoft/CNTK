@@ -6,7 +6,7 @@
 // BinaryFile.cpp : Define the Binary File class
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "DataReader.h"
 #include "BinaryReader.h"
 #include <limits.h>

@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "ConvolutionEngine.h"
 #include "CuDnnConvolutionEngine.h"
 

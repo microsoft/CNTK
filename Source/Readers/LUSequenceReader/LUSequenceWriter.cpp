@@ -6,7 +6,7 @@
 
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <objbase.h>
 #include "Basics.h"
 #include <fstream>

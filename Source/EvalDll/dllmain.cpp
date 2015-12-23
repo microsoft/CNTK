@@ -4,7 +4,7 @@
 // </copyright>
 //
 // dllmain.cpp : Defines the entry point for the DLL application.
-#include "stdafx.h"
+//#include "stdafx.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "BestGpu.h"
 
 #ifdef CPUONLY

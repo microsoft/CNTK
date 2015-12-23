@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #ifdef _WIN32
 #include <objbase.h>
 #endif

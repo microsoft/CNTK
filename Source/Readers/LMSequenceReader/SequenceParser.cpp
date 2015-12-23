@@ -6,7 +6,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <stdexcept>
 #include <stdint.h>
 #include "Basics.h"
