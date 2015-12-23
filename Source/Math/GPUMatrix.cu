@@ -1955,7 +1955,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-#if 1
+        // _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but is slightly slower and may have an accuracy regression.
+        // We have a new implementation that is non-branching (yay!) that Frank will check in.
+#if 0
         _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
 #else
         _assignSigmoidOf<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
