@@ -1292,8 +1292,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 1)
             {
+                FrameRange fr(Input(0)->GetMBLayout());
                 BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
                                          Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
 #ifdef _DEBUG
                 Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif

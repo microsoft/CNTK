@@ -169,38 +169,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		virtual void Validate(bool isFinalValidationPass) override
 		{
-#if 1
-			ValidateBinaryReduce(isFinalValidationPass);
-#else
+            ValidateBinaryReduce(isFinalValidationPass);
 
-			Base::Validate(isFinalValidationPass);
+            m_topK = 1;
+            // TODO: Make topK a constructor parameter
+            if (m_inputs.size() == 3)
+            {
+                if (Input(2)->GetNumRows() != 1 || Input(2)->GetNumCols() != 1)
+                    throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
+                m_topK = static_cast<int>(Input(2)->Get00Element());
+            }
+        }
 
-			ValidateInferBinaryChildrenDims();
+        virtual void UpdateFunctionMBSize() override
+        {
+            Base::UpdateFunctionMBSize();
 
-
-
-			if (isFinalValidationPass)
-			{
-				if (!(
-					Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
-					(Inputs(0)->HasMBLayout() || Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())
-					))
-				{
-					LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-				}
-
-			}
-
-			Resize(1, 1);
-			m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-			InferImageDimsFromInputs();
-#endif
-
-			// resize the temporaries to their proper size
-			size_t cols = Input(0)->GetNumCols();
-			m_maxIndexes0->Resize(1, cols);
-			m_maxIndexes1->Resize(1, cols);
-			m_maxValues->Resize(1, cols);
+            // resize the temporaries to their proper size
+            size_t cols = Input(0)->GetNumCols();
+            m_maxIndexes0->Resize(m_topK, cols);
+            m_maxIndexes1->Resize(m_topK, cols);
+            m_maxValues->Resize(m_topK, cols);
 		}
 
 		virtual void InferImageDimsFromInputs()
@@ -403,6 +392,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						wrongPhoneNum += insmatrix(labelsize, outputsize) + delmatrix(labelsize, outputsize) + submatrix(labelsize, outputsize);
 					}
 					lastsentend += FrameNum;
+                    if (lastsentend < mbsize)
+                    {
+                        FrameRange fr(pMBLayout, lastsentend);
+                        if (pMBLayout->IsGap(fr.Sequence(nchannel)))
+                            break;
+                    }
 				}
 			}
 
@@ -413,6 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
 		shared_ptr<Matrix<ElemType>> m_maxValues;
 		size_t m_blanknum;
+        int m_topK;
 	};
 
 	template class PhoneErrorNode<float>;
