@@ -46,7 +46,7 @@ extern bool g_shareNodeValueMatrices;
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
-// #define TRACK_GAP_NANS
+ #define TRACK_GAP_NANS
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
