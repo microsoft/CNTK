@@ -1960,7 +1960,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        // _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but is slightly slower and may have an accuracy regression.
+        // We have a new implementation that is non-branching (yay!) that Frank will check in.
+#if 0
+        _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, m_pArray, N);
+#else
         _assignSigmoidOf<<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
+#endif
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -2213,19 +2219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
-        if (IsEmpty())
-            LogicError("InplaceTruncateBottom: Matrix is empty.");    
-
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(N*1.0/GridDim::maxThreadsPerBlock); 
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _inplaceTruncateBottom<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        return *this;
+        return AssignTruncateBottomOf(*this, threshold);
     }
 
     template<class ElemType>
@@ -2255,18 +2249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
-        if (IsEmpty())
-            LogicError("InplaceTruncateTop: Matrix is empty.");
-        CUDA_LONG N=(CUDA_LONG)GetNumElements();
-        int blocksPerGrid =(int)ceil(N*1.0/GridDim::maxThreadsPerBlock);      
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _inplaceTruncateTop<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        return *this;        
+        return AssignTruncateTopOf(*this, threshold);
     }
 
     template<class ElemType>

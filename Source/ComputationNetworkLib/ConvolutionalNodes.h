@@ -171,9 +171,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
-                InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
-
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
@@ -386,9 +383,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
-                InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();

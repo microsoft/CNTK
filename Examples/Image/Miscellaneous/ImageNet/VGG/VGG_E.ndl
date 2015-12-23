@@ -1,7 +1,7 @@
-load=ndlMnistMacros
+load=ndlMacros
 run=DNN
 
-ndlMnistMacros = [
+ndlMacros = [
     ImageW = 224
     ImageH = 224
     ImageC = 3
