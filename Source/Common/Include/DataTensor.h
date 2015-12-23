@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             result.m_strides[k] = /*result.m_dims[k - 1] *, it's 1 */ result.m_strides[k - 1];
             return result;
         }
-        TensorShape DropDims(const std::vector<bool> & toDrop) const  // remove dimension
+        TensorShape DropDims(const SmallVector<bool> & toDrop) const  // remove dimension
         {
             // this deletes a dimension while retaining strides
             // This implies a slice to [0] for this dimension.
