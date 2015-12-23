@@ -438,6 +438,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
                 LogicError("invalid backpointer resulting in state index out of range");
 
             int bp = (int) backpointers(j,t);   // save the backpointer before overwriting it (gammas and backpointers are aliases of each other)
+			thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js);
             if (!returnsenoneids)               // return binary gammas (for MMI; this mode is compatible with softalignmode)
                 for (size_t i = js; i < je; i++)
                     loggammas(i,t) = ((int) i == j) ? 0.0f : LOGZERO;
@@ -784,7 +785,7 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
     //  - per-edge acoustic scores
     const size_t silunitid = hset.gethmmid("sil");      // shall be the same as parallelstate.getsilunitid()
     bool parallelsil = true;
-    bool cpuverification = false;
+    bool cpuverification = true;
 
 #ifndef PARALLEL_SIL                                     // we use a define to make this marked
     parallelsil = false;
