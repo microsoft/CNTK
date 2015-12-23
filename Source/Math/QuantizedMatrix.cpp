@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            m_quantizedData = new Matrix<char>(m_qColSize, m_numCols, m_allocator->Malloc(m_qColSize * m_numCols), matrixFlagDontOwnBuffer, deviceId);
+            m_quantizedData = new Matrix<char>(m_qColSize, m_numCols, (char*)m_allocator->Malloc(m_qColSize * m_numCols), matrixFlagDontOwnBuffer, deviceId);
         }
     }
 

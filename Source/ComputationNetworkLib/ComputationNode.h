@@ -26,6 +26,8 @@
 #include <sstream>
 #include <iostream>
 
+// #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
+
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -75,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName())               // convenience macro
 
-        virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimension from MBLayout
+        virtual void UpdateFunctionMBSize() = 0;                // recalculate our column dimensions from MBLayout. Override to update temps.
 
         virtual void BeginForwardProp() = 0;                    // called beforefirst iteration step of ForwardProp()
         virtual void ForwardProp(const FrameRange &) = 0;       // forward prop for one minibatch
@@ -295,6 +297,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
+        // Currently called from:
+        //  - Validate()   --intended
+        //  - LearnableParameterNode (init, load)
+        //  - InputValue (init, load)
+        //  - DelayedValueNodeBase (Init())
+        // only changes col dim:
+        //  - ResizeAllFeatureNodes()
+        // use a different name for these:
+        //  - ReshapeNode::UpdateFunctionMBSize()    --??
+        //  - various unit tests
+        //  - ComputationNetwork::FixupInputMinibatchSize()
+        //  - TimeReverseNode (first step--deprecate and/or move to UpdateMB... function)
+        //  - StrideTimesNode
+        //  - PairNetworkNode
+        //  - LSTMNode
+        //  - MultiNetworks-
         void SetDims(size_t rows, size_t cols)
         {
             m_numRows = rows;
@@ -302,6 +320,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // actual memory allocation happens elsewhere
         }
         void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
+        void SetDims(const TensorShape & sampleLayout, size_t cols)
+        {
+            m_sampleLayout = sampleLayout;
+            m_numRows = m_sampleLayout.GetNumElements();
+            m_numCols = cols;
+        }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
         {
@@ -313,7 +337,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         virtual void VerifyDims(ComputationNodeBasePtr node) { VerifyDims(node->GetNumRows(), node->GetNumCols()); }
-        virtual void VerifyDimsMatch() const = 0;     // verify that m_value dimensions match ours
+        virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
+
+        const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
+    protected:
+        // TODO: There are temporarily two confusing functions; either unify them, or name them better:
+        //  - GetSampleLayout() just reads out m_sampleLayout, which is the layout of matrix coluns
+        //  - GetSampleShape() makes up a sample layout in case of a bad m_sampleLayout, and includes columns in case of no MBLayout
+        TensorShape GetSampleShape() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
+        size_t DetermineElementwiseTensorRank() const;
+    public:
+        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
 
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
@@ -340,18 +374,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // helper functions for common cases
-    private:
-        // determine number of columns from a child and/or layout
-        size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
-        {
-            size_t childCols = child->GetNumCols();     // this is what the child says
-            if (!m_pMBLayout)                           // no layout: copy from child
-                return childCols;
-            size_t cols = m_pMBLayout->GetNumCols();    // layout: get it from there, but validate against child
-            if (childCols != cols)
-                RuntimeError("%ls %ls operation: Mismatch in number of columns", OperationName().c_str(), NodeName().c_str());
-            return cols;
-        }
     protected:
         void ValidateUnaryMap(bool isFinalValidationPass);
         void ValidateUnaryReduce(bool isFinalValidationPass);
@@ -476,9 +498,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
-                    if (IsInputAnImage(i))  //image
+                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout.GetWidth() != 1 || child->m_sampleLayout.GetNumChannels() != 1))  // looks like an image: use WHC notation
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
                                 child->m_sampleLayout.GetWidth(), child->m_sampleLayout.GetHeight(), child->m_sampleLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
+                    else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
+                        fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
@@ -519,9 +543,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
 
+        // TODO: Remove this.
+        // used from:
+        //  - Plus/Minus/ElementTimesNode --> replace by max dim over inputs. Make this standard behavior for all binary element-wise ops.
         bool IsInputAnImage(const size_t index) const
         {
-            return m_inputs[index]->m_sampleLayout.GetWidth() != 1 || m_inputs[index]->m_sampleLayout.GetNumChannels() != 1;
+            return m_inputs[index]->m_sampleLayout.IsInputAnImage();
         }
 
         const TensorShape & GetImageLayout() const { return m_sampleLayout; }
@@ -569,6 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Is the output value of the computation node needed for computing 
         // gradients of any of the input nodes
+        // Base-class version makes conservative assumption that it is. Override if not.
         virtual bool OutputUsedInComputingInputNodesGradients() const
         {
             return true;
@@ -576,6 +604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Is the output value of the specified  input node needed for computing
         // gradients of any of the input nodes
+        // Base-class version makes conservative assumption that it is. Override if not.
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
         {
             UNREFERENCED_PARAMETER(childIndex);
@@ -779,7 +808,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        ComputationNode() { }
     public:
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
         using ComputationNodeBase::SetDims;
@@ -1085,6 +1113,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
+    protected:
+        std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
+
+    public:
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
         {
@@ -1131,12 +1163,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MaskMissingGradientColumnsToZero(fr);
             return GradientFor(fr);
         }
-        // special version that converts a sparse matrix as dense
-        // TODO: Is this the right thing to do? It changes the matrix type in-place.
-        Matrix<ElemType> ValueForToDense(const FrameRange & fr/*select frame or entire batch*/, bool keepValuesOnSwitch)
+        // tensor variants
+        TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
-            Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
-            return ValueFor(fr);
+            return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
+        }
+        TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange & fr)
+        {
+            return TensorView<ElemType>(GradientFor(fr), GetTensorShape(rank, fr));
         }
 
         // update the actual matrix allocation for m_value based on the node dimension
@@ -1273,6 +1307,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
         // should only need one memory block per device
+        // Thread-safety could be achieved by changing this to a shared_ptr.
+        // When using the TensorView interface, one could instead just use a 1x1 matrix with a view that broadcasts its columns (stride 0).
         static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
         {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
@@ -1502,13 +1538,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // If you add new members to ComputationNode, please also add them here.
     // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
     // Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
-#define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
+#define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
     using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; using Base::MaskedValueFor; using Base::MaskedGradientFor; \
+    using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
+    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
     using Base::m_inputSampleLayout; using Base::m_sampleLayout; \
@@ -1517,6 +1554,7 @@ protected: \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
+    using Base::GetTensorsForwardBinary; using Base::DetermineElementwiseTensorRank; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
@@ -1528,11 +1566,12 @@ protected: \
     using Base::Save; using Base::UpdateFunctionMBSize; \
     using Base::RequestMatricesBeforeForwardProp; using Base::ReleaseMatricesAfterForwardProp; \
     using Base::RequestMatricesBeforeBackprop; using Base::ReleaseMatricesAfterBackprop; \
+    using Base::InputUsedInComputingInputNodesGradients; using Base::OutputUsedInComputingInputNodesGradients; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryInputDims; using Base::ValidateInferInputDims; \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
-    using Base::Value;
+    using Base::Value; using Base::GetTensorShape;
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
@@ -1541,6 +1580,71 @@ protected:    /* some boilerplate goes here */ \
 
 #define UsingComputationNodeMembersBoilerplate \
     ComputationNodeBoilerplate; UsingComputationNodeMembers
+
+    // =======================================================================
+    // a few standard base classes for N-nary operations
+    // =======================================================================
+
+    // -----------------------------------------------------------------------
+    // BinaryElementWiseNode (operand1, operand2)
+    //
+    // binary elementwise operations that are implemented with the tensor lib
+    //
+    // Derived clases only need to override ForwardProp() and BackpropTo().
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        BinaryElementWiseNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+#if DUMPOUTPUT
+            return true;
+#else
+            // By default, the BinaryElementWiseNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+#endif
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+        {
+            // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
+        virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
+        {
+            Base::BeginForwardProp();
+            // we switch result to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            // TODO: This is a stopgap. Is this the right thing to do? It changes the matrix type in-place.
+            Value().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            // TODO: change to infer as maximum of the two
+            if (IsInputAnImage(0))
+                InferImageDimsFromInput(0);
+            else
+                InferImageDimsFromInput(1);
+        }
+    };
+
+#define UsingBinaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
 #pragma endregion base computation class
 

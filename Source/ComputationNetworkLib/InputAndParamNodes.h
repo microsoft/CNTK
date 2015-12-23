@@ -40,16 +40,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_sampleLayout = ImageLayoutWHC(1, SIZE_MAX, 1);
+            m_sampleLayout = TensorShape();
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_sampleLayout = ImageLayoutWHC(1, rows, 1);
-            // TODO: Is ^^ this a wise choice? These are often weight matrices, where rows, not columns, are multiplied with input vectors.
             CreateMatrixIfNull(m_value);
-            SetDims(rows, cols);
+            SetDims(TensorShape(rows), cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
             Value().SetValue(0);
         }
@@ -97,10 +95,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_parameterUpdateRequired;
             fstream >> rows >> cols;
 
-            SetDims(rows, cols);
+            SetDims(TensorShape(rows), cols);
             LoadValue(fstream);
-
-            m_sampleLayout = ImageLayoutWHC(1, rows, 1);
         }
 
         // initialize with random numbers
@@ -232,14 +228,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
-        void Init(size_t rows, size_t cols, bool isSparse)
+        void Init(const TensorShape & sampleLayout, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
             CreateMatrixIfNull(m_value);
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            SetDims(rows, cols);
+            SetDims(sampleLayout, cols);
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
         }
@@ -247,30 +243,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
-            m_sampleLayout.Invalidate();
-            Init(0, 0, isSparse);
+            Init(TensorShape(), 0, isSparse);
         }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
             Base(deviceId, name)
         {
-            if (rows * cols == 0)
-                LogicError("This InputValue dimension is 0.");
-
-            m_sampleLayout = ImageLayoutVector(rows);
-            Init(rows, cols, isSparse);
+            Init(TensorShape(rows), cols, isSparse);
         }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages, bool isSparse) :
             Base(deviceId, name)
         {
-            size_t rows = imageLayout.GetNumElements();
             size_t cols = numImages;
-
-            if (rows * cols == 0)
-                LogicError("This InputValue dimension is 0.");
-
-            m_sampleLayout = imageLayout;
-
-            Init(rows, cols, isSparse);
+            Init(imageLayout, cols, isSparse);
         }
         InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
             Base(configp->Get(L"deviceId"), L"<placeholder>")
@@ -281,15 +265,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t rows = configp->Get(L"rows");
                 size_t cols = configp->Get(L"cols");
-                m_sampleLayout = ImageLayoutVector(rows);    // no tensor, just a vector
-                Init(rows, cols, isSparse);
+                Init(TensorShape(rows), cols, isSparse);         // no tensor, just a vector
             }
             else
             {
-                m_sampleLayout = ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"));
-                size_t rows = m_sampleLayout.GetNumElements();
-                size_t cols = configp->Get(L"numImages");         // this is actually the MB size
-                Init(rows, cols, isSparse);
+                size_t cols = configp->Get(L"numImages");       // This is actually the MB size.  --TODO: No need to specify it?
+                Init(ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")), cols, isSparse);
             }
         }
     public:
@@ -309,10 +290,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
+            // some older files retained the #columns when saving, which is meaningless
+            if (m_pMBLayout)
                 cols = 0;
-            m_sampleLayout.Load(fstream);
-            Init(rows, cols, m_isSparse);
+            TensorShape sampleLayout;
+            sampleLayout.Load(fstream);
+            // some older files may have inconsistent tensor information
+            if (rows != sampleLayout.GetNumElements())
+            {
+                fprintf(stderr, "WARNING: %ls InputValue has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
+                        NodeName().c_str(), string(sampleLayout).c_str(), (int)rows);
+                sampleLayout = TensorShape(rows);
+            }
+            Init(sampleLayout, cols, m_isSparse);
         }
 
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.

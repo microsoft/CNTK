@@ -35,7 +35,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // please keep this table sorted
         if      (nodeType == OperationNameOf(CRFNode))	                            return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef ENABLE_TENSORVIEW
+        else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#else
         else if (nodeType == OperationNameOf(ColumnElementTimesNode))               return New<ColumnElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
         else if (nodeType == OperationNameOf(CosDistanceNode))	                    return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(CosineNode))	                    return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
@@ -72,12 +76,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RectifiedLinearNode))	            return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ReshapeNode))	                    return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef ENABLE_TENSORVIEW
+        else if (nodeType == L"RowElementTimes")	                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#else
         else if (nodeType == OperationNameOf(RowElementTimesNode))	            return New<RowElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
         else if (nodeType == OperationNameOf(RowRepeatNode))	                    return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(DiagonalNode))	                    return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RowSliceNode))	                    return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RowStackNode))	                    return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef ENABLE_TENSORVIEW
+        else if (nodeType == L"Scale")	                                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#else
         else if (nodeType == OperationNameOf(ScaleNode))	                    return New<ScaleNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
         else if (nodeType == OperationNameOf(SequenceDecoderNode))	            return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(SigmoidNode))	                    return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(SoftmaxNode))	                    return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -474,10 +486,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
+#ifndef ENABLE_TENSORVIEW
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ScaleNode<ElemType>>(net.GetDeviceId(), nodeName), scalar, matrix);
     }
+#endif
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Transpose(const ComputationNodePtr matrix, const std::wstring nodeName)
     {
@@ -499,6 +513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
+#ifndef ENABLE_TENSORVIEW
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<RowElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
@@ -508,6 +523,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return net.AddNodeToNetAndAttachInputs(New<ColumnElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
+#endif
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
     {

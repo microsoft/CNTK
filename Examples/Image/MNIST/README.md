@@ -2,13 +2,12 @@
 
 ## Overview
 
-| | |
-|:--------|:---|
-Data:     |The MNIST database (http://yann.lecun.com/exdb/mnist/) of handwritten digits.
-Purpose:  |This example demonstrates usage of NDL to train neural networks on MNIST dataset.
-Network:  |NDLNetworkBuilder, simple feed forward and convolutional networks, cross entropy with softmax.
-Training: |Stochastic gradient descent both with and without momentum.
-Comments: |There are two config files, details are provided below.
+|Data:     |The MNIST database (http://yann.lecun.com/exdb/mnist/) of handwritten digits.
+|:---------|:---
+|Purpose:  |This example demonstrates usage of the NDL (Network Description Language) to define networks.
+|Network:  |NDLNetworkBuilder, simple feed forward and convolutional networks, cross entropy with softmax.
+|Training: |Stochastic gradient descent both with and without momentum.
+|Comments: |There are two config files, details are provided below.
 
 ## Running the example
 
@@ -21,12 +20,12 @@ downloaded and converted by running the following command from the 'AdditionalFi
 
 The script will download all required files and convert them to CNTK-supported format. 
 The resulting files (Train-28x28.txt and Test-28x28.txt) will be stored in the 'Data' folder. 
-In case you don't have a Python installed, there are 2 options:
+In case you don't have Python installed, there are 2 options:
 
 1. Download and install latest version of Python 2.7 from: https://www.python.org/downloads/ 
-Then install numpy package by following instruction from: http://www.scipy.org/install.html#individual-packages
+Then install the numpy package by following instruction from: http://www.scipy.org/install.html#individual-packages
 
-2. Alternatively install Python Anaconda distribution which contains most of the 
+2. Alternatively install the Python Anaconda distribution which contains most of the 
 popular Python packages including numpy: http://continuum.io/downloads
 
 ### Setup

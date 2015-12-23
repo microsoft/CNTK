@@ -14,6 +14,7 @@
 #include "ConcStack.h"
 #include <string>
 #include <vector>
+#include <array>
 #include <ctime>
 #include <iostream>     // for cout/cerr
 #include <memory>       // for unique_ptr
@@ -68,16 +69,6 @@ namespace Microsoft {
         ElemType* ExposePointer2Value() const {return m_data;}
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
-    };
-
-
-    // -----------------------------------------------------------------------
-    // ElementWiseOperator -- This enum represents which function to apply. It needs to be outside of GPUMatrix, because it is also used in GPUSparseMatrix
-    // -----------------------------------------------------------------------
-
-    enum ElementWiseOperator
-    {
-        opSigmoid = 0, opTanh, opSqrt, opExp, opLog, opAbs, opLinearRectifierDerivative, opCosine, opNegativeSine, opSigmoidDerivative
     };
 
 
@@ -417,6 +408,19 @@ namespace Microsoft {
         static bool AreEqual(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
+
+        void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 2> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
+        void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 3> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+        void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
+                      const std::array<size_t, 4> & offsets,
+                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
+                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
 
         static void CreateCurandObject(unsigned long seed, const char *caller);
         static void ResetCurandObject(unsigned long seed, const char *caller);
