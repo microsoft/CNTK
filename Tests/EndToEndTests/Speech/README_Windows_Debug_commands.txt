@@ -7,9 +7,13 @@ Note: Below, the current dir is sometimes set to be the data directory. This all
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\QuickE2E\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\QuickE2E  DataDir=.  DeviceId=auto  makeMode=false
 
+Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../QuickE2E/cntk.config  stderr=../RunDir/QuickE2E/models/cntkSpeech.dnn.log  RunDir=../RunDir/QuickE2E  DataDir=.  DeviceId=auto  makeMode=false
+
 --- Speech\LSTM\Truncated:
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  makeMode=false
+
+Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../LSTM/cntk.config  stderr=../RunDir/LSTM/Truncated/models/cntkSpeech.dnn.log  RunDir=../RunDir/LSTM/Truncated  NdlDir=../LSTM  DataDir=.  DeviceId=auto  makeMode=false
 
 Using full BrainScript configuration
 
@@ -41,6 +45,9 @@ COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\pu
 
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.config configName=02_Conv
 
+--- Image/QuickE2E:
+
+COMMAND:     configFile=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E\cntk.config  RunDir=$(SolutionDir)Tests\EndToEndTests\Image\_run  DataDir=$(SolutionDir)Tests\EndToEndTests\Image\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E  stderr=$(SolutionDir)Tests\EndToEndTests\RunDir\Image\QuickE2E\models\cntkImage.dnn.log  DeviceId=-1   makeMode=false
 
 Simple test
 -----------

@@ -145,55 +145,76 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor helpers
     // -----------------------------------------------------------------------
 
-    template<class ElemType>
-    static TensorShape GetSampleShape(const ComputationNode<ElemType> * node)
+    // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
+    TensorShape ComputationNodeBase::GetSampleShape() const
     {
-        // TODO: use actual ImageLayout. While those are not yet inferred properly, maybe use it if its dims match numRows?
-        if (node->HasMBLayout())                        // if we have a layout, that dimension is not part of the sample shape
-            return TensorShape(node->GetNumRows());
+        // BUGBUG: sample layouts are not fully consistent (are they?), so we only use them if plausible
+        bool layoutPlausible = true;
+        // some code initializes it to 0 or SIZE_MAX
+        for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
+        {
+            if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
+                layoutPlausible = false;
+        }
+        // some code initializes it to (1,1,rowDim)
+        if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
+            layoutPlausible = false;
+        // check dimension
+        if (m_numRows != m_sampleLayout.GetNumElements())
+            layoutPlausible = false;
+        if (layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
+            return m_sampleLayout;
+        else if (HasMBLayout())                     // if we have a layout, that dimension is not part of the sample shape
+            return TensorShape(GetNumRows());
+        else if (GetNumCols() == 1)                 // 1-column matrix is a vector
+            return TensorShape(GetNumRows());
         else
-            return TensorShape(node->GetNumRows(), node->GetNumCols());
+            return TensorShape(GetNumRows(), GetNumCols());
+    }
+
+    // determine the sample tensor dimension to use for operations based on output and all inputs
+    // 'Sample tensor' means we only consider single samples. If we have an MBLayout, that is the sample layout of a single matrix column.
+    size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
+    {
+        // determine largest tensor dimension amongst the sample shapes of output and the selected inputs
+        size_t maxRank = GetSampleShape().GetRank();
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            size_t rank = Input(i)->GetSampleShape().GetRank();
+            if (maxRank < rank)
+                maxRank = rank;
+        }
+        return maxRank;
+    }
+
+    // determine the full tensor dimension including padding and multiple samples (MBLayout)
+    TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
+    {
+        if (!HasMBLayout())                         // no MBLayout: just return sample layout (if other participants have layout, tensor lib will broadcast)
+            return GetSampleShape().Pad(rank);
+        else
+        {
+            // we have an MBLayout: append its dimensions to the tensor shape
+            auto sm = TensorShape(GetNumParallelSequences(), fr.IsAllFrames() ? GetNumTimeSteps() : 1);
+            // TODO: Can FrameRange ever refer to multiple time steps?
+            return GetSampleShape().Pad(rank).Concat(sm);
+        }
     }
 
     template<class ElemType>
     std::vector<TensorView<ElemType>> ComputationNode<ElemType>::GetTensorsForwardBinary(const FrameRange & fr)
     {
         const size_t N = 3;     // 2 inputs and 1 output
-        // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
-        // TODO: move this into a helper function
-        // get sample shapes
-        vector<ComputationNode<ElemType>*> nodes;
-        for (size_t i = 0; i < N; i++)
-            nodes.push_back(i < N-1 ? Input(i).get() : this);
-        vector<Matrix<ElemType>> values;
-        vector<TensorShape> shapes;
-        for (size_t i = 0; i < N; i++)
-        {
-            values.push_back(nodes[i]->ValueFor(i < N-1 ? fr.AllowBroadcast() : fr));   // no broadcasting for now allowed for output
-            shapes.push_back(GetSampleShape(nodes[i])); // this strips the column dimension in case of MBLayout
-        }
-        // pad
-        size_t dims = 0;
-        for (size_t i = 0; i < N; i++)
-            if (dims < shapes[i].GetNumDims())
-                dims = shapes[i].GetNumDims();
-        for (size_t i = 0; i < N; i++)
-            shapes[i] = shapes[i].Pad(dims);
-        // concatenate MBLayout dims (which we stripped above)
-        // TODO: Is it possible that the output has no layout, but inputs have? Then we lost dimensions. Tensor constructor will catch that, though.
-        if (HasMBLayout())
-        {
-            for (size_t i = 0; i < N; i++)
-            {
-                auto sm = nodes[i]->HasMBLayout() ? TensorShape(GetNumParallelSequences(), fr.IsAllFrames() ? GetNumTimeSteps() : 1) : TensorShape(1, 1);
-                // TODO: Can FrameRange ever refer to multiple time steps?
-                shapes[i] = shapes[i].Concat(sm);
-            }
-        }
         // perform operation
         std::vector<TensorView<ElemType>> tensors;
+        size_t rank = DetermineElementwiseTensorRank();
         for (size_t i = 0; i < N; i++)
-            tensors.push_back(TensorView<ElemType>(values[i], shapes[i]));
+        {
+            auto * node = i < N - 1 ? Input(i).get() : this;    // output is ourselves
+            auto slice = node->ValueFor(i < N - 1 ? fr.AllowBroadcast() : fr);
+            auto shape = node->GetTensorShape(rank, fr);
+            tensors.push_back(TensorView<ElemType>(slice, shape));
+        }
         return tensors;
     }
 

@@ -37,7 +37,44 @@
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 #define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; if (id>=N) return;
 
-#define threadsPerBlock 512
+// ---------------------------------------------------------------------------
+// GridDim -- helper to choose the CUDA grid dimensions
+// ---------------------------------------------------------------------------
+
+// TODO: move the computation of 'id' here as well
+struct GridDim
+{
+    static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
+    static const CUDA_LONG minBlocksPerGrid = 48;       // use at least that many blocks  --TODO: base this on actual hardware
+
+    // use these for launching
+    //   GridDim grid(NN);
+    //   kernel<<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, ...>>>(...)
+    int m_blocksPerGrid, m_threadsPerBlock;             // (these may in the future be extended to multi-dimensional ones)
+
+    GridDim(CUDA_LONG N)    // linear grid
+    {
+        if (N == 0)                     // CUDA will fail to launch with 0 blocks
+            N = 1;
+        m_threadsPerBlock = GridDim::maxThreadsPerBlock;
+        m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
+        if (m_blocksPerGrid < minBlocksPerGrid)
+        {
+            // we cannot fill all blocks -> use less threads
+            m_threadsPerBlock = (N + minBlocksPerGrid - 1) / minBlocksPerGrid;
+            // round to multiples of 32 (warp size) for efficient memory access
+            m_threadsPerBlock = (m_threadsPerBlock + 31) / 32 * 32;
+            m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
+        }
+        assert(m_blocksPerGrid * m_threadsPerBlock >= N);
+    }
+
+    // compute our location on the grid
+    static __device__ CUDA_LONG GetLinearThreadId()
+    {
+        return blockDim.x * blockIdx.x + threadIdx.x;
+    }
+};
 
 #ifdef __GNUC__
 #define UNUSED_FUNCTION_ATTRIBUTE __attribute__ ((unused))
@@ -713,8 +750,8 @@ __global__ void _logSoftMaxColWise(
     if (col_id >= m_numCols)
         return;
 
-    __shared__ ElemType maxV[threadsPerBlock];
-    __shared__ ElemType Sum[threadsPerBlock];
+    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -749,8 +786,8 @@ __global__ void _logSoftMaxColWise(
 //    if (col_id>=m_numCols)
 //        return;
 //
-//    __shared__ ElemType maxV[threadsPerBlock];
-//    __shared__ ElemType Sum[threadsPerBlock];
+//    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+//    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
 //    maxV[threadIdx.x]=a[IDX2C(0,col_id,m_numRows)];
 //    Sum[threadIdx.x]=0;
 //
@@ -926,8 +963,8 @@ __global__ void _logSoftMaxRowWise(
     if (row_id >= m_numRows)
         return;
 
-    __shared__ ElemType maxV[threadsPerBlock];
-    __shared__ ElemType Sum[threadsPerBlock];
+    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -2017,7 +2054,7 @@ __global__ void _columnElementMultiplyWith(
     if (id>=N)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType mul=a[id];
     for (CUDA_LONG j=0;j<M;++j)
@@ -2037,7 +2074,7 @@ __global__ void _rowElementMultiplyWith(
     if (id>=M)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType mul=a[id];
     for (CUDA_LONG i=0;i<N;++i)
@@ -2057,7 +2094,7 @@ __global__ void _rowElementDivideBy(
     if (id >= M)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType v = a[id];
     if (v >= 0 && v < EPS_IN_INVERSE)
@@ -2084,7 +2121,7 @@ __global__ void _ColumnElementDivideBy(
 
     ElemType smallValue = EPS_IN_INVERSE;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType v=a[id];
     for (CUDA_LONG j=0;j<M;++j)
@@ -4794,7 +4831,7 @@ __global__ void _reductionLogAddSum(
     CUDA_LONG N)
 {
 
-    __shared__ ElemType partialLogAddSum[threadsPerBlock];
+    __shared__ ElemType partialLogAddSum[GridDim::maxThreadsPerBlock];
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     int tid = threadIdx.x;

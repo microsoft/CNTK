@@ -116,9 +116,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma push_macro("DefBinaryOp")
     #define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a, ElemType b) { return expr; }
 
-    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementWiseProduct, a*b); DefBinaryOp(ElementWiseQuotient, a / b);
+    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a*b); DefBinaryOp(ElementwiseQuotient, a / b);
     DefBinaryOp(LogSum, LogAdd(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
     DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
+    DefBinaryOp(MaskNegative, b >= 0 ? a : 0);
 #pragma pop_macro("DefBinaryOp")
 
 #pragma push_macro("DefTernaryOp")

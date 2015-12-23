@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // cast a matrix as a TensorView
     template<class ElemType>
-    TensorView<ElemType>::TensorView(Matrix<ElemType> & sob) :
+    TensorView<ElemType>::TensorView(const Matrix<ElemType> & sob) :
         m_sob(sob.AsReference()), m_shape(TensorShape(array<size_t, 2> { sob.GetNumRows(), sob.GetNumCols() }))
     { }
     // reshape a TensorView
@@ -73,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
         size_t dims = 0;
         for (size_t i = 0; i < N; i++)
-            if (dims < shapes[i].GetNumDims())
-                dims = shapes[i].GetNumDims();
+            if (dims < shapes[i].GetRank())
+                dims = shapes[i].GetRank();
         for (size_t i = 0; i < N; i++)
             shapes[i] = shapes[i].Pad(dims);
 
@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t k = 0; k < dims; k++)
             for (size_t i = 0; i < N; i++)
                 if (!Matches(shapes[i][k], opDims[k]))
-                    InvalidArgument("Binary tensor operation: Dimension %d is incompatible between input %d and output (%s vs. %s)", (int)k, (int)shapes[i][k], string(shapes[i]).c_str(), string(TensorShape(opDims)).c_str());
+                    InvalidArgument("Binary tensor operation: Dimension %d of input [%d] is incompatible with operation dimensions (%s vs. %s)", (int)k, (int)i, string(shapes[i]).c_str(), string(TensorShape(opDims)).c_str());
 
         // flatten consecutive dimensions
         // Dimensions must be consecutive in memory, and either non-broadcasting or all-broadcasting, across all dimensions.
@@ -189,6 +189,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op)
     {
+        static int cc = 0; if (cc++ == 0)
+            fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
+
         // prepare all tensor descriptor information as needed for execution
         array<size_t, 2> offsets;
         array<vector<ptrdiff_t>, 2> regularStrides, reducingStrides;
@@ -202,6 +205,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
     {
+        static int cc = 0; if (cc++ == 0)
+            fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
+
         array<size_t, 3> offsets;
         array<vector<ptrdiff_t>, 3> regularStrides, reducingStrides;
         vector<size_t> regularOpDims, reducingOpDims;
@@ -213,6 +219,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op)
     {
+        static int cc = 0; if (cc++ == 0)
+            fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
+
         array<size_t, 4> offsets;
         array<vector<ptrdiff_t>, 4> regularStrides, reducingStrides;
         vector<size_t> regularOpDims, reducingOpDims;

@@ -630,7 +630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
+            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
     };
 

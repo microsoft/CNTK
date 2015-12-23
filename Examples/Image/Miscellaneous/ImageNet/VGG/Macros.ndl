@@ -20,7 +20,7 @@ DnnLayer(inDim, outDim, x, wScale, bValue)
 # Convolutional layer with ReLU activation.
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
 {
-    W = Parameter(outMap, inWCount, init = Uniform, initValueScale = wScale)
+    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
     b = Parameter(outMap, 1, init = fixedValue, value = bValue)
     z = Plus(c, b);

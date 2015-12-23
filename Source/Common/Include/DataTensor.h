@@ -87,20 +87,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         // main constructor (from vector that holds dimensions)
-        template<class VEC>
-        TensorShape(const VEC & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
-        TensorShape(std::vector<size_t> && dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
+        //template<class VEC>
+        //TensorShape(const VEC & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        template<size_t N>
+        TensorShape(const std::array<size_t, N> & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        TensorShape(const std::vector<size_t> &   dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        TensorShape(      std::vector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
 
         // convenience constructors, e,g. for test code
-        TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
+        explicit TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
         TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
         TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
         TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }
         TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(std::vector<size_t> { I, J, K, L, M }) { }
 
         // default constructor
-        // BUGBUG: This default initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
-        TensorShape() : TensorShape(1, 1, 1) { }
+        TensorShape() { InitAsNoSlice(); }
 
         // boilerplate
         bool operator==(const TensorShape & other) const { return m_dims == other.m_dims; }
@@ -161,21 +163,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // accessors
         size_t GetDim(size_t k) const { return m_dims[k]; }
-        size_t GetNumDims() const { return m_dims.size(); }
+        size_t GetRank() const { return m_dims.size(); }
         size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
         size_t GetOffset() const { return m_offset; }
 
         // vector-like accessors
         size_t operator[](size_t k) const { return GetDim(k); }
-        size_t size() const { return GetNumDims(); }
+        size_t size() const { return GetRank(); }
 
         const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
         const std::vector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
-        size_t GetNumChannels() const { return m_dims[0]; }
-        size_t GetWidth()       const { return m_dims[1]; }
-        size_t GetHeight()      const { return m_dims[2]; }
+        size_t GetNumChannels() const { return m_dims.size() > 0 ? m_dims[0] : 1; }
+        size_t GetWidth()       const { return m_dims.size() > 1 ? m_dims[1] : 1; }
+        size_t GetHeight()      const { return m_dims.size() > 2 ? m_dims[2] : 1; }
+        // heuristics used for pretty-printing
+        // TODO: This will go away.
+        bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
+        bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
         // indexing
         // Determines the offset into the underlying element array for a given multi-dimensional index.
@@ -265,20 +271,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape Pad(size_t numDims) const               // append singleton dimensions
         {
             VerifyIsDense();
-            if (numDims < GetNumDims())
+            if (numDims < GetRank())
                 LogicError("Pad() cannot drop a shorten the dimensions.");
-            else if (numDims == GetNumDims())
+            else if (numDims == GetRank())
                 return *this;
             auto dims = GetDims();
             dims.resize(numDims, 1);
-            return TensorShape(dims);
+            return TensorShape(std::move(dims));
         }
         TensorShape Concat(const TensorShape & other) const // concatenate
         {
             auto dims = GetDims();
             auto otherDims = other.GetDims();
             dims.insert(dims.end(), otherDims.begin(), otherDims.end());
-            return TensorShape(dims);
+            return TensorShape(std::move(dims));
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
@@ -357,11 +363,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
         return TensorShape(channels, width, height);
-    }
-    // and use this one when the data is a plain vector
-    static inline TensorShape ImageLayoutVector(size_t n)
-    {
-        return TensorShape(1, 1, n);    // for now storing it as a 3D object as well  --TODO: fix this
     }
     // TODO: we need a constructor from config; that will allow us to generalize
 

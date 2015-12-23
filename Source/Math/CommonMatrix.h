@@ -56,9 +56,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // these are not implemented yet:
         opSaturateBetaAlpha, opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
         // binary
-        opSum, opDifference, opElementWiseProduct, opElementWiseQuotient,
+        opSum, opDifference, opElementwiseProduct, opElementwiseQuotient,
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
+        opMaskNegative,
         // ternary
         opCond
         // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
@@ -75,9 +76,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(SaturateBetaAlpha); Macro(SumAlpha); Macro(SubDifferenceToAlpha); Macro(SubDifferenceFromAlpha);
 
 #define ForAllBinaryOps(Macro) \
-    Macro(Sum); Macro(Difference); Macro(ElementWiseProduct); Macro(ElementWiseQuotient); \
+    Macro(Sum); Macro(Difference); Macro(ElementwiseProduct); Macro(ElementwiseQuotient); \
     Macro(LogSum); Macro(Max); Macro(Min); \
-    Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE);
+    Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
+    Macro(MaskNegative);
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond);
