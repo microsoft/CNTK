@@ -4499,7 +4499,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         __device__ __host__ size_t getNumCols() const { return K; }
         __device__ __host__ T & operator()(size_t n, size_t k)       { return m_data[n][k]; }
         __device__ __host__ T   operator()(size_t n, size_t k) const { return m_data[n][k]; }
-        template<typename U> FixedMatrix(const array<vector<U>, N> & data)  // construct from CPU-side array of vectors
+        template<typename U> FixedMatrix(const array<SmallVector<U>, N> & data)  // construct from CPU-side array of vectors
         {
             assert(data.size() == N);
             for (size_t n = 0; n < N; n++)
@@ -4519,7 +4519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         __device__ __host__ size_t getNumRows() const { return N; }
         __device__ __host__ size_t getNumCols() const { return 0; }
-        template<typename U> FixedMatrix(const array<vector<U>, N> & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); UNUSED(data); }
+        template<typename U> FixedMatrix(const array<SmallVector<U>, N> & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); UNUSED(data); }
     };
 
     // -----------------------------------------------------------------------
@@ -4713,12 +4713,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
     template<class ElemType, C_size_t N, C_int M, C_int K>
     static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op,
-                               const vector<size_t> & regularOpDims,       const array<vector<ptrdiff_t>, N> & regularStrideVectors,
-                               const vector<size_t> & reducingOpDimVector, const array<vector<ptrdiff_t>, N> & reducingStrideVectors)
+                               const SmallVector<size_t> & regularOpDims,       const array<SmallVector<ptrdiff_t>, N> & regularStrideVectors,
+                               const SmallVector<size_t> & reducingOpDimVector, const array<SmallVector<ptrdiff_t>, N> & reducingStrideVectors)
     {
         // copy all parameters to CUDA-compatible data structures
         FixedArray<ElemType*, N> pointers(pointerVector);
-        vector<C_size_t> regularOpStrideVector;    // kernel needs the strides for converting thread index back to multi-dimensional tensor index
+        SmallVector<C_size_t> regularOpStrideVector;    // kernel needs the strides for converting thread index back to multi-dimensional tensor index
         C_size_t numElements = 1;
         for (C_size_t k = 0; k < regularOpDims.size(); k++)
         {
@@ -4804,8 +4804,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor operation with k+1 dimensions (-1 means scalar)
     template<class ElemType, C_size_t N, C_int K>
     static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
-                                        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                                        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                                        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         size_t dims = reducingOpDims.size();
         switch (dims)
@@ -4822,8 +4822,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, C_size_t N>
     static void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
                                const array<size_t, N> & offsets,
-                               const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
-                               const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                               const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                               const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         for (C_size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
             pointers[i] += offsets[i];
@@ -4848,8 +4848,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 2> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
     {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId())
@@ -4870,8 +4870,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 3> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides)
     {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId())
@@ -4883,8 +4883,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 4> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides)
     {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId())

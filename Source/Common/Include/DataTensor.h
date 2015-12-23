@@ -11,6 +11,7 @@
 #include "File.h"
 #include <vector>
 #include <string>
+#include <array>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -83,23 +84,52 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Matrix lib will contain overloads for relevant operations that take Tensor& instead of Matrix&.
     //  - elementwise ops will go through a single bottleneck function that deals with matching dimensions (extend, broadcast) and flattening
 
+    template<typename T>
+    class SmallVector : vector<T>
+    {
+        typedef vector<T> Base;
+    public:
+        SmallVector() { }
+        SmallVector(SmallVector && other) : Base(std::move(other)) { }
+        SmallVector(const SmallVector & other) : Base(other) { }
+        SmallVector(size_t sz) : Base(sz) { }
+        SmallVector(size_t sz, const T & val) : Base(sz, val) { }
+        SmallVector(const std::initializer_list<T> & l) : Base(l) { }
+        SmallVector(const std::vector<T> & v) : Base(v) { }
+        template<class ITER>
+        void assign(const ITER & beg, const ITER & end) { Base::assign(beg, end); }
+        void assign(size_t sz, const T & val) { Base::assign(sz, val); }
+        template<class ITER>
+        void append(ITER beg, const ITER & end) { Base::insert(Base::end(), beg, end); }
+        void push_back(const T & val) { Base::push_back(val); }
+        size_t size() const { return Base::size(); }
+        bool empty() const { return size() == 0; }
+        void resize(size_t sz) { Base::resize(sz); }
+        void resize(size_t sz, const T & val) { Base::resize(sz, val); }
+        const T * begin() const { return Base::data(); }
+        const T *   end() const { return Base::data() + size();   }
+        const T & back() const { return Base::back(); }
+        void operator=(const SmallVector & other) { Base::operator=(other); }
+        bool operator==(const SmallVector & other) const { return (const Base&)*this == (const Base&)other; }
+        T operator[](size_t i) const { return Base::operator[](i); }
+        T & operator[](size_t i) { return Base::operator[](i); }
+    };
+
     struct TensorShape
     {
     public:
         // main constructor (from vector that holds dimensions)
-        //template<class VEC>
-        //TensorShape(const VEC & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
         template<size_t N>
         TensorShape(const std::array<size_t, N> & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
-        TensorShape(const std::vector<size_t> &   dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
-        TensorShape(      std::vector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
+        TensorShape(const SmallVector<size_t> &   dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        TensorShape(      SmallVector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
 
         // convenience constructors, e,g. for test code
-        explicit TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
-        TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
-        TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
-        TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }
-        TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(std::vector<size_t> { I, J, K, L, M }) { }
+        explicit TensorShape(size_t I) : TensorShape(SmallVector<size_t> { I }) { }
+        TensorShape(size_t I, size_t J) : TensorShape(SmallVector<size_t> { I, J }) { }
+        TensorShape(size_t I, size_t J, size_t K) : TensorShape(SmallVector<size_t> { I, J, K }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(SmallVector<size_t> { I, J, K, L }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(SmallVector<size_t> { I, J, K, L, M }) { }
 
         // default constructor
         TensorShape() { InitAsNoSlice(); }
@@ -171,8 +201,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t operator[](size_t k) const { return GetDim(k); }
         size_t size() const { return GetRank(); }
 
-        const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
-        const std::vector<ptrdiff_t> & GetStrides() const { return m_strides; }
+        const SmallVector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
+        const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
         size_t GetNumChannels() const { return m_dims.size() > 0 ? m_dims[0] : 1; }
@@ -186,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // indexing
         // Determines the offset into the underlying element array for a given multi-dimensional index.
         // This function is for reference. Probably not often used.
-        size_t Locate(const std::vector<size_t> & index) const
+        size_t Locate(const SmallVector<size_t> & index) const
         {
             ptrdiff_t location = m_offset;
             for (size_t k = 0; k < index.size(); k++)
@@ -283,7 +313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             auto dims = GetDims();
             auto otherDims = other.GetDims();
-            dims.insert(dims.end(), otherDims.begin(), otherDims.end());
+            dims.append(otherDims.begin(), otherDims.end());
             return TensorShape(std::move(dims));
         }
 
@@ -322,8 +352,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        std::vector<size_t> m_dims;     // dimensions of tensor or tensor slice. The size of the box.
-        std::vector<ptrdiff_t> m_strides; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
+        SmallVector<size_t> m_dims;     // dimensions of tensor or tensor slice. The size of the box.
+        SmallVector<ptrdiff_t> m_strides; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
         size_t m_offset;                // offset to element(0,0,...,0). May be non-0 in case of slicing.
         size_t m_allocation;            // allocation size of original dense tensor
         // For a regular tensor, there are no strides, m_strides[k] = m_strides[k-1] * m_dims[k-1]. This is how TensorShapes are created from dimensions.

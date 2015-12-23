@@ -9,6 +9,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "DataTensor.h" // only for SmallVector; I was hoping to keep this out
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 #include "ConcStack.h"
@@ -411,16 +412,16 @@ namespace Microsoft {
 
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 2> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 3> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 4> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
 
         static void CreateCurandObject(unsigned long seed, const char *caller);
         static void ResetCurandObject(unsigned long seed, const char *caller);
