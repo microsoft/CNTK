@@ -1164,6 +1164,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GradientFor(fr);
         }
         // tensor variants
+        TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
+        {
+            return TensorView<ElemType>(DataFor(data, fr), GetTensorShape(rank, fr));
+        }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
             return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
@@ -1545,7 +1549,7 @@ protected: \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
-    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
+    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::DataTensorFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
     using Base::m_inputSampleLayout; using Base::m_sampleLayout; \

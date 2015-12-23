@@ -34,6 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorView(const Matrix<ElemType> & sob, const TensorShape & shape) :
             TensorView(TensorView(sob)/*cast as a TensorView*/, shape/*with a shape*/)
         { }
+        // empty constructor
+        TensorView() { }
         // copy constructor
         TensorView(const TensorView<ElemType> & other) :
             m_sob(other.m_sob.AsReference()), m_shape(other.m_shape)
@@ -42,8 +44,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // elementwise operations
         // Result goes into 'this', and can optionally be added to the existing value.
-        // E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b).
-        //  and c.DoDiffOf(0, c, a, 1) means c -= a.
+        // E.g. c.DoSumOf(beta,a,b,alpha) means c := beta * c + alpha * (a + b),
+        //      c.AssignDiffOf(c,a) means c -= a,
+        //  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
         // All operators support elementwise in-place operations, i.e. a, b, and c
         // may all reference the same underlying SOB.
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
@@ -51,7 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper) \
-        void Do ## oper ## Of(ElemType beta, const TensorView & a, ElemType alpha) { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op ## oper); }
+        void     Do ## oper ## Of(ElemType beta, const TensorView & a, ElemType alpha)        { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op ## oper); } \
+        void Assign ## oper ## Of(               const TensorView & a, ElemType alpha = 1.0f) { DoUnaryOpOf(0,    a, alpha, ElementWiseOperator::op ## oper); } \
+        void    Add ## oper ## Of(               const TensorView & a, ElemType alpha = 1.0f) { DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllUnaryOps(DeclareUnaryTensorOp);
         ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
@@ -59,14 +64,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma push_macro("DeclareBinaryTensorOp")
 #define DeclareBinaryTensorOp(oper) \
-        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); }
+        void     Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha)        { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op ## oper); } \
+        void Assign ## oper ## Of(               const TensorView & a, const TensorView & b, ElemType alpha = 1.0f) { DoBinaryOpOf(0,    a, b, alpha, ElementWiseOperator::op ## oper); } \
+        void    Add ## oper ## Of(               const TensorView & a, const TensorView & b, ElemType alpha = 1.0f) { DoBinaryOpOf(1.0f, a, b, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllBinaryOps(DeclareBinaryTensorOp);
 #pragma pop_macro("DeclareBinaryTensorOp")
 
 #pragma push_macro("DeclareTernaryTensorOp")
 #define DeclareTernaryTensorOp(oper) \
-        void Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha) { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op ## oper); }
+        void     Do ## oper ## Of(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha)        { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op ## oper); } \
+        void Assign ## oper ## Of(               const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha = 1.0f) { DoTernaryOpOf(0,    a, b, c, alpha, ElementWiseOperator::op ## oper); } \
+        void    Add ## oper ## Of(               const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha = 1.0f) { DoTernaryOpOf(1.0f, a, b, c, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllTernaryOps(DeclareTernaryTensorOp);
 #pragma pop_macro("DeclareTernaryTensorOp")
