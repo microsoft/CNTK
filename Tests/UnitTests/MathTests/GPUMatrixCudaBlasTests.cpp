@@ -5,7 +5,7 @@
 //
 // GPUMatrix CUDA BLAS library tests should go here
 //
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "../../../Source/Math/GPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;

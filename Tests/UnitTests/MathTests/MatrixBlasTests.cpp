@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-//#include "stdafx.h"
+#include "stdafx.h"
 #include <math.h>
 #include <crtdefs.h>
 #include "../../../Source/Math/Matrix.h"

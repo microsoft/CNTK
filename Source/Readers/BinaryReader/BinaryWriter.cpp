@@ -6,7 +6,7 @@
 // BinaryWriter.cpp : Defines the exported functions for the DLL application.
 //
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "Basics.h"
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"

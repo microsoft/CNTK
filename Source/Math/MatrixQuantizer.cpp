@@ -1,4 +1,4 @@
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "Matrix.h"
 #include "MatrixQuantizer.h"
 #include "MatrixQuantizerCPU.h"

@@ -6,7 +6,7 @@
 // CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
 //
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "Basics.h"
 #include "File.h"
 

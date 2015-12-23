@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "CuDnnConvolutionEngine.h"
 #include "GPUMatrix.h"
 #ifdef USE_CUDNN

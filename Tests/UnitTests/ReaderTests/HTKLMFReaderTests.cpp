@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-//#include "stdafx.h"
+#include "stdafx.h"
 
 using namespace Microsoft::MSR::CNTK;
 

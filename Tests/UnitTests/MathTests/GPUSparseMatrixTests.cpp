@@ -5,7 +5,7 @@
 //
 // GPUSparseMatrix Unit tests should go here
 //
-//#include "stdafx.h"
+#include "stdafx.h"
 #include <math.h>
 #include <crtdefs.h>
 #include "../../../Source/Math/GPUSparseMatrix.h"
