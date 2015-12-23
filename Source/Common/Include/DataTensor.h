@@ -84,6 +84,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Matrix lib will contain overloads for relevant operations that take Tensor& instead of Matrix&.
     //  - elementwise ops will go through a single bottleneck function that deals with matching dimensions (extend, broadcast) and flattening
 
+#if 1
+    template<typename T>
+    class SmallVector
+    {
+        T m_data[12];
+        size_t m_size;
+    public:
+        size_t capacity() const { return _countof(m_data); }
+        size_t size() const { return m_size; }
+        const T * data() const { return m_data; }
+        void clear() { m_size = 0; }
+        void push_back(const T & val) { if (m_size >= capacity()) LogicError("SmallVector: push_back() exceeded capacity of %d", (int)capacity()); m_data[m_size++] = val; }
+        void resize(size_t sz, const T & val) { if (sz < m_size) m_size = sz; else while (m_size < sz) push_back(val); }
+        void assign(size_t sz, const T & val) { clear(); resize(sz, val); }
+        template<class ITER>
+        void append(ITER beg, const ITER & end) { while (beg != end) push_back(*beg++); }
+        template<class ITER>
+        void assign(ITER beg, const ITER & end) { clear(); append(beg,end); }
+        void operator=(const SmallVector & other) { m_size = other.m_size; memcpy(m_data, other.m_data, other.m_size * sizeof(T)); }
+        SmallVector(const SmallVector & other) { *this = other; }
+        SmallVector(size_t sz, const T & val) { assign(sz, val); }
+        SmallVector(size_t sz) : SmallVector(sz, 0) { }
+        SmallVector() : SmallVector(0) { }
+        SmallVector(const std::vector<T>           & v) { assign(v.begin(), v.end()); }
+        SmallVector(const std::initializer_list<T> & l) { assign(l.begin(), l.end()); }
+        bool operator==(const SmallVector & other) const { return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T)); }
+        T   operator[](size_t i) const { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
+        T & operator[](size_t i)       { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
+        const T * begin() const { return data(); }
+        const T *   end() const { return data() + size(); }
+        const T & back() const { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
+        bool empty() const { return size() == 0; }
+        void resize(size_t sz) { resize(sz, 0); }
+    };
+#else
     template<typename T>
     class SmallVector : vector<T>
     {
@@ -114,6 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         T operator[](size_t i) const { return Base::operator[](i); }
         T & operator[](size_t i) { return Base::operator[](i); }
     };
+#endif
 
     struct TensorShape
     {
