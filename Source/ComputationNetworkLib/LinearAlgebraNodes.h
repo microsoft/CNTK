@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
@@ -122,9 +122,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-#if 0//def ENABLE_TENSORVIEW
+#ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoSumOf(0.0f, input0, input1, 1.0f);
@@ -215,7 +215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
 #ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
@@ -270,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#"); }
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoDifferenceOf(0.0f, input0, input1, 1.0f);
@@ -692,10 +692,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            // depending on inputIndex, inputs swap their meaning
-            // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
-            // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient        =                     GradientTensorFor(rank, fr);
             auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
             auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
 
@@ -725,7 +722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#"); }
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);

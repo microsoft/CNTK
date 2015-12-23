@@ -4176,138 +4176,136 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-	template<class ElemType>
-	void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
-	{
-		if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
-			InvalidArgument("All matrices must be on the same GPU");
+    template<class ElemType>
+    void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
+    {
+        if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
+            InvalidArgument("All matrices must be on the same GPU");
 
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("Scale:  one of the input matrices is empty.");
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("Scale:  one of the input matrices is empty.");
 
-		const int m = (int)a.GetNumRows();
-		const int n = (int)a.GetNumCols();
-		const int k = (int)b.GetNumRows();
-		const int l = (int)b.GetNumCols();
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int k = (int)b.GetNumRows();
+        const int l = (int)b.GetNumCols();
 
-		assert(m>0 && n>0 && k>0 && l>0); //converting from size_t to int may cause overflow
-		assert(m == k && n == l); //converting from size_t to int may cause overflow
-		if (m != k || n != l)
-			InvalidArgument("Matrices a and b should have same dimension.");
+        assert(m > 0 && n > 0 && k > 0 && l > 0); //converting from size_t to int may cause overflow
+        assert(m == k && n == l); //converting from size_t to int may cause overflow
+        if (m != k || n != l)
+            InvalidArgument("Matrices a and b should have same dimension.");
 
-		c.Resize(nt + 1, n);
+        c.Resize(nt + 1, n);
 
-		if (true)
-		{
+        if (true)
+        {
             cudaEvent_t done = nullptr;;
-			c.PrepareDevice();
+            c.PrepareDevice();
 
-			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
-			dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
-
-			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-			_innerProductWithShiftNeg<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, m, n, shift, nt + 1);
-			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		}
-	}
-
-	template<class ElemType>
-	GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m)
-	{
-		if (a.IsEmpty())
-			LogicError("GetARowByIndex: Matrix is empty.");
-
-		Resize(1, a.GetNumCols());
-
-		int n = a.GetNumRows();
-		int P = a.GetNumCols();
-
-		if (m >= n)
-			LogicError("GetARowByIndex: m is out of range.");
+            dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+            dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
 
-		int blocksPerGrid = (int)ceil(((double)P) / GridDim::maxThreadsPerBlock);
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _innerProductWithShiftNeg<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, m, n, shift, nt + 1);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+    }
 
-		a.PrepareDevice();
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m)
+    {
+        if (a.IsEmpty())
+            LogicError("GetARowByIndex: Matrix is empty.");
+
+        Resize(1, a.GetNumCols());
+
+        int n = a.GetNumRows();
+        int P = a.GetNumCols();
+
+        if (m >= n)
+            LogicError("GetARowByIndex: m is out of range.");
+
+
+        int blocksPerGrid = (int)ceil(((double)P) / GridDim::maxThreadsPerBlock);
+
+        a.PrepareDevice();
         cudaEvent_t done = nullptr;;
-		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-		_getARowByIndex<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, n, P, m);
-		//		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _getARowByIndex<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, n, P, m);
+        //		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
-		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		return *this;
-	}
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
 
 
-	template<class ElemType>
-	void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
-	{
-		if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
-			InvalidArgument("All matrices must be on the same GPU");
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
+    {
+        if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
+            InvalidArgument("All matrices must be on the same GPU");
 
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("Scale:  one of the input matrices is empty.");
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("Scale:  one of the input matrices is empty.");
 
-		const int m = (int)a.GetNumRows();
-		const int n = (int)a.GetNumCols();
-		const int O = (int)b.GetNumRows();
-		const int P = (int)b.GetNumCols();
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int O = (int)b.GetNumRows();
+        const int P = (int)b.GetNumCols();
 
-		assert(m>0 && n>0 && O>0 && P>0); //converting from size_t to int may cause overflow
-		if (m != 1 || n != P)
-			InvalidArgument("Matrices a and b should have same dimension.");
+        assert(m > 0 && n > 0 && O > 0 && P > 0); //converting from size_t to int may cause overflow
+        if (m != 1 || n != P)
+            InvalidArgument("Matrices a and b should have same dimension.");
 
-		c.Resize(O, P);
+        c.Resize(O, P);
 
-		if (true)
-		{
+        if (true)
+        {
             cudaEvent_t done = nullptr;;
-			c.PrepareDevice();
+            c.PrepareDevice();
 
-			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
-			dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
-
-			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-			_conductRowElementMultiplyWithShift<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, O, P, shift, isafixed);
-			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		}
-	}
+            dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+            dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
 
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _conductRowElementMultiplyWithShift<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, O, P, shift, isafixed);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+    }
 
-	template<class ElemType>
-	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			LogicError("AssignElementProductOfWithShift: Matrix is empty.");
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            LogicError("AssignElementProductOfWithShift: Matrix is empty.");
 
-		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			InvalidArgument("The input matrix dimensions do not match.");
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            InvalidArgument("The input matrix dimensions do not match.");
 
-		//int O = a.GetNumRows();
-		int P = a.GetNumCols();
+        //int O = a.GetNumRows();
+        int P = a.GetNumCols();
 
-		Resize(1, P);
-		CUDA_LONG N = (CUDA_LONG)GetNumElements();
-		int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
-		a.PrepareDevice();
+        Resize(1, P);
+        CUDA_LONG N = (CUDA_LONG)GetNumElements();
+        int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+        a.PrepareDevice();
         cudaEvent_t done = nullptr;;
-		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-		_assignElementProductOfWithShift<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, N);
-		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		return *this;
-	}
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignElementProductOfWithShift<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
 
     //sequence training
     template<class ElemType>
@@ -4617,13 +4615,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // The canonical case, vector op without reduction, is this PTX function:
-    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLy3ELi1ELi0EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IjXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IjXT1_EEENS9_IiXT0_EXT1_EEEi
-    //                                   float ^      ^ aggregate loop
-    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLy3ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IjXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IjXT1_EEENS9_IiXT0_EXT1_EEEi
-    //                                      args? ^       ^ input dims
     // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi3ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
-    // I see:
-    //  - C_size_t causes sign extend operations
+    //                                   float ^      ^ aggregate loop
+    //                                      args? ^       ^ input dims
+    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi2ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
 
     // increment a pointer by a number of elements
     // This will later change into pre-scaled strides.
@@ -4708,7 +4703,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides,
                                     FixedArray<C_unsigned_int, M> reducingOpDims,   FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG numElements)
     {
-        CUDA_LONG id = GridDim::GetLinearThreadId();   // blockDim.x * blockIdx.x + threadIdx.x;
+        CUDA_LONG id = GridDim::GetLinearThreadId();
         if (id >= numElements)
             return;
         TensorOpElement<ElemType, N, M, K, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
@@ -4740,6 +4735,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         GridDim grid(NN);
         _launchTensorOp<ElemType, N, M, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, NN);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+
+    // for linear unary ops, we need to define a functor for every function for use as a template parameter (lambda syntax doesn't work in CUDA 7)
+    #define DefineUnaryTensorFunctor(oper) \
+        struct Functor ## oper { template<class ElemType> static __device__ ElemType f(ElemType a) { return Op ## oper(a); } };
+    ForAllUnaryOps(DefineUnaryTensorFunctor);
+
+    // the top-level kernel for linear unary ops
+    // Note: If we have a beta, we have 2 memory accesses, so this optimization may no longer be needed as we are memory-bound.
+    template<class ElemType, class FN>
+    __global__ void _launchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, CUDA_LONG numElements)
+    {
+        CUDA_LONG id = GridDim::GetLinearThreadId();
+        if (id >= numElements)
+            return;
+        ElemType a = pa[id];
+        ElemType val = FN::f(a);
+        val *= alpha;
+        if (beta != 0)
+            val += beta * pb[id];
+        pb[id] = val;
+    }
+    // version without beta and alpha
+    template<class ElemType, class FN>
+    __global__ void _launchUnaryTensorOp(const ElemType * pa, ElemType * pb, CUDA_LONG numElements)
+    {
+        CUDA_LONG id = GridDim::GetLinearThreadId();
+        if (id >= numElements)
+            return;
+        ElemType a = pa[id];
+        ElemType val = FN::f(a);
+        pb[id] = val;
+    }
+
+    // special case of linear unary operation
+    template<class ElemType>
+    static void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
+    {
+        CUDA_LONG NN = (CUDA_LONG)regularOpDim;
+
+        #define CaseLaunchUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: \
+            if (beta == 0 && alpha == 1) \
+                return _launchUnaryTensorOp<ElemType,Functor ## oper> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(pa, pb, NN); \
+            else \
+                return _launchUnaryTensorOp<ElemType,Functor ## oper> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pa, pb, alpha, NN);
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        GridDim grid(NN);
+        switch (op)
+        {
+        ForAllUnaryOps(CaseLaunchUnaryTensorOp);
+        default: LogicError("LaunchTensorOp1: Unknown op code %d.", (int)op);
+        }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -4802,7 +4854,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
-        return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+        // special case: linear processing
+        // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
+        // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
+        if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
+            return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
+
+        // regular case
+        else
+            return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides

@@ -35,7 +35,6 @@
 #endif
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
-#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; if (id>=N) return;
 
 // ---------------------------------------------------------------------------
 // GridDim -- helper to choose the CUDA grid dimensions
@@ -76,6 +75,8 @@ struct GridDim
     }
 };
 
+#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) CUDA_LONG id = GridDim::GetLinearThreadId(); if (id>=N) return;
+
 #ifdef __GNUC__
 #define UNUSED_FUNCTION_ATTRIBUTE __attribute__ ((unused))
 #else
@@ -84,7 +85,11 @@ struct GridDim
 
 // Predefine this for later.
 static __inline__ __device__ double atomicAdd(double* address, double val) UNUSED_FUNCTION_ATTRIBUTE;
-//CUDA Kernels code
+
+// ===========================================================================
+// CUDA kernels follow, lots of them
+// ===========================================================================
+
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
     const ElemType alpha,     
@@ -92,7 +97,7 @@ __global__ void _elementWisePowerOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (alpha==0)
     {
         res[id]=1;
@@ -128,7 +133,7 @@ __global__ void _elementWiseSigmoidOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         if (a[id]>=0)
@@ -151,7 +156,7 @@ __global__ void _elementWiseSigmoidOnCuda(
         }
         else
         {
-            float e = exp(a[id]);
+            float e = exp(a[id]);   // BUGBUG: Looks like this should be expf().
             res[id]=e/(1+e);
         }
     }
@@ -173,15 +178,13 @@ __global__ void _assignSigmoidOf(
     ElemType* res,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (id >= N)
-    {
-        return;
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 
     // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
     // and e^x / (1 + e^x) if x is positive.
+    // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
+    //         There is a second version of this function that does. That should be used.
+
     ElemType negElem = -a[id];
     ElemType e = _exp(negElem);
 
@@ -194,7 +197,7 @@ __global__ void _elementWiseLinRectDerivativeOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = (a[id] <= 0) ? 0 : 1;
 }
 
@@ -204,7 +207,7 @@ __global__ void _elementWiseSigmoidDerivativeOnCuda(
     ElemType *res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = a[id] * (1-a[id]);
 }
 
@@ -214,7 +217,7 @@ __global__ void _elementWiseTanhOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=tanh(a[id]);
@@ -234,7 +237,7 @@ __global__ void _elementWiseSqrtOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=sqrt(max((ElemType)0, a[id]));
@@ -251,7 +254,7 @@ __global__ void _elementWiseExpOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=exp(a[id]);
@@ -268,7 +271,7 @@ __global__ void _elementWiseLogOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (a[id]<EPS_IN_LOG)
     {
         res[id]=LOG_OF_EPS_IN_LOG;
@@ -292,7 +295,7 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=fabs(a[id]);
@@ -309,7 +312,7 @@ __global__ void _elementWiseCosineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=cos(a[id]);
@@ -326,7 +329,7 @@ __global__ void _elementWiseNegativeSineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (sizeof(ElemType)==sizeof(double))
     {
         res[id]=-sin(a[id]);
@@ -2424,7 +2427,7 @@ __global__ void _matrixMatrixAddOnCuda(
     const CUDA_LONG N
     )
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     c[id] = alpha * a[id] + b[id];
 }
 
@@ -2437,8 +2440,8 @@ __global__ void _matrixVectorRowWiseAddWithThreadPerElem(
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     CUDA_LONG col = id / m;
 
@@ -2455,8 +2458,8 @@ __global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     CUDA_LONG col = id / m;
     CUDA_LONG row = id - col*m;

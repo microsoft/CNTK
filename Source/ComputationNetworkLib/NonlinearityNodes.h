@@ -183,6 +183,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             functionValues.AssignSigmoidOf(inputFunctionValues);
         }
+
+#if 1
+        // tensor lib:
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result =           ValueTensorFor(rank, fr);
+            auto input  = Input(0)->ValueTensorFor(rank, fr);
+            ForwardPropV(input, result);
+        }
+
+        /*virtual*/ void ForwardPropV(const TensorView<ElemType>& input, TensorView<ElemType>& result) //override
+        {
+            result.DoSigmoidOf(0.0f, input, 1.0f);
+        }
+#endif
     };
 
     template class SigmoidNode<float>;
