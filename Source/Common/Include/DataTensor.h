@@ -279,11 +279,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 return m_strides[k] == m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1];
         }
-        // editing functions
-        // These all create new TensorShape objects.
-        TensorShape Flatten(size_t k) const  // flatten [k] with [k-1]
+        // editing functions for tensor operations
+        // Unlike other methods, these are in-place.
+        TensorShape & FlattenInPlace(size_t k)  // flatten [k] with [k-1]
         {
-            TensorShape result = *this;
             if (!CanFlatten(k))
                 LogicError("Flatten() cannot flatten dimensions with gaps");
             // We reshape local (I x J) sub-matrices to (1 x I*J) sub-matrices.
@@ -294,16 +293,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //   m_dims    =   I   1    J*K   L
             //   m_strides =   1   I    I     I*J*K
             // TODO: rethink whether this is correct for example of negative strides
-            result.m_dims[k] *= result.m_dims[k - 1];
-            result.m_dims[k - 1] = 1;
-            result.m_strides[k] = /*result.m_dims[k - 1] *, it's 1 */ result.m_strides[k - 1];
-            return result;
+            m_dims[k] *= m_dims[k - 1];
+            m_dims[k - 1] = 1;
+            m_strides[k] = /*m_dims[k - 1] *, it's 1 */ m_strides[k - 1];
+            return *this;
         }
-        TensorShape DropDims(const SmallVector<bool> & toDrop) const  // remove dimension
+        TensorShape & DropDimsInPlace(const SmallVector<bool> & toDrop)   // remove dimension
         {
             // this deletes a dimension while retaining strides
             // This implies a slice to [0] for this dimension.
-            TensorShape result = *this;
             size_t j = 0;
             for (size_t k = 0; k < size(); k++)
             {
@@ -317,47 +315,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // dropping the second dimension
                     //   m_dims    =   I   %    J   K
                     //   m_strides =   1   %    I   I*J
-                    result.m_dims[j] = result.m_dims[k];
-                    result.m_strides[j] = result.m_strides[k];
+                    m_dims[j]    = m_dims[k];
+                    m_strides[j] = m_strides[k];
                     j++;
                 }
             }
-            result.m_dims.resize(j);
-            result.m_strides.resize(j);
-            return result;
+            m_dims.resize(j);
+            m_strides.resize(j);
+            return *this;
         }
-        TensorShape WithBroadcastStrides() const  // flatten [k] with [k-1] if toFlatten[k] is set
+        TensorShape DropDims(const SmallVector<bool> & toDrop) const
         {
-            TensorShape result = *this;
-            for (size_t k = 0; k < size(); k++)
-                if (result.m_dims[k] == 1)
-                    result.m_strides[k] = 0;
+            TensorShape result(*this);
+            result.DropDimsInPlace(toDrop);
             return result;
         }
-        TensorShape Pad(size_t numDims) const               // append singleton dimensions
+        TensorShape & SetBroadcastStrides()   // set strides to 0 for broadcasting dimensions
+        {
+            for (size_t k = 0; k < size(); k++)
+                if (m_dims[k] == 1)
+                    m_strides[k] = 0;
+            return *this;
+        }
+        TensorShape & PadInPlace(size_t numDims)                // append singleton dimensions
         {
             VerifyIsDense();
             if (numDims < GetRank())
                 LogicError("Pad() cannot drop a shorten the dimensions.");
-            else if (numDims == GetRank())
-                return *this;
-            auto dims = GetDims();
-            dims.resize(numDims, 1);
-            return TensorShape(std::move(dims));
+            else while (GetRank() < numDims)
+            {
+                m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
+                m_dims.push_back(1);
+            }
+            return *this;
         }
-        TensorShape Concat(const TensorShape & other) const // concatenate
+        //TensorShape Concat(const TensorShape & other) const // concatenate
+        //{
+        //    auto dims = GetDims();
+        //    auto otherDims = other.GetDims();
+        //    dims.append(otherDims.begin(), otherDims.end());
+        //    return TensorShape(std::move(dims));
+        //}
+        TensorShape & AppendInPlace(size_t rank, size_t newDim)  // concatenate one new dimension at position 'rank'
         {
-            auto dims = GetDims();
-            auto otherDims = other.GetDims();
-            dims.append(otherDims.begin(), otherDims.end());
-            return TensorShape(std::move(dims));
+            PadInPlace(rank);
+            m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
+            m_dims.push_back(newDim);
+            m_allocation *= newDim;
+            return *this;
         }
-        TensorShape Append(size_t rank, size_t newDim) const // concatenate one new dimension at position 'rank'
+        TensorShape Append(size_t rank, size_t newDim) const
         {
-            auto dims = GetDims();
-            dims.resize(rank, 1);
-            dims.push_back(newDim);
-            return TensorShape(std::move(dims));
+            TensorShape result(*this);
+            result.AppendInPlace(rank, newDim);
+            return result;
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
