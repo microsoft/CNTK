@@ -8,6 +8,20 @@ DnnReLULayer(inDim, outDim, x, wScale, bValue)
     y = RectifiedLinear(z)
 }
 
+# Fully-connected layer with batch normalization and ReLU activation.
+DnnBNReLULayer(inDim, outDim, x, wScale, bValue)
+{
+    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
+    b = Parameter(inDim, 1, init = fixedValue, value = bValue) 
+    sc = Parameter(inDim, 1, init = Gaussian, initValueScale = 0.01)
+    m = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    bn = BatchNormalization(x, sc, b, m, isd, eval = false, spatial = false)
+    t = Times(W, bn)
+    y = RectifiedLinear(t)
+}
+
 # Fully-connected layer.
 DnnLayer(inDim, outDim, x, wScale, bValue)
 {
@@ -27,3 +41,16 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
     y = RectifiedLinear(z);
 }
 
+# Convolutional layer with batch normalization and ReLU activation.
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue)
+{
+    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    b = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc = Parameter(outMap, 1, init = Gaussian, initValueScale = scValue)
+    m = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
+    bn = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true)
+    y = RectifiedLinear(bn);
+}

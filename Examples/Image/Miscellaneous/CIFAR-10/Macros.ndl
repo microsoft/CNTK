@@ -82,6 +82,59 @@ ResNetNode2Reduce(inp, outMap, inWCount, wCount, inDim, outDim, kW, kH, wScale, 
     y2 = RectifiedLinear(p);
 }
 
+ResNetNode2MaxPool(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue)
+{
+    W1 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    b1 = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scValue)
+    m1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c1 = Convolution(W1, inp, kW, kH, outMap, 2, 2, zeroPadding = true)
+    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true)
+    y1 = RectifiedLinear(bn1);
+    
+    W2 = Parameter(outMap, wCount, init = Gaussian, initValueScale = wScale)
+    b2 = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scValue)
+    m2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c2 = Convolution(W2, y1, kW, kH, outMap, 1, 1, zeroPadding = true)
+    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true)
+    
+    imp = MaxPooling(inp, 2, 2, 2, 2)
+    imp2 = RowStack(imp, imp)
+    p = Plus(bn2, imp2)
+    y2 = RectifiedLinear(p);
+}
+
+ResNetNode2Conv(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, Wproj)
+{
+    W1 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    b1 = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scValue)
+    m1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c1 = Convolution(W1, inp, kW, kH, outMap, 2, 2, zeroPadding = true)
+    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true)
+    y1 = RectifiedLinear(bn1);
+    
+    W2 = Parameter(outMap, wCount, init = Gaussian, initValueScale = wScale)
+    b2 = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scValue)
+    m2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
+    
+    c2 = Convolution(W2, y1, kW, kH, outMap, 1, 1, zeroPadding = true)
+    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true)
+    
+    cproj = Convolution(Wproj, inp, 2, 2, outMap, 2, 2, zeroPadding = false)
+    p = Plus(bn2, cproj)
+    y2 = RectifiedLinear(p);
+}
+
 DnnReLULayer(inDim, outDim, x, wScale, bValue)
 {
     W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
