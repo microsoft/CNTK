@@ -19,7 +19,7 @@ namespace Microsoft {  namespace MSR {  namespace CNTK
             // This fixture sets up paths so the tests can assume the right location for finding the configuration 
             // file as well as the input data and control data.
             // subPath : an optional sub path (or full path) for the location of data.
-            ReaderFixture(string subPath = "")
+            ReaderFixture(string subPath = "", string envVariableErrorMessage = "")
             {
                 BOOST_TEST_MESSAGE("Setup fixture");
                 m_initialWorkingPath = boost::filesystem::current_path().generic_string();
@@ -61,6 +61,14 @@ namespace Microsoft {  namespace MSR {  namespace CNTK
                         else
                         {
                             BOOST_TEST_MESSAGE("Invalid environment variable: " + subPath);
+                            fprintf(stderr, "Invalid environment variable: %s\n", subPath.c_str());
+
+                            if (!envVariableErrorMessage.empty())
+                            {
+                                BOOST_TEST_MESSAGE(envVariableErrorMessage);
+                                fprintf(stderr, envVariableErrorMessage.c_str());
+                            }
+
                             newCurrentPath = m_testDataPath;
                         }
                     }

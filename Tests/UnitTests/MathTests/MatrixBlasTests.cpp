@@ -6,8 +6,8 @@
 #include "stdafx.h"
 #include <math.h>
 #include <crtdefs.h>
-#include "../../../Math/Math/Matrix.h"
-#include "../../../Math/Math/CPUMatrix.h"
+#include "../../../Source/Math/Matrix.h"
+#include "../../../Source/Math/CPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 

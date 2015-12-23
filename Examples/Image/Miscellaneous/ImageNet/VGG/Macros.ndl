@@ -1,0 +1,29 @@
+# Fully-connected layer with ReLU activation.
+DnnReLULayer(inDim, outDim, x, wScale, bValue)
+{
+    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
+    b = Parameter(outDim, init = fixedValue, value = bValue) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = RectifiedLinear(z)
+}
+
+# Fully-connected layer.
+DnnLayer(inDim, outDim, x, wScale, bValue)
+{
+    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale)
+    b = Parameter(outDim, init = fixedValue, value = bValue)
+    t = Times(W, x)
+    z = Plus(t, b)
+}
+
+# Convolutional layer with ReLU activation.
+ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
+{
+    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
+    b = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    z = Plus(c, b);
+    y = RectifiedLinear(z);
+}
+
