@@ -8,7 +8,9 @@
 
 #pragma once
 
-#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#endif
 #define _SCL_SECURE_NO_WARNINGS // current API of matrix does not allow safe invokations. TODO: change api to proper one.
 
 #include "targetver.h"
