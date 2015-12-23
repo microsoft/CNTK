@@ -76,12 +76,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (dims < shapes[i].GetRank())
                 dims = shapes[i].GetRank();
         for (size_t i = 0; i < N; i++)
-            shapes[i] = shapes[i].Pad(dims);
+            if (shapes[i].GetRank() < dims)
+                shapes[i] = shapes[i].Pad(dims);
+        // all shapes[] now have the same rank
 
         // determine operation shape (max over all dimensions)
-        SmallVector<size_t> opDims(dims, 0);
+        SmallVector<size_t> opDims(shapes[0].GetDims());
         for (size_t k = 0; k < dims; k++)
-            for (size_t i = 0; i < N; i++)
+            for (size_t i = 1; i < N; i++)
                 opDims[k] = max(opDims[k], shapes[i][k]);
 
         // dimension compatibility check
@@ -115,19 +117,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
         // remove singleton dimensions
-        vector<bool> toDrop(dims, false);
+        SmallVector<bool> toDrop(dims, false);
+        bool anyToDrop = false;
         for (size_t k = 0; k < dims; k++)
         {
             for (size_t i = 0; i < N; i++)
                 if (shapes[i][k] != 1)
                     goto neither;
             toDrop[k] = true;           // found an all-singleton dimensions
+            anyToDrop = true;
         neither:;
         }
-        for (size_t i = 0; i < N; i++)
-            shapes[i] = shapes[i].DropDims(toDrop);
-        opDims = TensorShape(opDims).DropDims(toDrop).GetDims();    // (ugh)
-        dims = opDims.size();   // #dims has changed
+        if (anyToDrop)
+        {
+            for (size_t i = 0; i < N; i++)
+                shapes[i] = shapes[i].DropDims(toDrop);
+            opDims = TensorShape(opDims).DropDims(toDrop).GetDims();    // (ugh)
+            dims = opDims.size();   // #dims has changed
+        }
         for (size_t i = 0; i < N; i++)
             assert(dims == shapes[i].size());
         // note: if op is a scalar, then we end up with 0 dimensions here, which is allowed
@@ -136,9 +143,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // determine broadcasting; that is, set strides to 0 for 1-dimensions
         // To be more precise, we should only set actually broadcasting dimensions to 0.
         // But since dimensions that are 1 across all args are eliminated, any 1 must be some form of broadcasting.
-        // TODO: Do we need to allow other strides at this point in time? If not, broadcasting becomes a bit vector.
-        for (size_t i = 0; i < N; i++)
-            shapes[i] = shapes[i].WithBroadcastStrides();
+        for (size_t i = 0; i < N; i++)       // TODO: do we need to test output tensor here as well?
+            for (size_t k = 0; k < dims; k++)
+                if (shapes[i][k] < opDims[k])
+                {
+                    shapes[i] = shapes[i].WithBroadcastStrides();
+                    break;
+                }
 
         //fprintf(stderr, "%s  op  %s  ->  %s  via  %s\n", string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
 
@@ -165,22 +176,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // separate out the inverse-broadcasting dimensions
         // Any singleton dimension in the result tensor is inverse-broadcasting, because there must be at least one non-1 dimension
         // in one of the inputs, otherwise the entire dimension would have been optimized away above.
-        vector<bool> isReducingDim(dims);    // true for each inverse-broadcasting dimension
+        SmallVector<bool> isReducingDim(dims);    // true for each inverse-broadcasting dimension
+        bool isAnyReducingDim = false;
         for (size_t k = 0; k < dims; k++)
-            isReducingDim[k] = shapes.back()[k] == 1;
+        {
+            bool isRed = shapes.back()[k] == 1;
+            isReducingDim[k] = isRed;
+            isAnyReducingDim |= isRed;
+        }
 
         // form the regular (non-inverse-broadcasting) dims
-        for (size_t i = 0; i < N; i++)
-            regularStrides[i] = shapes[i].DropDims(isReducingDim).GetStrides();
-        regularOpDims = TensorShape(opDims).DropDims(isReducingDim).GetDims();    // (ugh)
+        if (isAnyReducingDim)
+        {
+            for (size_t i = 0; i < N; i++)
+                regularStrides[i] = shapes[i].DropDims(isReducingDim).GetStrides();
+            regularOpDims = TensorShape(opDims).DropDims(isReducingDim).GetDims();    // (ugh)
 
-        // form the inverse-broadcasting dims
-        vector<bool> isRegularDim(dims);    // true for each inverse-broadcasting dimension
-        for (size_t k = 0; k < dims; k++)
-            isRegularDim[k] = !isReducingDim[k];   // (no way to do this more nicely?)
-        for (size_t i = 0; i < N; i++)
-            reducingStrides[i] = shapes[i].DropDims(isRegularDim).GetStrides();
-        reducingOpDims = TensorShape(opDims).DropDims(isRegularDim).GetDims();    // (ugh)
+            // form the inverse-broadcasting dims
+            SmallVector<bool> isRegularDim(dims);    // true for each inverse-broadcasting dimension
+            for (size_t k = 0; k < dims; k++)
+                isRegularDim[k] = !isReducingDim[k];   // (no way to do this more nicely?)
+            for (size_t i = 0; i < N; i++)
+                reducingStrides[i] = shapes[i].DropDims(isRegularDim).GetStrides();
+            reducingOpDims = TensorShape(opDims).DropDims(isRegularDim).GetDims();    // (ugh)
+        }
+        else        // case if no reduction: things are simpler
+        {
+            for (size_t i = 0; i < N; i++)
+                regularStrides[i] = shapes[i].GetStrides();
+            regularOpDims = opDims;
+
+            for (size_t i = 0; i < N; i++)
+                reducingStrides[i].clear();
+            reducingOpDims.clear();
+        }
 
         for (size_t i = 0; i < N; i++)
             offsets[i] = shapes[i].GetOffset();
