@@ -4336,7 +4336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
     void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-        ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+        ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         DecideAndMoveToRightDevice(a, b, c);
         

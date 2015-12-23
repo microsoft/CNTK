@@ -147,10 +147,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (deepCopy.m_sliceViewOffset > 0)
         {
-            int blocksPerGrid = (int)ceil(1.0*SecondaryIndexCount() / threadsPerBlock);
+            int blocksPerGrid = (int)ceil(1.0*SecondaryIndexCount() / GridDim::maxThreadsPerBlock);
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, threadsPerBlock, 0, t_stream >> > (
+            _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
                 SecondaryIndexLocation(),
                 SecondaryIndexCount()
                 );
@@ -1017,7 +1017,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
-        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
@@ -1969,8 +1969,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / threadsPerBlock);
-        _isValid<ElemType> << <blocksPerGrid, threadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
+        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / GridDim::maxThreadsPerBlock);
+        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
