@@ -6,33 +6,30 @@
     <ClInclude Include="Common\ReaderTestHelper.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Common\Include\Config.h">
-      <Filter>Common</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Common\DataReader.cpp">
+    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\DebugUtil.cpp">
+    <ClCompile Include="..\..\..\Source\Common\DebugUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\Eval.cpp">
+    <ClCompile Include="..\..\..\Source\Common\Eval.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\File.cpp">
+    <ClCompile Include="..\..\..\Source\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\..\..\Source\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Common\TimerUtility.cpp">
+    <ClCompile Include="..\..\..\Source\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="UCIFastReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Common\Config.cpp">
+    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,21 +53,6 @@
     </Text>
     <Text Include="Data\UCIFastReaderSimpleDataLoop_Train.txt">
       <Filter>Data</Filter>
-    </Text>
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop7_Control.txt">
-      <Filter>Control</Filter>
-    </Text>
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_0_Control.txt">
-      <Filter>Control</Filter>
-    </Text>
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop21_1_Control.txt">
-      <Filter>Control</Filter>
-    </Text>
-    <Text Include="Data\HTKMLFReaderSimpleDataLoop22_Control.txt">
-      <Filter>Control</Filter>
-    </Text>
-    <Text Include="Data\UCIFastReaderSimpleDataLoop_Control.txt">
-      <Filter>Control</Filter>
     </Text>
     <Text Include="Config\HTKMLFReaderSimpleDataLoop1_Config.txt">
       <Filter>Config</Filter>
@@ -154,6 +136,21 @@
       <Filter>Control</Filter>
     </Text>
     <Text Include="Control\HTKMLFReaderSimpleDataLoop10_20_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop7_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_0_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop21_1_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\HTKMLFReaderSimpleDataLoop22_Control.txt">
+      <Filter>Control</Filter>
+    </Text>
+    <Text Include="Control\UCIFastReaderSimpleDataLoop_Control.txt">
       <Filter>Control</Filter>
     </Text>
   </ItemGroup>

@@ -8,7 +8,7 @@
 #include "stdafx.h"
 #include <math.h>
 #include <crtdefs.h>
-#include "../../../Math/Math/GPUSparseMatrix.h"
+#include "../../../Source/Math/GPUSparseMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
