@@ -32,20 +32,20 @@ DNN=[
     cMap1 = 16
     conv1 = ConvBNReLULayer2(featScaled, cMap1, 27, kW, kH, hStride1, vStride1, convWScale, convBValue, scValue)
 
-		rn1_1 = ResNetNode2(conv1, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
-		rn1_2 = ResNetNode2(rn1_1, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
-		rn1_3 = ResNetNode2(rn1_2, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
+    rn1_1 = ResNetNode2(conv1, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
+    rn1_2 = ResNetNode2(rn1_1, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
+    rn1_3 = ResNetNode2(rn1_2, cMap1, 144, kW, kH, convWScale, convBValue, scValue)
 
     cMap2 = 32
-		rn2_1 = ResNetNode2Reduce(rn1_3, cMap2, 144, 288, 16384, 8192, kW, kH, convWScale, convBValue, scValue)
-		rn2_2 = ResNetNode2(rn2_1, cMap2, 288, kW, kH, convWScale, convBValue, scValue)
-		rn2_3 = ResNetNode2(rn2_2, cMap2, 288, kW, kH, convWScale, convBValue, scValue)
+    rn2_1 = ResNetNode2Reduce(rn1_3, cMap2, 144, 288, 16384, 8192, kW, kH, convWScale, convBValue, scValue)
+    rn2_2 = ResNetNode2(rn2_1, cMap2, 288, kW, kH, convWScale, convBValue, scValue)
+    rn2_3 = ResNetNode2(rn2_2, cMap2, 288, kW, kH, convWScale, convBValue, scValue)
 
     cMap3 = 64
-		rn3_1 = ResNetNode2Reduce(rn2_3, cMap3, 288, 576, 8192, 4096, kW, kH, convWScale, convBValue, scValue)
-		rn3_2 = ResNetNode2(rn3_1, cMap3, 576, kW, kH, convWScale, convBValue, scValue)
-		rn3_3 = ResNetNode2(rn3_2, cMap3, 576, kW, kH, convWScale, convBValue, scValue)
-		
+    rn3_1 = ResNetNode2Reduce(rn2_3, cMap3, 288, 576, 8192, 4096, kW, kH, convWScale, convBValue, scValue)
+    rn3_2 = ResNetNode2(rn3_1, cMap3, 576, kW, kH, convWScale, convBValue, scValue)
+    rn3_3 = ResNetNode2(rn3_2, cMap3, 576, kW, kH, convWScale, convBValue, scValue)
+                
     # pool
     poolW = 3
     poolH = 3
