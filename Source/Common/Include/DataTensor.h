@@ -158,12 +158,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_dims[1] = n;
                 fstream >> m_dims[2] >> m_dims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
             }
-            // legacy: Before we switched to general tensors, some models wrote out rank-3 tensors for everything.
-            //         This heuristic detects this and strips the unnecessary dimensions.
-            //         It should be relatively safe (but brittle), since this would reflect a 1 x 1 image with lots of channels.
-            //         For legit uses of such tensor, the tensor lib would pad ones, but there arise be cases where it fails. Revisit it then.
-            if (m_dims.size() == 3 && m_dims[1] == 1 && m_dims[2] == 1)
-                m_dims.resize(1);
             InitAsNoSlice();
         }
 
@@ -187,6 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // heuristics used for pretty-printing
         // TODO: This will go away.
         bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
+        bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
         // indexing
         // Determines the offset into the underlying element array for a given multi-dimensional index.

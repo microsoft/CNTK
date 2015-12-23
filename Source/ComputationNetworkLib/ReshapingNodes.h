@@ -576,7 +576,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // RowSlice cannot slice tensors.
             // TODO: Create a TensorSlice operation, or just Slice.
-            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetRank() != 1)
+            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetRank() != 1
+                && !Input(0)->GetSampleLayout().IsVectorStoredAsImage()   // legacy
+                )
                 RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
             SetDims(TensorShape(m_sliceHeight), Input(0)->GetNumCols());
             //InferImageDimsFromInputs(); 
