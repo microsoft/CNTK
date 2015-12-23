@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "MatrixQuantizerCPU.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

@@ -6,7 +6,7 @@
 // DataReader.cpp : Defines the exported functions for the DLL application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #ifdef _WIN32
 #include <objbase.h>
 #endif

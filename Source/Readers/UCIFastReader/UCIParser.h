@@ -6,7 +6,7 @@
 // </copyright>
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <string>
 #include <vector>
 #include <assert.h>

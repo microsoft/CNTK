@@ -6,7 +6,7 @@
 // DataWriter.cpp : Defines the exported functions for the DLL application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "Basics.h"
 
 #include "htkfeatio.h"                  // for reading HTK features

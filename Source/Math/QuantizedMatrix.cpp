@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "QuantizedMatrix.h"
 #include "ColumnQuantizer.h"
 

@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "../../Common/Include/Basics.h"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"

@@ -7,7 +7,7 @@
 //
 
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
 #include "SequenceReader.h"
