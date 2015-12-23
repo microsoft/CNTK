@@ -13,6 +13,7 @@
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
 #include "CuDnnConvolutionEngine.h"
+#include "DataTensor.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -1066,18 +1067,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
         const array<size_t, 2> & offsets,
-        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides) { }
+        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides) { }
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
         const array<size_t, 3> & offsets,
-        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides) { }
+        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides) { }
     template<class ElemType>
     void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
         const array<size_t, 4> & offsets,
-        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
-        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides) { }
+        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides) { }
 
     template<class ElemType>
     void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char *caller)
