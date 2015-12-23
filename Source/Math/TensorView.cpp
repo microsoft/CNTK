@@ -59,10 +59,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType, size_t N>
     static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N> & offsets,
-                                      vector<size_t> & regularOpDims,
-                                      array<vector<ptrdiff_t>, N> & regularStrides,
-                                      vector<size_t> & reducingOpDims,
-                                      array<vector<ptrdiff_t>, N> & reducingStrides)
+                                      SmallVector<size_t> & regularOpDims,
+                                      array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                                      SmallVector<size_t> & reducingOpDims,
+                                      array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         // massage TensorShapes
         // Note that TensorShapes here may be shapes are stored or shapes with stride magic applied.
@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             shapes[i] = shapes[i].Pad(dims);
 
         // determine operation shape (max over all dimensions)
-        vector<size_t> opDims(dims, 0);
+        SmallVector<size_t> opDims(dims, 0);
         for (size_t k = 0; k < dims; k++)
             for (size_t i = 0; i < N; i++)
                 opDims[k] = max(opDims[k], shapes[i][k]);
@@ -194,8 +194,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // prepare all tensor descriptor information as needed for execution
         array<size_t, 2> offsets;
-        array<vector<ptrdiff_t>, 2> regularStrides, reducingStrides;
-        vector<size_t> regularOpDims, reducingOpDims;
+        array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
+        SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType,2>(array<TensorShape, 2> { a.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
         // now perform the operation
@@ -209,8 +209,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
 
         array<size_t, 3> offsets;
-        array<vector<ptrdiff_t>, 3> regularStrides, reducingStrides;
-        vector<size_t> regularOpDims, reducingOpDims;
+        array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides;
+        SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3> { a.GetShape(), b.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
         GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
@@ -223,8 +223,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
 
         array<size_t, 4> offsets;
-        array<vector<ptrdiff_t>, 4> regularStrides, reducingStrides;
-        vector<size_t> regularOpDims, reducingOpDims;
+        array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
+        SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType, 4>(array<TensorShape, 4> { a.GetShape(), b.GetShape(), c.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
         GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
