@@ -5,7 +5,7 @@
 //
 
 
-//#include "stdafx.h"
+#include "stdafx.h"
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.

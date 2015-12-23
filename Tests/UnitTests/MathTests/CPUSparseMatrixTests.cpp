@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-//#include "stdafx.h"
+#include "stdafx.h"
 #include <crtdefs.h>
 #include "../../../Source/Math/CPUSparseMatrix.h"
 

@@ -5,7 +5,7 @@
 //
 // LibSVMBinaryReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "RandomOrdering.h"

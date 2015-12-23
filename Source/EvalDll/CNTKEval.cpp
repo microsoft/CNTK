@@ -6,7 +6,7 @@
 // CNTKEval.cpp : Defines the exported functions for the CNTK DLL.
 //
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #define EVAL_EXPORTS  // creating the exports here
 #include "Eval.h"
 #include "CNTKEval.h"

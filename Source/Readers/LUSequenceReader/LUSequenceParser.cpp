@@ -6,7 +6,7 @@
 //
 
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "LUSequenceParser.h"
 #include <stdexcept>
 #include <fileutil.h>
