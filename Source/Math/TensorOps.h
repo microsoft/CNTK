@@ -46,9 +46,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DECL ElemType Sigmoid(ElemType z)
     {
-        if (z >= 0)
+        if (z > -80)        // max. float32 value is about exp(88.7)
             return 1 / (1 + exp_(-z));
-        else
+        else                // if this is taken too often, we will get thread divergence
         {
             ElemType v = exp_(z);
             return v / (1 + v);
