@@ -46,13 +46,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DECL ElemType Sigmoid(ElemType z)
     {
-        if (z > -80)        // max. float32 value is about exp(88.7)
+#if 1   // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
+        ElemType q = exp_(-fabs_(z));
+        ElemType numer;
+        if (z > 0)                      // q = exp(-z)
+            numer = 1;
+        else                            // q = exp(z)
+            numer = q;
+        return numer / (1 + q);
+#else   // Reference code:
+        if (z > 0)
             return 1 / (1 + exp_(-z));
-        else                // if this is taken too often, we will get thread divergence
+        else
         {
             ElemType v = exp_(z);
             return v / (1 + v);
         }
+#endif
     }
 
     template<class ElemType>
