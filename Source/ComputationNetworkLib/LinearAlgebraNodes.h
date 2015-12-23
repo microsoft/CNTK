@@ -699,7 +699,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // if reduction then mask the respective input(s) (zero out the gaps)
             if (Input(inputIndex)->GetNumCols() < GetNumCols())
                 MaskMissingGradientColumnsToZero(fr);
-            if (Input(1 - inputIndex)->GetNumCols() < GetNumCols())
+            if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
                 Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
             inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
