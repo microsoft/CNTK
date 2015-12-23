@@ -9,8 +9,11 @@
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
+#include "DataTensor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace std;
 
     // -----------------------------------------------------------------------
     // subroutines for Validate() implementations
@@ -40,13 +43,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all are consistent: install it
         LinkToMBLayout(pMBLayout);
     }
+
     // single input that maps its input element-wise (e.g. Sigmoid)
     void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     {
         assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        SetDims(m_inputs[0]->GetNumRows(), DetermineNumCols(m_inputs[0]));
+        SetDims(m_inputs[0]);
         InferImageDimsFromInputs();
     }
     // binary zip operation, e.g. Plus
@@ -138,6 +142,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // -----------------------------------------------------------------------
+    // tensor helpers
+    // -----------------------------------------------------------------------
+
+    // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
+    TensorShape ComputationNodeBase::GetSampleShape() const
+    {
+        // BUGBUG: sample layouts are not fully consistent (are they?), so we only use them if plausible
+        bool layoutPlausible = true;
+        // some code initializes it to 0 or SIZE_MAX
+        for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
+        {
+            if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
+                layoutPlausible = false;
+        }
+        // some code initializes it to (1,1,rowDim)
+        if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
+            layoutPlausible = false;
+        // check dimension
+        if (m_numRows != m_sampleLayout.GetNumElements())
+            layoutPlausible = false;
+        if (layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
+            return m_sampleLayout;
+        else if (HasMBLayout())                     // if we have a layout, that dimension is not part of the sample shape
+            return TensorShape(GetNumRows());
+        else if (GetNumCols() == 1)                 // 1-column matrix is a vector
+            return TensorShape(GetNumRows());
+        else
+            return TensorShape(GetNumRows(), GetNumCols());
+    }
+
+    // determine the sample tensor dimension to use for operations based on output and all inputs
+    // 'Sample tensor' means we only consider single samples. If we have an MBLayout, that is the sample layout of a single matrix column.
+    size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
+    {
+        // determine largest tensor dimension amongst the sample shapes of output and the selected inputs
+        size_t maxRank = GetSampleShape().GetRank();
+        for (size_t i = 0; i < GetNumInputs(); i++)
+        {
+            size_t rank = Input(i)->GetSampleShape().GetRank();
+            if (maxRank < rank)
+                maxRank = rank;
+        }
+        return maxRank;
+    }
+
+    // determine the full tensor dimension including padding and multiple samples (MBLayout)
+    TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
+    {
+        if (!HasMBLayout())                         // no MBLayout: just return sample layout (if other participants have layout, tensor lib will broadcast)
+            return GetSampleShape().Pad(rank);
+        else
+        {
+            // we have an MBLayout: append its dimensions to the tensor shape
+            auto sm = TensorShape(GetNumParallelSequences(), fr.IsAllFrames() ? GetNumTimeSteps() : 1);
+            // TODO: Can FrameRange ever refer to multiple time steps?
+            return GetSampleShape().Pad(rank).Concat(sm);
+        }
+    }
+
+    template<class ElemType>
+    std::vector<TensorView<ElemType>> ComputationNode<ElemType>::GetTensorsForwardBinary(const FrameRange & fr)
+    {
+        const size_t N = 3;     // 2 inputs and 1 output
+        // perform operation
+        std::vector<TensorView<ElemType>> tensors;
+        size_t rank = DetermineElementwiseTensorRank();
+        for (size_t i = 0; i < N; i++)
+        {
+            auto * node = i < N - 1 ? Input(i).get() : this;    // output is ourselves
+            auto slice = node->ValueFor(i < N - 1 ? fr.AllowBroadcast() : fr);
+            auto shape = node->GetTensorShape(rank, fr);
+            tensors.push_back(TensorView<ElemType>(slice, shape));
+        }
+        return tensors;
+    }
+
+    // -----------------------------------------------------------------------
     // others
     // -----------------------------------------------------------------------
 
@@ -171,6 +252,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
 
+    template class ComputationNode<float>;
+    template class ComputationNode<double>;
+
     template class LearnableParameter<float>;
     template class LearnableParameter<double>;
 }}}
@@ -189,4 +273,28 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     }
 
     ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNodeBase> registerComputationNode(L"ComputationNode");
+
+    // -----------------------------------------------------------------------
+    // register a boxed version of TensorShape with the ScriptableObject system
+    // -----------------------------------------------------------------------
+
+    // e.g.
+    // new TensorShape [ dims = 13:42 ]
+    class BoxedTensorShape : public BoxOf<TensorShape>
+    {
+        // create a TensorShape from config
+        static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
+        {
+            const auto & valp = config[L"dims"];
+            if (valp.Is<ConfigArray>())
+                return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
+            else
+                return TensorShape(std::vector<size_t>(1, (size_t)valp));       // single element
+        }
+    public:
+        BoxedTensorShape(const IConfigRecordPtr configp) : BoxOf<TensorShape>(TensorShapeFromConfig(*configp)) { }
+    };
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensoShape(L"TensorShape");
+
 }}}

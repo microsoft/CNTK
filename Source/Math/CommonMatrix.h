@@ -41,6 +41,53 @@ MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
+    // -----------------------------------------------------------------------
+    // ElementWiseOperator -- This enum represents which function to apply.
+    // This is shared between all matrix types and tensors.
+    // -----------------------------------------------------------------------
+
+    enum ElementWiseOperator
+    {
+        // unary (or binary with constant parameter)
+        opCopy,
+        opNegate, opNot,
+        opAbs,
+        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine,
+        // these are not implemented yet:
+        opSaturateBetaAlpha, opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
+        // binary
+        opSum, opDifference, opElementwiseProduct, opElementwiseQuotient,
+        opLogSum, opMax, opMin,
+        opEQ, opNE, opGT, opLT, opGE, opLE,
+        opMaskNegative,
+        // ternary
+        opCond
+        // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
+    };
+
+    // helper to apply a C macro for all operations of each kind
+#define ForAllUnaryOps(Macro) \
+    Macro(Copy); \
+    Macro(Negate); Macro(Not); \
+    Macro(Abs); \
+    Macro(Sigmoid); Macro(SigmoidDerivative); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifierDerivative); Macro(Cosine); Macro(NegativeSine);
+
+#define ForAllParameterizedUnaryOps(Macro) \
+    Macro(SaturateBetaAlpha); Macro(SumAlpha); Macro(SubDifferenceToAlpha); Macro(SubDifferenceFromAlpha);
+
+#define ForAllBinaryOps(Macro) \
+    Macro(Sum); Macro(Difference); Macro(ElementwiseProduct); Macro(ElementwiseQuotient); \
+    Macro(LogSum); Macro(Max); Macro(Min); \
+    Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
+    Macro(MaskNegative);
+
+#define ForAllTernaryOps(Macro) \
+    Macro(Cond);
+
+    // -----------------------------------------------------------------------
+    // various enums to describe 
+    // -----------------------------------------------------------------------
+
     enum MatrixFlagBitPosition
     {
         bitPosRowMajor = 0, // row major matrix
@@ -76,6 +123,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         matrixFlagSetValueOnDevice = 1<<bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
     };
 
+    // -----------------------------------------------------------------------
+    // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class BaseMatrix

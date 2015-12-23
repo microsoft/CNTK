@@ -70,6 +70,12 @@
     <ClInclude Include="TensorView.h">
       <Filter>Tensors</Filter>
     </ClInclude>
+    <ClInclude Include="TensorOps.h">
+      <Filter>Tensors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\DataTensor.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -81,7 +87,6 @@
     <None Include="GPUWatcher.h">
       <Filter>GPU</Filter>
     </None>
-    <None Include="ClassDiagram.cd" />
     <None Include="GPUWatcher.cu">
       <Filter>GPU</Filter>
     </None>

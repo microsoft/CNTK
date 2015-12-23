@@ -5,6 +5,12 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "TensorView.h"
+#include "ComputationNode.h"
+#include "ConvolutionalNodes.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,11 +24,6 @@
 #include <sstream>
 #include <iostream>
 
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
-#include "ConvolutionalNodes.h"
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
@@ -30,10 +31,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class PlusNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        using Base::ValueForToDense;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"Plus"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(PlusNode);
@@ -43,6 +43,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#ifdef ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+
+            inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
+#else
             Matrix<ElemType> gradientValues = GradientFor(fr);
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
@@ -106,30 +117,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-#if DUMPOUTPUT
-            return true;
-#else
-            // The PlusNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
 #endif
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The PlusNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-            Matrix<ElemType> functionValues = ValueForToDense(fr, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+#if 0//def ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoSumOf(0.0f, input0, input1, 1.0f);
+#else
+            Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
@@ -185,22 +185,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+#endif
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
 #endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
         }
     };
 
@@ -211,11 +199,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MinusNode (minuend, subtrahend)
     // -----------------------------------------------------------------------
 
-    // TODO: merge with PlusNode
     template<class ElemType>
-    class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class MinusNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"Minus"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(MinusNode);
@@ -225,6 +212,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+            ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
+#ifdef ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+
+            if (sign > 0)
+                inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
+            else
+                inputGradient.DoDifferenceOf(0.0f, inputGradient, gradient, 1.0f);
+#else
             Matrix<ElemType> gradientValues = GradientFor(fr);
 
             Matrix<ElemType> childGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
@@ -232,7 +234,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
             size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
 
-            ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
             if (colsc == colsp && rowsc == rowsp)                   // matching dimensions
             {
                 // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
@@ -261,25 +262,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The MinusNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The MinusNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
+#endif
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
+#ifdef ENABLE_TENSORVIEW
+            static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#"); }
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoDifferenceOf(0.0f, input0, input1, 1.0f);
+#else
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
             Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
@@ -304,27 +299,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
+#endif
         }
     };
 
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
+#ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
+    //
+    // Identical to ElementTimesnNode with tensor lib (broadcasting). Can be removed.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -385,6 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ScaleNode<float>; 
     template class ScaleNode<double>;
+#endif
 
     // -----------------------------------------------------------------------
     // NegateNode (input)
@@ -414,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The NegateNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -538,10 +525,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()  
         {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
+            InferImageDimsFromInput(1, false); // the second one is the input since it's columnwise
 
-            //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
+            // after multiplication the structure is lost
+            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
 
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -677,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumRows(), 1);
+            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
     };
 
@@ -686,12 +673,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ElementTimesNode (factor1, factor2)
+    //
+    // This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    class ElementTimesNode : public BinaryElementWiseNode<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"ElementTimes"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
@@ -701,6 +690,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#ifdef ENABLE_TENSORVIEW
+            size_t rank = DetermineElementwiseTensorRank();
+            // depending on inputIndex, inputs swap their meaning
+            // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
+            // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+            if (Input(1 - inputIndex)->GetNumCols() < GetNumCols())
+                Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+#else
             Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1-inputIndex)->ValueFor(fr);
@@ -709,44 +715,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
             // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
+#endif
         }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The ElementTimesNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return true; }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
+#ifdef ENABLE_TENSORVIEW
+            static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#"); }
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+#else
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
             //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateBinaryZip(isFinalValidationPass, false/*allowMultiple*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            if (IsInputAnImage(0))  // if conflict, give priority to child 0
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
+#endif
         }
     };
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
+#ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -896,6 +897,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ColumnElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1049,6 +1052,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ColumnElementTimesNode<float>;
     template class ColumnElementTimesNode<double>;
+#endif
 
     // -----------------------------------------------------------------------
     // DiagTimesNode (vector representing the diagonal of a square matrix, data)
@@ -1090,19 +1094,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // the gradients of its input nodes
             return false;
         }
-
-        ///*TODO: merge with call site*/void BackpropToLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        //{
-        //    temp.AssignInnerProductOf(gradientValues, inputFunctionValues, false);
-        //    inputGradientValues += temp;
-        //}
-        //
-        ///*TODO: merge with call site*/void BackpropToRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        //{
-        //    temp.SetValue(gradientValues);
-        //    temp.ColumnElementMultiplyWith(inputFunctionValues);
-        //    inputGradientValues += temp;
-        //}
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
@@ -1204,7 +1195,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The SumElementsNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1240,6 +1231,7 @@ private:
     // -----------------------------------------------------------------------
     // SumColumnElementsNode (input)
     // sums up each column of the input
+    // TODO: This should be deprecated, in favor of a reduce node.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1268,7 +1260,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The SumColumnElementsNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1307,6 +1299,7 @@ private:
 
     // -----------------------------------------------------------------------
     // TransposeNode (input matrix)
+    // TODO: extend towards tensor transpose (swap 2 dimensions)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1348,7 +1341,7 @@ private:
 #endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The TransposeNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1388,7 +1381,7 @@ private:
             InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
 
             // after transposition, the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, Input(0)->GetNumCols(), 1);
+            m_sampleLayout = TensorShape(Input(0)->GetNumCols());
         }
     };
 
@@ -1423,7 +1416,7 @@ private:
         {
             InferImageDimsFromInput(0, true);
 
-            m_sampleLayout = ImageLayoutWHC(1, m_sampleLayout.GetHeight(), 1);
+            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
 
             if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -1505,7 +1498,7 @@ private:
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The DiagonalNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1573,6 +1566,7 @@ private:
             sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
             sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
             sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
+            // TODO: This formulation above allows to use the tensor lib for this, with automatic broadcasting.
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -1726,7 +1720,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = ImageLayoutWHC(1, m_value->GetNumRows(), 1);
+            m_sampleLayout = TensorShape(m_value->GetNumRows());
         }
     };
 
@@ -1735,6 +1729,12 @@ private:
 
     // -----------------------------------------------------------------------
     // CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
+    //
+    // Left and right forms pairs of positive samples. They are symmetric but usually
+    // the search key is used as the left. For example, Left is search query and right is document.
+    // The negative samples are formed on the fly by shifting the right side.
+    // The 'shift' indicates how many samples in the right node you should shift to form each negative sample pair.
+    // It is often choose to be one. 'Neg' indicates how many negative samples you want to generate.
     // -----------------------------------------------------------------------
 
     template<class ElemType>

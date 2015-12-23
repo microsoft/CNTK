@@ -32,22 +32,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(pMBLayout->GetNumParallelSequences() == m_numUttsPerMinibatch);
         uttInfoInMinibatch->clear();
         uttInfoInMinibatch->resize(uttInfo.size());
+                
         for (size_t i = 0; i < uttInfo.size(); ++i)
         {
             size_t startFrameIndexInMinibatch = 0;
             size_t numFrames = 0;
+
             for (size_t j = 0; j < pMBLayout->GetNumTimeSteps(); ++j)
             {
-                if (pMBLayout->Is(i, j, MinibatchPackingFlags::NoLabel))
+                /*  if (pMBLayout->Is(i, j, MinibatchPackingFlags::NoLabel))
                 {
                     continue;
-                }
-                if (pMBLayout->Is(i, j, MinibatchPackingFlags::NoFeature))
+                }*/
+                FrameRange fr(pMBLayout,j);
+
+                if (pMBLayout->IsGap(fr.Sequence(i)))
                 {
                     continue;
                 }
                 numFrames += 1;
-                if (pMBLayout->Is(i, j, MinibatchPackingFlags::SequenceEnd)
+                if (pMBLayout->IsBeyondStartOrEnd(fr.WithTimeOffset((ptrdiff_t) 1).Sequence(i))
                          || j == pMBLayout->GetNumTimeSteps() - 1)
                 {
                     size_t uttIndex = (*uttInfoInMinibatch)[i].size();

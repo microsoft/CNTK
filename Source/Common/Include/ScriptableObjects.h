@@ -465,28 +465,33 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         ConfigArray(int firstIndex, std::vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(move(values)) { }
         //ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
         pair<int, int> GetIndexRange() const { return make_pair(firstIndex, firstIndex + (int)values.size() - 1); }
+        // for use as a plain array: get size and verify that index range starts with 0
+        template<typename FAILFN>
+        size_t GetSize(const FAILFN & Fail) const { if (firstIndex != 0) Fail(L"This array is expected to begin with index 0."); return values.size(); }
         // building the array from expressions: append an element or an array
         void Append(const ConfigValuePtr & value) { values.push_back(value); }
         void Append(ConfigValuePtr && value) { values.push_back(move(value)); } // this appends an unresolved ConfigValuePtr
         void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }
         // get element at index, including bounds check
         template<typename FAILFN>
-        const ConfigValuePtr & At(int index, const FAILFN & failfn/*should report location of the index*/) const
+        const ConfigValuePtr & At(int index, const FAILFN & Fail/*should report location of the index*/) const
         {
             if (index < firstIndex || index >= firstIndex + values.size())
-                failfn(L"index out of bounds");
+                Fail(msra::strfun::wstrprintf(L"Index %d out of bounds [%d..%d].", (int)index, (int)firstIndex, (int)(firstIndex + values.size() - 1)));
             return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
         }
-#if 0
+        // get element when knowing that the bounds are correct, e.g. looping over the item range returned by GetItemRange()
+        const ConfigValuePtr & At(int index) const { return At(index, [](const std::wstring &){ LogicError("ConfigArray::At(): Index unexpectedly out of bounds."); }); }
         // get an entire array into a std::vector. Note that this will force all values to be evaluated.
-        template<typename C>
-        std::vector<C> AsVector() const
+        template<typename C, typename FAILFN>
+        std::vector<C> AsVector(const FAILFN & Fail) const
         {
-            if (firstIndex != 0)
-                InvalidArgument("ConfigArray::AsVector(): First index must be 0.");
-            return std::vector<C>(values.begin(), values.end());
+            std::vector<C> res;
+            res.reserve(GetSize(Fail));
+            for (const auto & val : values)
+                res.push_back(val);
+            return res;
         }
-#endif
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -655,12 +660,15 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         if (!valp->Is<ConfigArray>())
             return std::vector<T>(1, (const T &)*valp); // scalar value
         const ConfigArray & arr = *valp;        // actual array
-        const auto range = arr.GetIndexRange();
-        if (range.first != 0) valp->Fail(L"This array is expected to begin with index 0.");
-        std::vector<T> res(range.second + 1);
-        for (int i = range.first; i <= range.second; i++)
-            res[i] = (const T &)arr.At(i, [](const std::wstring &){ LogicError("IConfigRecord: operator() for array failed unexpectedly."); });
+#if 1   // TODO: test whether this works correctly w.r.t. typecasting
+        return arr.AsVector<T>([&](const std::wstring & msg){ valp->Fail(msg); });
+#else
+        const auto size = arr.GetSize([&](const std::wstring & msg){ valp->Fail(msg); });
+        std::vector<T> res(size);
+        for (int i = 0; i < size; i++)
+            res[i] = (const T &)arr.At(i);
         return res;
+#endif
     }
     inline bool IConfigRecord::ExistsCurrent(const std::wstring & id) const // this is inefficient, but we can optimize it if it ever turns out to be a problem. I rather think, this function is misguided. The name is bad, too.
     {
