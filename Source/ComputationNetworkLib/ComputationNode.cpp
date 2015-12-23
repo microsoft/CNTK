@@ -193,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GetSampleLayout();    //  .Pad(rank); // no need for padding
         else if (fr.IsAllFrames())
         {
-            // we have an MBLayout, and fr refers to the entire MB
+            // we have an MBLayout, and for refers to the entire MB
             return GetSampleLayout().Append(rank, GetMBLayout()->GetNumCols());
         }
         //else if (fr.Sequence != SIZE_MAX)     // needs a slice and a two-dim tensor

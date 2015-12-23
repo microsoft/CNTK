@@ -77,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 dims = shapes[i].GetRank();
         for (size_t i = 0; i < N; i++)
             if (shapes[i].GetRank() < dims)
-                shapes[i] = shapes[i].Pad(dims);
+                shapes[i].PadInPlace(dims);
         // all shapes[] now have the same rank
 
         // determine operation shape (max over all dimensions)
@@ -110,8 +110,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             // these dimensions can be merged
             for (size_t i = 0; i < N; i++)
-                shapes[i] = shapes[i].Flatten(k);               // TODO: overdoing the immutable thingy much?
-            opDims = TensorShape(opDims).Flatten(k).GetDims();  // (ugh)
+                shapes[i].FlattenInPlace(k);               // TODO: overdoing the immutable thingy much?
+            opDims = TensorShape(opDims).FlattenInPlace(k).GetDims();  // (ugh)
         nope:;
         }
         //fprintf(stderr, "Post-flatten: Op %d: %s op %s -> %s via %s\n", (int)op, string(shapes[0]).c_str(), string(shapes[1]).c_str(), string(shapes[2]).c_str(), string(TensorShape(opDims)).c_str());
@@ -131,8 +131,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (anyToDrop)
         {
             for (size_t i = 0; i < N; i++)
-                shapes[i] = shapes[i].DropDims(toDrop);
-            opDims = TensorShape(opDims).DropDims(toDrop).GetDims();    // (ugh)
+                shapes[i].DropDimsInPlace(toDrop);
+            opDims = TensorShape(opDims).DropDimsInPlace(toDrop).GetDims();    // (ugh)
             dims = opDims.size();   // #dims has changed
         }
         for (size_t i = 0; i < N; i++)
@@ -147,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t k = 0; k < dims; k++)
                 if (shapes[i][k] < opDims[k])
                 {
-                    shapes[i] = shapes[i].WithBroadcastStrides();
+                    shapes[i].SetBroadcastStrides();
                     break;
                 }
 

@@ -306,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
@@ -740,7 +740,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
     //
