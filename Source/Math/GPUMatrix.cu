@@ -4802,7 +4802,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
-        return TensorOpN(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -4815,7 +4815,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
-        return TensorOpN(beta, array<ElemType*, 3> { a.m_pArray, b.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpN<ElemType, 3>(beta, array<ElemType*, 3> { a.m_pArray, b.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -4828,7 +4828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
-        return TensorOpN(beta, array<ElemType*, 4> { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpN<ElemType, 4>(beta, array<ElemType*, 4> { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
 
