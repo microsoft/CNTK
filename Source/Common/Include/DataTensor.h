@@ -352,6 +352,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dims.append(otherDims.begin(), otherDims.end());
             return TensorShape(std::move(dims));
         }
+        TensorShape Append(size_t rank, size_t newDim) const // concatenate one new dimension at position 'rank'
+        {
+            auto dims = GetDims();
+            dims.resize(rank, 1);
+            dims.push_back(newDim);
+            return TensorShape(std::move(dims));
+        }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
         operator std::string() const

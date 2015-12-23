@@ -145,10 +145,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor helpers
     // -----------------------------------------------------------------------
 
-    // BUGBUG: Currently does not interpret actual ImageLayouts or convolutional models.
-    TensorShape ComputationNodeBase::GetSampleShape() const
+    const TensorShape & ComputationNodeBase::GetAndValidateSampleLayout() const
     {
-        // BUGBUG: sample layouts are not fully consistent (are they?), so we only use them if plausible
+        // validate that m_sampleLayout is plausibly configured
         bool layoutPlausible = true;
         // some code initializes it to 0 or SIZE_MAX
         for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
@@ -160,16 +159,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
             layoutPlausible = false;
         // check dimension
-        if (m_numRows != m_sampleLayout.GetNumElements())
+        if (GetNumRows() != m_sampleLayout.GetNumElements())
             layoutPlausible = false;
-        if (layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
-            return m_sampleLayout;
-        else if (HasMBLayout())                     // if we have a layout, that dimension is not part of the sample shape
-            return TensorShape(GetNumRows());
-        else if (GetNumCols() == 1)                 // 1-column matrix is a vector
-            return TensorShape(GetNumRows());
-        else
-            return TensorShape(GetNumRows(), GetNumCols());
+        if (!layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
+            LogicError("GetAndValidateSampleLayout: %ls %ls operation has sample layout [%s] that is inconsistent with number of rows %d.",
+                       NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str(), (int)GetNumRows());
+
+        // all good: return it
+        return GetSampleLayout();
     }
 
     // determine the sample tensor dimension to use for operations based on output and all inputs
@@ -177,10 +174,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
     {
         // determine largest tensor dimension amongst the sample shapes of output and the selected inputs
-        size_t maxRank = GetSampleShape().GetRank();
+        size_t maxRank = GetAndValidateSampleLayout().GetRank();
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
-            size_t rank = Input(i)->GetSampleShape().GetRank();
+            size_t rank = Input(i)->GetAndValidateSampleLayout().GetRank();
             if (maxRank < rank)
                 maxRank = rank;
         }
@@ -188,22 +185,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // determine the full tensor dimension including padding and multiple samples (MBLayout)
+    // but without trailing ones (assuming they will be auto-padded by the tensor op)
     TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
     {
+        //GetAndValidateSampleLayout();     // no need to validate because rank comes from DetermineElementwiseTensorRank() which validates all
         if (!HasMBLayout())                         // no MBLayout: just return sample layout (if other participants have layout, tensor lib will broadcast)
-            return GetSampleShape().Pad(rank);
+            return GetSampleLayout();    //  .Pad(rank); // no need for padding
+        else if (fr.IsAllFrames())
+        {
+            // we have an MBLayout, and fr refers to the entire MB
+            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumCols());
+        }
+        //else if (fr.Sequence != SIZE_MAX)     // needs a slice and a two-dim tensor
+        //{
+        //    return GetAndValidateSampleLayout();  // .Append(rank, 1);  // no need to append ones
+        //}
         else
         {
-            // we have an MBLayout: append its dimensions to the tensor shape
-            auto sm = TensorShape(GetNumParallelSequences(), fr.IsAllFrames() ? GetNumTimeSteps() : 1);
-            // TODO: Can FrameRange ever refer to multiple time steps?
-            return GetSampleShape().Pad(rank).Concat(sm);
+            // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
+            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumParallelSequences());
         }
     }
 
+    // TODO: no longer used, delete this
     template<class ElemType>
     std::vector<TensorView<ElemType>> ComputationNode<ElemType>::GetTensorsForwardBinary(const FrameRange & fr)
     {
+#if 1
+        NOT_IMPLEMENTED;
+#else
         const size_t N = 3;     // 2 inputs and 1 output
         // perform operation
         std::vector<TensorView<ElemType>> tensors;
@@ -216,6 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tensors.push_back(TensorView<ElemType>(slice, shape));
         }
         return tensors;
+#endif
     }
 
     // -----------------------------------------------------------------------

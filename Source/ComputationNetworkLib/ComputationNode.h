@@ -341,10 +341,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
     protected:
-        // TODO: There are temporarily two confusing functions; either unify them, or name them better:
-        //  - GetSampleLayout() just reads out m_sampleLayout, which is the layout of matrix coluns
-        //  - GetSampleShape() makes up a sample layout in case of a bad m_sampleLayout, and includes columns in case of no MBLayout
-        TensorShape GetSampleShape() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
+        // TODO: There are temporarily a second version of GetSampleLayout() that verifies that m_sampleLayout is consistent with matrix dims
+        const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
     public:
         TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
@@ -416,7 +414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         const std::vector<ComputationNodeBasePtr> & GetInputs() const { return m_inputs; }
-        ComputationNodeBasePtr Input(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
+        const ComputationNodeBasePtr & Input(size_t index) const { return m_inputs[index]; }
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
@@ -439,7 +437,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
-        MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
+        //MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
+        const MBLayoutPtr & GetMBLayout() const { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
         std::wstring GetName() const { return m_nodeName; }
@@ -1558,7 +1557,7 @@ protected: \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::GetTensorsForwardBinary; using Base::DetermineElementwiseTensorRank; \
+    /*using Base::GetTensorsForwardBinary; */using Base::DetermineElementwiseTensorRank; \
     using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
@@ -1575,7 +1574,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
-    using Base::Value; using Base::GetTensorShape;
+    using Base::Value;/* using Base::GetTensorShape;*/
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
