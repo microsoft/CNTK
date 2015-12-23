@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.AssignSigmoidOf(inputFunctionValues);
         }
 
-#if 1
+#ifdef ENABLE_TENSORVIEW
         // tensor lib:
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {

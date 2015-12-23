@@ -127,6 +127,7 @@ __global__ void _elementWisePowerOnCuda(
     }    
 };
 
+// Note that this code is inefficient on CUDA due to diverging code paths.
 template<class ElemType>
 __global__ void _elementWiseSigmoidOnCuda(    
     const ElemType *a,
@@ -172,6 +173,9 @@ __device__ __forceinline__ double _exp(double f)
     return exp(f);
 }
 
+//#define TENSOR_OPS_DECL __device__ __host__
+//#include "TensorOps.h"
+
 template<class ElemType>
 __global__ void _assignSigmoidOf(
     const ElemType* a,
@@ -184,11 +188,14 @@ __global__ void _assignSigmoidOf(
     // and e^x / (1 + e^x) if x is positive.
     // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
     //         There is a second version of this function that does. That should be used.
-
+#if 0   // this has the same speed now
+    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+#else
     ElemType negElem = -a[id];
     ElemType e = _exp(negElem);
 
     res[id] = 1 / (e + 1);
+#endif
 };
 
 template<class ElemType>
