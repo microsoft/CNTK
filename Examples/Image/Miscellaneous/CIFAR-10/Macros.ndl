@@ -41,7 +41,7 @@ ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue)
     isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
     c1 = Convolution(W1, inp, kW, kH, outMap, 1, 1, zeroPadding = true)
-    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true)
+    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true, expAvgFactor = 0.9)
     y1 = RectifiedLinear(bn1);
     
     W2 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
@@ -51,12 +51,12 @@ ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scValue)
     isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
     c2 = Convolution(W2, y1, kW, kH, outMap, 1, 1, zeroPadding = true)
-    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true)
+    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true, expAvgFactor = 0.9)
     p = Plus(bn2, inp)
     y2 = RectifiedLinear(p);
 }
 
-ResNetNode2Reduce(inp, outMap, inWCount, wCount, inDim, outDim, kW, kH, wScale, bValue, scValue)
+ResNetNode2Conv(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scValue, Wproj)
 {
     W1 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     b1 = Parameter(outMap, 1, init = fixedValue, value = bValue)
@@ -65,7 +65,7 @@ ResNetNode2Reduce(inp, outMap, inWCount, wCount, inDim, outDim, kW, kH, wScale, 
     isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
     c1 = Convolution(W1, inp, kW, kH, outMap, 2, 2, zeroPadding = true)
-    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true)
+    bn1 = BatchNormalization(c1, sc1, b1, m1, isd1, eval = false, spatial = true, expAvgFactor = 0.9)
     y1 = RectifiedLinear(bn1);
     
     W2 = Parameter(outMap, wCount, init = Gaussian, initValueScale = wScale)
@@ -75,10 +75,10 @@ ResNetNode2Reduce(inp, outMap, inWCount, wCount, inDim, outDim, kW, kH, wScale, 
     isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
     c2 = Convolution(W2, y1, kW, kH, outMap, 1, 1, zeroPadding = true)
-    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true)
-    WP = Parameter(outDim, inDim)
-    t = Times(WP, inp, init = Gaussian, initValueScale = wScale)
-    p = Plus(bn2, t)
+    bn2 = BatchNormalization(c2, sc2, b2, m2, isd2, eval = false, spatial = true, expAvgFactor = 0.9)
+    
+    cproj = Convolution(Wproj, inp, 1, 1, outMap, 2, 2, zeroPadding = false)
+    p = Plus(bn2, cproj)
     y2 = RectifiedLinear(p);
 }
 

@@ -90,6 +90,25 @@ static __inline__ __device__ double atomicAdd(double* address, double val) UNUSE
 // CUDA kernels follow, lots of them
 // ===========================================================================
 
+// _elementWise*() kernels
+//
+// Designed to operate on contiguous blocks of memory, where the output is a simple function of the inputs.
+// The first parameters of every function are inputs, and the last two arguments to each function are always
+// (ElemenType *res, CUDA_LONG N), a pointer and length of the output block. Each thread computes a function
+// of the inputs for one value in the output.
+
+// This macro overloads _x() with float and double arguments, and inlines the correct library function. This simplifies templated kernel code.
+// TODO: merge with similar definition in TensorOps.h
+#define DEF_ELEMENT_PRIMITIVE(x) __device__ __forceinline__ float _##x(float f) { return x##f(f); } __device__ __forceinline__ double _##x(double f) { return x(f); }
+
+DEF_ELEMENT_PRIMITIVE(exp)
+DEF_ELEMENT_PRIMITIVE(log)
+DEF_ELEMENT_PRIMITIVE(tanh)
+DEF_ELEMENT_PRIMITIVE(sqrt)
+DEF_ELEMENT_PRIMITIVE(fabs)
+DEF_ELEMENT_PRIMITIVE(cos)
+DEF_ELEMENT_PRIMITIVE(sin)
+
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
     const ElemType alpha,     
@@ -134,47 +153,18 @@ __global__ void _elementWiseSigmoidOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    if (a[id] >= 0)
     {
-        if (a[id]>=0)
-        {
-            double e = exp(-1*a[id]);
-            res[id]=1/(1+e);
+        double e = _exp(-a[id]);
+        res[id] = 1 / (1 + e);
         }
         else
         {
-            double e = exp(a[id]);
-            res[id]=e/(1+e);
+        double e = _exp(a[id]);
+        res[id] = e / (1 + e);
         }
-    }
-    else
-    {
-        if (res[id]>=0)
-        {
-            float e = expf(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            float e = exp(a[id]);   // BUGBUG: Looks like this should be expf().
-            res[id]=e/(1+e);
-        }
-    }
 };
-
-__device__ __forceinline__ float _exp(float f)
-{
-    return expf(f);
-}
-
-__device__ __forceinline__ double _exp(double f)
-{
-    return exp(f);
-}
-
-//#define TENSOR_OPS_DECL __device__ __host__
-//#include "TensorOps.h"
 
 template<class ElemType>
 __global__ void _assignSigmoidOf(
@@ -224,16 +214,8 @@ __global__ void _elementWiseTanhOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=tanh(a[id]);
-    }
-    else
-    {
-        res[id]=tanhf(a[id]);
-    }
-
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = _tanh(a[id]);
 };
 
 //to prevent negative values caused by floating operations, we force inputs to be >=0
@@ -244,15 +226,8 @@ __global__ void _elementWiseSqrtOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=sqrt(max((ElemType)0, a[id]));
-    }
-    else
-    {
-        res[id]=sqrtf(max(ElemType(0), a[id]));
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = _sqrt(max((ElemType)0, a[id]));
 };
 
 template<class ElemType>
@@ -261,15 +236,8 @@ __global__ void _elementWiseExpOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=exp(a[id]);
-    }
-    else
-    {
-        res[id]=expf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = _exp(a[id]);
 };
 
 template<class ElemType>
@@ -278,22 +246,8 @@ __global__ void _elementWiseLogOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (a[id]<EPS_IN_LOG)
-    {
-        res[id]=LOG_OF_EPS_IN_LOG;
-    }
-    else
-    {
-        if (sizeof(ElemType)==sizeof(double))
-        {
-            res[id]=log(a[id]);
-        }
-        else
-        {
-            res[id]=logf(a[id]);
-        }
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : _log(a[id]);
 };
 
 template<class ElemType>
@@ -302,15 +256,8 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=fabs(a[id]);
-    }
-    else
-    {
-        res[id]=fabsf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = _fabs(a[id]);
 };
 
 template<class ElemType>
@@ -319,15 +266,8 @@ __global__ void _elementWiseCosineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=cos(a[id]);
-    }
-    else
-    {
-        res[id]=cosf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = _cos(a[id]);
 };
 
 template<class ElemType>
@@ -336,17 +276,9 @@ __global__ void _elementWiseNegativeSineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=-sin(a[id]);
-    }
-    else
-    {
-        res[id]=-sinf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    res[id] = -_sin(a[id]);
 };
-
 
 template<class ElemType>
 __global__ void _setValue(    
@@ -1141,6 +1073,7 @@ __global__ void _assignColumnwiseHardmaxOf(
     }
 }
 
+#if 0
 template<class ElemType>
 __global__ void _inplaceTruncateBottom(
     ElemType* a,
@@ -1153,6 +1086,7 @@ __global__ void _inplaceTruncateBottom(
     if (a[id]<threshold)
         a[id]=threshold;
 }
+#endif
 
 template<class ElemType>
 __global__ void _assignTruncateBottom(
@@ -1161,15 +1095,11 @@ __global__ void _assignTruncateBottom(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]<threshold)
-        us[id]=threshold;
-    else
-        us[id]=a[id];
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    us[id] = a[id] < threshold ? threshold : a[id];
 }
 
+#if 0
 template<class ElemType>
 __global__ void _inplaceTruncateTop(
     ElemType* a,
@@ -1182,6 +1112,7 @@ __global__ void _inplaceTruncateTop(
     if (a[id]>threshold)
         a[id]=threshold;
 }
+#endif
 
 template<class ElemType>
 __global__ void _assignTruncateTop(
@@ -1190,13 +1121,8 @@ __global__ void _assignTruncateTop(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]>threshold)
-        us[id]=threshold;
-    else
-        us[id]=a[id];
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    us[id] = a[id] > threshold ? threshold : a[id];
 }
 
 template<class ElemType>
@@ -3716,9 +3642,7 @@ __global__ void _inplaceTruncate(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT
     ElemType locThresholdPos = abs(threshold);
     ElemType locTHresholdNeg = -locThresholdPos; 
     if (a[id] > locThresholdPos)
