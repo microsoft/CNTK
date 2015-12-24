@@ -647,7 +647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	void ComputationNetwork::SetCTCParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t blanknum)
 	{
 
-		fprintf(stderr, "set blank phone num %d\n", blanknum);
+		fprintf(stderr, "set blank phone num %d\n", (int)blanknum);
 		std::list<ComputationNodeBasePtr> ctcNodes = net->GetNodesWithType(OperationNameOf(CTCwithSoftmaxNode), criterionNode);
 		if (ctcNodes.size() == 0)
 		{

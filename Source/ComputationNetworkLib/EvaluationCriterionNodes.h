@@ -333,13 +333,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						}
 						fprintf(stderr, "label: ");
 						for (size_t i = 0; i < labelsize; i++){
-							fprintf(stderr, "%d\t", labelseq[i]);
+							fprintf(stderr, "%d\t", (int)labelseq[i]);
 						}
 						fprintf(stderr, "\n");
 
 						fprintf(stderr, "output: ");
 						for (size_t i = 0; i < outputsize; i++){
-							fprintf(stderr, "%d\t", outputseq[i]);
+							fprintf(stderr, "%d\t", (int)outputseq[i]);
 						}
 						fprintf(stderr, "\n");
 
