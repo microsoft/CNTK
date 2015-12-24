@@ -383,10 +383,10 @@ struct latticefunctionskernels
 					pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);                                
 
 				}*/
-				pathscore2 = getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
-				pathscore1 = getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
+				pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
+				pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
 				state1stepm1to1 = ts;
-				pathscore0 = getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
+				pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
 				
 
             }
@@ -535,7 +535,7 @@ struct latticefunctionskernels
 					for (size_t t = alignindex; t < alignindex + numframes; t++)    // set the final alignment
 					{
 						size_t senoneid;
-						if (state2step0to1 < te && t < state2step0to1)						
+                        if (state2step0to1 <alignindex - ts + te && t < state2step0to1)
 							senoneid = senoneid0;
 						else if(t < state2step1to2)                                 // in state 1
 							senoneid = senoneid1;
