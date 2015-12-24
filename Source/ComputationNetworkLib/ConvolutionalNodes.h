@@ -213,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels.", NodeName().c_str(), (int)inputDim);
 
             // that's our dimension
-            SetDims(m_sampleLayout, Input(1)->GetNumCols());
+            SetDims(outputSampleLayout, Input(1)->GetNumCols());
 
             // set up the various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
