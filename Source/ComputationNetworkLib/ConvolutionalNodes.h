@@ -197,7 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            InferImageDimsFromInput(1, false);
+            CopyInputSampleLayoutFromInput(1, false);
 
             if (m_inputSampleLayout.GetWidth() < m_kernelWidth || m_inputSampleLayout.GetHeight() < m_kernelHeight)
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
@@ -403,7 +403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             if (m_inputSampleLayout.GetWidth() < m_windowWidth || m_inputSampleLayout.GetHeight() < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
@@ -686,7 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            InferImageDimsFromInput(0);
+            CopyInputSampleLayoutFromInputTrue(0);
 
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);

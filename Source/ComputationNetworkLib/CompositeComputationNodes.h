@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = cols0;
             SetDims(rows, cols);
 
-            InferImageDimsFromInput(0);
+            CopyInputSampleLayoutFromInputTrue(0);
         }
 
     public:
@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
 
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-                SetDims(Input(0)->GetNumRows(), 1);
+                SetDims(Input(0)->GetSampleLayout(), 1);
             else
                 VerifyDims(Input(0)->GetNumRows(), 1);
             InferImageDimsFromInputs();
@@ -655,6 +655,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
             Input(1)->SetParameterUpdateRequired(false);
             Input(2)->SetParameterUpdateRequired(false);  //prevent learning
+
             SetDims(Input(0));
             InferImageDimsFromInputs();
         }
@@ -956,7 +957,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
             SetDims(Input(0));
-            InferImageDimsFromInput(0);
+            CopyInputSampleLayoutFromInputTrue(0);
         }
 
     public:

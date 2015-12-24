@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }       
@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }
@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }
@@ -401,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }
@@ -483,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }
@@ -659,7 +659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //    m_sampleLayout = TensorShape();
         //}
 
@@ -951,7 +951,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1232,7 +1232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1402,7 +1402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1629,7 +1629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
             m_sampleLayout = TensorShape();
         }
 

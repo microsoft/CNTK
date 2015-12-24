@@ -541,14 +541,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
         }
 
-        virtual void /*IComputationNode::*/InferImageDimsFromInputs()
-        {
-            if (!IsLeaf())
-                InferImageDimsFromInput(0); //copy from child 0 by default.
-        }
-
-        virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
-
         // TODO: Remove this.
         // used from:
         //  - Plus/Minus/ElementTimesNode --> replace by max dim over inputs. Make this standard behavior for all binary element-wise ops.
@@ -617,18 +609,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
+    public:
+
+        // base-class version just copies from child 0 by default
+        virtual void /*IComputationNode::*/InferImageDimsFromInputs()
+        {
+            if (!IsLeaf())
+                CopyInputSampleLayoutFromInputTrue(0);
+        }
+
+        virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
+
     protected:
 
-        void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
+        void CopyInputSampleLayoutFromInput(const size_t index, const bool outputSameAsInput)
         {
             if (index >= GetNumInputs())
-                InvalidArgument("InferImageDimsFromInput: output index");
+                InvalidArgument("CopyInputSampleLayoutFromInput: output index");
 
             const auto & child = m_inputs[index];
             if (child != nullptr)
                 m_inputSampleLayout = child->m_sampleLayout;
             if (outputSameAsInput)
                 m_sampleLayout = m_inputSampleLayout;
+        }
+        void CopyInputSampleLayoutFromInputTrue(const size_t index)
+        {
+            CopyInputSampleLayoutFromInput(index, false);
+            m_sampleLayout = m_inputSampleLayout;
         }
 
         void InferMBLayoutFromInputsForStandardCase();
@@ -1565,7 +1573,7 @@ protected: \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
     /*using Base::GetTensorsForwardBinary; */using Base::DetermineElementwiseTensorRank; \
-    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetImageLayout; using Base::CopyInputSampleLayoutFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
@@ -1648,9 +1656,9 @@ protected:    /* some boilerplate goes here */ \
         {
             // TODO: change to infer as maximum of the two
             if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
+                CopyInputSampleLayoutFromInputTrue(0);
             else
-                InferImageDimsFromInput(1);
+                CopyInputSampleLayoutFromInputTrue(1);
         }
     };
 

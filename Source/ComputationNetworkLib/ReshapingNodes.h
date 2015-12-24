@@ -202,8 +202,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, true);
-            InferImageDimensions();
+            CopyInputSampleLayoutFromInputTrue(0);
+            InferTargetSampleLayout();
 
             // setting any dimension to 0 means lose the tensor, flatten to vector
             // TODO: We can use 0 to indicate "infer". One value can be 0. It will be filled in to match row dim.
@@ -381,7 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
-        void InferImageDimensions()
+        void InferTargetSampleLayout()
         {
             if (m_targetImageLayout.GetWidth() > 0)
             {
@@ -587,7 +587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // TODO: This is outdated.
-            InferImageDimsFromInput(0, true);
+            CopyInputSampleLayoutFromInputTrue(0);
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_sliceHeight, m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
@@ -681,7 +681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, true);
+            CopyInputSampleLayoutFromInputTrue(0);
 #if 0
             // TODO: stacked elements should become another tensor dimension
 #else
@@ -744,7 +744,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, true);
+            CopyInputSampleLayoutFromInputTrue(0);
 #if 0
             // TODO: This should add another tensor dimension.
 #else

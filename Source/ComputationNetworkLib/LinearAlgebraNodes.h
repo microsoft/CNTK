@@ -390,7 +390,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(1); 
+            CopyInputSampleLayoutFromInputTrue(1);
         }
     };
 
@@ -551,7 +551,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()  
         {
-            InferImageDimsFromInput(1, false); // the second one is the input since it's columnwise
+            CopyInputSampleLayoutFromInput(1, false); // the second one is the input since it's columnwise
 
             // after multiplication the structure is lost
             m_sampleLayout = TensorShape(Input(0)->GetNumRows());
@@ -688,7 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
+            CopyInputSampleLayoutFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_sampleLayout = TensorShape(Input(0)->GetNumRows());
@@ -895,7 +895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // input 0 is the matrix and input 1 is a row vector
-            InferImageDimsFromInput(0);
+            CopyInputSampleLayoutFromInputTrue(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1053,7 +1053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // input 0 is a matrix and input 1 is a column vector
-            InferImageDimsFromInput(0);
+            CopyInputSampleLayoutFromInputTrue(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1155,7 +1155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs() //this is element wise scaling, so based on child 1
         {
-            InferImageDimsFromInput(1);
+            CopyInputSampleLayoutFromInputTrue(1);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1242,7 +1242,7 @@ private:
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1310,7 +1310,7 @@ private:
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1400,7 +1400,7 @@ private:
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
+        //    CopyInputSampleLayoutFromInput(0, false); // the second one is the input since it's column wize
         //
         //    m_sampleLayout = TensorShape(Input(0)->GetNumCols());
         //}
@@ -1431,16 +1431,6 @@ private:
             {
                 auto node = dynamic_pointer_cast<DiagonalNode<ElemType>>(nodeP);
             }
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, true);
-
-            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
-
-            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
-                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
@@ -1487,6 +1477,16 @@ private:
 
             SetDims(1, dim);
             InferImageDimsFromInputs();
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            CopyInputSampleLayoutFromInputTrue(0);
+
+            if (m_sampleLayout.GetWidth() * m_sampleLayout.GetNumChannels() != 1)
+                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+
+            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -1609,7 +1609,7 @@ private:
 
         //virtual void InferImageDimsFromInputs() 
         //{
-        //    InferImageDimsFromInput(0, false);
+        //    CopyInputSampleLayoutFromInput(0, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -1741,7 +1741,7 @@ private:
         {
             // since it's symmetrical any one of the input may be the true input. 
             // since we dont' use the input image size info in the operation, the input part doesn't matter.
-            InferImageDimsFromInput(1, false); 
+            CopyInputSampleLayoutFromInput(1, false); 
 
             // after KhatriRaoProduct the structure is lost
             m_sampleLayout = TensorShape(m_value->GetNumRows());
@@ -1970,7 +1970,7 @@ private:
 
         virtual void InferImageDimsFromInputs()
         {
-            InferImageDimsFromInput(0, false);
+            CopyInputSampleLayoutFromInput(0, false);
 
             m_sampleLayout = TensorShape();
         }
