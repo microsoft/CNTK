@@ -51,6 +51,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // GPU and 1-dimensional image
             bool gpuSparse1D = (inT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                convDesc.wStride() == 1 &&
+                !convDesc.padding() &&
                 in.GetMatrixType() == MatrixType::SPARSE);
 
             out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
@@ -197,6 +199,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // GPU and 1-dimensional image
             bool gpuSparse1D = (inT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                convDesc.wStride() == 1 &&
+                !convDesc.padding() &&
                 in.GetMatrixType() == MatrixType::SPARSE);
 
             if (numSubBatches == 1 && allowReuse && !gpuSparse1D)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
