@@ -104,7 +104,7 @@ DNN=[
 
     pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs)
 
-    ol = DnnLayer(1605632, labelDim, pool5, fcWScale, fcBValue)
+    ol = DnnLayer(8192, labelDim, pool5, fcWScale, fcBValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)
