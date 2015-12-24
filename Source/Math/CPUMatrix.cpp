@@ -5410,7 +5410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 					}
 					if (fabs(Zt + totalscore) > 0.01)
-						printf("bad score %d %f %f", t, Zt, totalscore);
+						printf("bad score %d %f %f", (int)t, Zt, totalscore);
 					for (s = 1; s< senonenum - 1; s++)
 					{
 						senoneid = phoneseq[s];
