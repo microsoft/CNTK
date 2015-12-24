@@ -314,16 +314,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numCols = cols;
             // actual memory allocation happens elsewhere
         }
-        void SetDims(const ComputationNodeBasePtr & node)
-        {
-            // TODO: change to node->GetSampleLayout()
-            SetDims(node->GetNumRows(), node->GetNumCols());
-        }
+        // set our dimensions (rows, cols, sample layout)
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
             m_sampleLayout = sampleLayout;
             m_numRows = m_sampleLayout.GetNumElements();
             m_numCols = cols;
+        }
+        // copy dimensions (rows, cols, sample layout) from another node
+        void SetDims(const ComputationNodeBasePtr & node)
+        {
+            SetDims(node->GetSampleLayout(), node->GetNumCols());
         }
         // update number of columns (in response to MB size)
         void SetNumCols(size_t cols)
