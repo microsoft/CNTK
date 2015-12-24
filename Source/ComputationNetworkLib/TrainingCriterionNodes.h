@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }       
@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }
@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }
@@ -401,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }
@@ -483,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }
@@ -656,12 +656,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //cerr << Input(3)->GetNumCols() << "\t" << Input(0)->GetNumCols() << endl;
             SetDims(TensorShape(1), 1);
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //    m_sampleLayout = TensorShape();
-        //}
 
     protected:
         Matrix<ElemType> m_logSoftmax;
@@ -949,13 +943,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nbrCls = Input(3)->GetNumRows();
         }
 
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
-
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1230,13 +1217,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //InferImageDimsFromInputs();
         }
 
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -1399,13 +1379,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gammatime = 0;
             m_partialtime = 0;
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -1609,6 +1582,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual void InferImageDimsFromInputs()
+        {
+            m_inputSampleLayout = GetInputSampleLayout(0);
+            m_sampleLayout = TensorShape();
+        }
+
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
         {
@@ -1625,12 +1604,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
             ReleaseMatrixToPool(m_result, matrixPool);
             ReleaseMatrixToPool(m_temp, matrixPool);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            CopyInputSampleLayoutFromInput(0, false);
-            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

@@ -859,13 +859,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(TensorShape(1), cols[3]);
         }
 
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(3, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
