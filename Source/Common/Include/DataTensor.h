@@ -230,7 +230,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // accessors
         size_t GetDim(size_t k) const { return m_dims[k]; }
         size_t GetRank() const { return m_dims.size(); }
-        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
+        size_t GetNumElements() const { if (m_dims.empty()) return 0; size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
+        size_t GetAllocation() const { return m_allocation; }
         size_t GetOffset() const { return m_offset; }
 
         // vector-like accessors
@@ -241,9 +242,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
-        size_t GetNumChannels() const { return m_dims.size() > 0 ? m_dims[0] : 1; }
-        size_t GetWidth()       const { return m_dims.size() > 1 ? m_dims[1] : 1; }
-        size_t GetHeight()      const { return m_dims.size() > 2 ? m_dims[2] : 1; }
+        size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
+        size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
+        size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
         // heuristics used for pretty-printing
         // TODO: This will go away.
         bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
