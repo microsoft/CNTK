@@ -1753,8 +1753,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
 			m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-			m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
-            //m_GammaCal.doCTC_m(FunctionValues(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Inputs(0)->GetMBLayout(), m_extrauttmap);
+			//m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
+            m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap);
 			//m_CTCposterior->Print("posterior");
 
 #if NANCHECK
