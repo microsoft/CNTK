@@ -479,15 +479,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (isFinalValidationPass && Input(1)->GetNumRows() % Input(0)->GetNumCols() != 0)
                 InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
             int wordsInEachSample = Input(1)->GetNumRows() / Input(0)->GetNumCols();
 
+            // TODO: Should this add a tensor dimension?
             SetDims(Input(0)->GetNumRows() * wordsInEachSample, Input(1)->GetNumCols());
-
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 

@@ -71,6 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
 
             if (Input(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
@@ -87,7 +88,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -262,6 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (isFinalValidationPass)
                 if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
@@ -272,8 +273,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                 }
             // BUGBUG: Not resizing FunctionValues?
-
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -594,6 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            LinkToMBLayout(Input(1)->GetMBLayout());   // retains the layout of the right input
 
             if (Input(2)->Value().GetNumElements() != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
@@ -612,6 +612,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 size_t T1 = rows0 / m_stride;
                 SetDims(T1, cols1);
+                InferImageDimsFromInputs();
             }
 
             else // by col
@@ -619,10 +620,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 SetDims(rows0, cols1);
+                InferImageDimsFromInputs();
             }
-            LinkToMBLayout(Input(1)->GetMBLayout());   // retains the layout of the right input
 
-            InferImageDimsFromInputs();
         }
 
         virtual void InferImageDimsFromInputs()
@@ -702,12 +702,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
                 SetDims(Input(0));
 
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
     };
@@ -1529,8 +1529,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             InferMBLayoutFromInputsForStandardCase();
+
             InferImageDimsFromInputs();
 
             if (Input(0)->Value().GetMatrixType() == SPARSE)

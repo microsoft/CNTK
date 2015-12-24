@@ -378,14 +378,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
-            // left Node must be a scalar
+            // left node must be a scalar
             if (isFinalValidationPass && (Input(0)->GetNumRows() != 1 || Input(0)->GetNumCols() != 1))
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
 
             SetDims(Input(1));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            InferImageDimsFromInputs();
         }
 
         virtual void InferImageDimsFromInputs()
@@ -519,6 +519,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            if (isFinalValidationPass && Input(0)->HasMBLayout())
+                InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
+            InferMBLayoutFromInputsForStandardCase();
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -540,12 +543,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumCols())
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Input(1)->GetNumRows(), (int)Input(0)->GetNumCols());
-            SetDims(rows0, cols1);
 
-            if (isFinalValidationPass && Input(0)->HasMBLayout())
-                InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            // TODO: With tensors, inner dimensions must match.
+            SetDims(rows0, cols1);
+            InferImageDimsFromInputs();     // TODO: totally wrong here
         }
 
         virtual void InferImageDimsFromInputs()  
@@ -661,6 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -679,8 +681,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
 
+            // TODO: What should the tensor story be?
             SetDims(cols0, cols1);
-            InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
 
@@ -879,6 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols(); rows0;
@@ -886,7 +889,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1029,6 +1031,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1044,7 +1047,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1129,6 +1131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //if dimension not specified we assume two operands' dimensions should match
             if (Input(0)->GetNumRows() == 0 && Input(1)->GetNumRows() != 0)
@@ -1147,7 +1150,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(Input(0)->GetNumRows(), Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -1233,18 +1235,17 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
+
+            SetDims(TensorShape(1), 1);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    InferImageDimsFromInput(0, false);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
     };
 
     template class SumElementsNode<float>; 
@@ -1302,18 +1303,17 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(1, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+
+            SetDims(TensorShape(1), Input(0)->GetNumCols());    // each column is reduced to a scalar
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    InferImageDimsFromInput(0, false);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
     };
 
     template class SumColumnElementsNode<float>;
@@ -1388,23 +1388,22 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-
-            SetDims(cols0, rows0);
             if (Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
+
+            if (Input(0)->HasSampleLayout())    // must be a plain matrix without tensor substructure
+                InvalidArgument("%ls %ls operation cannot operate on input tensors", NodeName().c_str(), OperationName().c_str());
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+            SetDims(TensorShape(cols0), rows0);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
-
-            // after transposition, the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumCols());
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
+        //
+        //    m_sampleLayout = TensorShape(Input(0)->GetNumCols());
+        //}
     };
 
     template class TransposeNode<float>;
@@ -1594,6 +1593,8 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
             ValidateInferBinaryInputDims();
 
 #if 0
@@ -1601,17 +1602,17 @@ private:
                 LogicError("%ls %ls operation: The input dimensions do not match.", NodeName().c_str(), OperationName().c_str());
 #endif
 
-            SetDims(1, Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            // TODO: We could do something more interesting with tensors.
+            //       E.g. apply a cos distance of a whole set of data with a single reference.
+            SetDims(TensorShape(1), Input(1)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs() 
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs() 
+        //{
+        //    InferImageDimsFromInput(0, false);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -1717,7 +1718,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -1733,6 +1734,7 @@ private:
                 LogicError("The Matrices should have same number of columns.");
 
             SetDims(rows0 * rows1, Input(0)->GetNumCols());
+            InferImageDimsFromInputs(); // TODO: What is the correct sample layout?
         }
 
         virtual void InferImageDimsFromInputs()  
@@ -1933,9 +1935,10 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //if dimension is missing make the two operatants to have same size
-            // TODO: use a for loop??
+            // TODO: use a for loop?? Or don't we have a function for this?
             size_t index = 0;
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
@@ -1960,8 +1963,8 @@ private:
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Input(3)->Get00Element();
 
+            // TODO: This calls for a tensor representation!
             SetDims(negNumber + 1, Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
