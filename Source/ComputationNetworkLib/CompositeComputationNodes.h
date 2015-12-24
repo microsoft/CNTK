@@ -125,9 +125,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
-            SetDims(rows, cols);
 
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
+            SetDims(rows, cols);
+            m_sampleLayout = GetInputSampleLayout(0);
+            // BUGBUG: Inconsistent with 'rows'
         }
 
     public:
@@ -956,8 +957,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
+
             SetDims(Input(0));
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
     public:
