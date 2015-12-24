@@ -291,7 +291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // dimensions
 
-        size_t GetNumRows() const { assert(m_numRows == m_sampleLayout.GetNumElements());  return m_numRows; }
+        size_t GetNumRows() const { assert(m_numRows == m_sampleLayout.GetAllocation()); return m_numRows; }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
@@ -836,7 +836,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CreateMatrixIfNull(m_value);
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
-            SetDims(Value().GetNumRows(), Value().GetNumCols());
+            SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
             // BUGBUG: This looses the sample layout (tensor shape). It should be serialized as well.
         }
 
