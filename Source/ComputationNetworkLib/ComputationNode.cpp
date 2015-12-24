@@ -76,8 +76,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        SetDims(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
-        InferImageDimsFromInputs();
+        // BUGBUG: Must take component-wise max over tensor dimensions.
+        SetDims(TensorShape(max(rows0, rows1)), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
+        InferImageDimsFromInputs(); // TODO: Is this the only place that calls InferImageDimsFromInputs()?
     }
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
     void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
@@ -123,6 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateInferInputDims(index, rows, cols);
         }
     }
+    // BUGBUG: Change this to take a TensorShape.
     template<class ElemType>
     void ComputationNode<ElemType>::ValidateInferInputDims(size_t i, size_t rows, size_t cols) //override final
     {
@@ -130,10 +132,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (rows == 0 || cols == 0)
                 LogicError("ValidateInferInputDims: Inferred matrix must not be empty.");
-            Input(i)->SetDims(rows, cols);
+            Input(i)->SetDims(rows == Input(i)->GetNumRows() ? Input(i)->GetSampleLayout() : TensorShape(rows), cols);
+            // BUGBUG: This will loose tensor shape.
             Input(i)->Validate(true);  // validate it properly
             // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
-            // big BUGBUG: This should do random initialization.
+            // big BUGBUG: This should do random initialization as requested by user in the first place.
             Input(i)->Value().SetValue(0);
             fprintf(stderr, "ValidateInferInputDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)rows, (int)cols);
         }

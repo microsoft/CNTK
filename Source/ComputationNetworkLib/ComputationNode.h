@@ -291,7 +291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // dimensions
 
-        size_t GetNumRows() const { return m_numRows; }
+        size_t GetNumRows() const { assert(m_numRows == m_sampleLayout.GetNumElements());  return m_numRows; }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
@@ -307,12 +307,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - StrideTimesNode
         //  - PairNetworkNode
         //  - LSTMNode
-        void SetDims(size_t rows, size_t cols)      // TODO: replace this by something that sets all info incl. tensor shape vs. only parts
-        {
-            m_numRows = rows;
-            m_numCols = cols;
-            // actual memory allocation happens elsewhere
-        }
         // set our dimensions (rows, cols, sample layout)
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
@@ -324,6 +318,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetDims(const ComputationNodeBasePtr & node)
         {
             SetDims(node->GetSampleLayout(), node->GetNumCols());
+        }
+        // use this only for testing code. Everywhere else, be explicit on the TensorShape.
+        void SetDims1(size_t rows, size_t cols)
+        {
+            SetDims(TensorShape(rows), cols);
         }
         // update number of columns (in response to MB size)
         void SetNumCols(size_t cols)
@@ -837,8 +836,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CreateMatrixIfNull(m_value);
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
-            m_numRows = Value().GetNumRows();
-            m_numCols = Value().GetNumCols();
+            SetDims(Value().GetNumRows(), Value().GetNumCols());
+            // BUGBUG: This looses the sample layout (tensor shape). It should be serialized as well.
         }
 
         // reader updated m_functionValue--update our internal state, i.e. m_numCols
@@ -1543,7 +1542,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::m_deviceId; using Base::SetDims; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
+    using Base::m_deviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \

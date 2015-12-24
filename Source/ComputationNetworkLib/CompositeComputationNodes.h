@@ -126,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
 
-            SetDims(rows, cols);
+            SetDims(TensorShape(rows), cols);
             m_sampleLayout = GetInputSampleLayout(0);
             // BUGBUG: Inconsistent with 'rows'
         }
@@ -143,20 +143,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f1 = Input(1)->Value();
             func = Value();
 
-            Input(0)->SetDims(nInput0, nT);
+            Input(0)->SetDims1(nInput0, nT);
             Input(0)->UpdateFunctionValuesSize();
             Input(0)->Value().SetValue(0);
             Input(0)->Value()(0, 0) = 1;
             Input(0)->Value()(0, 1) = 2;
             Input(0)->Value()(0, 2) = 3;
 
-            Input(1)->SetDims(nInput1, nT);
+            Input(1)->SetDims1(nInput1, nT);
             Input(1)->UpdateFunctionValuesSize();
             Input(1)->Value().SetValue(0);
             Input(1)->Value()(0, 0) = 4;
             Input(1)->Value()(0, 1) = 5;
             Input(1)->Value()(0, 2) = 6;
-            SetDims(nInput0 + nInput1, nT);
+            SetDims1(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
             ForwardProp(FrameRange(m_pMBLayout));
@@ -973,13 +973,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f0 = Input(0)->Value();
             func = Value();
 
-            Input(0)->SetDims(nInput, nT);
+            Input(0)->SetDims1(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
             Input(0)->Value().SetValue(0);
             Input(0)->Value()(0, 0) = 1;
             Input(0)->Value()(0, 1) = 2;
             Input(0)->Value()(0, 2) = 3;
-            SetDims(nOutput, nT);
+            SetDims1(nOutput, nT);
             UpdateFunctionValuesSize();
             Input(0)->Value().TransferToDeviceIfNotThere( m_deviceId, true);
             ForwardProp(FrameRange(m_pMBLayout));
