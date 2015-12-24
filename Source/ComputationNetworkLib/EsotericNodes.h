@@ -88,15 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(TensorShape(1), 1);
-            //InferImageDimsFromInputs(); 
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    m_inputSampleLayout = GetInputSampleLayout(0);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
     };
 
     template class DummyCriterionNode<float>; 

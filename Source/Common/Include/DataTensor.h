@@ -110,11 +110,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SmallVector(const std::vector<T>           & v) { assign(v.begin(), v.end()); }
         SmallVector(const std::initializer_list<T> & l) { assign(l.begin(), l.end()); }
         bool operator==(const SmallVector & other) const { return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T)); }
+        bool operator!=(const SmallVector & other) const { return !operator==(other); } // duh
         T   operator[](size_t i) const { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
         T & operator[](size_t i)       { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
         const T * begin() const { return data(); }
         const T *   end() const { return data() + size(); }
-        const T & back() const { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
+        T   back() const { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
+        T & back()       { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
         bool empty() const { return size() == 0; }
         void resize(size_t sz) { resize(sz, 0); }
     };
