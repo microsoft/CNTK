@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = cols0;
             SetDims(rows, cols);
 
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
     public:
@@ -957,7 +957,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
             SetDims(Input(0));
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
     public:

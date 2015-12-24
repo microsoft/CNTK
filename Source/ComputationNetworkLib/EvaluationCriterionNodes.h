@@ -66,6 +66,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual void InferImageDimsFromInputs()
+        {
+            m_inputSampleLayout = GetInputSampleLayout(0);
+
+            m_sampleLayout = TensorShape();
+        }
+
         virtual void UpdateFunctionMBSize() override
         {
             Base::UpdateFunctionMBSize();
@@ -75,13 +82,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxIndexes0->Resize(m_topK, cols);
             m_maxIndexes1->Resize(m_topK, cols);
             m_maxValues->Resize(m_topK, cols);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            CopyInputSampleLayoutFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

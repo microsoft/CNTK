@@ -390,7 +390,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInputTrue(1);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(1);
         }
     };
 
@@ -551,7 +551,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()  
         {
-            CopyInputSampleLayoutFromInput(1, false); // the second one is the input since it's columnwise
+            m_inputSampleLayout = GetInputSampleLayout(1); // the second one is the input since it's columnwise
 
             // after multiplication the structure is lost
             m_sampleLayout = TensorShape(Input(0)->GetNumRows());
@@ -688,7 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(1, false); //the second one is the input since it's column wize
+            m_inputSampleLayout = GetInputSampleLayout(1); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_sampleLayout = TensorShape(Input(0)->GetNumRows());
@@ -895,7 +895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // input 0 is the matrix and input 1 is a row vector
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1053,7 +1053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // input 0 is a matrix and input 1 is a column vector
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1155,7 +1155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs() //this is element wise scaling, so based on child 1
         {
-            CopyInputSampleLayoutFromInputTrue(1);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(1);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1239,13 +1239,6 @@ private:
 
             SetDims(TensorShape(1), 1);
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
     };
 
     template class SumElementsNode<float>; 
@@ -1307,13 +1300,6 @@ private:
 
             SetDims(TensorShape(1), Input(0)->GetNumCols());    // each column is reduced to a scalar
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
     };
 
     template class SumColumnElementsNode<float>;
@@ -1397,13 +1383,6 @@ private:
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             SetDims(TensorShape(cols0), rows0);
         }
-
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false); // the second one is the input since it's column wize
-        //
-        //    m_sampleLayout = TensorShape(Input(0)->GetNumCols());
-        //}
     };
 
     template class TransposeNode<float>;
@@ -1481,7 +1460,7 @@ private:
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
 
             if (m_sampleLayout.GetWidth() * m_sampleLayout.GetNumChannels() != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -1606,13 +1585,6 @@ private:
             //       E.g. apply a cos distance of a whole set of data with a single reference.
             SetDims(TensorShape(1), Input(1)->GetNumCols());
         }
-
-        //virtual void InferImageDimsFromInputs() 
-        //{
-        //    CopyInputSampleLayoutFromInput(0, false);
-        //
-        //    m_sampleLayout = TensorShape();
-        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -1741,7 +1713,7 @@ private:
         {
             // since it's symmetrical any one of the input may be the true input. 
             // since we dont' use the input image size info in the operation, the input part doesn't matter.
-            CopyInputSampleLayoutFromInput(1, false); 
+            m_inputSampleLayout = GetInputSampleLayout(1); 
 
             // after KhatriRaoProduct the structure is lost
             m_sampleLayout = TensorShape(m_value->GetNumRows());
@@ -1970,7 +1942,7 @@ private:
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }

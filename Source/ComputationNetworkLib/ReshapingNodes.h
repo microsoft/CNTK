@@ -202,7 +202,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
+            // TODO: m_sampleLayout will be overwritten below and is unused until then
             InferTargetSampleLayout();
 
             // setting any dimension to 0 means lose the tensor, flatten to vector
@@ -587,7 +588,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             // TODO: This is outdated.
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_sliceHeight, m_sampleLayout.GetNumChannels());
 
             // warn that this node will destroy the image size information from the child
@@ -681,10 +682,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
 #if 0
             // TODO: stacked elements should become another tensor dimension
 #else
+            // BUGBUG: Do we need to check compatibility of layouts? And then increase the last dimension?
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), GetNumRows(), m_sampleLayout.GetNumChannels());
 #endif
 
@@ -744,10 +746,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInputTrue(0);
+            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
 #if 0
             // TODO: This should add another tensor dimension.
 #else
+            // TODO: Make this general, i.e. multiply the last dimension.
             m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_inputSampleLayout.GetHeight() * m_numRepeat, m_sampleLayout.GetNumChannels());
 #endif
 

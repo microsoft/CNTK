@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    CopyInputSampleLayoutFromInput(0, false);
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
         //
         //    m_sampleLayout = TensorShape();
         //}
@@ -278,7 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(0, false);
+            m_inputSampleLayout = GetInputSampleLayout(0);
 
             m_sampleLayout = TensorShape();
         }
@@ -627,7 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(1, false); //the second one is the input since it's column wize
+            m_inputSampleLayout = GetInputSampleLayout(1); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_sampleLayout = TensorShape(Input(0)->GetNumRows());
@@ -1693,7 +1693,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            CopyInputSampleLayoutFromInput(1, false);
+            m_inputSampleLayout = GetInputSampleLayout(1);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
