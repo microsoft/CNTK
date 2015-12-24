@@ -832,6 +832,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
@@ -855,17 +856,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
-            SetDims(1, cols[3]);
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+            SetDims(TensorShape(1), cols[3]);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(3, false);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    InferImageDimsFromInput(3, false);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {

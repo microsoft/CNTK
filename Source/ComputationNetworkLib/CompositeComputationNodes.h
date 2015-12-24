@@ -110,6 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows1, cols1;
             rows1 = Input(1)->GetNumRows();
@@ -126,7 +127,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = cols0;
             SetDims(rows, cols);
 
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInput(0);
         }
 
@@ -268,10 +268,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             if (!Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
                 SetDims(Input(0)->GetNumRows(), 1);
             else
@@ -609,6 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (Input(0)->RequiresPreCompute())
             {
@@ -655,7 +656,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(1)->SetParameterUpdateRequired(false);
             Input(2)->SetParameterUpdateRequired(false);  //prevent learning
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
     };
@@ -727,6 +727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (Input(0)->RequiresPreCompute())
             {
@@ -776,7 +777,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(2)->SetParameterUpdateRequired(false);
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
     };

@@ -339,6 +339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
+        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }  // meaning does it have a layout that is not just a vector
     protected:
         // TODO: There are temporarily a second version of GetSampleLayout() that verifies that m_sampleLayout is consistent with matrix dims
         const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away

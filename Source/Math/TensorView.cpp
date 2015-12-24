@@ -5,6 +5,14 @@
 // </copyright>
 //
 
+// TODO:
+//  - dimension inference in nodes
+//  - reduction on GPU is highly inefficient; test cases Image/QuickE2E PlusNode::BackpropTo() and ScaleNode::BackpropTo()
+//  - accuracy deviation in FullUtterance and SequenceTraining
+//  - TimesNode  --needs to specify reduction dimensions
+//  - ConvolutionNode   --needs to specify reduction dimensions
+//  - some nodes create new "dimensions" such as RowStack. Should that be an actual new tensor dimension?
+
 // This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings

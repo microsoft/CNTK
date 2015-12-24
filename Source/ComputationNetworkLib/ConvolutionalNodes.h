@@ -170,10 +170,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             InferMBLayoutFromInputsForStandardCase();
+
             InferImageDimsFromInputs();
 
+            // TODO: can we get by without using m_inputSampleLayout?
+            // TODO: SetDims(layout)
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
 
             if (Input(0)->Value().HasNoElements())
@@ -383,8 +385,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             InferMBLayoutFromInputsForStandardCase();
+
             InferImageDimsFromInputs();
 
             m_inputSizePerSample = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();
@@ -676,8 +678,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             InferMBLayoutFromInputsForStandardCase();
+
             InferImageDimsFromInputs();
 
             SetDims(m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels(), Input(0)->GetNumCols());

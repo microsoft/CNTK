@@ -240,6 +240,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            if (factor() == 1)          // canonical case: keeps the MBLayout(e.g. only changing the TensorShape)
+                m_pMBLayout = Input(0)->GetMBLayout();
+            else if (Input(0)->HasMBLayout())
+            {
+                if (!m_pMBLayout)
+                    m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates a new layout
+            }
+            else
+                assert(!m_pMBLayout);                       // reshaping non-mini-batch data
 
             size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             // Note: During initial validation, cols may not be a multiple. E.g. cols may be 1 or 3. So we cannot check here whether the integer-multiple conditions are fulfilled.
@@ -254,15 +263,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(m_numTargetRows, newCols);
-            if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the TensorShape)
-                m_pMBLayout = Input(0)->GetMBLayout();
-            else if (Input(0)->HasMBLayout())
-            {
-                if (!m_pMBLayout)
-                    m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates its own layout
-            }
-            else
-                assert(!m_pMBLayout);                       // reshaping non-mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -483,7 +483,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             if (isFinalValidationPass && (!Input(0)->HasMBLayout() || !Input(1)->HasMBLayout()))
                 RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = Input(1)->GetMBLayout(); // output layout is that of 'layoutInput'
@@ -576,7 +575,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // RowSlice cannot slice tensors.
             // TODO: Create a TensorSlice operation, or just Slice.
-            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetRank() != 1
+            if (isFinalValidationPass && Input(0)->HasSampleLayout()
                 && !Input(0)->GetSampleLayout().IsVectorStoredAsImage()   // legacy
                 )
                 RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
@@ -790,9 +789,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(Input(0)->GetNumRows() * m_numRepeat, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
+
+            // TODO: What should the tensor dim be? An additional dimension?
+            SetDims(Input(0)->GetNumRows() * m_numRepeat, Input(0)->GetNumCols());
             InferImageDimsFromInputs();
         }
 
