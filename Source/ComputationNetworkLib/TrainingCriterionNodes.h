@@ -903,7 +903,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(TensorShape(1), 1);
-            //InferImageDimsFromInputs();
 
             m_nbrCls = Input(3)->GetNumRows();
         }
@@ -1179,7 +1178,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(TensorShape(1), 1);
-            //InferImageDimsFromInputs();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1339,7 +1337,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             SetDims(TensorShape(1), 1);
-            //InferImageDimsFromInputs();
 
             m_gammatime = 0;
             m_partialtime = 0;

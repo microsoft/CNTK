@@ -96,7 +96,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
 
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
-        virtual void InferImageDimsFromInputs() = 0;
         virtual void Save(File& fstream) const = 0;
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) = 0;
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
@@ -605,13 +604,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        // base-class version just copies from child 0 by default
-        virtual void /*IComputationNode::*/InferImageDimsFromInputs()
-        {
-            if (!IsLeaf())
-                m_sampleLayout = GetInputSampleLayout(0);
-        }
-
         virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
 
     protected:
@@ -1106,9 +1098,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
-    protected:
-        std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
-
     public:
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
@@ -1469,7 +1458,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: There are too many of these. This indicates improper class hierarchies.
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { NOT_IMPLEMENTED; }
         virtual void Validate(bool isFinalValidationPass) override { NOT_IMPLEMENTED; }          // main base validation function
-        virtual void InferImageDimsFromInputs() override { NOT_IMPLEMENTED; }
         virtual void Save(File& fstream) const override { NOT_IMPLEMENTED; }
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
@@ -1552,7 +1540,7 @@ protected: \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::DetermineElementwiseTensorRank; \
-    using Base::GetInputSampleLayout; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetInputSampleLayout; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
@@ -1629,15 +1617,6 @@ protected:    /* some boilerplate goes here */ \
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: change to infer as maximum of the two
-            if (IsInputAnImage(0))
-                m_sampleLayout = GetInputSampleLayout(0);
-            else
-                m_sampleLayout = GetInputSampleLayout(1);
         }
     };
 

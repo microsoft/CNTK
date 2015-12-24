@@ -684,8 +684,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
                 SetDims(Input(0));
-
-            InferImageDimsFromInputs();
+            else
+                SetDims(Input(0)->GetSampleLayout(), 0);
         }
     };
 

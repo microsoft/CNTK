@@ -11,7 +11,13 @@
 #include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 #include "DataTensor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+#ifndef let
+#define let const auto
+#endif
+
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
     using namespace std;
 
@@ -50,8 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        SetDims(m_inputs[0]);
-        InferImageDimsFromInputs();
+        SetDims(Input(0));
     }
     // binary zip operation, e.g. Plus
     // If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
@@ -67,6 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
         size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
+        // TODO: This test will go away once we switch to full tensor lib.
         if (isFinalValidationPass && !(
                (rows0 == rows1 && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
                (allowMultiples && (rows0 == 1 || rows1 == 1) && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||    // one is row vec
@@ -76,9 +82,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        // BUGBUG: Must take component-wise max over tensor dimensions.
-        SetDims(TensorShape(max(rows0, rows1)), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
-        InferImageDimsFromInputs(); // TODO: Is this the only place that calls InferImageDimsFromInputs()?
+        // result has tensor shape with dimensions being the max over both
+        let shape0 = GetInputSampleLayout(0);
+        let shape1 = GetInputSampleLayout(1);
+        SmallVector<size_t> dims = shape0.GetDims();
+        if (shape1.GetRank() > dims.size())
+            dims.resize(shape1.GetRank(), 1);  // pad with ones
+
+        // If rank of [0] is higher than we only need to take max over rank [1].
+        // If rank of [1] is higher then we have padded to equal lentgh.
+        for (size_t k = 0; k < shape1.GetRank(); k++)
+        {
+            size_t dim1 = shape1[k];
+            if (dims[k] == 1)           // is [0] broadcasting?
+                dims[k] = dim1;         // then use dimension we broadcast to
+            else if (dim1 == 1)         // if [1] is broadcasting
+                ;                       // dims is already correct
+            else if (dim1 != dims[k])   // no broadcasting: they must match
+                InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
+                                NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
+        }
+
+        SetDims(TensorShape(dims), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
     }
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
     void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
@@ -206,28 +231,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
             return GetSampleLayout().Append(rank, GetMBLayout()->GetNumParallelSequences());
         }
-    }
-
-    // TODO: no longer used, delete this
-    template<class ElemType>
-    std::vector<TensorView<ElemType>> ComputationNode<ElemType>::GetTensorsForwardBinary(const FrameRange & fr)
-    {
-#if 1
-        NOT_IMPLEMENTED;
-#else
-        const size_t N = 3;     // 2 inputs and 1 output
-        // perform operation
-        std::vector<TensorView<ElemType>> tensors;
-        size_t rank = DetermineElementwiseTensorRank();
-        for (size_t i = 0; i < N; i++)
-        {
-            auto * node = i < N - 1 ? Input(i).get() : this;    // output is ourselves
-            auto slice = node->ValueFor(i < N - 1 ? fr.AllowBroadcast() : fr);
-            auto shape = node->GetTensorShape(rank, fr);
-            tensors.push_back(TensorView<ElemType>(slice, shape));
-        }
-        return tensors;
-#endif
     }
 
     // -----------------------------------------------------------------------

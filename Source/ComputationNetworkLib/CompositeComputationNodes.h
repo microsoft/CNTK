@@ -277,7 +277,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDims(Input(0)->GetSampleLayout(), 1);
             else
                 VerifyDims(Input(0)->GetNumRows(), 1);
-            InferImageDimsFromInputs();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -658,7 +657,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(2)->SetParameterUpdateRequired(false);  //prevent learning
 
             SetDims(Input(0));
-            InferImageDimsFromInputs();
         }
     };
 
@@ -779,7 +777,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(2)->SetParameterUpdateRequired(false);
 
             SetDims(Input(0));
-            InferImageDimsFromInputs();
         }
     };
 
