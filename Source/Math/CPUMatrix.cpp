@@ -5259,6 +5259,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         return *this;
     }
+	// 'double' version of LogAdd
+	double LogAddD(double x, double y) { return LogAdd(x, y); }
 
 	template<class ElemType>
 	CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
@@ -5471,8 +5473,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 =======*/
-    // 'double' version of LogAdd
-    double LogAddD(double x, double y) { return LogAdd(x, y); }
+    
 
 
     template<class ElemType>

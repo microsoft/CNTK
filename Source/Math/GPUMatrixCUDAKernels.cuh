@@ -4940,12 +4940,12 @@ template<class ElemType>
 __global__ void _assignAlphaScore(
 	const ElemType *prob,
 	ElemType *Alphascore,
-	const unsigned __int64 *phoneseq,
-	const unsigned __int64 *phonebound,
+	const size_t *phoneseq,
+	const size_t *phonebound,
 	const long  t,
 	const long M,
 	const long phonenum,
-	unsigned __int64 blanknum)
+	size_t blanknum)
 {
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -5055,13 +5055,13 @@ template<class ElemType>
 __global__ void _assignBetaScore(
 	const ElemType *prob,
 	ElemType *Betascore,
-	const unsigned __int64 *phoneseq,
-	const unsigned __int64 *phonebound,
+	const size_t *phoneseq,
+	const size_t *phonebound,
 	const long  t,
 	const long N,
 	const long M,
 	const long phonenum,
-	unsigned __int64 blanknum)
+	size_t blanknum)
 {
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	int i;
@@ -5173,7 +5173,7 @@ __global__ void _assignCTCScore(
 	ElemType *prob,
 	ElemType *Alphascore,
 	ElemType *Betascore,
-	const unsigned __int64 *phoneseq,
+	const size_t *phoneseq,
 	const long N,
 	const long M,
 	const long phonenum)
@@ -5208,7 +5208,7 @@ __global__ void _assignCTCScore(
 	//printf("gamma end %d\n",id);
 }
 template<class ElemType>
-__global__ void _assigntotalscore(ElemType *Betascore, unsigned __int64 blanknum)
+__global__ void _assigntotalscore(ElemType *Betascore, size_t blanknum)
 {
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	int i;
@@ -5228,15 +5228,15 @@ __global__ void _assignAlphaScore_m(
 	const ElemType *prob,
 	ElemType *Alphascore,
 	ElemType *phoneseq,
-	const unsigned __int64 *uttmap,
-	const unsigned __int64 *uttframenum,
-	const unsigned __int64 *uttbeginframe,
-	const unsigned __int64 *uttphonenum,
-	unsigned __int64 samplesInRecurrentStep,
-	const unsigned __int64 uttNum,
-	const unsigned __int64  t,
-	const unsigned __int64 maxphonenum,
-	const unsigned __int64 totalphonenum)	
+	const size_t *uttmap,
+	const size_t *uttframenum,
+	const size_t *uttbeginframe,
+	const size_t *uttphonenum,
+	size_t samplesInRecurrentStep,
+	const size_t uttNum,
+	const size_t  t,
+	const size_t maxphonenum,
+	const size_t totalphonenum)	
 {
 	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
 	LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
@@ -5309,12 +5309,12 @@ __global__ void _assignBetaScore_m(
 	const ElemType *prob,
 	ElemType *Betascore,
 	ElemType *phoneseq,
-	const unsigned __int64 *uttmap,
-	const unsigned __int64 *uttframenum,
-	const unsigned __int64 *uttbeginframe,
-	const unsigned __int64 *uttphonenum,
+	const size_t *uttmap,
+	const size_t *uttframenum,
+	const size_t *uttbeginframe,
+	const size_t *uttphonenum,
 	long samplesInRecurrentStep,
-	const unsigned __int64 uttNum,
+	const size_t uttNum,
 	const long  t,	
 	const long maxphonenum,
 	const long totalphonenum)
@@ -5395,11 +5395,11 @@ __global__ void _assignCTCScore_m(
 	ElemType *Alphascore,
 	ElemType *Betascore,
 	ElemType *phoneseq,
-	const unsigned __int64 uttNum,	
-	const unsigned __int64 *uttmap,
-	const unsigned __int64 *uttbeginframe,
-	const unsigned __int64 *uttphonenum,
-	const unsigned __int64 *uttframenum,
+	const size_t uttNum,	
+	const size_t *uttmap,
+	const size_t *uttbeginframe,
+	const size_t *uttphonenum,
+	const size_t *uttframenum,
 	long samplesInRecurrentStep,
 	const long totalframenum,
 	const long maxphonenum,
@@ -5454,11 +5454,11 @@ __global__ void _assignCTCScore_m(
 template<class ElemType>
 __global__ void _assigntotalscore_m(ElemType *Betascore,
 	ElemType & totalscore,
-	const unsigned __int64 uttNum,
-	const unsigned __int64 *uttmap,
-	const unsigned __int64 *uttbeginframe,
-	unsigned __int64 samplesInRecurrentStep,
-	const unsigned __int64 maxphonenum)
+	const size_t uttNum,
+	const size_t *uttmap,
+	const size_t *uttbeginframe,
+	size_t samplesInRecurrentStep,
+	const size_t maxphonenum)
 {
 	LONG64 uttid =  blockIdx.x ;
 	//totalscore = 0; 
@@ -5476,11 +5476,11 @@ __global__ void _assigntotalscore_m(ElemType *Betascore,
 template<class ElemType>
 __global__ void _assigntotaluttscore_m(ElemType *Betascore,
 	ElemType & totalscore,
-	const unsigned __int64 uttNum,
-	const unsigned __int64 *uttmap,
-	const unsigned __int64 *uttbeginframe,
-	unsigned __int64 samplesInRecurrentStep,
-	const unsigned __int64 maxphonenum)
+	const size_t uttNum,
+	const size_t *uttmap,
+	const size_t *uttbeginframe,
+	size_t samplesInRecurrentStep,
+	const size_t maxphonenum)
 {
 	LONG64 uttid ;
 	//totalscore = 0; 
