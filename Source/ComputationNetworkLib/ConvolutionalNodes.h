@@ -681,7 +681,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
 
             InferImageDimsFromInputs();
-
             SetDims(m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels(), Input(0)->GetNumCols());
         }
 

@@ -26,7 +26,7 @@
 #include <sstream>
 #include <iostream>
 
- #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
+// #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
 
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -301,29 +301,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - LearnableParameterNode (init, load)
         //  - InputValue (init, load)
         //  - DelayedValueNodeBase (Init())
-        // only changes col dim:
-        //  - ResizeAllFeatureNodes()
         // use a different name for these:
-        //  - ReshapeNode::UpdateFunctionMBSize()    --??
         //  - various unit tests
-        //  - ComputationNetwork::FixupInputMinibatchSize()
+        // deprecated ones:
         //  - TimeReverseNode (first step--deprecate and/or move to UpdateMB... function)
         //  - StrideTimesNode
         //  - PairNetworkNode
         //  - LSTMNode
-        //  - MultiNetworks-
-        void SetDims(size_t rows, size_t cols)
+        void SetDims(size_t rows, size_t cols)      // TODO: replace this by something that sets all info incl. tensor shape vs. only parts
         {
             m_numRows = rows;
             m_numCols = cols;
             // actual memory allocation happens elsewhere
         }
-        void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
+        void SetDims(const ComputationNodeBasePtr & node)
+        {
+            // TODO: change to node->GetSampleLayout()
+            SetDims(node->GetNumRows(), node->GetNumCols());
+        }
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
             m_sampleLayout = sampleLayout;
             m_numRows = m_sampleLayout.GetNumElements();
             m_numCols = cols;
+        }
+        // update number of columns (in response to MB size)
+        void SetNumCols(size_t cols)
+        {
+            m_numCols = cols;
+            // actual memory allocation happens elsewhere
         }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
@@ -982,7 +988,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        // update size (#columns) of node to match MBLayout
+        // update size (m_numCols) of node to match MBLayout (but does not do the actual Resize())
         // This must be called right before ForwardProp() the first time for a given minibatch.
         // Currently overridden by
         //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
@@ -994,7 +1000,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                SetDims(GetNumRows(), m_pMBLayout->GetNumCols());
+                SetNumCols(m_pMBLayout->GetNumCols());
         }
         virtual void VerifyDimsMatch() const override final
         {
@@ -1190,7 +1196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::BeginForwardProp();
 
-            // update dimensions based on MB size
+            // update m_numCols based on MB size
             UpdateFunctionMBSize();
 
             // update the actual m_value allocation
@@ -1544,7 +1550,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
+    using Base::m_deviceId; using Base::SetDims; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \

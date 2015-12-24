@@ -87,16 +87,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
 
-            SetDims(1,1);
-            InferImageDimsFromInputs(); 
+            SetDims(TensorShape(1), 1);
+            //InferImageDimsFromInputs(); 
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    InferImageDimsFromInput(0, false);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
     };
 
     template class DummyCriterionNode<float>; 
