@@ -28,10 +28,9 @@
 
  #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
 
-//#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
-#pragma warning (disable: 4267)
+#pragma warning (disable: 4267) // conversion from size_t to int or other types
 
 // version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
