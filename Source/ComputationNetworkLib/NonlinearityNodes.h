@@ -861,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void InferImageDimsFromInputs()
         //{
-        //    InferImageDimsFromInput(3, false);
+        //    CopyInputSampleLayoutFromInput(3, false);
         //
         //    m_sampleLayout = TensorShape();
         //}
