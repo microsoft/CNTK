@@ -64,12 +64,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryReduce(isFinalValidationPass);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
-        }       
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}       
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -190,12 +190,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryReduce(isFinalValidationPass);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -299,12 +299,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -399,12 +399,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryReduce(isFinalValidationPass);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
@@ -481,12 +481,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryReduce(isFinalValidationPass);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //
+        //    m_sampleLayout = TensorShape();
+        //}
     };
 
     template class MatrixL2RegNode<float>; 
@@ -1582,11 +1582,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-            m_sampleLayout = TensorShape();
-        }
+        //virtual void InferImageDimsFromInputs()
+        //{
+        //    m_inputSampleLayout = GetInputSampleLayout(0);
+        //    m_sampleLayout = TensorShape();
+        //}
 
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)

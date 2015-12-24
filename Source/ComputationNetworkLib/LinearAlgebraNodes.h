@@ -385,12 +385,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
 
             SetDims(Input(1));
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(1);
         }
     };
 
@@ -545,16 +539,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Input(1)->GetNumRows(), (int)Input(0)->GetNumCols());
 
             // TODO: With tensors, inner dimensions must match.
-            SetDims(rows0, cols1);
-            InferImageDimsFromInputs();     // TODO: totally wrong here
-        }
-
-        virtual void InferImageDimsFromInputs()  
-        {
-            m_inputSampleLayout = GetInputSampleLayout(1); // the second one is the input since it's columnwise
-
             // after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
+            SetDims(TensorShape(rows0), cols1);
         }
 
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -682,16 +668,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
 
             // TODO: What should the tensor story be?
-            SetDims(cols0, cols1);
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(1); //the second one is the input since it's column wize
-
             //after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
+            SetDims(TensorShape(cols0), cols1);
         }
     };
 
@@ -889,13 +867,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
             SetDims(Input(0));
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // input 0 is the matrix and input 1 is a row vector
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1047,13 +1018,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
             SetDims(Input(0));
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // input 0 is a matrix and input 1 is a column vector
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1149,13 +1113,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
-            SetDims(Input(0)->GetNumRows(), Input(1)->GetNumCols());
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs() //this is element wise scaling, so based on child 1
-        {
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(1);
+            // TODO: Should Input(0) have a specific tensor structure? E.g. match Input(1)?
+            SetDims(Input(1));
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1454,18 +1413,10 @@ private:
             if (isFinalValidationPass && dim != Input(0)->GetNumRows())
                 InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
 
-            SetDims(1, dim);
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
-
-            if (m_sampleLayout.GetWidth() * m_sampleLayout.GetNumChannels() != 1)
+            if (Input(0)->HasSampleLayout())
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
 
-            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
+            SetDims(TensorShape(1), dim);
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -1705,18 +1656,9 @@ private:
             if (isFinalValidationPass && !HasMBLayout() && Input(1)->GetNumCols() != Input(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
 
-            SetDims(rows0 * rows1, Input(0)->GetNumCols());
-            InferImageDimsFromInputs(); // TODO: What is the correct sample layout?
-        }
-
-        virtual void InferImageDimsFromInputs()  
-        {
-            // since it's symmetrical any one of the input may be the true input. 
-            // since we dont' use the input image size info in the operation, the input part doesn't matter.
-            m_inputSampleLayout = GetInputSampleLayout(1); 
-
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = TensorShape(m_value->GetNumRows());
+            // TODO: ^^ Is that correctWhat is the correct sample layout?
+            SetDims(TensorShape(rows0 * rows1), Input(0)->GetNumCols());
         }
     };
 
@@ -1936,15 +1878,7 @@ private:
             size_t negNumber = (size_t)Input(3)->Get00Element();
 
             // TODO: This calls for a tensor representation!
-            SetDims(negNumber + 1, Input(1)->GetNumCols());
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(negNumber + 1), Input(1)->GetNumCols());
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

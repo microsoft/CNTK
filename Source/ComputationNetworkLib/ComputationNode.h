@@ -266,7 +266,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_parameterUpdateRequired = m_parameterUpdateRequired;
                 node->m_nodeName = newName;
 
-                node->m_inputSampleLayout = m_inputSampleLayout;
                 node->m_sampleLayout = m_sampleLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
@@ -551,7 +550,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const TensorShape & GetImageLayout() const { return m_sampleLayout; }
 
-        pair<TensorShape, TensorShape> GetImageLayouts() const { return make_pair(m_inputSampleLayout, m_sampleLayout); }   // helper for Validate()
+        pair<TensorShape, TensorShape> GetImageLayouts() const { return make_pair(m_sampleLayout, m_sampleLayout); }   // helper for Validate()  --TODO: just get sampleLayout instead (input is gone)
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
 
@@ -615,7 +614,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*IComputationNode::*/InferImageDimsFromInputs()
         {
             if (!IsLeaf())
-                m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
+                m_sampleLayout = GetInputSampleLayout(0);
         }
 
         virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
@@ -784,9 +783,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numRows, m_numCols;        // matrix dimension of function values and gradients
         TensorShape m_sampleLayout;    // and the output
         MBLayoutPtr m_pMBLayout;
-
-        TensorShape m_inputSampleLayout;     // how to interpret each column in the input as an image
-        // TODO: Why is the input layout not just the layout of the input node?
 
         // flags related to gradient propagation
         bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
@@ -1554,13 +1550,13 @@ protected: \
     using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::DataTensorFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
-    using Base::m_inputSampleLayout; using Base::m_sampleLayout; \
+    using Base::m_sampleLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    /*using Base::GetTensorsForwardBinary; */using Base::DetermineElementwiseTensorRank; \
+    using Base::DetermineElementwiseTensorRank; \
     using Base::GetImageLayout; using Base::GetInputSampleLayout; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
@@ -1577,7 +1573,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
-    using Base::Value;/* using Base::GetTensorShape;*/
+    using Base::Value;
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
@@ -1644,9 +1640,9 @@ protected:    /* some boilerplate goes here */ \
         {
             // TODO: change to infer as maximum of the two
             if (IsInputAnImage(0))
-                m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
+                m_sampleLayout = GetInputSampleLayout(0);
             else
-                m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(1);
+                m_sampleLayout = GetInputSampleLayout(1);
         }
     };
 

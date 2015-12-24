@@ -272,14 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                 }
-            // BUGBUG: Not resizing FunctionValues?
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(0);
-
+            // BUGBUG: No SetDims()?
             m_sampleLayout = TensorShape();
         }
     };
@@ -612,25 +605,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 size_t T1 = rows0 / m_stride;
                 SetDims(T1, cols1);
-                InferImageDimsFromInputs();
+                m_sampleLayout = TensorShape(Input(0)->GetNumRows());   // BUGBUG: Totally wrong.
+                //after multiplication the structure is lost
             }
 
             else // by col
             {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
-                SetDims(rows0, cols1);
-                InferImageDimsFromInputs();
+                SetDims(TensorShape(rows0), cols1);
+                //after multiplication the structure is lost
             }
 
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(1); //the second one is the input since it's column wize
-
-            //after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
     };
 
@@ -1531,8 +1517,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            InferImageDimsFromInputs();
-
             if (Input(0)->Value().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
 
@@ -1689,11 +1673,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fprintf(stderr, "LSTMNode unit test passed!\n");
             return true;
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            m_inputSampleLayout = GetInputSampleLayout(1);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override

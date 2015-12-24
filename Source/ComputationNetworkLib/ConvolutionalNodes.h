@@ -174,9 +174,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             InferImageDimsFromInputs();
 
-            // TODO: can we get by without using m_inputSampleLayout?
+            auto inputSampleLayout = GetInputSampleLayout(1);
+
             // TODO: SetDims(layout)
-            size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
+            size_t weightCols = m_kernelWidth * m_kernelHeight * inputSampleLayout.GetNumChannels();
 
             if (Input(0)->Value().HasNoElements())
                 ValidateInferInputDims(0, m_sampleLayout.GetNumChannels(), weightCols);
@@ -184,7 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != m_sampleLayout.GetNumChannels()))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_inputs[0]->NodeName().c_str(), (int)m_sampleLayout.GetNumChannels(), (int)weightCols);
 
-            size_t inputDim = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();
+            size_t inputDim = inputSampleLayout.GetWidth() * inputSampleLayout.GetHeight() * inputSampleLayout.GetNumChannels();
             if (Input(1)->GetNumRows() == 0)
                 ValidateInferInputDims(1, inputDim, Input(1)->GetNumCols());
 
@@ -197,9 +198,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            m_inputSampleLayout = GetInputSampleLayout(1);
+            auto inputSampleLayout = GetInputSampleLayout(1);
 
-            if (m_inputSampleLayout.GetWidth() < m_kernelWidth || m_inputSampleLayout.GetHeight() < m_kernelHeight)
+            if (inputSampleLayout.GetWidth() < m_kernelWidth || inputSampleLayout.GetHeight() < m_kernelHeight)
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             if (m_zeroPadding)
@@ -207,15 +208,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const int kernelWidthCenter = m_kernelWidth % 2;
                 const int kernelHeightCenter = m_kernelHeight % 2;
                 m_sampleLayout = ImageLayoutWHC(
-                    (m_inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
-                    (m_inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
+                    (inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+                    (inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
                     m_sampleLayout.GetNumChannels());
             }
             else
             {
                 m_sampleLayout = ImageLayoutWHC(
-                    (m_inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
-                    (m_inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
+                    (inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
+                    (inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
                     m_sampleLayout.GetNumChannels());
             }    
 
@@ -225,9 +226,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
+                m_inT = m_factory->CreateTensor(inputSampleLayout.GetWidth(), inputSampleLayout.GetHeight(), inputSampleLayout.GetNumChannels(), 1);
             if (m_filterT == nullptr)
-                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputSampleLayout.GetNumChannels(), m_sampleLayout.GetNumChannels());
+                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, inputSampleLayout.GetNumChannels(), m_sampleLayout.GetNumChannels());
             if (m_outT == nullptr)
                 m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
             if (m_convDesc == nullptr)
@@ -241,8 +242,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::DumpNodeInfo(printValues, fstream);
 
+            auto inputSampleLayout = GetInputSampleLayout(1);
+
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels());
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout.GetWidth(), inputSampleLayout.GetHeight(), inputSampleLayout.GetNumChannels());
             fstream << string(str);
             sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
@@ -389,7 +392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             InferImageDimsFromInputs();
 
-            m_inputSizePerSample = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();
+            auto inputSampleLayout = GetInputSampleLayout(0);
+
+            m_inputSizePerSample = inputSampleLayout.GetWidth() * inputSampleLayout.GetHeight() * inputSampleLayout.GetNumChannels();
             m_outputSizePerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
 
             if (Input(0)->GetNumRows() == 0)
@@ -403,15 +408,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            m_inputSampleLayout = GetInputSampleLayout(0);
+            auto inputSampleLayout = GetInputSampleLayout(0);
 
-            if (m_inputSampleLayout.GetWidth() < m_windowWidth || m_inputSampleLayout.GetHeight() < m_windowHeight)
+            if (inputSampleLayout.GetWidth() < m_windowWidth || inputSampleLayout.GetHeight() < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
             m_sampleLayout = ImageLayoutWHC(
-                (m_inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
-                (m_inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample + 1,
-                m_inputSampleLayout.GetNumChannels());
+                (inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
+                (inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample + 1,
+                inputSampleLayout.GetNumChannels());
 
             // REVIEW alexeyk: is there a better place to create engines?
             if (m_factory == nullptr)
@@ -419,7 +424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_poolEng == nullptr)
                 m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
             if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(), 1);
+                m_inT = m_factory->CreateTensor(inputSampleLayout.GetWidth(), inputSampleLayout.GetHeight(), inputSampleLayout.GetNumChannels(), 1);
             if (m_outT == nullptr)
                 m_outT = m_factory->CreateTensor(m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(), 1);
         }
@@ -428,8 +433,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::DumpNodeInfo(printValues, fstream);
 
+            auto inputSampleLayout = GetInputSampleLayout(0);
+
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels());
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout.GetWidth(), inputSampleLayout.GetHeight(), inputSampleLayout.GetNumChannels());
             fstream << string(str);
             sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
@@ -686,7 +693,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InferImageDimsFromInputs() override
         {
-            m_sampleLayout = m_inputSampleLayout = GetInputSampleLayout(0);
+            m_sampleLayout = GetInputSampleLayout(0);
 
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
