@@ -494,9 +494,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
-                SetDims(rows0 / GetNumParallelSequences(), cols1);
-            if (m_strideDim == 1)       // TODO: no else??
-                SetDims(rows0, cols1);
+                SetDims(TensorShape(rows0 / GetNumParallelSequences()), cols1);
+            else
+                SetDims(Input(0)->GetSampleLayout(), cols1);
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
@@ -604,8 +604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (isFinalValidationPass && rows1 != cols0)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 size_t T1 = rows0 / m_stride;
-                SetDims(T1, cols1);
-                m_sampleLayout = TensorShape(Input(0)->GetNumRows());   // BUGBUG: Totally wrong.
+                SetDims(TensorShape(T1), cols1);
                 //after multiplication the structure is lost
             }
 
@@ -640,7 +639,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t row_size, size_t col_size)
         {
             CreateMatrixIfNull(m_value);
-            SetDims(row_size, col_size);
+            SetDims(TensorShape(row_size), col_size);
             UpdateFunctionValuesSize();
         }
     public:
@@ -1197,7 +1196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t outputDim = Input(1)->GetNumRows();
 
             {
-                SetDims(outputDim, nT);
+                SetDims1(outputDim, nT);
                 Value().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
                 m_State.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
@@ -1565,7 +1564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            SetDims(noutdim, nT);
+            SetDims(TensorShape(noutdim), nT);
             Value().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
         }
 
@@ -1602,18 +1601,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < nT; i++)
                     target(0, i) = 1;
 
-                Input(0)->SetDims(nInput, nT);
+                Input(0)->SetDims1(nInput, nT);
                 Input(0)->Value().SetValue(ConstOnes(nInput, nT, m_deviceId));
                 Input(0)->Value().SetValue((ElemType)0.1);
-                Input(1)->SetDims(nHidden, nInput + nOutput + 2);
+                Input(1)->SetDims1(nHidden, nInput + nOutput + 2);
                 Input(1)->Value().SetValue((ElemType)0.1);
-                Input(2)->SetDims(nHidden, nInput + nHidden + 2);
+                Input(2)->SetDims1(nHidden, nInput + nHidden + 2);
                 Input(2)->Value().SetValue((ElemType)0.1);
-                Input(3)->SetDims(nOutput, nInput + nHidden + 2);
+                Input(3)->SetDims1(nOutput, nInput + nHidden + 2);
                 Input(3)->Value().SetValue((ElemType)0.1);
-                Input(4)->SetDims(nOutput, nHidden + nInput + 1);
+                Input(4)->SetDims1(nOutput, nHidden + nInput + 1);
                 Input(4)->Value().SetValue((ElemType)0.1);
-                SetDims(nOutput, nT);
+                SetDims1(nOutput, nT);
 
                 m_DefaultState = 0.0;
                 ForwardProp(FrameRange(m_pMBLayout));

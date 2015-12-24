@@ -487,8 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int wordsInEachSample = Input(1)->GetNumRows() / Input(0)->GetNumCols();
 
             // TODO: Should this add a tensor dimension?
-            SetDims(Input(0)->GetNumRows() * wordsInEachSample, Input(1)->GetNumCols());
-            InferImageDimsFromInputs(); 
+            SetDims(TensorShape(Input(0)->GetNumRows() * wordsInEachSample), Input(1)->GetNumCols());
         }
 
         bool UnitTest()
@@ -499,19 +498,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Input(0)->SetDims(nInput, nHidden);
+                Input(0)->SetDims1(nInput, nHidden);
                 Input(0)->UpdateFunctionValuesSize();
                 Input(0)->Value().SetValue(1.0);
                 Input(1)->Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Input(1)->Value().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Input(1)->SetDims(nHidden, nOutput);
+                Input(1)->SetDims1(nHidden, nOutput);
                 Input(1)->UpdateFunctionValuesSize();
                 Input(1)->Value().SetValue(0.0);
                 Input(1)->Value().SetValue(0, 0, 1.0);
                 Input(1)->Value().SetValue(1, 1, 2.0);
                 Input(1)->Value().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Input(1)->Value().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                SetDims(nInput, nOutput);
+                SetDims1(nInput, nOutput);
                 UpdateFunctionValuesSize();
 
                 ForwardProp(FrameRange(m_pMBLayout));

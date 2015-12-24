@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
 
             // Note: Do we need load cols for delay node? I just set to zero to see if there is any problem.
-            SetDims(rows, 0);
+            SetDims(TensorShape(rows), 0);          // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
             m_delayedActivation.Resize(rows, 0);    // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
