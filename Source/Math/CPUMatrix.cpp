@@ -5336,7 +5336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				totalscore = -alpha(senonenum - 1, framenum - 1);
 
 
-				fprintf(stderr, "framenum: %d objection value %f\n", framenum, totalscore / framenum);
+				//fprintf(stderr, "framenum: %d objection value %f\n", framenum, totalscore / framenum);
 				//alpha.dump("alpha");
 				//lasts.dump("lasts");
 				//cal beta
