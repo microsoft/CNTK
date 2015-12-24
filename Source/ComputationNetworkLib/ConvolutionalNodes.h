@@ -46,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
             m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)
         {
-            m_sampleLayout = ImageLayoutWHC(1, 1, 0);           // TODO: what is this magic #channels == 0? Can this even be initialized at this time, or only inferred?
+            SetDims(ImageLayoutWHC(1, 1, 0), 0);           // TODO: what is this magic #channels == 0? Can this even be initialized at this time, or only inferred?
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
             Base(deviceId, name),
@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
-            m_sampleLayout = ImageLayoutWHC(1, 1, outputChannels);
+            SetDims(ImageLayoutWHC(1, 1, outputChannels), 0);
             m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId);
         }
         ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Save(File& fstream) const override
         {
             Base::Save(fstream);
-            fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
+            fstream << m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
             fstream << m_sampleLayout.GetNumChannels();
             fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
         }
@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
             size_t outputChannels;
             fstream >> outputChannels;
-            m_sampleLayout = ImageLayoutWHC(1, 1, outputChannels);
+            SetDims(ImageLayoutWHC(1, 1, outputChannels), 0);
             fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
         }
 
@@ -113,12 +113,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
-            if (inputIndex == 0)  //derivative with respect to the weight matrix
+            if (inputIndex == 0)        // derivative with respect to the weight matrix
             {
                 Matrix<ElemType>& grad = Input(0)->Gradient();
                 m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
             }
-            else if (inputIndex == 1)  // derivative with respect to the input feature
+            else if (inputIndex == 1)   // derivative with respect to the input feature
             {
                 const Matrix<ElemType>& input0 = Input(0)->Value();
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
+            // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?  TODO: Yes, in BeginForwardProp().
             size_t batchSize = sliceInput1Value.GetNumCols();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
@@ -154,6 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        // BUGBUG: Should not be here. Use PlusNode and m_sampleLayout.
         void AddBias(const Matrix<ElemType>& output, const Matrix<ElemType>& bias, Matrix<ElemType>& dst)
         {
             assert(m_convEng != nullptr);
@@ -179,6 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             // determine output tensor shape
+            // WATCH OUT: Number of channels is tucked away in m_sampleLayout and must be propagated.
             TensorShape outputSampleLayout;
             if (m_zeroPadding)
             {
@@ -187,14 +189,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 outputSampleLayout = ImageLayoutWHC(
                     (inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
                     (inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
-                    outputSampleLayout.GetNumChannels());
+                    m_sampleLayout.GetNumChannels());
             }
             else
             {
                 outputSampleLayout = ImageLayoutWHC(
                     (inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
                     (inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
-                    outputSampleLayout.GetNumChannels());
+                    m_sampleLayout.GetNumChannels());
             }
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * inputSampleLayout.GetNumChannels();

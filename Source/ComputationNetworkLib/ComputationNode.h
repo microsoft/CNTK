@@ -547,10 +547,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_inputs[index]->m_sampleLayout.IsInputAnImage();
         }
 
-        const TensorShape & GetImageLayout() const { return m_sampleLayout; }
-
-        pair<TensorShape, TensorShape> GetImageLayouts() const { return make_pair(m_sampleLayout, m_sampleLayout); }   // helper for Validate()  --TODO: just get sampleLayout instead (input is gone)
-
         const size_t GetNumInputs() const { return m_inputs.size(); }
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
@@ -1556,7 +1552,7 @@ protected: \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
     using Base::DetermineElementwiseTensorRank; \
-    using Base::GetImageLayout; using Base::GetInputSampleLayout; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::GetInputSampleLayout; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
