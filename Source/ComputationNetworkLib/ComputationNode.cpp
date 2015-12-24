@@ -85,8 +85,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_inputs.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-        SetDims(1, 1);
-        InferImageDimsFromInputs();
+        SetDims(TensorShape(1), 1);
+        //InferImageDimsFromInputs();
     }
     // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
     // Currently only called by criterion nodes.
@@ -101,8 +101,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             !(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
               (Input(0)->HasMBLayout() || (Input(0)->GetNumCols() == Input(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
-        SetDims(1, 1);
-        InferImageDimsFromInputs();
+        SetDims(TensorShape(1), 1);
+        //InferImageDimsFromInputs();
     }
     // helper function for validation
     // In bad cases of convolution, dimensions are quite complex to know.

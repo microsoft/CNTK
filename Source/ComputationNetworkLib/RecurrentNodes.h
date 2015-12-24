@@ -91,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             CreateMatrixIfNull(m_value);
-            SetDims(row_size, col_size);
+            SetDims(TensorShape(row_size), col_size);    // TODO: needed? Can we not infer it? How about setting a sample layout?
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
     protected:

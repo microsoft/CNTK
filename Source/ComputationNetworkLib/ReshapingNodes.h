@@ -277,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
             }
             else
-                SetDims(m_numTargetRows, newCols);
+                SetNumCols(newCols);
         }
 
         // TODO: there seems to be semantic overlap between BeginForwardProp() and UpdateFunctionMBSize()

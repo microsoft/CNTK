@@ -626,8 +626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t bSize = best_path.size();
             for (int i = 0; i < outputNodes.size(); i++)
             {
-                size_t dim = outputNodes[i]->GetNumRows();
-                outputNodes[i]->SetDims(dim, bSize);
+                outputNodes[i]->SetNumCols(bSize);
                 dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateFunctionValuesSize();
                 dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value().SetValue(0);
                 for (int k = 0; k < bSize; k++)
@@ -760,10 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
-            {
-                size_t nr = (*ptr)->GetNumRows();
-                (*ptr)->SetDims(nr, 1);
-            }
+                (*ptr)->SetNumCols(1);
             // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
             //evalnet->SetActualMiniBatchSizeFromFeatures();
 
@@ -780,7 +776,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional.
+                    // BUGBUG: I commented this out because these flags no longer exist. This code is no longer functional. [fseide]
                     //evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
