@@ -66,11 +66,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //virtual void InferImageDimsFromInputs()
-        //{
-        //    m_sampleLayout = TensorShape();
-        //}
-
         virtual void UpdateFunctionMBSize() override
         {
             Base::UpdateFunctionMBSize();
