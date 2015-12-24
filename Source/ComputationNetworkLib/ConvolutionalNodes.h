@@ -172,54 +172,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            InferImageDimsFromInputs();
-
+            // get input tensor shape
             auto inputSampleLayout = GetInputSampleLayout(1);
 
-            // TODO: SetDims(layout)
+            if (inputSampleLayout.GetWidth() < m_kernelWidth || inputSampleLayout.GetHeight() < m_kernelHeight)
+                InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
+
+            // determine output tensor shape
+            TensorShape outputSampleLayout;
+            if (m_zeroPadding)
+            {
+                const int kernelWidthCenter = m_kernelWidth % 2;
+                const int kernelHeightCenter = m_kernelHeight % 2;
+                outputSampleLayout = ImageLayoutWHC(
+                    (inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
+                    (inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
+                    outputSampleLayout.GetNumChannels());
+            }
+            else
+            {
+                outputSampleLayout = ImageLayoutWHC(
+                    (inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
+                    (inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
+                    outputSampleLayout.GetNumChannels());
+            }
+
             size_t weightCols = m_kernelWidth * m_kernelHeight * inputSampleLayout.GetNumChannels();
 
             if (Input(0)->Value().HasNoElements())
-                ValidateInferInputDims(0, m_sampleLayout.GetNumChannels(), weightCols);
+                ValidateInferInputDims(0, outputSampleLayout.GetNumChannels(), weightCols);
 
-            if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != m_sampleLayout.GetNumChannels()))
-                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_inputs[0]->NodeName().c_str(), (int)m_sampleLayout.GetNumChannels(), (int)weightCols);
+            if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != outputSampleLayout.GetNumChannels()))
+                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", Input(0)->NodeName().c_str(), (int)outputSampleLayout.GetNumChannels(), (int)weightCols);
 
             size_t inputDim = inputSampleLayout.GetWidth() * inputSampleLayout.GetHeight() * inputSampleLayout.GetNumChannels();
             if (Input(1)->GetNumRows() == 0)
                 ValidateInferInputDims(1, inputDim, Input(1)->GetNumCols());
 
             if (isFinalValidationPass && Input(1)->GetNumRows() != inputDim)
-                LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)inputDim);
+                LogicError("Each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels.", NodeName().c_str(), (int)inputDim);
 
-            size_t outputDim = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
-            SetDims(outputDim, Input(1)->GetNumCols());
-        }
+            // that's our dimension
+            SetDims(m_sampleLayout, Input(1)->GetNumCols());
 
-        void InferImageDimsFromInputs() override
-        {
-            auto inputSampleLayout = GetInputSampleLayout(1);
-
-            if (inputSampleLayout.GetWidth() < m_kernelWidth || inputSampleLayout.GetHeight() < m_kernelHeight)
-                InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
-
-            if (m_zeroPadding)
-            {
-                const int kernelWidthCenter = m_kernelWidth % 2;
-                const int kernelHeightCenter = m_kernelHeight % 2;
-                m_sampleLayout = ImageLayoutWHC(
-                    (inputSampleLayout.GetWidth()  - kernelWidthCenter)  / m_horizontalSubsample + 1,
-                    (inputSampleLayout.GetHeight() - kernelHeightCenter) / m_verticalSubsample   + 1,
-                    m_sampleLayout.GetNumChannels());
-            }
-            else
-            {
-                m_sampleLayout = ImageLayoutWHC(
-                    (inputSampleLayout.GetWidth()  - m_kernelWidth)  / m_horizontalSubsample + 1,
-                    (inputSampleLayout.GetHeight() - m_kernelHeight) / m_verticalSubsample   + 1,
-                    m_sampleLayout.GetNumChannels());
-            }    
-
+            // set up the various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
@@ -390,34 +386,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            InferImageDimsFromInputs();
-
-            auto inputSampleLayout = GetInputSampleLayout(0);
-
-            m_inputSizePerSample = inputSampleLayout.GetWidth() * inputSampleLayout.GetHeight() * inputSampleLayout.GetNumChannels();
-            m_outputSizePerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels();
-
-            if (Input(0)->GetNumRows() == 0)
-                ValidateInferInputDims(0, m_inputSizePerSample, Input(0)->GetNumCols());
-
-            if (isFinalValidationPass && Input(0)->GetNumRows() != m_inputSizePerSample)
-                LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)m_inputSizePerSample);
-
-            SetDims(m_outputSizePerSample, Input(0)->GetNumCols());
-        }
-
-        void InferImageDimsFromInputs() override
-        {
+            // get input tensor shape
             auto inputSampleLayout = GetInputSampleLayout(0);
 
             if (inputSampleLayout.GetWidth() < m_windowWidth || inputSampleLayout.GetHeight() < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
-            m_sampleLayout = ImageLayoutWHC(
+            // determine output tensor shape
+            auto outputSampleLayout = ImageLayoutWHC(
                 (inputSampleLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
                 (inputSampleLayout.GetHeight() - m_windowHeight) / m_verticalSubsample + 1,
                 inputSampleLayout.GetNumChannels());
 
+            m_inputSizePerSample = inputSampleLayout.GetWidth() * inputSampleLayout.GetHeight() * inputSampleLayout.GetNumChannels();
+            //m_outputSizePerSample = outputSampleLayout.GetWidth() * outputSampleLayout.GetHeight() * outputSampleLayout.GetNumChannels();
+
+            if (Input(0)->GetNumRows() == 0)
+                ValidateInferInputDims(0, m_inputSizePerSample, Input(0)->GetNumCols());    // TODO: We should infer a tensor dimension for the input instead.
+
+            if (isFinalValidationPass && Input(0)->GetNumRows() != m_inputSizePerSample)    // TODO: Can be removed once tensor shape and numRows are perfectly in sync.
+                LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int)m_inputSizePerSample);
+
+            SetDims(outputSampleLayout, Input(0)->GetNumCols());
+
+            // set up various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
@@ -484,9 +476,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        void InferImageDimsFromInputs() override
+        void Validate(bool isFinalValidationPass) override
         {
-            Base::InferImageDimsFromInputs();
+            Base::Validate(isFinalValidationPass);
             if (m_poolDesc == nullptr)
                 m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
@@ -528,9 +520,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        void InferImageDimsFromInputs() override
+        void Validate(bool isFinalValidationPass) override
         {
-            Base::InferImageDimsFromInputs();
+            Base::Validate(isFinalValidationPass);
             if (m_poolDesc == nullptr)
                 m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
@@ -687,13 +679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
 
-            InferImageDimsFromInputs();
-            SetDims(m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight() * m_sampleLayout.GetNumChannels(), Input(0)->GetNumCols());
-        }
-
-        void InferImageDimsFromInputs() override
-        {
-            m_sampleLayout = GetInputSampleLayout(0);
+            SetDims(Input(0));
 
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
