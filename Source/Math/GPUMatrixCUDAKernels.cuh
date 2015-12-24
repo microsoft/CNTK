@@ -153,17 +153,21 @@ __global__ void _elementWiseSigmoidOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+#if 0   // this computes the same thing but is twice as fast on CUDA
+    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+#else
     if (a[id] >= 0)
     {
-        double e = _exp(-a[id]);
+        ElemType e = _exp(-a[id]);
         res[id] = 1 / (1 + e);
-        }
-        else
-        {
-        double e = _exp(a[id]);
+    }
+    else
+    {
+        ElemType e = _exp(a[id]);
         res[id] = e / (1 + e);
-        }
+    }
+#endif
 };
 
 template<class ElemType>
@@ -172,13 +176,13 @@ __global__ void _assignSigmoidOf(
     ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
     // and e^x / (1 + e^x) if x is positive.
     // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
     //         There is a second version of this function that does. That should be used.
-#if 0   // this has the same speed now
+#if 0   // this has the same speed now, although not identical accuracy
     res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
 #else
     ElemType negElem = -a[id];
@@ -214,7 +218,7 @@ __global__ void _elementWiseTanhOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = _tanh(a[id]);
 };
 
@@ -226,7 +230,7 @@ __global__ void _elementWiseSqrtOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = _sqrt(max((ElemType)0, a[id]));
 };
 
@@ -236,7 +240,7 @@ __global__ void _elementWiseExpOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = _exp(a[id]);
 };
 
@@ -246,7 +250,7 @@ __global__ void _elementWiseLogOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : _log(a[id]);
 };
 
@@ -256,7 +260,7 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = _fabs(a[id]);
 };
 
@@ -266,7 +270,7 @@ __global__ void _elementWiseCosineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = _cos(a[id]);
 };
 
@@ -276,7 +280,7 @@ __global__ void _elementWiseNegativeSineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = -_sin(a[id]);
 };
 
@@ -1095,7 +1099,7 @@ __global__ void _assignTruncateBottom(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     us[id] = a[id] < threshold ? threshold : a[id];
 }
 
@@ -1121,7 +1125,7 @@ __global__ void _assignTruncateTop(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     us[id] = a[id] > threshold ? threshold : a[id];
 }
 
@@ -3642,7 +3646,7 @@ __global__ void _inplaceTruncate(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N)
     ElemType locThresholdPos = abs(threshold);
     ElemType locTHresholdNeg = -locThresholdPos; 
     if (a[id] > locThresholdPos)

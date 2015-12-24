@@ -310,7 +310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
-    // Identical to ElementTimesnNode with tensor lib (broadcasting). Can be removed.
+    // Identical to ElementTimesNode with tensor lib (broadcasting). Can be removed.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -326,6 +326,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#if 0//def ENABLE_TENSORVIEW    // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+            if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
+                Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+#else
             if (inputIndex == 0)        // left derivative
             {
                 // this is a reduction over frames, so we must mask gaps to zero
@@ -336,6 +350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Value()/*1x1*/, GradientFor(fr), 1.0f, sliceInput1Grad);
             }
+#endif
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -347,7 +362,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
+#ifdef ENABLE_TENSORVIEW
+            static int c = 0; if (c++ == 0) { fprintf(stderr, "#SCALE#"); }
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+#else
             ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
+#endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
