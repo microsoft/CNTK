@@ -166,30 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
 #ifdef ENABLE_TENSORVIEW
-        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-#else
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-        {
-            // The Sigmoid node does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-#endif
-
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
-        {
-            gradient.AssignSigmoidDerivativeOf(functionValues);
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
-        {
-            functionValues.AssignSigmoidOf(inputFunctionValues);
-        }
-
-#ifdef ENABLE_TENSORVIEW
-        // tensor lib:
+        // TODO: Once tensor lib works, we will change all nodes in here to use it. Then move ForwardProp() and BackpropTo() from here into base.
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             size_t rank = DetermineElementwiseTensorRank();
@@ -230,7 +207,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
             inputGradientValues.AddElementwiseProductOf(gradientValues, gradient);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+#else
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+        {
+            // The Sigmoid node does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
 #endif
+
+        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        {
+            gradient.AssignSigmoidDerivativeOf(functionValues);
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
+        }
+
+        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
+        {
+            functionValues.AssignSigmoidOf(inputFunctionValues);
+        }
     };
 
     template class SigmoidNode<float>;

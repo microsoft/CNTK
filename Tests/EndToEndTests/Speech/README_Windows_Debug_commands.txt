@@ -37,7 +37,6 @@ COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  con
 
 --- Speech\SequenceTraining:
 
-
 set CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY=\\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData
 COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\DNN\SequenceTraining\cntk_sequence.config  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\DNN\SequenceTraining  DataDir=.  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Speech\DNN\SequenceTraining  DeviceId=0
 
@@ -47,7 +46,7 @@ COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFil
 
 --- Image/QuickE2E:
 
-COMMAND:     configFile=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E\cntk.config  RunDir=$(SolutionDir)Tests\EndToEndTests\Image\_run  DataDir=$(SolutionDir)Tests\EndToEndTests\Image\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E  stderr=$(SolutionDir)Tests\EndToEndTests\RunDir\Image\QuickE2E\models\cntkImage.dnn.log  DeviceId=-1   makeMode=false
+COMMAND:     configFile=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E\cntk.config  RunDir=$(SolutionDir)Tests\EndToEndTests\Image\_run  DataDir=$(SolutionDir)Tests\EndToEndTests\Image\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Image\QuickE2E  stderr=$(SolutionDir)Tests\EndToEndTests\RunDir\Image\QuickE2E\models\cntkImage.dnn.log  DeviceId=0   makeMode=false
 
 Simple test
 -----------
