@@ -111,6 +111,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Define a static function for every ElementWiseOperator (CommonMatrix.h).
     // -----------------------------------------------------------------------
 
+#pragma push_macro("DefNullaryOp")
+    #define DefNullaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op() { return expr; }
+
+    DefNullaryOp(ConstOne, 1);
+#pragma pop_macro("DefNullaryOp")
+
 #pragma push_macro("DefUnaryOp")
     #define DefUnaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a) { return expr; }
 
