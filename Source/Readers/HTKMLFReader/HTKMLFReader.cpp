@@ -100,6 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             vector<wstring> scriptpaths;
             vector<wstring> RootPathInScripts; 
+            wstring         RootPathInLatticeTocs;
             vector<wstring> mlfpaths;
             vector<vector<wstring>>mlfpathsmulti;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
@@ -263,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     expand_wildcards(thisLattice(L"numLatTocFile"), paths);
                     latticetocs.first.insert(latticetocs.first.end(), paths.begin(), paths.end());
                 }
-
+                RootPathInLatticeTocs = thisLattice(L"prefixPathInToc",L"");
             }
 
             //get HMM related file names
@@ -448,7 +449,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!_wcsicmp(readMethod.c_str(), L"blockRandomize"))
             {
                 // construct all the parameters we don't need, but need to be passed to the constructor...
-                m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap()));
+                
+                m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap(), RootPathInLatticeTocs));
+                m_lattices->setverbosity(m_verbosity);
 
                 // now get the frame source. This has better randomization and doesn't create temp files
                 m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));

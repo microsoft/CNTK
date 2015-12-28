@@ -1016,6 +1016,8 @@ class archive
     // set of lattice archive files referenced
     // Note that .toc files can be concatenated, i.e. one .toc file can reference multiple archive files.
     std::vector<std::wstring> archivepaths;         // [archiveindex] -> archive path
+    std::wstring              prefixPathInToc;      // prefix path in a toc; using this to avoid pushd some path before start training 
+    mutable int               verbosity;            
     size_t getarchiveindex (const std::wstring & path)  // get index of a path in archivepaths[]; create new entry if needed
     {
         auto iter = std::find (archivepaths.begin(), archivepaths.end(), path);
@@ -1042,7 +1044,8 @@ class archive
         {   // need to read the map and establish the mapping
             // get the symlist file
             const std::wstring symlistpath = archivepaths[archiveindex] + L".symlist";
-            fprintf (stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
+            if (verbosity>0)
+                fprintf (stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
             std::vector<char> textbuffer;
             auto lines = msra::files::fgetfilelines (symlistpath, textbuffer);
             // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
@@ -1092,19 +1095,25 @@ class archive
 public:
     // construct = open the archive
     //archive() : currentarchiveindex (SIZE_MAX) {}
-
+    void setverbosity(int veb) const 
+    {
+        verbosity = veb;
+    }
     // test if this object is loaded with anything (if not, an empty set of TOC paths was passed--meaning disable lattice mode)
     bool empty() const { return archivepaths.empty(); }
 
     // construct from a list of TOC files
-    archive (const std::vector<std::wstring> & tocpaths, const std::unordered_map<std::string,size_t> & modelsymmap) : currentarchiveindex (SIZE_MAX), modelsymmap (modelsymmap)
+    archive (const std::vector<std::wstring> & tocpaths, const std::unordered_map<std::string,size_t> & modelsymmap, const std::wstring prefixPath=L"") 
+        : currentarchiveindex(SIZE_MAX), modelsymmap(modelsymmap), prefixPathInToc(prefixPath), verbosity(0)
     {
         if (tocpaths.empty())   // nothing to read--keep silent
             return;
         fprintf (stderr, "archive: opening %d lattice-archive TOC files ('%S' etc.)..", (int)tocpaths.size(), tocpaths[0].c_str());
+        size_t onepercentage = tocpaths.size() / 100 ? tocpaths.size()/100 : 1; 
         foreach_index (i, tocpaths)
         {
-            fprintf (stderr, ".");
+            if ( (i % onepercentage) ==  0)
+                fprintf (stderr, ".");
             open (tocpaths[i]);
         }
         fprintf (stderr, " %d total lattices referenced in %d archive files\n", (int)toc.size(), (int)archivepaths.size());
@@ -1135,7 +1144,11 @@ public:
                 RuntimeError("open: invalid TOC line (no [): %s", line);
             if (q != p)
             {
-                const std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
+                std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
+                if (!prefixPathInToc.empty())
+                {
+                    archivepath = prefixPathInToc + L"/" + archivepath;
+                }
                 // TODO: should we allow paths relative to TOC file?
                 archiveindex = getarchiveindex (archivepath);
             }
