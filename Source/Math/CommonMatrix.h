@@ -48,6 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum ElementWiseOperator
     {
+        // nullary
+        opConstOne,
         // unary (or binary with constant parameter)
         opCopy,
         opNegate, opNot,
@@ -66,6 +68,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // helper to apply a C macro for all operations of each kind
+#define ForAllNullaryOps(Macro) \
+    Macro(ConstOne);
+
 #define ForAllUnaryOps(Macro) \
     Macro(Copy); \
     Macro(Negate); Macro(Not); \

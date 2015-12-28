@@ -30,9 +30,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ConvolutionNode (convolutionWeights, inputFeature)
     // -----------------------------------------------------------------------
 
-    // convolutional network 
-    // This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
-    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
+    // Convolutions (incl. pooling) support two different storage formats:
+    // BUGBUG: These are currently hard-selected depending on circumstances, without being reflected in TensoShape.
+    //
+    // * legacy mode (CPU and GPU without cudnn): Channels are tuples of scalars
+    //
+    //    This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
+    //    Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
+    // 
+    //     - input :  [C  x W  x H      x T]  or  ARRAY[1..T] OF                ARRAY[1..H]  OF ARRAY[1..W]  OF ARRAY[1..C]
+    //     - output : [C' x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..C']
+    //     - filter : [C' x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..C']
+    // 
+    // * GPU with cudnn: Channels are planes
+    // 
+    //     - input :   [W  x H  x C       x T]   or  ARRAY[1..T] OF                 ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+    //     - output :  [W' x H' x      C' x T]   or  ARRAY[1..T] OF ARRAY[1..C'] OF                 ARRAY[1..H'] OF ARRAY[1..W']
+    //     - filter :  [W" x H" x C  x C'    ]   or                 ARRAY[1..C'] OF ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+    // 
+    // where:
+    //  - using ' for output and " for filter
+    //  - T = samples (NVidia calls this N)
+    //  - W, H = width, height (W', H' for output, W", H" for kernel)
+    //  - C = input channels
+    //     - 3 for color images, 1 for B&W images
+    //     - for hidden layer: dimension of activation vector for each pixel
+    //  - C' = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
     template<class ElemType>
     class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
@@ -80,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
             size_t outputChannels;
             fstream >> outputChannels;
-            SetDims(ImageLayoutWHC(1, 1, outputChannels), 0);
+            SetDims(ImageLayoutWHC(1, 1, outputChannels), 0);   // TODO: Save this separately.
             fstream >> m_zeroPadding >> m_maxTempMemSizeInSamples;
         }
 
@@ -180,6 +203,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             // determine output tensor shape
+            // BUGBUG: For cudnn, tensor is not WHC. How can we propagate this?
+            // TODO: This is the point where we need to know which tensor dimension refers to W,H,C.
+            //       We should enforce rank and then somehow know which is which. But how? It's an option to the reader. Use the same option? Must be serialized...
             // WATCH OUT: Number of channels is tucked away in m_sampleLayout and must be propagated.
             TensorShape outputSampleLayout;
             if (m_zeroPadding)

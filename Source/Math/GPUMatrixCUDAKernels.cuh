@@ -11,6 +11,7 @@
 #include <float.h>
 #include <cuda_runtime.h>
 #include "CommonMatrix.h"
+#include "GPUMatrix.h"
 #include "device_functions.h"
 #include <assert.h>
 
@@ -44,19 +45,21 @@
 struct GridDim
 {
     static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
-    static const CUDA_LONG minBlocksPerGrid = 48;       // use at least that many blocks  --TODO: base this on actual hardware
 
     // use these for launching
     //   GridDim grid(NN);
     //   kernel<<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, ...>>>(...)
     int m_blocksPerGrid, m_threadsPerBlock;             // (these may in the future be extended to multi-dimensional ones)
+    CUDA_LONG m_N;
 
     GridDim(CUDA_LONG N)    // linear grid
     {
+        m_N = N;
         if (N == 0)                     // CUDA will fail to launch with 0 blocks
             N = 1;
         m_threadsPerBlock = GridDim::maxThreadsPerBlock;
         m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
+        CUDA_LONG minBlocksPerGrid = GetDeviceProps().multiProcessorCount;       // use at least that many blocks
         if (m_blocksPerGrid < minBlocksPerGrid)
         {
             // we cannot fill all blocks -> use less threads
@@ -66,6 +69,25 @@ struct GridDim
             m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
         }
         assert(m_blocksPerGrid * m_threadsPerBlock >= N);
+    }
+
+    static std::vector<cudaDeviceProp> CacheDeviceProps()
+    {
+        int numDevices;
+        CUDA_CALL(cudaGetDeviceCount(&numDevices));
+        std::vector<cudaDeviceProp> props(numDevices);
+        for (int i = 0; i < numDevices; i++)
+            CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
+        return props;
+    }
+
+    // get device properties of current device
+    static const cudaDeviceProp & GetDeviceProps()
+    {
+        static std::vector<cudaDeviceProp> props = CacheDeviceProps();   // thread-safe according to C++ standard
+        int deviceId;
+        cudaGetDevice(&deviceId);
+        return props[deviceId];
     }
 
     // compute our location on the grid

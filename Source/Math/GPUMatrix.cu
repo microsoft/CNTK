@@ -25,6 +25,10 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
+#ifndef let
+#define let const auto
+#endif
+
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
 #pragma comment (lib, "cusparse.lib")
@@ -4512,6 +4516,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     struct TensorOps
     {
+        static __device__ ElemType Compute(const FixedArray<ElemType*, 1> & pointers, ElementWiseOperator op)
+        {
+#define CaseNullaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper<ElemType>()
+            switch (op)
+            {
+            ForAllNullaryOps(CaseNullaryTensorOp);
+            default: return OpConstOne<ElemType>();   // (failure--we only have one nullary op, so use the same, maybe it will eliminate the switch altogether)
+            }
+        }
         static __device__ ElemType Compute(const FixedArray<ElemType*, 2> & pointers, ElementWiseOperator op)
         {
             ElemType a = *(pointers[0]);
@@ -4603,15 +4616,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //                                      args? ^       ^ input dims
     // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi2ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
 
-    // increment a pointer by a number of elements
-    // This will later change into pre-scaled strides.
-    template<class ElemType>
-    static __device__ void IncPtr(ElemType * &p, C_int index, C_int stride)
-    {
-        //p = (ElemType*)(byteOffset + (char *)p);
-        p = p + index * stride;
-    }
-
     // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
     template<class ElemType, C_size_t N, C_int M, C_int K, C_int k>
     struct TensorOpElement
@@ -4684,7 +4688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, C_size_t N, C_int M, C_int K>
     __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
                                     FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides,
-                                    FixedArray<C_unsigned_int, M> reducingOpDims,   FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG numElements)
+                                    FixedArray<C_unsigned_int, M> reducingOpDims,   FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG numElements, CUDA_LONG numReductionThreads)
     {
         CUDA_LONG id = GridDim::GetLinearThreadId();
         if (id >= numElements)
@@ -4712,12 +4716,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FixedMatrix<C_int, N, K> regularStrides(regularStrideVectors);
         FixedArray<C_unsigned_int, M> reducingOpDims(reducingOpDimVector);
         FixedMatrix<C_int, N, M> reducingStrides(reducingStrideVectors);
-        
-        CUDA_LONG NN = (CUDA_LONG)numElements;
+
+        // launch the kernel
+        CUDA_LONG NN = (CUDA_LONG)numElements;      // linear space identifying each individual input element
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+
+        CUDA_LONG numReductionThreads = 1;          // in case we reduce
+        // do some optimization for reductions
+        // Cases:
+        //  - input elements >> GPU procs  -->  do reduction in inner loop
+        //  - reduction dimension fits into a single kernel  -->  launch it that way
+        //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc  --is this any good?
+        //     - PlusNode: reducing to a bias for small matrices
+        //     - ScaleNode: big elementwise product reduced to a scalar (dot product)
+#if 0
+        //C_size_t reductionDim = 1;  // number of elements to reduce over
+        //for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
+        //    reductionDim *= (C_size_t)reducingOpDimVector[k];
+        //let & props = GridDim::GetDeviceProps();
+        //if (reductionDim > 0/*1*/ && op != ElementWiseOperator::opConstOne      /*&& NN < props.multiProcessorCount * props.warpSize*/)
+        if (op != ElementWiseOperator::opConstOne)
+        {
+            // We have too few elements to do reduction in inner loop. Need to be more clever.
+            // atomicAdd mode: need to zero out first
+            //if (reductionDim > 0/*USE REAL EXPRESSION HERE, but for now use this in testing*/)
+            {
+                LaunchTensorOp<ElemType, /*N=*/1, /*M=*/0, K>(beta, array<ElemType*, 1> { pointerVector.back() }, /*alpha=*/0, ElementWiseOperator::opConstOne,
+                                                              regularOpDims, array<SmallVector<ptrdiff_t>, 1> { regularStrideVectors.back() },
+                                                              SmallVector<size_t>(), array<SmallVector<ptrdiff_t>, 1>());
+                beta = 1;       // and actual operation now adds with weight 1 since we already initialized/pre-multiplied
+            }
+            sin(1.0);
+        }
+#endif
+
         GridDim grid(NN);
-        _launchTensorOp<ElemType, N, M, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, NN);
+        _launchTensorOp
+            //<ElemType, N, M, K>
+            << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, grid.m_N, numReductionThreads);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
