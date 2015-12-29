@@ -4,16 +4,18 @@
 // </copyright>
 //
 
+#pragma once
+
 #include "BestGpu.h"
 
 #ifndef CPUONLY
 
-#include <float.h>
-#include <cuda_runtime.h>
 #include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "device_functions.h"
+#include <cuda_runtime.h>
 #include <assert.h>
+#include <float.h>
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
