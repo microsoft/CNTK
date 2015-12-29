@@ -427,9 +427,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Cases:
         //  - input elements >> GPU procs  -->  do reduction in inner loop
         //  - reduction dimension fits into a single kernel  -->  launch it that way
-        //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc  --is this any good?
+        //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc
         //     - PlusNode: reducing to a bias for small matrices
         //     - ScaleNode: big elementwise product reduced to a scalar (dot product)
+        //     - E.g. 3072 GPU procs:
+        //       If >= 3072 reduced output values must be computed, just loop inside.
+        //       If less, and reduction per value does not fit into a single proc,
+        //       then we break it into procs, say, 24.
+        //       This way we will need 24 atomicAdd()s of 3072/24 = 128 values.
+        //       If reduction is along stride=1, then we'd have 24 atomicAdd()s of 32 coalesced writes.
+        //       Does not sound scary at all.
+        //       Precondition: matrix cannot at the same time participate in reduction and operation.
 #if 1
         C_size_t reductionDim = 1;  // number of elements to reduce over
         for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
