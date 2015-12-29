@@ -1972,7 +1972,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto end = chrono::high_resolution_clock::now();
         auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
         start = end;
-        fprintf(stderr, "--> elapsed time for calculate factor: %d\n", elapsed.count());
+        fprintf(stderr, "--> elapsed time for calculate factor: %ld\n", elapsed.count());
 
         //========================================
         // Sec. 2 sync models based on factor 
@@ -1996,36 +1996,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             end = chrono::high_resolution_clock::now();
             elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
             start = end;
-            fprintf(stderr, "--> elapsed time for scale: %d\n", elapsed.count());
+            fprintf(stderr, "--> elapsed time for scale: %ld\n", elapsed.count());
             // 2. send weight matrix over MPI nodes; 
             ElemType* px = mat.CopyToArray(); 
             size_t    nx = mat.GetNumElements(); 
             end = chrono::high_resolution_clock::now();
             elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
             start = end;
-            fprintf(stderr, "--> elapsed time for copy weight: %d\n", elapsed.count());
+            fprintf(stderr, "--> elapsed time for copy weight: %ld\n", elapsed.count());
 
             // 3. inplace sum 
             g_mpi->AllReduce(px, nx);
             end = chrono::high_resolution_clock::now();
             elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
             start = end;
-            fprintf(stderr, "--> elapsed time for all reduce (%d, %d x %d): %d\n", nx, mat.GetNumRows(), mat.GetNumCols(), elapsed.count());
+            fprintf(stderr, "--> elapsed time for all reduce (%lu, %lu x %lu): %ld\n", nx, mat.GetNumRows(), mat.GetNumCols(), elapsed.count());
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
             end = chrono::high_resolution_clock::now();
             elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
             start = end;
-            fprintf(stderr, "--> elapsed time for setvalue %d\n", elapsed.count());
+            fprintf(stderr, "--> elapsed time for setvalue %ld\n", elapsed.count());
             // 4. clean up 
             delete []px; 
             end = chrono::high_resolution_clock::now();
             elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
             start = end;
-            fprintf(stderr, "--> elapsed time for cleanup: %d\n", elapsed.count());
+            fprintf(stderr, "--> elapsed time for cleanup: %ld\n", elapsed.count());
         }
         auto xend = end;
         elapsed = chrono::duration_cast<chrono::milliseconds>(xend - xstart);
-        fprintf(stderr, "-----> elapsed time for overall sync: %d\n", elapsed.count());
+        fprintf(stderr, "-----> elapsed time for overall sync: %ld\n", elapsed.count());
         return nTotalSamples;
     }
     
