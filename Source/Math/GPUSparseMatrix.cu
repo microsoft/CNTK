@@ -34,11 +34,7 @@ static
 #endif
 cudaStream_t t_stream;
 
-
-// support for CudaCall() function template
-static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-static const char * CudaErrString(cublasStatus_t)   { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
-static const char * CudaErrString(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
+template<> const char * CudaErrString<cusparseStatus_t>(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

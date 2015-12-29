@@ -43,10 +43,17 @@
 // GridDim -- helper to choose the CUDA grid dimensions
 // ---------------------------------------------------------------------------
 
+template<class INT, class INT2>
+static INT CeilDiv(INT a, INT2 b)
+{
+    return (a + b - 1) / b;
+}
+
 // TODO: move the computation of 'id' here as well
 struct GridDim
 {
     static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
+    static const CUDA_LONG maxWarpsPerBlock = 16;       // use this many warps per block
 
     // use these for launching
     //   GridDim grid(NN);
@@ -59,17 +66,27 @@ struct GridDim
         m_N = N;
         if (N == 0)                     // CUDA will fail to launch with 0 blocks
             N = 1;
-        m_threadsPerBlock = GridDim::maxThreadsPerBlock;
-        m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
-        CUDA_LONG minBlocksPerGrid = GetDeviceProps().multiProcessorCount;       // use at least that many blocks
-        if (m_blocksPerGrid < minBlocksPerGrid)
+
+        // get device information
+        const auto & props = GetDeviceProps();
+        CUDA_LONG numProcs = props.multiProcessorCount;
+        CUDA_LONG warpSize = props.warpSize;
+
+        // distribute warps evenly over processors
+        CUDA_LONG warpsPerProc = CeilDiv(N, numProcs * warpSize);
+
+        // if too many warps per block then reduce #warps
+        if (warpsPerProc > maxWarpsPerBlock)
         {
-            // we cannot fill all blocks -> use less threads
-            m_threadsPerBlock = (N + minBlocksPerGrid - 1) / minBlocksPerGrid;
-            // round to multiples of 32 (warp size) for efficient memory access
-            m_threadsPerBlock = (m_threadsPerBlock + 31) / 32 * 32;
-            m_blocksPerGrid = (N + m_threadsPerBlock - 1) / m_threadsPerBlock;
+            CUDA_LONG overBy = CeilDiv(warpsPerProc, maxWarpsPerBlock); // we are over by this factor
+            warpsPerProc = CeilDiv(warpsPerProc, overBy);
         }
+
+        // put it back together
+        m_threadsPerBlock = warpsPerProc * warpSize;
+        m_blocksPerGrid = CeilDiv(N, m_threadsPerBlock);
+        if (m_blocksPerGrid == 1)
+            m_threadsPerBlock = N;  // don't launch more than necessary  --TODO: Does this make a difference at all?
         assert(m_blocksPerGrid * m_threadsPerBlock >= N);
     }
 
