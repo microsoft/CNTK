@@ -10,6 +10,7 @@
 
 #include <map>
 #include <set>
+#include <chrono>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -1951,6 +1952,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return nSamplesSinceLastSync; 
         }
 
+        auto start = chrono::high_resolution_clock::now();
+        auto xstart = start;
         //========================================
         // Sec. 1 calculate factor
         //========================================
@@ -1966,6 +1969,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples; 
         }
+        auto end = chrono::high_resolution_clock::now();
+        auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+        start = end;
+        fprintf(stderr, "--> elapsed time for calculate factor: %d\n", elapsed.count());
 
         //========================================
         // Sec. 2 sync models based on factor 
@@ -1986,18 +1993,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->Value();
             // 1. normalize the weight matrix 
             Matrix<ElemType>::Scale(factor, mat);
+            end = chrono::high_resolution_clock::now();
+            elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+            start = end;
+            fprintf(stderr, "--> elapsed time for scale: %d\n", elapsed.count());
             // 2. send weight matrix over MPI nodes; 
             ElemType* px = mat.CopyToArray(); 
             size_t    nx = mat.GetNumElements(); 
+            end = chrono::high_resolution_clock::now();
+            elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+            start = end;
+            fprintf(stderr, "--> elapsed time for copy weight: %d\n", elapsed.count());
 
             // 3. inplace sum 
             g_mpi->AllReduce(px, nx);
+            end = chrono::high_resolution_clock::now();
+            elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+            start = end;
+            fprintf(stderr, "--> elapsed time for all reduce (%d, %d x %d): %d\n", nx, mat.GetNumRows(), mat.GetNumCols(), elapsed.count());
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
+            end = chrono::high_resolution_clock::now();
+            elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+            start = end;
+            fprintf(stderr, "--> elapsed time for setvalue %d\n", elapsed.count());
             // 4. clean up 
             delete []px; 
+            end = chrono::high_resolution_clock::now();
+            elapsed = chrono::duration_cast<chrono::milliseconds>(end - start);
+            start = end;
+            fprintf(stderr, "--> elapsed time for cleanup: %d\n", elapsed.count());
         }
-
-        return nTotalSamples; 
+        auto xend = end;
+        elapsed = chrono::duration_cast<chrono::milliseconds>(xend - xstart);
+        fprintf(stderr, "-----> elapsed time for overall sync: %d\n", elapsed.count());
+        return nTotalSamples;
     }
     
 // public:
