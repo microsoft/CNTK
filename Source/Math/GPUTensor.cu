@@ -38,8 +38,6 @@ extern bool do_sync;
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread)
-#else
-static
 #endif
 extern cudaStream_t t_stream;
 
@@ -507,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // special case of linear unary operation
     template<class ElemType>
-    static void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
+    void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
     {
         CUDA_LONG NN = (CUDA_LONG)regularOpDim;
 
@@ -553,10 +551,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor operation, generalized in number of arguments
     // This function now expands into different k. It also eliminates the offsets by adding them to the pointers.
     template<class ElemType, C_size_t N>
-    static void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
-                               const array<size_t, N> & offsets,
-                               const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
-                               const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
+    void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
+                        const array<size_t, N> & offsets,
+                        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         for (C_size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
             pointers[i] += offsets[i];
@@ -576,30 +574,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // explicit instantiations--these are being called from GPUMatrix.cu
     //------------------------------------------------------------------------
 
-    template void TensorOpN(float beta, array<float*, 2> pointers, float alpha, ElementWiseOperator op,
-                            const array<size_t, 2> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
-    template void TensorOpN(float beta, array<float*, 3> pointers, float alpha, ElementWiseOperator op,
-                            const array<size_t, 3> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
-    template void TensorOpN(float beta, array<float*, 4> pointers, float alpha, ElementWiseOperator op,
-                            const array<size_t, 4> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
-    template void TensorOpN(double beta, array<double*, 2> pointers, double alpha, ElementWiseOperator op,
-                            const array<size_t, 2> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
-    template void TensorOpN(double beta, array<double*, 3> pointers, double alpha, ElementWiseOperator op,
-                            const array<size_t, 3> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
-    template void TensorOpN(double beta, array<double*, 4> pointers, double alpha, ElementWiseOperator op,
-                            const array<size_t, 4> & offsets,
-                            const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
-                            const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
+    template void TensorOpN<float,  2>(float beta, array<float*, 2> pointers, float alpha, ElementWiseOperator op,
+                                       const array<size_t, 2> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
+    template void TensorOpN<float,  3>(float beta, array<float*, 3> pointers, float alpha, ElementWiseOperator op,
+                                       const array<size_t, 3> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
+    template void TensorOpN<float,  4>(float beta, array<float*, 4> pointers, float alpha, ElementWiseOperator op,
+                                       const array<size_t, 4> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
+    template void TensorOpN<double, 2>(double beta, array<double*, 2> pointers, double alpha, ElementWiseOperator op,
+                                       const array<size_t, 2> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
+    template void TensorOpN<double, 3>(double beta, array<double*, 3> pointers, double alpha, ElementWiseOperator op,
+                                       const array<size_t, 3> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
+    template void TensorOpN<double, 4>(double beta, array<double*, 4> pointers, double alpha, ElementWiseOperator op,
+                                       const array<size_t, 4> & offsets,
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
 
     template void LaunchUnaryTensorOp(float beta, const float * pa, float * pb, float alpha, ElementWiseOperator op, size_t regularOpDim);
     template void LaunchUnaryTensorOp(double beta, const double * pa, double * pb, double alpha, ElementWiseOperator op, size_t regularOpDim);
