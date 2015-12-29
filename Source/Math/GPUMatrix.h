@@ -47,9 +47,7 @@ typedef struct CUstream_st *cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -506,7 +504,7 @@ namespace Microsoft {
 }}}
 
 // Error handling
-template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> const char * CudaErrString(ERRTYPE x);
 template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
 {
     if (retCode != successCode)
