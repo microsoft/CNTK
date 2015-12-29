@@ -425,7 +425,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // do some optimization for reductions
         // Cases:
-        //  - input elements >> GPU procs  -->  do reduction in inner loop
+        //  - #output elements >= GPU procs  -->  use one proc per element, do reduction in inner loop
         //  - reduction dimension fits into a single kernel  -->  launch it that way
         //  - reduction dimension requires multiple kernels  -->  use atomic add, to avoid temp mem alloc
         //     - PlusNode: reducing to a bias for small matrices
@@ -444,19 +444,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             reductionDim *= (C_size_t)reducingOpDimVector[k];
         let & props = GridDim::GetDeviceProps();
         GridDim grid(NN);
-        if (reductionDim > 1 && NN < props.multiProcessorCount * props.warpSize      && reductionDim <= GridDim::maxThreadsPerBlock)
+        if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount      && reductionDim <= GridDim::maxThreadsPerBlock)
         {
-            let numInputBlocks = (NN + grid.m_blocksPerGrid - 1) / grid.m_blocksPerGrid;    // undo rounding-up to multiples of 32, since this is no longer used as a warp
-            // TODO: We can now freely redistribute between .x and .y dimension.
-            if (reductionDim <= GridDim::maxThreadsPerBlock)
-            {
-                // one thread block per reduction is sufficient
-                // TODO: In the special case where reduction dim <= 16 (half warp size), we could fit more than one reduction.
-                let blocksPerGrid   = dim3(grid.m_blocksPerGrid, numInputBlocks); // block Y is element dimension
-                let threadsPerBlock = dim3(reductionDim);       // X dimension is reduction dimension
-                _launchTensorOpParallelReduction<ElemType, N, M, K> << <blocksPerGrid, threadsPerBlock, reductionDim * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides, reductionDim);
-            }
-            else
+            // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
+            // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
+            auto numBlocks = NN;
+            // By how much do we underutilize now?
+            // We increase #blocks by that factor by breaking reduction into that many chunks.
+            let numReductionChunks = 1;// CeilDiv(props.multiProcessorCount, numBlocks);
+
+            // numBlocks may be too large for a single dimension
+            let blockXOverBy = CeilDiv(numBlocks, props.maxGridSize[0]);
+            let numBlocksX = CeilDiv(numBlocks, blockXOverBy);
+            let numBlocksY = CeilDiv(NN, numBlocksX);
+            let numBlocksZ = numReductionChunks;
+            // Block dim is now:
+            //  - X, Y: such that X*Y covers NN
+            //  - Z: reduction chunks
+
+            // reduction goes into thread dim X
+            let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
+            let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
+
+            // If we need more than one chunk, we will use atomicAdd().
+            // We could use two launches: (1) reset the accumulator; (2) add all partial reductions into it.
+            // Instead, we will use the first launch to reset and compute the first chunk.
+            // A second launch will then do all but the first chunk, and use atomicAdd().
+            _launchTensorOpParallelReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, reductionDim * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionDim);
+            sin(numBlocksZ);
+#if 0
             {
                 fprintf(stderr, "%d %d\n", (int)reductionDim, (int)props.multiProcessorCount * props.warpSize);
                 // we need more than one block for each reduction. Temporary memory is required.
@@ -492,10 +508,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // and done with the temp memory
                 CUDA_CALL(cudaFree(tempBufferPtr));
             }
+#endif
         }
         else
 #endif
         {
+            // we got enough elements to generate: do one element per thread, and reduction inside
             _launchTensorOp<ElemType, N, M, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides, 1);
         }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
