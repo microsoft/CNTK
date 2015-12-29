@@ -48,7 +48,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //      c.AssignDiffOf(c,a) means c -= a,
         //  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
         // All operators support elementwise in-place operations, i.e. a, b, and c
-        // may all reference the same underlying SOB.
+        // may all reference the same underlying SOB, with onee exception:
+        // The output cannot be in-place and inverse-broadcasting at the same time.
+        // E.g. with c=[10] and a=[10 x 20], c.AssignDiffOf(c,a) will fail.
+        // In that case, you can use c.AddCopyOf(a,-1).
+        // Aliasing is not detected, so don't pass distinct TensorView objects that
+        // reference overlapping but not identical slices.
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 

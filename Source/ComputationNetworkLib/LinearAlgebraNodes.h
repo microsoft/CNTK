@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Input(inputIndex)->GetNumCols() < GetNumCols())
                 MaskMissingGradientColumnsToZero(fr);
 
-            inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
+            inputGradient.AddCopyOf(gradient);
 #if 0
             if (Input(inputIndex)->GetNumCols() < GetNumCols())
                 Input(inputIndex)->Gradient().Print("PlusNode BackProp with reduction");
@@ -227,10 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Input(inputIndex)->GetNumCols() < GetNumCols())
                 MaskMissingGradientColumnsToZero(fr);
 
-            if (sign > 0)
-                inputGradient.DoSumOf(0.0f, inputGradient, gradient, 1.0f);
-            else
-                inputGradient.DoDifferenceOf(0.0f, inputGradient, gradient, 1.0f);
+            inputGradient.AddCopyOf(gradient, sign);
 #else
             Matrix<ElemType> gradientValues = GradientFor(fr);
 

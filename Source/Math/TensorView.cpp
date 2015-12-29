@@ -223,6 +223,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             offsets[i] = shapes[i].GetOffset();
     }
 
+    // enforce that in case of broadcasting, the output must not be an input
+    template<class ElemType>
+    static bool CheckDifferentObject(const TensorView<ElemType> & a, const TensorView<ElemType> & b)
+    {
+        if (&a == &b)
+            LogicError("Do{U,Bi,Ter}naryOpOf: When inverse broadcasting, output must not be an input.");
+        return true;
+    }
+
     template<class ElemType>
     void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op)
     {
@@ -234,6 +243,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
         SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType,2>(array<TensorShape, 2> { a.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+        // output cannot be input when reducing
+        if (reducingOpDims.size() > 0)
+            CheckDifferentObject(a, *this);
 
         // now perform the operation
         GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
@@ -250,6 +263,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3> { a.GetShape(), b.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
+        // output cannot be input when reducing
+        if (reducingOpDims.size() > 0)
+            CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
+
         GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
@@ -263,6 +280,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
         SmallVector<size_t> regularOpDims, reducingOpDims;
         PrepareTensorOperands<ElemType, 4>(array<TensorShape, 4> { a.GetShape(), b.GetShape(), c.GetShape(), GetShape() }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+        // output cannot be input when reducing
+        if (reducingOpDims.size() > 0)
+            CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this);
 
         GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
