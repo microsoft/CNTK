@@ -1292,8 +1292,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 1)
             {
-                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                                         Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+				FrameRange fr(Input(0)->GetMBLayout());
+				BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+					Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+				MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+                
 #ifdef _DEBUG
                 Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
@@ -1433,6 +1436,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         }
+
+		//request matrices needed to do node function value evaluation
+		virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+		{
+			Base::ReleaseMatricesAfterForwardProp(matrixPool);
+			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+		}
+
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticepair>> * getLatticePtr()
         {
