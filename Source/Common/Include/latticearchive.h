@@ -51,6 +51,7 @@ enum mbrclassdefinition     // used to identify definition of class in minimum b
 // ===========================================================================
 class lattice
 {
+    mutable int verbosity; 
     struct header_v1_v2
     {
         size_t numnodes : 32;
@@ -567,11 +568,13 @@ private:
         std::vector<size_t> backptroffsets;         // TODO: we could change this to 'unsigned int' to save some transfer time
         std::vector<unsigned short> backptrstorage; // CPU-side versions use this as the traceback buffer; CUDA code has its CUDA-side buffer
         size_t numofstates;                         // per sil hmm
+        int verbosity;  
     public:
-        backpointers (const lattice & L, const msra::asr::simplesenonehmm & hset) : numofstates(0)
+        backpointers (const lattice & L, const msra::asr::simplesenonehmm & hset, int verbosity=0) : numofstates(0)
         {
             size_t edgeswithsilence = 0;    // (diagnostics only: number of edges with at least one /sil/)
             size_t backptrbufsize = 0;      // number of entries in buffer for silence backpointer array, used as cursor as we build it
+            
             backptroffsets.resize (L.edges.size() + 1);  // +1, so that the final entry determines the overall size of the allocated buffer
             const size_t silUnitId = hset.gethmmid ("sil");
             numofstates = hset.gethmm (silUnitId).getnumstates();
@@ -595,15 +598,18 @@ private:
 #if 1           // multiple /sil/ -> log this (as we are not sure whether this is actually proper--probably it is)
                 if (numsilunits > 1)
                 {
-                    fprintf (stderr, "backpointers: lattice '%S', edge %d has %d /sil/ phonemes\n", L.getkey(), j, (int)numsilunits);
-                    fprintf (stderr, "alignments: :");
-                    foreach_index (a, aligntokens)
+                    if (verbosity)
                     {
-                        const auto & unit = aligntokens[a];
-                        const auto & hmm = hset.gethmm (unit.unit);
-                        fprintf (stderr, "%s,%.2f:", hmm.getname(), unit.frames / 100.0f);
+                        fprintf(stderr, "backpointers: lattice '%S', edge %d has %d /sil/ phonemes\n", L.getkey(), j, (int)numsilunits);
+                        fprintf(stderr, "alignments: :");
+                        foreach_index(a, aligntokens)
+                        {
+                            const auto & unit = aligntokens[a];
+                            const auto & hmm = hset.gethmm(unit.unit);
+                            fprintf(stderr, "%s,%.2f:", hmm.getname(), unit.frames / 100.0f);
+                        }
+                        fprintf(stderr, "\n");
                     }
-                    fprintf (stderr, "\n");
                 }
 #endif
                 if (numsilunits > 0)
@@ -611,7 +617,8 @@ private:
                 backptrbufsize += maxsilframes * numofstates;
             }
             backptroffsets[L.edges.size()] = backptrbufsize;        // (TODO: remove if not actually needed)
-            fprintf (stderr, "backpointers: %.1f%% edges have at least one /sil/ unit inside\n", 100.0f * ((float) edgeswithsilence / L.edges.size()));
+            if (verbosity)
+                fprintf (stderr, "backpointers: %.1f%% edges have at least one /sil/ unit inside\n", 100.0f * ((float) edgeswithsilence / L.edges.size()));
         }
         // CUDA support
         const std::vector<size_t> & getbackptroffsets() const { return backptroffsets; }
@@ -1002,6 +1009,10 @@ public:
 
     std::wstring key;        // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t * getkey() const { return key.c_str(); }
+
+    void setverbosity(int veb) const{
+        verbosity = veb;
+    }
 };
 
 // ===========================================================================
@@ -1220,6 +1231,7 @@ public:
             fsetpos (f, offset);
             // get it
             L.fread (f, idmap, spunit);
+            L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE       // hack to simulate DEL in the lattice
             const size_t silunit = getid (modelsymmap, "sil");
             const bool addsp = true;
