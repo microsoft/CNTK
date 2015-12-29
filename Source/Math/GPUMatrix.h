@@ -504,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 }}}
 
 // Error handling
-template<typename ERRTYPE> const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> const char * CudaErrString(ERRTYPE x);   // actual error function is defined inside .cu files
 template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
 {
     if (retCode != successCode)
@@ -521,7 +521,9 @@ template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * ex
         }
     }
 }
+
 #define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
 #define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))
+#define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN", CUDNN_STATUS_SUCCESS))

@@ -77,9 +77,9 @@ cudaStream_t MATH_API GetStream()
     performElementWiseFunction(ElementWiseOperator::op##f, a.m_pArray); \
     return *this; }
 
-const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
-const char * CudaErrString(curandStatus)   { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
+template<> const char * CudaErrString<cudaError_t>(cudaError_t x)     { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
+template<> const char * CudaErrString<cublasStatus_t>(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
+template<> const char * CudaErrString<curandStatus>(curandStatus)     { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
