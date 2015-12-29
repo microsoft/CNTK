@@ -90,6 +90,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         T m_data[12];
         size_t m_size;
+        void DebugWipe()
+        {
+#ifdef _DEBUG
+            memset(m_data, 0, sizeof(m_data)); // initialize to 0 to make it look prettier in the debugger
+#endif
+        }
     public:
         size_t capacity() const { return _countof(m_data); }
         size_t size() const { return m_size; }
@@ -103,12 +109,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class ITER>
         void assign(ITER beg, const ITER & end) { clear(); append(beg,end); }
         void operator=(const SmallVector & other) { m_size = other.m_size; memcpy(m_data, other.m_data, other.m_size * sizeof(T)); }
-        SmallVector(const SmallVector & other) { *this = other; }
-        SmallVector(size_t sz, const T & val) { assign(sz, val); }
+        SmallVector(const SmallVector & other) { DebugWipe(); *this = other; }
+        SmallVector(size_t sz, const T & val) { DebugWipe(); assign(sz, val); }
         SmallVector(size_t sz) : SmallVector(sz, 0) { }
         SmallVector() : SmallVector(0) { }
-        SmallVector(const std::vector<T>           & v) { assign(v.begin(), v.end()); }
-        SmallVector(const std::initializer_list<T> & l) { assign(l.begin(), l.end()); }
+        SmallVector(const std::vector<T>           & v) { DebugWipe(); assign(v.begin(), v.end()); }
+        SmallVector(const std::initializer_list<T> & l) { DebugWipe(); assign(l.begin(), l.end()); }
         bool operator==(const SmallVector & other) const { return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T)); }
         bool operator!=(const SmallVector & other) const { return !operator==(other); } // duh
         T   operator[](size_t i) const { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
