@@ -223,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             C_size_t index = id / stride;           // this dimension. For m=0, the stride is 1 and hence the division will be removed at compile time.
             id = id % stride;                       // remaining dimensions inside this. For m=0 this value is ignored and hence not even computed.
             // apply this index to the pointers
-            for (C_size_t i = 0; i < N; i++)
+            for (C_size_t i = 0; i < N - 1; i++)
                 pointers[i] += index * reducingStrides(i, (C_size_t)m);    // now this dimension is taken care of
             return TensorOpParallelReduce<ElemType, N, M, m - 1>::Compute(id, pointers, op, reducingOpDims, reducingStrides);
         }
@@ -344,46 +344,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const FixedArray<C_unsigned_int, M> & reducingOpDims,       const FixedMatrix<C_int, N, M> & reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
         {
             CUDA_LONG reductionBlock = blockIdx.z;          // block index  --larger reductions are split into blocks
-            CUDA_LONG reductionBlocks = gridDim.z;          // number of blocks
+            //CUDA_LONG reductionBlocks = gridDim.z;          // number of blocks
             CUDA_LONG tid = threadIdx.x;                    // thread index
             CUDA_LONG tids = blockDim.x;                    // out of how many threads  --note: last block is partial
 
             // determine our range  --this is a single int mul, we can stomach it (we could alternatively pass in yet another parameter)
-            C_size_t stride = 1;                    // compute the stride. This seems expensive, but since we we only currently support M <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
-            for (int i = 0; i < 2; i++)
-                stride *= reducingOpDims[(C_size_t)i];
-            CUDA_LONG reductionDim = (CUDA_LONG)reducingOpDims[(C_size_t)0];
+            CUDA_LONG reductionDim = (CUDA_LONG)reducingOpDims[0];
             for (C_size_t i = 1; i < reducingOpDims.size(); i++)
-                reductionDim *= reducingOpDims[(C_size_t)i];
+                reductionDim *= reducingOpDims[i];
+
+            auto * pout = pointers[pointers.size() - 1];
+            double poutval = *pout;
+
+int f = 2;
+reductionChunkSize /= f;
+for (reductionBlock = 0; reductionBlock < f; reductionBlock++){
 
             // determine the redId range that we operate on
             // Each thread takes a stride tid + (multiples of tids) within this range.
             reductionBegin += reductionChunkSize * reductionBlock;
             CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
-            // accumulator
-            __shared__ double accumulators[GridDim::maxThreadsPerBlock/*tids*/];
-
             // compute the operation for this input coordinate
-            accumulators[tid] = 0;
+            typedef double AccType;
+            AccType sum = 0;
             for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
             {
-                accumulators[tid] += TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
+                auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
+                sum += val;
+if(blockIdx.x < 3)printf("blockIdx.x %d  tid = %d  redId = %d   val = %d  sum = %d\n", (int)blockIdx.x, (int)tid, (int)redId, (int)(val*1000), (int)(sum*1000));
             }
 
             // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
+            __shared__ AccType accumulators[GridDim::maxThreadsPerBlock/*tids*/];
+            accumulators[tid] = sum;
             __syncthreads();
             static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
-            if (tid < 256 && tid + 256 < tids) accumulators[tid] += accumulators[tid + 256]; if (0 + 256 < tids) __syncthreads();   // sync if condition true for at least one thread
-            if (tid < 128 && tid + 128 < tids) accumulators[tid] += accumulators[tid + 128]; if (0 + 128 < tids) __syncthreads();
-            if (tid < 64  && tid + 64  < tids) accumulators[tid] += accumulators[tid + 64];  if (0 + 64  < tids) __syncthreads();
-            if (tid < 32  && tid + 32  < tids) accumulators[tid] += accumulators[tid + 32];  if (0 + 32  < tids) __syncthreads();   // somehow I still need to sync, contradicting the PDF
-            if (tid < 16  && tid + 16  < tids) accumulators[tid] += accumulators[tid + 16];  if (0 + 16  < tids) __syncthreads();   // TODO: Understand this!
-            if (tid < 8   && tid + 8   < tids) accumulators[tid] += accumulators[tid + 8];                       __syncthreads();
-            if (tid < 4   && tid + 4   < tids) accumulators[tid] += accumulators[tid + 4];                       __syncthreads();
-            if (tid < 2   && tid + 2   < tids) accumulators[tid] += accumulators[tid + 2];                       __syncthreads();
-            if (tid < 1   && tid + 1   < tids) accumulators[tid] += accumulators[tid + 1];
+            for (CUDA_LONG i = 256; i; i >>= 1)
+            {
+                if (tid < i && tid + i < tids) accumulators[tid] += accumulators[tid + i];
+                if (0 + i < tids) __syncthreads();    // sync if condition true for at least one thread
+            }
 
+            poutval += (float)accumulators[0];
+#if 0
             // now set final value to output coordinate
             if (tid == 0)
             {
@@ -391,20 +395,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // scale
                 val *= alpha;
                 // combine with previous value in target matrix, then write it out
-                auto * pout = pointers[pointers.size() - 1];
                 if (reductionBlocks > 1)        // multiple blocks: need to use atomicAdd()
                 {
                     // in this case, outer calling code must pass beta = 1
-                    atomicAdd(pout, val);
+                    val = atomicAdd(pout, val);
+printf("UMPFF!!\n");
                 }
                 else
                 {
-                    if (beta != 0)
-                        val += beta * *pout;
-                    // save
-                    *pout = val;
+                    //poutval += val;
+                    //if (beta != 0)
+                    //    val += beta * *pout;
+                    //// save
+                    //*pout = val;
                 }
             }
+#endif
+}
+            *pout = poutval;
+if (blockIdx.x < 3)printf("blockIdx.x %d  redDim = %d  poutval = %d    pout = %x\n", (int)blockIdx.x, (int)reductionDim, (int)(poutval * 1000), (int)(size_t)pout);
         }
     };
 
@@ -461,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides,  CUDA_LONG numElements,
                                                  FixedArray<C_unsigned_int, M> reducingOpDims,   FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize)
     {
-        CUDA_LONG id = gridDim.y * blockIdx.x + blockIdx.y;   // input dimensions are Y dimension of blocks in this case, so we can use thread dim for shared-memory/parallelization
+        CUDA_LONG id = gridDim.x * blockIdx.y + blockIdx.x;   // input dimensions are Y dimension of blocks in this case, so we can use thread dim for shared-memory/parallelization
         if (id < numElements)       // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
             TensorOpElement<ElemType, N, M, K, true, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize);
     }
@@ -511,18 +520,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             reductionDim *= (C_size_t)reducingOpDimVector[k];
         let & props = GridDim::GetDeviceProps();
         GridDim grid(NN);
-        if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount      && reductionDim <= GridDim::maxThreadsPerBlock)
+        if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount      && NN == 10 && reductionDim <= GridDim::maxThreadsPerBlock)
         {
             // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
             // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
-            auto numBlocks = NN;
-            // By how much do we underutilize now?
-            // We increase #blocks by that factor by breaking reduction into that many chunks.
-            let numReductionChunks = 1;// CeilDiv(props.multiProcessorCount, numBlocks);
 
-            // numBlocks may be too large for a single dimension
-            let blockXOverBy = CeilDiv(numBlocks, props.maxGridSize[0]);
-            let numBlocksX = CeilDiv(numBlocks, blockXOverBy);
+            // By how much do we underutilize?
+            // We increase #blocks by that factor by breaking reduction into that many chunks.
+            let numReductionChunks = 1;// CeilDiv(props.multiProcessorCount, NN);
+
+            // NN may be too large for a single dimension
+            let blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
+            let numBlocksX = CeilDiv(NN, blockXOverBy);
             let numBlocksY = CeilDiv(NN, numBlocksX);
             let numBlocksZ = numReductionChunks;
             // Block dim is now:
@@ -531,19 +540,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // reduction goes into thread dim X
             let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
-            let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
+            let numThreadsX = 1;// min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
             // If we need more than one chunk, we will use atomicAdd().
             // We could use two launches: (1) reset the accumulator; (2) add all partial reductions into it.
             // Instead, we will use the first launch to reset and compute the first chunk.
             // A second launch will then do all but the first chunk, and use atomicAdd().
-            _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+#if 1
+            // zero out
+            if (beta != 1)
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), 1, 1 * sizeof(double), t_stream >> >(beta, pointers, /*alpha=*/0, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, 1);
 
-            // now for the remaining chunks
-            if (numBlocksZ > 1)
+            // now do all chunks
+            //if (numBlocksZ == 2)
+            //{
+            //    _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+            //    _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+            //}
+            //else
+            _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+#else
+            if (beta == 1 || numBlocksZ == 1)
             {
-                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(1/*add*/, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             }
+            else
+            {
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+            }
+#endif
         }
         else
         {
