@@ -308,6 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - PairNetworkNode
         //  - LSTMNode
         // set our dimensions (rows, cols, sample layout)
+        // TODO: Separate SetDims() into version with and without MBLayout.
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
             m_sampleLayout = sampleLayout;

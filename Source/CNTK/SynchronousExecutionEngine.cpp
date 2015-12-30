@@ -108,9 +108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
                 size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
-                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1; // BUGBUG: This comes through MBLayout, and should be forbidden.
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (cnNodeType == L"SparseImageInput")
@@ -126,8 +127,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateSparseInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateSparseInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -323,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageLayoutWHC(img_width, img_height, img_channels), name);
+                nodePtr = builder.Reshape(NULL, num_rows, ImageLayoutWHC(img_width, img_height, img_channels), name);   // BUGBUG: use a tensor descriptor instead
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
