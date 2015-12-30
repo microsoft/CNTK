@@ -25,18 +25,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // unified overloads for float/double math functions
     //
-    // Declare float and double versions of the functions f we need as f_(),
-    // e.g. exp_ -> exp(double), expf(float).
+    // Declare float and double versions of the functions x we need as x_().
+    // This macro overloads x_() with float and double arguments, and inlines the correct library function,
+    // e.g. exp_ -> exp(double), expf(float). This simplifies templated kernel code.
     // -----------------------------------------------------------------------
 
 #pragma push_macro("OverloadUnaryMathFns")
-    #define OverloadUnaryMathFns(func) \
-        DECL float func ## _(float arg) { return func ## f(arg); } \
-        DECL double func ## _(double arg) { return func(arg); }
+    #define OverloadUnaryMathFns(x) DECL float x ## _(float f) { return x ## f(f); } DECL double x ## _(double f) { return x(f); }
 
-    OverloadUnaryMathFns(fabs); OverloadUnaryMathFns(sqrt);
-    OverloadUnaryMathFns(exp); OverloadUnaryMathFns(log);
-    OverloadUnaryMathFns(tanh); OverloadUnaryMathFns(cos); OverloadUnaryMathFns(sin);
+    OverloadUnaryMathFns(exp);
+    OverloadUnaryMathFns(log);
+    OverloadUnaryMathFns(tanh);
+    OverloadUnaryMathFns(sqrt);
+    OverloadUnaryMathFns(fabs);
+    OverloadUnaryMathFns(cos);
+    OverloadUnaryMathFns(sin);
+
 #pragma push_macro("OverloadUnaryMathFns")
 
     // -----------------------------------------------------------------------
@@ -85,7 +89,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return sqrt_(z > 0 ? z : 0);
     }
 
-    // TODO: call this LogAdd() for consistency
     template<typename ElemType>
     DECL ElemType LogAdd(ElemType x, ElemType y)
     {

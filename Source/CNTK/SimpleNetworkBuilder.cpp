@@ -1050,7 +1050,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
                 scalar->Value().SetValue((ElemType)0.01);
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
                 ComputationNodePtr scaled = builder.Scale(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
 #else
                 ComputationNodePtr scaled = builder.ElementTimes(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
