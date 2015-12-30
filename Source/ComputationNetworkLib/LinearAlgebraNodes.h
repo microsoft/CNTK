@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-#ifdef ENABLE_TENSORVIEW
+#if 0//def ENABLE_TENSORVIEW
             // BUGBUG: This gives us a huge perf hit for Image/QuickE2E.
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient      =                    GradientTensorFor(rank, fr);
@@ -214,7 +214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
-#ifdef ENABLE_TENSORVIEW
+#if 0//def ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -692,7 +692,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-#ifdef ENABLE_TENSORVIEW
+#if 0//def ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient        =                     GradientTensorFor(rank, fr);
             auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
