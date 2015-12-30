@@ -87,6 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class INT, class INT2>
 static INT CeilDiv(INT a, INT2 b)
 {
+if (b == 0) LogicError("CeilDiv a=%d b=%d", (int)a, (int)b);    // TODO: delete this once tracked down
     return (a + b - 1) / b;
 }
 
