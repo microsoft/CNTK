@@ -297,6 +297,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             gradient.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
+            // TODO: with tensor lib:
+            //inputGradientValues.AddElementDivisionOf(gradientValues, inputFunctionValues); // 1/x (x is input to log(x))
         }
 
         /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
@@ -333,6 +335,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_gradientTemp->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
             sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradientTemp);
+            // TODO: with tensor lib:
+            // sliceInputGrad.AddElementProductOf(sliceOutputGrad, functionValues);
+            // and set OutputUsed
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -379,6 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             gradient.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
+            // TODO: tensor lib: make a joint kernel, since neg sin is never used for anything else
         }
 
         /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
