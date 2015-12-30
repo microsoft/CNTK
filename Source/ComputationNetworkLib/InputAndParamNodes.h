@@ -42,17 +42,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = true;
             SetDims(TensorShape(), 0);
         }
-        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & shape) :
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
             CreateMatrixIfNull(m_value);
-            SetDims(TensorShape(rows), cols);
+            // for now we split off the trailing dimension into the matrix column dimension
+            // TODO: This is for compat, but is is inconsistent. Decide what a sample layout means for a node without MBLayout w.r.t. non-tensor ops.
+            auto dims = shape.GetDims();
+            size_t cols = 1;
+            if (dims.size() > 1)
+            {
+                cols = dims.back();
+                dims.resize(dims.size()-1);
+            }
+            SetDims(TensorShape(dims), cols);
             UpdateFunctionValuesSize();   // this allocates the matrix
             Value().SetValue(0);
         }
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            LearnableParameter(deviceId, name, TensorShape(rows, cols))
+        { }
         LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
-            LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
+            LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"))
         {
             // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
             AttachInputs(configp, this->GetExpectedNumInputs());
@@ -229,14 +241,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
-        void Init(const TensorShape & sampleLayout, size_t cols, bool isSparse)
+        void Init(const TensorShape & sampleLayout, bool isSparse)
         {
             m_isSparse = isSparse;
             CreateMatrixIfNull(m_value);
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            SetDims(sampleLayout, cols);
+            SetDims(sampleLayout, 0);
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
         }
@@ -244,19 +256,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
-            Init(TensorShape(), 0, isSparse);
+            Init(TensorShape(), isSparse);
         }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
             Base(deviceId, name)
         {
-            cols;// InputValues must be minibatches
-            Init(TensorShape(rows), 0, isSparse);
+            cols;   // BUGBUG: There should be no 'cols' parameter for InputValues, since they must be minibatches.
+            Init(TensorShape(rows), isSparse);
         }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages, bool isSparse) :
             Base(deviceId, name)
         {
-            numImages;//size_t cols = numImages;
-            Init(imageLayout, 0, isSparse);
+            numImages;   // BUGBUG: There should be no 'numImages' parameter for InputValues, since they must be minibatches.
+            Init(imageLayout, isSparse);
         }
         InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
             Base(configp->Get(L"deviceId"), L"<placeholder>")
@@ -264,24 +276,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AttachInputs(configp, this->GetExpectedNumInputs());
             bool isImage  = configp->Get(L"isImage");
             if (!isImage)
-            {
-                size_t rows = configp->Get(L"rows");
-                //size_t cols = configp->Get(L"cols");  // InputValues must be minibatches
-                Init(TensorShape(rows), 0, isSparse);         // no tensor, just a vector
-            }
+                Init(configp->Get(L"shape"), isSparse);
             else
-            {
-                Init(ImageLayout(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), 0, isSparse);
-            }
+                Init(ImageLayout(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse);
         }
     public:
 
         virtual void Save(File& fstream) const override
         {
             Base::Save(fstream);
-            size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to Load()
-            size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
-            fstream << rows << cols;
+            size_t rows = GetNumRows();     // using explicitly typed variables to be 100% symmetrical to Load()
+            size_t colsDummy = 0;           // This should not be saved. InputValues always are minibatches.
+            fstream << rows << colsDummy;
             m_sampleLayout.Save(fstream);
         }
 
@@ -289,11 +295,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Load(fstream, modelVersion);
 
-            size_t rows, cols;
-            fstream >> rows >> cols;
-            // some older files retained the #columns when saving, which is meaningless
-            if (m_pMBLayout)
-                cols = 0;
+            size_t rows, colsDummy;
+            fstream >> rows >> colsDummy;
             TensorShape sampleLayout;
             sampleLayout.Load(fstream);
             // some older files may have inconsistent tensor information
@@ -303,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         NodeName().c_str(), string(sampleLayout).c_str(), (int)rows);
                 sampleLayout = TensorShape(rows);
             }
-            Init(sampleLayout, cols, m_isSparse);
+            Init(sampleLayout, m_isSparse);
         }
 
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.

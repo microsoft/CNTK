@@ -301,6 +301,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
         {
             const auto & valp = config[L"dims"];
+            // TODO: Add code that if input is already a tensor shape it is also OK.
             if (valp.Is<ConfigArray>())
                 return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
             else

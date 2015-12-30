@@ -35,11 +35,11 @@ using namespace std;
         ;
 
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
-        L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]\n"
         L"Parameter = LearnableParameter // deprecated \n"
         // ^^ already works; vv untested
-        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
-        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = false /*plus the function args*/ ]\n"
+        L"Input(rows, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ dims = (rows) ] ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
+        L"SparseInput(rows, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ dims = (rows) ] ; isImage = false /*plus the function args*/ ]\n"
         L"ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]\n"
         L"SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]\n"
         L"Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue', value = val) \n"
