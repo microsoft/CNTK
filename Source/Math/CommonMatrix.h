@@ -55,16 +55,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         opNegate, opNot,
         opAbs,
         opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine,
-        // these are not implemented yet:
-        opSaturateBetaAlpha, opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
         // binary
         opSum, opDifference, opElementwiseProduct, opElementwiseQuotient,
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
+        opAnd, opOr, opXor,
         opMaskNegative,
+        opElementwiseProductWithSigmoidDerivative/* a * dsigmoid/dx(b) */,
         // ternary
-        opCond
-        // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
+        opCond/*a ? b : c*/, opClip/*clip a within interval b..c*/
+        // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
     };
 
     // helper to apply a C macro for all operations of each kind
@@ -77,17 +77,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(Abs); \
     Macro(Sigmoid); Macro(SigmoidDerivative); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifierDerivative); Macro(Cosine); Macro(NegativeSine);
 
-#define ForAllParameterizedUnaryOps(Macro) \
-    Macro(SaturateBetaAlpha); Macro(SumAlpha); Macro(SubDifferenceToAlpha); Macro(SubDifferenceFromAlpha);
-
 #define ForAllBinaryOps(Macro) \
     Macro(Sum); Macro(Difference); Macro(ElementwiseProduct); Macro(ElementwiseQuotient); \
     Macro(LogSum); Macro(Max); Macro(Min); \
     Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
-    Macro(MaskNegative);
+    Macro(And); Macro(Or); Macro(Xor);\
+    Macro(MaskNegative); \
+    Macro(ElementwiseProductWithSigmoidDerivative);
 
 #define ForAllTernaryOps(Macro) \
-    Macro(Cond);
+    Macro(Cond); Macro(Clip);
 
     // -----------------------------------------------------------------------
     // various enums to describe 

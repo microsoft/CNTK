@@ -64,7 +64,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void    Add ## oper ## Of(               const TensorView & a, ElemType alpha = 1.0f) { DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllUnaryOps(DeclareUnaryTensorOp);
-        ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
