@@ -447,15 +447,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Does the same trick work for 2D images?
     };
 
+    // image layouts used in CNTK
+    // Nodes that do semantic interpretation of width, height, channel information must know which index they are in.
+    // Eventually this can go away once we switch completely to cudnn layout.
+    enum ImageLayoutKind
+    {
+        CHW,    // cudnn
+        HWC     // legacy
+    };
+    static inline ImageLayoutKind ImageLayoutKindFrom(const wstring & s)
+    {
+        if      (s == L"CHW") return ImageLayoutKind::CHW;
+        else if (s == L"HWC") return ImageLayoutKind::HWC;
+        else InvalidArgument("ImageLayoutKindFrom: Unknown ImageLayoutKind '%ls', must be 'CHW' (cudnn) or 'HWC' (CNTK legacy)", s.c_str());
+    }
+    static inline TensorShape ImageLayout(size_t width, size_t height, size_t channels, ImageLayoutKind imageLayoutKind)
+    {
+        if       (imageLayoutKind == ImageLayoutKind::CHW) return TensorShape(width, height, channels);
+        else  if (imageLayoutKind == ImageLayoutKind::HWC) return TensorShape(channels, width, height);
+        else LogicError("ImageLayout: Invalid ImageLayoutKind");
+    }
+
     // When constructing an image tensor with the usual W, H, C format, use the following function instead.
     // This will sort the three parameters into the correct order.
-    // BUGBUG: at several places, a comment says "after multiplication the structure is lost" and the vector dimension
-    //         is set as the image height. However, the image height is actually the wrong dimension since images are assumed transposed.
-    //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
+    // BUGBUG: This only works for ImageLayoutKind::HWC. Also the naming is bad.
     static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
     {
         return TensorShape(channels, width, height);
     }
-    // TODO: we need a constructor from config; that will allow us to generalize
 
 }}}

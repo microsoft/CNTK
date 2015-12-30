@@ -85,10 +85,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // ---------------------------------------------------------------------------
 
 template<class INT, class INT2>
-static INT CeilDiv(INT a, INT2 b)
+static INT CeilDiv(INT a, INT2 b)   // ceil(a/b)
 {
-if (b == 0) LogicError("CeilDiv a=%d b=%d", (int)a, (int)b);    // TODO: delete this once tracked down
-    return (a + b - 1) / b;
+    return (INT)(((size_t)a + (size_t)b - 1) / (size_t)b);  // these size_t casts are necessary since b may be INT_MAX (for maxGridSize[])
 }
 
 struct GridDim
@@ -138,6 +137,10 @@ struct GridDim
         std::vector<cudaDeviceProp> props(numDevices);
         for (int i = 0; i < numDevices; i++)
             CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
+#if 1   // on Linux, maxGridSize[0] gets reported as 0
+        for (int i = 0; i < numDevices; i++)
+            fprintf(stderr, "%d procs  %d warps  %d %d %d max grid  on  %s\n", (int)props[i].multiProcessorCount, (int)props[i].warpSize, (int)props[i].maxGridSize[0], (int)props[i].maxGridSize[1], (int)props[i].maxGridSize[2], props[i].name);
+#endif
         return props;
     }
 
