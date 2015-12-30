@@ -50,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DECL ElemType Sigmoid(ElemType z)
     {
-#if 1   // BUGBUG: Numerically bad. But if I don't use this, results change.
+#if 0   // BUGBUG: Numerically bad. But if I don't use this, results change.
         ElemType negElem = -z;
         ElemType e = exp_(negElem);
 
