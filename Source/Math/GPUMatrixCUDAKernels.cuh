@@ -10,12 +10,16 @@
 
 #ifndef CPUONLY
 
+#pragma push_macro("TENSOR_OPS_DECL")
+#define TENSOR_OPS_DECL __device__ __host__
 #include "CommonMatrix.h"
 #include "GPUMatrix.h"
+#include "TensorOps.h"  // for exp_() etc.
 #include "device_functions.h"
 #include <cuda_runtime.h>
 #include <assert.h>
 #include <float.h>
+#pragma pop_macro("TENSOR_OPS_DECL")
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
@@ -39,6 +43,43 @@
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
+// CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
+static __inline__ __device__ double atomicAdd(double* address, double val)
+{
+    unsigned long long int* address_as_ull = (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+
+// TODO: replace this with TensorOps.h LogAdd(). It differs in using ElemType throughout, while this one seems to use 'double' versions of exp() and log().
+// The 'k' in the name is to avoid naming conflicts with various versions of logadd() that are defined throughout the codebase.
+template<class ElemType>
+static inline __device__ __host__ ElemType logaddk(ElemType x, ElemType y)
+{
+    ElemType temp, diff, z;
+
+    if (x < y)
+    {
+        temp = x; x = y; y = temp;
+    }
+    diff = y - x;
+    if (diff < MINLOGEXP)
+    {
+        return (x < LSMALL) ? LZERO : x;
+    }
+    else
+    {
+        z = exp(diff);
+        return x + log(1.0 + z);
+    }
+}
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
 // ---------------------------------------------------------------------------
 // GridDim -- helper to choose the CUDA grid dimensions
 // ---------------------------------------------------------------------------
@@ -49,7 +90,6 @@ static INT CeilDiv(INT a, INT2 b)
     return (a + b - 1) / b;
 }
 
-// TODO: move the computation of 'id' here as well
 struct GridDim
 {
     static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
@@ -124,9 +164,6 @@ struct GridDim
 #define UNUSED_FUNCTION_ATTRIBUTE
 #endif
 
-// Predefine this for later.
-static __inline__ __device__ double atomicAdd(double* address, double val) UNUSED_FUNCTION_ATTRIBUTE;
-
 // ===========================================================================
 // CUDA kernels follow, lots of them
 // ===========================================================================
@@ -137,18 +174,6 @@ static __inline__ __device__ double atomicAdd(double* address, double val) UNUSE
 // The first parameters of every function are inputs, and the last two arguments to each function are always
 // (ElemenType *res, CUDA_LONG N), a pointer and length of the output block. Each thread computes a function
 // of the inputs for one value in the output.
-
-// This macro overloads _x() with float and double arguments, and inlines the correct library function. This simplifies templated kernel code.
-// TODO: merge with similar definition in TensorOps.h
-#define DEF_ELEMENT_PRIMITIVE(x) __device__ __forceinline__ float _##x(float f) { return x##f(f); } __device__ __forceinline__ double _##x(double f) { return x(f); }
-
-DEF_ELEMENT_PRIMITIVE(exp)
-DEF_ELEMENT_PRIMITIVE(log)
-DEF_ELEMENT_PRIMITIVE(tanh)
-DEF_ELEMENT_PRIMITIVE(sqrt)
-DEF_ELEMENT_PRIMITIVE(fabs)
-DEF_ELEMENT_PRIMITIVE(cos)
-DEF_ELEMENT_PRIMITIVE(sin)
 
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
@@ -188,6 +213,7 @@ __global__ void _elementWisePowerOnCuda(
 };
 
 // Note that this code is inefficient on CUDA due to diverging code paths.
+// Use Sigmoid() in TensorOps.h instead, which solves this problem.
 template<class ElemType>
 __global__ void _elementWiseSigmoidOnCuda(    
     const ElemType *a,
@@ -200,12 +226,12 @@ __global__ void _elementWiseSigmoidOnCuda(
 #else
     if (a[id] >= 0)
     {
-        ElemType e = _exp(-a[id]);
+        ElemType e = exp_(-a[id]);
         res[id] = 1 / (1 + e);
     }
     else
     {
-        ElemType e = _exp(a[id]);
+        ElemType e = exp_(a[id]);
         res[id] = e / (1 + e);
     }
 #endif
@@ -227,7 +253,7 @@ __global__ void _assignSigmoidOf(
     res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
 #else
     ElemType negElem = -a[id];
-    ElemType e = _exp(negElem);
+    ElemType e = exp_(negElem);
 
     res[id] = 1 / (e + 1);
 #endif
@@ -260,7 +286,7 @@ __global__ void _elementWiseTanhOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = _tanh(a[id]);
+    res[id] = tanh_(a[id]);
 };
 
 //to prevent negative values caused by floating operations, we force inputs to be >=0
@@ -272,7 +298,7 @@ __global__ void _elementWiseSqrtOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = _sqrt(max((ElemType)0, a[id]));
+    res[id] = sqrt_(max((ElemType)0, a[id]));
 };
 
 template<class ElemType>
@@ -282,7 +308,7 @@ __global__ void _elementWiseExpOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = _exp(a[id]);
+    res[id] = exp_(a[id]);
 };
 
 template<class ElemType>
@@ -292,7 +318,7 @@ __global__ void _elementWiseLogOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : _log(a[id]);
+    res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log_(a[id]);
 };
 
 template<class ElemType>
@@ -302,7 +328,7 @@ __global__ void _elementWiseAbsOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = _fabs(a[id]);
+    res[id] = fabs_(a[id]);
 };
 
 template<class ElemType>
@@ -312,7 +338,7 @@ __global__ void _elementWiseCosineOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = _cos(a[id]);
+    res[id] = cos_(a[id]);
 };
 
 template<class ElemType>
@@ -322,7 +348,7 @@ __global__ void _elementWiseNegativeSineOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = -_sin(a[id]);
+    res[id] = -sin_(a[id]);
 };
 
 template<class ElemType>
@@ -3464,7 +3490,7 @@ __global__ void _assignNoiseContrastiveEstimation(
         if (positive)
             prob = -prob;
         ElemType score_noise = log_num_noise_samples + prob;
-        ElemType z = logadd(tmp[i], score_noise);
+        ElemType z = logaddk(tmp[i], score_noise);
         ElemType logprob = tmp[i] - z;
         ElemType logprob_noise = score_noise - z;
         tmp[i] = -exp(logprob);
@@ -3754,40 +3780,6 @@ __global__ void _normalGradForSparseBlock(
     }
     rhs[IDX2C(row, col, numRows)] = (1 - momentum)*lhsValues[index] + momentum*rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
-}
-
-static __inline__ __device__ double atomicAdd(double* address, double val)
-{
-    unsigned long long int* address_as_ull = (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-
-    do {
-        assumed = old;
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
-template<class ElemType>
-static __inline__ __device__ ElemType logadd(ElemType x, ElemType y)
-{
-    ElemType temp, diff, z; 
-
-    if (x < y) 
-    {
-        temp = x; x = y; y = temp;
-    }
-    diff = y - x; 
-    if (diff < MINLOGEXP)
-    {
-        return (x < LSMALL)?LZERO:x;
-    }
-    else
-    {
-        z = exp(diff);
-        return x + log(1.0 + z);
-    }
 }
 
 //This function should be called with 1024 threads per block and 1 block
@@ -4554,7 +4546,7 @@ __global__ void _rcrfBackwardCompute(
             fSum = LZERO;
             for (int j = 0; j < iNumLab; j++)
             {
-                fSum = logadd(fSum, alpha[IDX2C(j, t, iNumLab)]);
+                fSum = logaddk(fSum, alpha[IDX2C(j, t, iNumLab)]);
             }
 
             fTmp = alpha[IDX2C(id, t, iNumLab)] - fSum;
@@ -4566,10 +4558,10 @@ __global__ void _rcrfBackwardCompute(
                 fSum = LZERO;
                 for (int m = 0; m < iNumLab; m++)
                 {
-                    fSum = logadd(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
+                    fSum = logaddk(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
                 }
 
-                fTmp = logadd(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
+                fTmp = logaddk(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
             }
         }
 
@@ -4630,7 +4622,7 @@ __global__ void _rcrfBackwardCompute(
     {
         for (int j = 0; j < iNumLab; j++)
         {
-            fTmp = logadd(fTmp, beta_t1[j] + alpha[id] + pair_scores[j] - zeta[j]);
+            fTmp = logaddk(fTmp, beta_t1[j] + alpha[id] + pair_scores[j] - zeta[j]);
         }
     }
 
@@ -4671,9 +4663,9 @@ __global__ void _rcrfBackwardComputeZeta(
     for (int m = 0; m < iNumLab; m++)
     {
         if (t == iNumPos - 1)
-            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)]);
+            fSum = logaddk(fSum, alpha[IDX2C(m, 0, iNumLab)]);
         else
-            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)] + pair_scores[m]);
+            fSum = logaddk(fSum, alpha[IDX2C(m, 0, iNumLab)] + pair_scores[m]);
     }
 
     gzeta[id] = fSum;
@@ -4725,7 +4717,7 @@ __global__ void _rcrfTransGrdComputeZeta(
         else
             fTmp = alpha[m];
 
-        fSum = logadd(fSum, pair_scores[m] + fTmp);
+        fSum = logaddk(fSum, pair_scores[m] + fTmp);
     }
 
     gzeta[id] = fSum;
@@ -4828,7 +4820,7 @@ __global__ void _reductionLogAddSum(
     {
         ElemType lSum = LZERO;
         if (tid < s){
-            lSum = logadd(partialLogAddSum[tid], partialLogAddSum[tid + s]);
+            lSum = logaddk(partialLogAddSum[tid], partialLogAddSum[tid + s]);
             partialLogAddSum[tid] = lSum;
         }
     }
@@ -4952,5 +4944,7 @@ __global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LON
         a[IDX2C(rowIdx, colIdx, numRows)] = val;
     }
 }
+
+}}}
 
 #endif // !CPUONLY

@@ -111,14 +111,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
         ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"");
 #endif
         ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"");
         ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
         ComputationNodePtr RowElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr ColumnElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
 #endif

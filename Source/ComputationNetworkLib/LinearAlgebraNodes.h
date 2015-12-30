@@ -304,7 +304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
@@ -742,7 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
     //

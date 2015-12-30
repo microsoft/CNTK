@@ -39,7 +39,7 @@
 
 MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
-namespace Microsoft { namespace MSR { namespace CNTK {    
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ElementWiseOperator -- This enum represents which function to apply.
