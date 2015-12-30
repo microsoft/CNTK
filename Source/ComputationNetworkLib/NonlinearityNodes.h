@@ -155,7 +155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // SigmoidNode (input) -- sigmoid non-linearity
     // -----------------------------------------------------------------------
 
-#ifdef ENABLE_TENSORVIEW
+#if 0//def ENABLE_TENSORVIEW
     template<class ElemType>
     class SigmoidNode : public UnaryElementWiseNode<ElemType>
     {

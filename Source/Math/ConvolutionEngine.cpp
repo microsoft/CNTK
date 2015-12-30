@@ -239,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
             assert(outT.n() == out.GetNumCols());
 
-            Mat o = out.ColumnSlice(0, out.GetNumCols());
+            Mat o = out.ColumnSlice(0, out.GetNumCols());   // same as .AsReference()
             Mat d = dst.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n());
             d.AssignSumOf(o.Reshaped(biasT.c(), outT.w() * outT.h() * outT.n()), bias);
         }
