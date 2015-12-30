@@ -235,7 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op)
     {
-        static int cc = 0; if (cc++ == 0)
+        //static int cc = 0; if (cc++ == 0)
             fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
 
         // prepare all tensor descriptor information as needed for execution
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op)
     {
-        static int cc = 0; if (cc++ == 0)
+        //static int cc = 0; if (cc++ == 0)
             fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
 
         array<size_t, 3> offsets;
@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op)
     {
-        static int cc = 0; if (cc++ == 0)
+        //static int cc = 0; if (cc++ == 0)
             fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
 
         array<size_t, 4> offsets;
