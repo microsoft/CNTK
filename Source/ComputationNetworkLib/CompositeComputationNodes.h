@@ -110,6 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows1, cols1;
             rows1 = Input(1)->GetNumRows();
@@ -124,10 +125,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
-            SetDims(rows, cols);
 
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInput(0);
+            SetDims(TensorShape(rows), cols);
+            m_sampleLayout = GetInputSampleLayout(0);
+            // BUGBUG: Inconsistent with 'rows'
         }
 
     public:
@@ -142,20 +143,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f1 = Input(1)->Value();
             func = Value();
 
-            Input(0)->SetDims(nInput0, nT);
+            Input(0)->SetDims1(nInput0, nT);
             Input(0)->UpdateFunctionValuesSize();
             Input(0)->Value().SetValue(0);
             Input(0)->Value()(0, 0) = 1;
             Input(0)->Value()(0, 1) = 2;
             Input(0)->Value()(0, 2) = 3;
 
-            Input(1)->SetDims(nInput1, nT);
+            Input(1)->SetDims1(nInput1, nT);
             Input(1)->UpdateFunctionValuesSize();
             Input(1)->Value().SetValue(0);
             Input(1)->Value()(0, 0) = 4;
             Input(1)->Value()(0, 1) = 5;
             Input(1)->Value()(0, 2) = 6;
-            SetDims(nInput0 + nInput1, nT);
+            SetDims1(nInput0 + nInput1, nT);
             UpdateFunctionValuesSize();
 
             ForwardProp(FrameRange(m_pMBLayout));
@@ -268,15 +269,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             if (!Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-                SetDims(Input(0)->GetNumRows(), 1);
+                SetDims(Input(0)->GetSampleLayout(), 1);
             else
                 VerifyDims(Input(0)->GetNumRows(), 1);
-            InferImageDimsFromInputs();
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -609,6 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (Input(0)->RequiresPreCompute())
             {
@@ -654,9 +655,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
             Input(1)->SetParameterUpdateRequired(false);
             Input(2)->SetParameterUpdateRequired(false);  //prevent learning
+
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
         }
     };
 
@@ -727,6 +727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (Input(0)->RequiresPreCompute())
             {
@@ -776,8 +777,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Input(2)->SetParameterUpdateRequired(false);
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
         }
     };
 
@@ -955,8 +954,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             if (isFinalValidationPass && !m_pMBLayout)
                 RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
+
             SetDims(Input(0));
-            InferImageDimsFromInput(0);
         }
 
     public:
@@ -971,13 +970,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f0 = Input(0)->Value();
             func = Value();
 
-            Input(0)->SetDims(nInput, nT);
+            Input(0)->SetDims1(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
             Input(0)->Value().SetValue(0);
             Input(0)->Value()(0, 0) = 1;
             Input(0)->Value()(0, 1) = 2;
             Input(0)->Value()(0, 2) = 3;
-            SetDims(nOutput, nT);
+            SetDims1(nOutput, nT);
             UpdateFunctionValuesSize();
             Input(0)->Value().TransferToDeviceIfNotThere( m_deviceId, true);
             ForwardProp(FrameRange(m_pMBLayout));

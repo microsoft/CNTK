@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(), 0);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
@@ -479,16 +479,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (isFinalValidationPass && Input(1)->GetNumRows() % Input(0)->GetNumCols() != 0)
                 InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
             int wordsInEachSample = Input(1)->GetNumRows() / Input(0)->GetNumCols();
 
-            SetDims(Input(0)->GetNumRows() * wordsInEachSample, Input(1)->GetNumCols());
-
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            // TODO: Should this add a tensor dimension?
+            SetDims(TensorShape(Input(0)->GetNumRows() * wordsInEachSample), Input(1)->GetNumCols());
         }
 
         bool UnitTest()
@@ -499,19 +498,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Input(0)->SetDims(nInput, nHidden);
+                Input(0)->SetDims1(nInput, nHidden);
                 Input(0)->UpdateFunctionValuesSize();
                 Input(0)->Value().SetValue(1.0);
                 Input(1)->Value().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Input(1)->Value().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Input(1)->SetDims(nHidden, nOutput);
+                Input(1)->SetDims1(nHidden, nOutput);
                 Input(1)->UpdateFunctionValuesSize();
                 Input(1)->Value().SetValue(0.0);
                 Input(1)->Value().SetValue(0, 0, 1.0);
                 Input(1)->Value().SetValue(1, 1, 2.0);
                 Input(1)->Value().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Input(1)->Value().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                SetDims(nInput, nOutput);
+                SetDims1(nInput, nOutput);
                 UpdateFunctionValuesSize();
 
                 ForwardProp(FrameRange(m_pMBLayout));

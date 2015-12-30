@@ -1050,7 +1050,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
                 scalar->Value().SetValue((ElemType)0.01);
-#ifndef ENABLE_TENSORVIEW
+#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
                 ComputationNodePtr scaled = builder.Scale(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
 #else
                 ComputationNodePtr scaled = builder.ElementTimes(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
@@ -2523,19 +2523,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_net->LabelNodes().push_back(label);
 
         ComputationNodePtr output;
+
+        // BUGBUG: Use of 'tinput' conflicts with some criteria that expect their top weight matrix transposed, e.g. [200 x 10000] with vocab size of 10000 instead of [10000 x 200].
+        //         E.g. ClassCrossEntropyWithSoftmax uses this, but that is incompatible with 'tinput.' Now 'tinput' is computed on demand, but if a criterion node is
+        //         used that needs it, we will still have this incompatibility.
         ComputationNodePtr tinput = input;
-        if (matrix != nullptr)
-            tinput = builder.Times(matrix, input);
 
         switch (m_trainCriterion)
         {
         case TrainingCriterion::CrossEntropyWithSoftmax:
+            if (matrix != nullptr)
+                tinput = builder.Times(matrix, input);
             output = builder.CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"") ? L"CrossEntropyWithSoftmax" : trainNodeName);
             break;
         case TrainingCriterion::SquareError:
+            if (matrix != nullptr)
+                tinput = builder.Times(matrix, input);
             output = builder.SquareError(label, tinput, (trainNodeName == L"") ? L"SquareError" : trainNodeName);
             break;
         case TrainingCriterion::Logistic:
+            if (matrix != nullptr)
+                tinput = builder.Times(matrix, input);
             output = builder.Logistic(label, tinput, (trainNodeName == L"") ? L"Logistic" : trainNodeName);
             break;
         case TrainingCriterion::CRF:
@@ -2564,6 +2572,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             switch (m_evalCriterion)
             {
             case EvalCriterion::CrossEntropyWithSoftmax:
+                if (matrix != nullptr && tinput == input)
+                    tinput = builder.Times(matrix, input);
                 //output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
                 output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
                 break;
@@ -2575,18 +2585,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName);
                 break;
             case EvalCriterion::SquareError:
+                if (matrix != nullptr && tinput == input)
+                    tinput = builder.Times(matrix, input);
                 //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
                 output = builder.SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
                 break;
             case EvalCriterion::Logistic:
+                if (matrix != nullptr && tinput == input)
+                    tinput = builder.Times(matrix, input);
                 //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
                 output = builder.Logistic(label, tinput, (evalNodeName == L"") ? L"Logistic" : evalNodeName);
                 break;
             case EvalCriterion::ErrorPrediction:
+                if (matrix != nullptr && tinput == input)
+                    tinput = builder.Times(matrix, input);
                 output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
                 break;
             case EvalCriterion::CRF:
                 assert(trans != nullptr);
+                if (matrix != nullptr && tinput == input)
+                    tinput = builder.Times(matrix, input);
                 output = builder.CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
                 break;
             default:

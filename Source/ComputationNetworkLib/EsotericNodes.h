@@ -71,6 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
 
             if (Input(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
@@ -86,16 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
 
-            SetDims(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(1), 1);
         }
     };
 
@@ -262,6 +254,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             if (isFinalValidationPass)
                 if (!(Input(1)->GetNumRows() == Input(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
@@ -271,16 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                 }
-            // BUGBUG: Not resizing FunctionValues?
-
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
+            // BUGBUG: No SetDims()?
             m_sampleLayout = TensorShape();
         }
     };
@@ -502,9 +486,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UpdateStride(sliceInput1Value);
 
             if (m_strideDim == 0)
-                SetDims(rows0 / GetNumParallelSequences(), cols1);
-            if (m_strideDim == 1)       // TODO: no else??
-                SetDims(rows0, cols1);
+                SetDims(TensorShape(rows0 / GetNumParallelSequences()), cols1);
+            else
+                SetDims(Input(0)->GetSampleLayout(), cols1);
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
@@ -594,6 +578,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            LinkToMBLayout(Input(1)->GetMBLayout());   // retains the layout of the right input
 
             if (Input(2)->Value().GetNumElements() != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
@@ -611,26 +596,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (isFinalValidationPass && rows1 != cols0)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
                 size_t T1 = rows0 / m_stride;
-                SetDims(T1, cols1);
+                SetDims(TensorShape(T1), cols1);
+                //after multiplication the structure is lost
             }
 
             else // by col
             {
                 if (isFinalValidationPass && cols0 != rows1 * m_stride)
                     RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", (int)m_strideDim, (int)cols0, (int)rows1);
-                SetDims(rows0, cols1);
+                SetDims(TensorShape(rows0), cols1);
+                //after multiplication the structure is lost
             }
-            LinkToMBLayout(Input(1)->GetMBLayout());   // retains the layout of the right input
 
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
-
-            //after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
         }
     };
 
@@ -654,7 +631,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t row_size, size_t col_size)
         {
             CreateMatrixIfNull(m_value);
-            SetDims(row_size, col_size);
+            SetDims(TensorShape(row_size), col_size);
             UpdateFunctionValuesSize();
         }
     public:
@@ -702,13 +679,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
                 SetDims(Input(0));
-
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+            else
+                SetDims(Input(0)->GetSampleLayout(), 0);
         }
     };
 
@@ -1211,7 +1188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t outputDim = Input(1)->GetNumRows();
 
             {
-                SetDims(outputDim, nT);
+                SetDims1(outputDim, nT);
                 Value().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
                 m_State.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
@@ -1529,9 +1506,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
 
             if (Input(0)->Value().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
@@ -1581,7 +1556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            SetDims(noutdim, nT);
+            SetDims(TensorShape(noutdim), nT);
             Value().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
         }
 
@@ -1618,18 +1593,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < nT; i++)
                     target(0, i) = 1;
 
-                Input(0)->SetDims(nInput, nT);
+                Input(0)->SetDims1(nInput, nT);
                 Input(0)->Value().SetValue(ConstOnes(nInput, nT, m_deviceId));
                 Input(0)->Value().SetValue((ElemType)0.1);
-                Input(1)->SetDims(nHidden, nInput + nOutput + 2);
+                Input(1)->SetDims1(nHidden, nInput + nOutput + 2);
                 Input(1)->Value().SetValue((ElemType)0.1);
-                Input(2)->SetDims(nHidden, nInput + nHidden + 2);
+                Input(2)->SetDims1(nHidden, nInput + nHidden + 2);
                 Input(2)->Value().SetValue((ElemType)0.1);
-                Input(3)->SetDims(nOutput, nInput + nHidden + 2);
+                Input(3)->SetDims1(nOutput, nInput + nHidden + 2);
                 Input(3)->Value().SetValue((ElemType)0.1);
-                Input(4)->SetDims(nOutput, nHidden + nInput + 1);
+                Input(4)->SetDims1(nOutput, nHidden + nInput + 1);
                 Input(4)->Value().SetValue((ElemType)0.1);
-                SetDims(nOutput, nT);
+                SetDims1(nOutput, nT);
 
                 m_DefaultState = 0.0;
                 ForwardProp(FrameRange(m_pMBLayout));
@@ -1689,11 +1664,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fprintf(stderr, "LSTMNode unit test passed!\n");
             return true;
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(1, false);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override

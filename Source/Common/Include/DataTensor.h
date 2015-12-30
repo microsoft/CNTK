@@ -11,6 +11,7 @@
 #include "File.h"
 #include <vector>
 #include <string>
+#include <array>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -83,23 +84,90 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - Matrix lib will contain overloads for relevant operations that take Tensor& instead of Matrix&.
     //  - elementwise ops will go through a single bottleneck function that deals with matching dimensions (extend, broadcast) and flattening
 
+#if 1
+    template<typename T>
+    class SmallVector
+    {
+        T m_data[12];
+        size_t m_size;
+    public:
+        size_t capacity() const { return _countof(m_data); }
+        size_t size() const { return m_size; }
+        const T * data() const { return m_data; }
+        void clear() { m_size = 0; }
+        void push_back(const T & val) { if (m_size >= capacity()) LogicError("SmallVector: push_back() exceeded capacity of %d", (int)capacity()); m_data[m_size++] = val; }
+        void resize(size_t sz, const T & val) { if (sz < m_size) m_size = sz; else while (m_size < sz) push_back(val); }
+        void assign(size_t sz, const T & val) { clear(); resize(sz, val); }
+        template<class ITER>
+        void append(ITER beg, const ITER & end) { while (beg != end) push_back(*beg++); }
+        template<class ITER>
+        void assign(ITER beg, const ITER & end) { clear(); append(beg,end); }
+        void operator=(const SmallVector & other) { m_size = other.m_size; memcpy(m_data, other.m_data, other.m_size * sizeof(T)); }
+        SmallVector(const SmallVector & other) { *this = other; }
+        SmallVector(size_t sz, const T & val) { assign(sz, val); }
+        SmallVector(size_t sz) : SmallVector(sz, 0) { }
+        SmallVector() : SmallVector(0) { }
+        SmallVector(const std::vector<T>           & v) { assign(v.begin(), v.end()); }
+        SmallVector(const std::initializer_list<T> & l) { assign(l.begin(), l.end()); }
+        bool operator==(const SmallVector & other) const { return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T)); }
+        bool operator!=(const SmallVector & other) const { return !operator==(other); } // duh
+        T   operator[](size_t i) const { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
+        T & operator[](size_t i)       { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
+        const T * begin() const { return data(); }
+        const T *   end() const { return data() + size(); }
+        T   back() const { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
+        T & back()       { if (empty()) LogicError("SmallVector: back() called on empty vector"); return m_data[m_size - 1]; }
+        bool empty() const { return size() == 0; }
+        void resize(size_t sz) { resize(sz, 0); }
+    };
+#else
+    template<typename T>
+    class SmallVector : vector<T>
+    {
+        typedef vector<T> Base;
+    public:
+        SmallVector() { }
+        SmallVector(SmallVector && other) : Base(std::move(other)) { }
+        SmallVector(const SmallVector & other) : Base(other) { }
+        SmallVector(size_t sz) : Base(sz) { }
+        SmallVector(size_t sz, const T & val) : Base(sz, val) { }
+        SmallVector(const std::initializer_list<T> & l) : Base(l) { }
+        SmallVector(const std::vector<T> & v) : Base(v) { }
+        template<class ITER>
+        void assign(const ITER & beg, const ITER & end) { Base::assign(beg, end); }
+        void assign(size_t sz, const T & val) { Base::assign(sz, val); }
+        template<class ITER>
+        void append(ITER beg, const ITER & end) { Base::insert(Base::end(), beg, end); }
+        void push_back(const T & val) { Base::push_back(val); }
+        size_t size() const { return Base::size(); }
+        bool empty() const { return size() == 0; }
+        void resize(size_t sz) { Base::resize(sz); }
+        void resize(size_t sz, const T & val) { Base::resize(sz, val); }
+        const T * begin() const { return Base::data(); }
+        const T *   end() const { return Base::data() + size();   }
+        const T & back() const { return Base::back(); }
+        void operator=(const SmallVector & other) { Base::operator=(other); }
+        bool operator==(const SmallVector & other) const { return (const Base&)*this == (const Base&)other; }
+        T operator[](size_t i) const { return Base::operator[](i); }
+        T & operator[](size_t i) { return Base::operator[](i); }
+    };
+#endif
+
     struct TensorShape
     {
     public:
         // main constructor (from vector that holds dimensions)
-        //template<class VEC>
-        //TensorShape(const VEC & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
         template<size_t N>
         TensorShape(const std::array<size_t, N> & dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
-        TensorShape(const std::vector<size_t> &   dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
-        TensorShape(      std::vector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
+        TensorShape(const SmallVector<size_t> &   dims) { m_dims.assign(dims.begin(), dims.end()); InitAsNoSlice(); }
+        TensorShape(      SmallVector<size_t> &&  dims) : m_dims(std::move(dims)) { InitAsNoSlice(); }
 
         // convenience constructors, e,g. for test code
-        explicit TensorShape(size_t I) : TensorShape(std::vector<size_t> { I }) { }
-        TensorShape(size_t I, size_t J) : TensorShape(std::vector<size_t> { I, J }) { }
-        TensorShape(size_t I, size_t J, size_t K) : TensorShape(std::vector<size_t> { I, J, K }) { }
-        TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(std::vector<size_t> { I, J, K, L }) { }
-        TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(std::vector<size_t> { I, J, K, L, M }) { }
+        explicit TensorShape(size_t I) : TensorShape(SmallVector<size_t> { I }) { }
+        TensorShape(size_t I, size_t J) : TensorShape(SmallVector<size_t> { I, J }) { }
+        TensorShape(size_t I, size_t J, size_t K) : TensorShape(SmallVector<size_t> { I, J, K }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L) : TensorShape(SmallVector<size_t> { I, J, K, L }) { }
+        TensorShape(size_t I, size_t J, size_t K, size_t L, size_t M) : TensorShape(SmallVector<size_t> { I, J, K, L, M }) { }
 
         // default constructor
         TensorShape() { InitAsNoSlice(); }
@@ -164,20 +232,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // accessors
         size_t GetDim(size_t k) const { return m_dims[k]; }
         size_t GetRank() const { return m_dims.size(); }
-        size_t GetNumElements() const { size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
+        size_t GetNumElements() const { if (m_dims.empty()) return 0; size_t res = 1; for (auto & dim : m_dims) res *= dim; return res; } // in slice
+        size_t GetAllocation() const { return m_allocation; }
         size_t GetOffset() const { return m_offset; }
 
         // vector-like accessors
         size_t operator[](size_t k) const { return GetDim(k); }
         size_t size() const { return GetRank(); }
 
-        const std::vector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
-        const std::vector<ptrdiff_t> & GetStrides() const { return m_strides; }
+        const SmallVector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
+        const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
-        size_t GetNumChannels() const { return m_dims.size() > 0 ? m_dims[0] : 1; }
-        size_t GetWidth()       const { return m_dims.size() > 1 ? m_dims[1] : 1; }
-        size_t GetHeight()      const { return m_dims.size() > 2 ? m_dims[2] : 1; }
+        size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
+        size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
+        size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
         // heuristics used for pretty-printing
         // TODO: This will go away.
         bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
@@ -186,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // indexing
         // Determines the offset into the underlying element array for a given multi-dimensional index.
         // This function is for reference. Probably not often used.
-        size_t Locate(const std::vector<size_t> & index) const
+        size_t Locate(const SmallVector<size_t> & index) const
         {
             ptrdiff_t location = m_offset;
             for (size_t k = 0; k < index.size(); k++)
@@ -213,11 +282,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 return m_strides[k] == m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1];
         }
-        // editing functions
-        // These all create new TensorShape objects.
-        TensorShape Flatten(size_t k) const  // flatten [k] with [k-1]
+        // editing functions for tensor operations
+        // Unlike other methods, these are in-place.
+        TensorShape & FlattenInPlace(size_t k)  // flatten [k] with [k-1]
         {
-            TensorShape result = *this;
             if (!CanFlatten(k))
                 LogicError("Flatten() cannot flatten dimensions with gaps");
             // We reshape local (I x J) sub-matrices to (1 x I*J) sub-matrices.
@@ -228,16 +296,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //   m_dims    =   I   1    J*K   L
             //   m_strides =   1   I    I     I*J*K
             // TODO: rethink whether this is correct for example of negative strides
-            result.m_dims[k] *= result.m_dims[k - 1];
-            result.m_dims[k - 1] = 1;
-            result.m_strides[k] = /*result.m_dims[k - 1] *, it's 1 */ result.m_strides[k - 1];
-            return result;
+            m_dims[k] *= m_dims[k - 1];
+            m_dims[k - 1] = 1;
+            m_strides[k] = /*m_dims[k - 1] *, it's 1 */ m_strides[k - 1];
+            return *this;
         }
-        TensorShape DropDims(const std::vector<bool> & toDrop) const  // remove dimension
+        TensorShape & DropDimsInPlace(const SmallVector<bool> & toDrop)   // remove dimension
         {
             // this deletes a dimension while retaining strides
             // This implies a slice to [0] for this dimension.
-            TensorShape result = *this;
             size_t j = 0;
             for (size_t k = 0; k < size(); k++)
             {
@@ -251,40 +318,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // dropping the second dimension
                     //   m_dims    =   I   %    J   K
                     //   m_strides =   1   %    I   I*J
-                    result.m_dims[j] = result.m_dims[k];
-                    result.m_strides[j] = result.m_strides[k];
+                    m_dims[j]    = m_dims[k];
+                    m_strides[j] = m_strides[k];
                     j++;
                 }
             }
-            result.m_dims.resize(j);
-            result.m_strides.resize(j);
-            return result;
+            m_dims.resize(j);
+            m_strides.resize(j);
+            return *this;
         }
-        TensorShape WithBroadcastStrides() const  // flatten [k] with [k-1] if toFlatten[k] is set
+        TensorShape DropDims(const SmallVector<bool> & toDrop) const
         {
-            TensorShape result = *this;
-            for (size_t k = 0; k < size(); k++)
-                if (result.m_dims[k] == 1)
-                    result.m_strides[k] = 0;
+            TensorShape result(*this);
+            result.DropDimsInPlace(toDrop);
             return result;
         }
-        TensorShape Pad(size_t numDims) const               // append singleton dimensions
+        TensorShape & SetBroadcastStrides()   // set strides to 0 for broadcasting dimensions
+        {
+            for (size_t k = 0; k < size(); k++)
+                if (m_dims[k] == 1)
+                    m_strides[k] = 0;
+            return *this;
+        }
+        TensorShape & PadInPlace(size_t numDims)                // append singleton dimensions
         {
             VerifyIsDense();
             if (numDims < GetRank())
                 LogicError("Pad() cannot drop a shorten the dimensions.");
-            else if (numDims == GetRank())
-                return *this;
-            auto dims = GetDims();
-            dims.resize(numDims, 1);
-            return TensorShape(std::move(dims));
+            else while (GetRank() < numDims)
+            {
+                m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
+                m_dims.push_back(1);
+            }
+            return *this;
         }
-        TensorShape Concat(const TensorShape & other) const // concatenate
+        //TensorShape Concat(const TensorShape & other) const // concatenate
+        //{
+        //    auto dims = GetDims();
+        //    auto otherDims = other.GetDims();
+        //    dims.append(otherDims.begin(), otherDims.end());
+        //    return TensorShape(std::move(dims));
+        //}
+        TensorShape & AppendInPlace(size_t rank, size_t newDim)  // concatenate one new dimension at position 'rank'
         {
-            auto dims = GetDims();
-            auto otherDims = other.GetDims();
-            dims.insert(dims.end(), otherDims.begin(), otherDims.end());
-            return TensorShape(std::move(dims));
+            PadInPlace(rank);
+            m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
+            m_dims.push_back(newDim);
+            m_allocation *= newDim;
+            return *this;
+        }
+        TensorShape Append(size_t rank, size_t newDim) const
+        {
+            TensorShape result(*this);
+            result.AppendInPlace(rank, newDim);
+            return result;
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
@@ -322,8 +409,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        std::vector<size_t> m_dims;     // dimensions of tensor or tensor slice. The size of the box.
-        std::vector<ptrdiff_t> m_strides; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
+        SmallVector<size_t> m_dims;     // dimensions of tensor or tensor slice. The size of the box.
+        SmallVector<ptrdiff_t> m_strides; // dimension gets multiplied by this for computing the index offset. How to hop to the next element in dimension[k]. Stride magic happening here!
         size_t m_offset;                // offset to element(0,0,...,0). May be non-0 in case of slicing.
         size_t m_allocation;            // allocation size of original dense tensor
         // For a regular tensor, there are no strides, m_strides[k] = m_strides[k-1] * m_dims[k-1]. This is how TensorShapes are created from dimensions.

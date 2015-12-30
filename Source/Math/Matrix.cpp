@@ -5176,8 +5176,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 2> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a);
 
@@ -5193,8 +5193,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 3> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a, b);
 
@@ -5210,8 +5210,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 4> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a, b, c);
 

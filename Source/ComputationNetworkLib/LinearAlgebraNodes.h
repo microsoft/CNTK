@@ -44,8 +44,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
 #ifdef ENABLE_TENSORVIEW
+            // BUGBUG: This gives us a huge perf hit for Image/QuickE2E.
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
@@ -122,9 +123,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-#if 0//def ENABLE_TENSORVIEW
+#ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoSumOf(0.0f, input0, input1, 1.0f);
@@ -215,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
 #ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
@@ -270,7 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#"); }
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoDifferenceOf(0.0f, input0, input1, 1.0f);
@@ -306,11 +307,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
-    // Identical to ElementTimesnNode with tensor lib (broadcasting). Can be removed.
+    // Identical to ElementTimesNode with tensor lib (broadcasting). Can be removed.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -326,6 +327,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
+#if 0//def ENABLE_TENSORVIEW    // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+            if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
+                Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+#else
             if (inputIndex == 0)        // left derivative
             {
                 // this is a reduction over frames, so we must mask gaps to zero
@@ -336,6 +351,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Value()/*1x1*/, GradientFor(fr), 1.0f, sliceInput1Grad);
             }
+#endif
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -347,25 +363,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
+#ifdef ENABLE_TENSORVIEW
+            static int c = 0; if (c++ == 0) { fprintf(stderr, "#SCALE#"); }
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+#else
             ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
+#endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
-            // left Node must be a scalar
+            // left node must be a scalar
             if (isFinalValidationPass && (Input(0)->GetNumRows() != 1 || Input(0)->GetNumCols() != 1))
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
 
             SetDims(Input(1));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(1); 
         }
     };
 
@@ -494,6 +513,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            if (isFinalValidationPass && Input(0)->HasMBLayout())
+                InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
+            InferMBLayoutFromInputsForStandardCase();
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -515,20 +537,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumCols())
                 LogicError("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)Input(1)->GetNumRows(), (int)Input(0)->GetNumCols());
-            SetDims(rows0, cols1);
 
-            if (isFinalValidationPass && Input(0)->HasMBLayout())
-                InvalidArgument("%ls %ls operation requires the first factor to not be minibatch data (must not have an MBLayout).", NodeName().c_str(), OperationName().c_str());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs()  
-        {
-            InferImageDimsFromInput(1, false); // the second one is the input since it's columnwise
-
+            // TODO: With tensors, inner dimensions must match.
             // after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
+            SetDims(TensorShape(rows0), cols1);
         }
 
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -636,6 +648,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -654,17 +667,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Input(1)->GetNumRows() != Input(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
 
-            SetDims(cols0, cols1);
-            InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
-
+            // TODO: What should the tensor story be?
             //after multiplication the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumRows());
+            SetDims(TensorShape(cols0), cols1);
         }
     };
 
@@ -692,17 +697,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef ENABLE_TENSORVIEW
             size_t rank = DetermineElementwiseTensorRank();
-            // depending on inputIndex, inputs swap their meaning
-            // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
-            // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
-            auto gradient = GradientTensorFor(rank, fr);
+            auto gradient        =                     GradientTensorFor(rank, fr);
             auto inputGradient   =  Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
             auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
 
             // if reduction then mask the respective input(s) (zero out the gaps)
             if (Input(inputIndex)->GetNumCols() < GetNumCols())
                 MaskMissingGradientColumnsToZero(fr);
-            if (Input(1 - inputIndex)->GetNumCols() < GetNumCols())
+            if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
                 Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
             inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
@@ -725,7 +727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#"); }
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
+            auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
             result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
@@ -743,7 +745,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
-#ifndef ENABLE_TENSORVIEW
+#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
     //
@@ -857,6 +859,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
             size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols(); rows0;
@@ -864,14 +867,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // input 0 is the matrix and input 1 is a row vector
-            InferImageDimsFromInput(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1007,6 +1002,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1022,14 +1018,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
             SetDims(Input(0));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // input 0 is a matrix and input 1 is a column vector
-            InferImageDimsFromInput(0);
         }
 
         //request matrices that are needed for gradient computation
@@ -1107,6 +1095,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //if dimension not specified we assume two operands' dimensions should match
             if (Input(0)->GetNumRows() == 0 && Input(1)->GetNumRows() != 0)
@@ -1124,14 +1113,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
-            SetDims(Input(0)->GetNumRows(), Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs() //this is element wise scaling, so based on child 1
-        {
-            InferImageDimsFromInput(1);
+            // TODO: Should Input(0) have a specific tensor structure? E.g. match Input(1)?
+            SetDims(Input(1));
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1211,17 +1194,9 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-        }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(1), 1);
         }
     };
 
@@ -1280,17 +1255,9 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(1, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(1), Input(0)->GetNumCols());    // each column is reduced to a scalar
         }
     };
 
@@ -1366,22 +1333,14 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-
-            SetDims(cols0, rows0);
             if (Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
-        }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
-
-            // after transposition, the structure is lost
-            m_sampleLayout = TensorShape(Input(0)->GetNumCols());
+            if (Input(0)->HasSampleLayout())    // must be a plain matrix without tensor substructure
+                InvalidArgument("%ls %ls operation cannot operate on input tensors", NodeName().c_str(), OperationName().c_str());
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+            SetDims(TensorShape(cols0), rows0);
         }
     };
 
@@ -1410,16 +1369,6 @@ private:
             {
                 auto node = dynamic_pointer_cast<DiagonalNode<ElemType>>(nodeP);
             }
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, true);
-
-            m_sampleLayout = TensorShape(m_sampleLayout.GetHeight());
-
-            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
-                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
@@ -1464,8 +1413,10 @@ private:
             if (isFinalValidationPass && dim != Input(0)->GetNumRows())
                 InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
 
-            SetDims(1, dim);
-            InferImageDimsFromInputs();
+            if (Input(0)->HasSampleLayout())
+                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+
+            SetDims(TensorShape(1), dim);
         }
 
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -1572,6 +1523,8 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
             ValidateInferBinaryInputDims();
 
 #if 0
@@ -1579,16 +1532,9 @@ private:
                 LogicError("%ls %ls operation: The input dimensions do not match.", NodeName().c_str(), OperationName().c_str());
 #endif
 
-            SetDims(1, Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void InferImageDimsFromInputs() 
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
+            // TODO: We could do something more interesting with tensors.
+            //       E.g. apply a cos distance of a whole set of data with a single reference.
+            SetDims(TensorShape(1), Input(1)->GetNumCols());
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1695,7 +1641,7 @@ private:
         {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
@@ -1710,17 +1656,9 @@ private:
             if (isFinalValidationPass && !HasMBLayout() && Input(1)->GetNumCols() != Input(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
 
-            SetDims(rows0 * rows1, Input(0)->GetNumCols());
-        }
-
-        virtual void InferImageDimsFromInputs()  
-        {
-            // since it's symmetrical any one of the input may be the true input. 
-            // since we dont' use the input image size info in the operation, the input part doesn't matter.
-            InferImageDimsFromInput(1, false); 
-
             // after KhatriRaoProduct the structure is lost
-            m_sampleLayout = TensorShape(m_value->GetNumRows());
+            // TODO: ^^ Is that correctWhat is the correct sample layout?
+            SetDims(TensorShape(rows0 * rows1), Input(0)->GetNumCols());
         }
     };
 
@@ -1911,9 +1849,10 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             //if dimension is missing make the two operatants to have same size
-            // TODO: use a for loop??
+            // TODO: use a for loop?? Or don't we have a function for this?
             size_t index = 0;
             {
                 size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
@@ -1938,16 +1877,8 @@ private:
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Input(3)->Get00Element();
 
-            SetDims(negNumber + 1, Input(1)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
+            // TODO: This calls for a tensor representation!
+            SetDims(TensorShape(negNumber + 1), Input(1)->GetNumCols());
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

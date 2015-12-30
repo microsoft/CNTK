@@ -46,13 +46,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DECL ElemType Sigmoid(ElemType z)
     {
-        if (z >= 0)
+#if 1   // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
+        ElemType q = exp_(-fabs_(z));
+        ElemType numer;
+        if (z > 0)                      // q = exp(-z)
+            numer = 1;
+        else                            // q = exp(z)
+            numer = q;
+        return numer / (1 + q);
+#else   // Reference code:
+        if (z > 0)
             return 1 / (1 + exp_(-z));
         else
         {
             ElemType v = exp_(z);
             return v / (1 + v);
         }
+#endif
     }
 
     template<class ElemType>
@@ -116,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma push_macro("DefBinaryOp")
     #define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a, ElemType b) { return expr; }
 
-    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a*b); DefBinaryOp(ElementwiseQuotient, a / b);
+    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a * b); DefBinaryOp(ElementwiseQuotient, a / b);
     DefBinaryOp(LogSum, LogAdd(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
     DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
     DefBinaryOp(MaskNegative, b >= 0 ? a : 0);

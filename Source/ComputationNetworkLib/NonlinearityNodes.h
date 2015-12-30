@@ -165,6 +165,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
+#ifdef ENABLE_TENSORVIEW
+        // TODO: Once tensor lib works, we will change all nodes in here to use it. Then move ForwardProp() and BackpropTo() from here into base.
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result =           ValueTensorFor(rank, fr);
+            auto input  = Input(0)->ValueTensorFor(rank, fr);
+            ForwardPropV(input, result);
+        }
+
+        /*virtual*/ void ForwardPropV(const TensorView<ElemType>& input, TensorView<ElemType>& result) //override
+        {
+            result.AssignSigmoidOf(input);
+        }
+
+        virtual void /*IComputationNode::*/BeginBackprop() override             // called before first iteration step of ComputeGradient()
+        {
+            m_gradientTemp->Resize(GetNumRows(), GetNumCols());
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            assert(inputIndex == 0); inputIndex;
+
+            // get the args
+            // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
+            size_t rank = DetermineElementwiseTensorRank();
+            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);   // propagate from this one...
+            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);   // ...to this one
+            auto sliceInputValue  = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueTensorFor(rank, fr) : TensorView<ElemType>();
+            auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ?           ValueTensorFor(rank, fr) : TensorView<ElemType>();
+
+            // do the actual operation
+            // TODO: Once all is unified then make the order of arguments more logical (in -> out)
+            BackpropToV(DataTensorFor(*m_gradientTemp, rank, fr), sliceInputValue, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        /*virtual*/ void BackpropToV(TensorView<ElemType> gradient, const TensorView<ElemType>& inputFunctionValues, TensorView<ElemType> inputGradientValues, const TensorView<ElemType>& gradientValues, const TensorView<ElemType>& functionValues)
+        {
+            gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
+            inputGradientValues.AddElementwiseProductOf(gradientValues, gradient);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+#else
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The Sigmoid node does not require any of it's input's values for computing
@@ -172,6 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UNREFERENCED_PARAMETER(childIndex);
             return false;
         }
+#endif
 
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
@@ -786,6 +832,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
@@ -809,16 +856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
-            SetDims(1, cols[3]);
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(3, false);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(1), cols[3]);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
