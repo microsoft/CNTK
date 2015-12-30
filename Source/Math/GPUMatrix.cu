@@ -4456,17 +4456,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
         if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
         {
-if(op==1)fprintf(sterr, "LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
+if(op==1)fprintf(stderr, "LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
             return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
-if(op==1)fprintf(sterr, "Done LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
+if(op==1)fprintf(stderr, "Done LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
         }
 
         // regular case
         else
         {
-if(op==1)fprintf(sterr, "TensorOpN<2> %d\n", (int)regularOpDims[0]);
+if(op==1)fprintf(stderr, "TensorOpN<2> %d\n", (int)regularOpDims[0]);
             return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-if(op==1)fprintf(sterr, "Done TensorOpN<2> %d\n", (int)regularOpDims[0]);
+if(op==1)fprintf(stderr, "Done TensorOpN<2> %d\n", (int)regularOpDims[0]);
         }
     }
 
