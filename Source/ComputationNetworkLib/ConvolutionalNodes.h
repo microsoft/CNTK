@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        // BUGBUG: Should not be here. Use PlusNode and m_sampleLayout.
+        // BUGBUG: Should not be here. Use PlusNode and m_sampleLayout.  TODO: Bad naming:'output' is actually an 'input'
         void AddBias(const Matrix<ElemType>& output, const Matrix<ElemType>& bias, Matrix<ElemType>& dst)
         {
             assert(m_convEng != nullptr);
