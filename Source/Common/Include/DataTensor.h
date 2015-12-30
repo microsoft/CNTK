@@ -90,12 +90,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         T m_data[12];
         size_t m_size;
-        void DebugWipe()
-        {
 #ifdef _DEBUG
-            memset(m_data, 0, sizeof(m_data)); // initialize to 0 to make it look prettier in the debugger
+        void DebugWipe() { memset(m_data, 0, sizeof(m_data)); } // initialize to 0 to make it look prettier in the debugger
+#else
+        void DebugWipe() { }
 #endif
-        }
     public:
         size_t capacity() const { return _countof(m_data); }
         size_t size() const { return m_size; }

@@ -465,6 +465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             const SmallVector<size_t> & regularOpDims,       const array<SmallVector<ptrdiff_t>, N> & regularStrideVectors,
                                             const SmallVector<size_t> & reducingOpDimVector, const array<SmallVector<ptrdiff_t>, N> & reducingStrideVectors)
     {
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         // copy all parameters to CUDA-compatible data structures
         FixedArray<ElemType*, N> pointers(pointerVector);
         SmallVector<C_size_t> regularOpStrideVector;    // kernel needs the strides for converting thread index back to multi-dimensional tensor index
@@ -479,11 +480,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FixedArray<C_unsigned_int, M> reducingOpDims(reducingOpDimVector);
         FixedMatrix<C_int, N, M> reducingStrides(reducingStrideVectors);
 
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         // launch the kernel
         CUDA_LONG NN = (CUDA_LONG)numElements;      // linear space identifying each individual input element
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
 
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         // do some optimization for reductions
         // Cases:
         //  - #output elements >= GPU procs  -->  use one proc per element, do reduction in inner loop
@@ -503,9 +506,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
             reductionDim *= (C_size_t)reducingOpDimVector[k];
         let & props = GridDim::GetDeviceProps();
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         GridDim grid(NN);
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         if (reductionDim > 1 && grid.m_blocksPerGrid < props.multiProcessorCount  /*    && NN == 10 && reductionDim <= GridDim::maxThreadsPerBlock*/)
         {
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             // we are reducing and are underutilizing the multiprocs we have: get more parallelism by doing reduction in parallel
             // Change of strategy: All NN elements get their own block. Reduction gets split over blocks as well.
 
@@ -513,6 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We increase #blocks by that factor by breaking reduction into that many chunks.
             let numReductionChunks = CeilDiv(props.multiProcessorCount, NN);
 
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             // NN may be too large for a single dimension
             let blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
             let numBlocksX = CeilDiv(NN, blockXOverBy);
@@ -526,26 +533,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
             let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             if (beta == 1 || numBlocksZ == 1)
             {
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
                 _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             }
             else
             {
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
                 // We need more than one chunk, we will use atomicAdd().
                 // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
                 _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
                 _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             }
         }
         else
         {
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             // we got enough elements to generate: do one element per thread, and reduction inside
             _launchTensorOp<ElemType, N, M, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, grid.m_N, reducingOpDims, reducingStrides);
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
         }
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
     }
 
     // -----------------------------------------------------------------------
@@ -588,6 +603,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
     {
+if (op == 1)fprintf(stderr, "LaunchUnaryTensorOp: %d", (int)__LINE__);
         CUDA_LONG NN = (CUDA_LONG)regularOpDim;
 
         #define CaseLaunchUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: \
