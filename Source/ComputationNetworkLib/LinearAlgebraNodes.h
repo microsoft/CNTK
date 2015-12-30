@@ -54,10 +54,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MaskMissingGradientColumnsToZero(fr);
 
             inputGradient.AddCopyOf(gradient);
-#if 0
-            if (Input(inputIndex)->GetNumCols() < GetNumCols())
-                Input(inputIndex)->Gradient().Print("PlusNode BackProp with reduction");
-#endif
 #else
             Matrix<ElemType> gradientValues = GradientFor(fr);
             Matrix<ElemType> functionValues = ValueFor(fr);
@@ -132,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.DoSumOf(0.0f, input0, input1, 1.0f);
+            result.AssignSumOf(input0, input1);
 #else
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
@@ -275,7 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.DoDifferenceOf(0.0f, input0, input1, 1.0f);
+            result.AssignDifferenceOf(input0, input1);
 #else
             Matrix<ElemType> functionValues = ValueFor(fr);
             Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
@@ -308,7 +304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
-#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
@@ -328,7 +324,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-#if 0//def ENABLE_TENSORVIEW    // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
+#ifdef ENABLE_TENSORVIEW    // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient = GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -340,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
                 Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
 #else
             if (inputIndex == 0)        // left derivative
             {
@@ -370,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto result = ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+            result.AssignElementwiseProductOf(input0, input1);
 #else
             ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
 #endif
@@ -708,7 +704,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
                 Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-            inputGradient.DoElementwiseProductOf(1.0f/*add to*/, gradient, otherInputValue, 1.0f);
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
 #else
             Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
@@ -731,7 +727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
             auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.DoElementwiseProductOf(0.0f, input0, input1, 1.0f);
+            result.AssignElementwiseProductOf(input0, input1);
 #else
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
@@ -746,7 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
-#if 1// change once we no longer see a perf hit to #ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // RowElementTimesNode (left, right)  --TODO: what are left and right?
     //
