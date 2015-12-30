@@ -1571,6 +1571,31 @@ protected:    /* some boilerplate goes here */ \
     // =======================================================================
 
     // -----------------------------------------------------------------------
+    // UnaryElementWiseNode (operand)
+    //
+    // unary elementwise operations that are implemented with the tensor lib
+    //
+    // Derived clases only need to override ForwardProp() and BackpropTo().
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class UnaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        UnaryElementWiseNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+    };
+
+#define UsingUnaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
+
+    // -----------------------------------------------------------------------
     // BinaryElementWiseNode (operand1, operand2)
     //
     // binary elementwise operations that are implemented with the tensor lib
@@ -1598,13 +1623,9 @@ protected:    /* some boilerplate goes here */ \
 #endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-        {
-            // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
+        // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
+        // the gradients of its input nodes
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
         virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {

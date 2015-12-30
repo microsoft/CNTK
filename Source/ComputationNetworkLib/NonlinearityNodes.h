@@ -117,7 +117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(RectifiedLinearNode);
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
@@ -155,35 +155,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // SigmoidNode (input) -- sigmoid non-linearity
     // -----------------------------------------------------------------------
 
+#ifdef ENABLE_TENSORVIEW
     template<class ElemType>
-    class SigmoidNode : public NonlinearityNodeBase<ElemType>
+    class SigmoidNode : public UnaryElementWiseNode<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
         static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
-#ifdef ENABLE_TENSORVIEW
-        // TODO: Once tensor lib works, we will change all nodes in here to use it. Then move ForwardProp() and BackpropTo() from here into base.
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);
             auto input  = Input(0)->ValueTensorFor(rank, fr);
-            ForwardPropV(input, result);
-        }
-
-        /*virtual*/ void ForwardPropV(const TensorView<ElemType>& input, TensorView<ElemType>& result) //override
-        {
             result.AssignSigmoidOf(input);
-        }
-
-        virtual void /*IComputationNode::*/BeginBackprop() override             // called before first iteration step of ComputeGradient()
-        {
-            m_gradientTemp->Resize(GetNumRows(), GetNumCols());
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -193,26 +182,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get the args
             // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
             size_t rank = DetermineElementwiseTensorRank();
-            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);   // propagate from this one...
-            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);   // ...to this one
-            auto sliceInputValue  = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueTensorFor(rank, fr) : TensorView<ElemType>();
-            auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ?           ValueTensorFor(rank, fr) : TensorView<ElemType>();
+            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);  // propagate from this one...
+            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);  // ...to this one
+            auto sliceInputValue  = Input(0)->ValueTensorFor(rank, fr);
+            //auto sliceInputValue  = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueTensorFor(rank, fr) : TensorView<ElemType>();
+            //auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ?           ValueTensorFor(rank, fr) : TensorView<ElemType>();
 
             // do the actual operation
-            // TODO: Once all is unified then make the order of arguments more logical (in -> out)
-            BackpropToV(DataTensorFor(*m_gradientTemp, rank, fr), sliceInputValue, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            sliceInputGrad.AddElementwiseProductWithSigmoidDerivativeOf(sliceOutputGrad, sliceInputValue);
         }
 
-        /*virtual*/ void BackpropToV(TensorView<ElemType> gradient, const TensorView<ElemType>& inputFunctionValues, TensorView<ElemType> inputGradientValues, const TensorView<ElemType>& gradientValues, const TensorView<ElemType>& functionValues)
-        {
-            //gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
-            //inputGradientValues.AddElementwiseProductOf(gradientValues, gradient);
-            //gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
-            inputGradientValues.AddElementwiseProductWithSigmoidDerivativeOf(gradientValues, inputFunctionValues);
-        }
-
+        // We don't need our output values in backprop.
         virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    };
 #else
+    template<class ElemType>
+    class SigmoidNode : public NonlinearityNodeBase<ElemType>
+    {
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Sigmoid"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
+        SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The Sigmoid node does not require any of it's input's values for computing
@@ -220,7 +214,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UNREFERENCED_PARAMETER(childIndex);
             return false;
         }
-#endif
 
         /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
@@ -233,6 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.AssignSigmoidOf(inputFunctionValues);
         }
     };
+#endif
 
     template class SigmoidNode<float>;
     template class SigmoidNode<double>;
@@ -249,7 +243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(TanhNode);
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -289,7 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(LogNode);
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -326,7 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(ExpNode);
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -371,7 +365,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(CosineNode);
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -410,7 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(SoftmaxNode);
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
@@ -477,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         DeclareConstructorFromConfigWithNumInputs(LogSoftmaxNode);
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
