@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "ComputationNode.h"
+#include "Matrix.h"
+#include "TensorView.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,10 +22,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -204,8 +205,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*virtual*/ void BackpropToV(TensorView<ElemType> gradient, const TensorView<ElemType>& inputFunctionValues, TensorView<ElemType> inputGradientValues, const TensorView<ElemType>& gradientValues, const TensorView<ElemType>& functionValues)
         {
-            gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
-            inputGradientValues.AddElementwiseProductOf(gradientValues, gradient);
+            //gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
+            //inputGradientValues.AddElementwiseProductOf(gradientValues, gradient);
+            //gradient.AssignSigmoidDerivativeOf(inputFunctionValues);
+            inputGradientValues.AddElementwiseProductWithSigmoidDerivativeOf(gradientValues, inputFunctionValues);
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
