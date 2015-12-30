@@ -452,8 +452,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Eventually this can go away once we switch completely to cudnn layout.
     enum ImageLayoutKind
     {
-        CHW,    // cudnn
-        HWC     // legacy
+        CHW,    // cudnn; default for BrainScript
+        HWC     // legacy; default for NDL
     };
     static inline ImageLayoutKind ImageLayoutKindFrom(const wstring & s)
     {

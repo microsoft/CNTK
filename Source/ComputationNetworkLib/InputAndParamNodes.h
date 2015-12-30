@@ -54,6 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
             LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"rows"), configp->Get(L"cols"))
         {
+            // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
             AttachInputs(configp, this->GetExpectedNumInputs());
             // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
             // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
@@ -248,13 +249,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
             Base(deviceId, name)
         {
-            Init(TensorShape(rows), cols, isSparse);
+            cols;// InputValues must be minibatches
+            Init(TensorShape(rows), 0, isSparse);
         }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages, bool isSparse) :
             Base(deviceId, name)
         {
-            size_t cols = numImages;
-            Init(imageLayout, cols, isSparse);
+            numImages;//size_t cols = numImages;
+            Init(imageLayout, 0, isSparse);
         }
         InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
             Base(configp->Get(L"deviceId"), L"<placeholder>")
@@ -264,13 +266,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!isImage)
             {
                 size_t rows = configp->Get(L"rows");
-                size_t cols = configp->Get(L"cols");
-                Init(TensorShape(rows), cols, isSparse);         // no tensor, just a vector
+                //size_t cols = configp->Get(L"cols");  // InputValues must be minibatches
+                Init(TensorShape(rows), 0, isSparse);         // no tensor, just a vector
             }
             else
             {
-                size_t cols = configp->Get(L"numImages");       // This is actually the MB size.  --TODO: No need to specify it?
-                Init(ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")), cols, isSparse);
+                Init(ImageLayout(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), 0, isSparse);
             }
         }
     public:

@@ -172,6 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")))
         {
+            // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
@@ -381,6 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Say in one sentence what this logic does.
         void InferTargetSampleLayout()
         {
+            // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
             if (m_targetImageLayout.GetWidth() > 0)
             {
                 if (m_targetImageLayout.GetHeight() > 0)
