@@ -119,6 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
         {
             size_t inputSize = GetNumCols();
+            //fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
