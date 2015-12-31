@@ -37,6 +37,7 @@ using namespace std;
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
         L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (rows : cols) ] /*plus the function args*/ ]\n"
         L"Parameter = LearnableParameter // deprecated \n"
+        L"ParameterTensor(dims, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
         // ^^ already works; vv untested
         L"Input(rows, tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ dims = (rows) ] ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
         L"SparseInput(rows, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ dims = (rows) ] ; isImage = false /*plus the function args*/ ]\n"
