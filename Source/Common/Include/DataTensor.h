@@ -457,8 +457,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
     static inline ImageLayoutKind ImageLayoutKindFrom(const wstring & s)
     {
-        if      (s == L"CHW") return ImageLayoutKind::CHW;
-        else if (s == L"HWC") return ImageLayoutKind::HWC;
+        if      (s == L"CHW" || s == L"cudnn")  return ImageLayoutKind::CHW;
+        else if (s == L"HWC" || s == L"legacy") return ImageLayoutKind::HWC;
         else InvalidArgument("ImageLayoutKindFrom: Unknown ImageLayoutKind '%ls', must be 'CHW' (cudnn) or 'HWC' (CNTK legacy)", s.c_str());
     }
     static inline TensorShape ImageLayout(size_t width, size_t height, size_t channels, ImageLayoutKind imageLayoutKind)

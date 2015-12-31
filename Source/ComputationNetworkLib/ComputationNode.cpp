@@ -72,6 +72,7 @@ namespace Microsoft {
         size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
         size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
+#if 1//ndef ENABLE_TENSORVIEW
         // TODO: This test will go away once we switch to full tensor lib.
         if (isFinalValidationPass && !(
                (rows0 == rows1 && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
@@ -81,6 +82,9 @@ namespace Microsoft {
         {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
+#else
+        rows0; rows1;
+#endif
 
         // result has tensor shape with dimensions being the max over both
         let shape0 = GetInputSampleLayout(0);
@@ -204,6 +208,8 @@ namespace Microsoft {
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
             size_t rank = Input(i)->GetAndValidateSampleLayout().GetRank();
+            if (!HasMBLayout())                         // no MBLayout: last dim is column dimension
+                rank++;
             if (maxRank < rank)
                 maxRank = rank;
         }
@@ -215,8 +221,9 @@ namespace Microsoft {
     TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
     {
         //GetAndValidateSampleLayout();     // no need to validate because rank comes from DetermineElementwiseTensorRank() which validates all
-        if (!HasMBLayout())                         // no MBLayout: just return sample layout (if other participants have layout, tensor lib will broadcast)
-            return GetSampleLayout();    //  .Pad(rank); // no need for padding
+        if (!HasMBLayout())
+            return GetSampleLayout().Append(GetSampleLayout().GetRank(), GetNumCols());    //  last dim is column dimension
+            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
         else if (fr.IsAllFrames())
         {
             // we have an MBLayout, and for refers to the entire MB
