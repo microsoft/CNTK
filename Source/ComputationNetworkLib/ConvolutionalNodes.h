@@ -198,6 +198,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // get input tensor shape
             auto inputSampleLayout = GetInputSampleLayout(1);
+            //if (1)
+            //{
+            //    inputSampleLayout = ImageLayoutWHC(inputSampleLayout[0], inputSampleLayout[1], inputSampleLayout[2]);
+            //}
 
             if (inputSampleLayout.GetWidth() < m_kernelWidth || inputSampleLayout.GetHeight() < m_kernelHeight)
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");

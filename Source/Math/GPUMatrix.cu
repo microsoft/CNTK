@@ -25,6 +25,7 @@
 #include <curand_kernel.h>
 #include "cublas_v2.h"
 #include <assert.h>
+#include <memory>
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
@@ -383,7 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors and Destructor
 
-   //should only be used by constructors.
+    // should only be used by constructors
     template<class ElemType>
     void GPUMatrix<ElemType>::ZeroInit(int deviceId)
     {
@@ -448,13 +449,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numRows = moveFrom.m_numRows;
         m_numCols = moveFrom.m_numCols;
         m_computeDevice = moveFrom.m_computeDevice;
-        m_pArray = moveFrom.m_pArray;  //shallow copy the pointer       
+        m_pArray = moveFrom.m_pArray;  // shallow copy the pointer       
         m_matrixName=moveFrom.m_matrixName;
         m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
         m_format = moveFrom.m_format;
         m_externalBuffer = moveFrom.m_externalBuffer;
 
-        //release the pointer from the source object so that the destructor won't release it twice
+        // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroInit(0);       
     }
 
@@ -476,10 +477,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &moveFrom)
         {
-            if (OwnBuffer() && m_pArray!=NULL)
-            {
+            if (OwnBuffer() && m_pArray)
                 CUDA_CALL(cudaFree(m_pArray));  
-            }
 
             m_numRows = moveFrom.m_numRows;
             m_numCols = moveFrom.m_numCols;
@@ -499,8 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUMatrix<ElemType>::~GPUMatrix(void)
     {
         Clear();
-        if (m_workspace != nullptr)
-            delete m_workspace;
+        delete m_workspace;
     }
 
     template<class ElemType>
@@ -3258,6 +3256,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Other helper functions
 
 #pragma region Static BLAS Functions
+    // float/double overloads of cublasSgemm()/cublasDgemm()
+    static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const float *A, int lda, const float *B, int ldb, const float *beta, float *C, int ldc)
+    {
+        return cublasSgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    }
+    static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double *alpha, const double *A, int lda, const double *B, int ldb, const double *beta, double *C, int ldc)
+    {
+        return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    }
+
     template<class ElemType>
     void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, 
         ElemType beta, GPUMatrix<ElemType>& c)
@@ -3277,28 +3285,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (beta == 0)
             c.Resize(m,n);
         else
-            c.VerifySize(m, n); // Can't resize if beta != 0
+            c.VerifySize(m, n);     // Can't resize if beta != 0
 
         if (!(m>0 && k>0 && l>0 && n>0)) 
-        {
             RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
-        }
         if (k!=l) 
-        {
             RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-        }
-        if (sizeof(ElemType)==sizeof(float))
-        {
-            CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
-        }
-        else if (sizeof(ElemType)==sizeof(double))
-        {            
-            CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
-        }
-        else 
-        {
-            RuntimeError("Unsupported template argument in GPUMatrix");             
-        }
+        CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.m_pArray), (int)a.m_numRows, reinterpret_cast<float*>(b.m_pArray), (int)b.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.m_pArray), (int)c.m_numRows));
         c.m_numRows=m;
         c.m_numCols=n;
     }
@@ -4439,6 +4432,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TensorView entry points from Matrix.cpp
     // -----------------------------------------------------------------------
 
+    // helper to provide a vector of ones of at least the given number of elements
+    // TODO: Use this to implement ComputationNode::ConstOnes? Or do we even need that anymore?
+    template<class ElemType>
+    static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
+    {
+        // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
+        // And using a plain array so this will never get freed, avoiding free-after-DLL-unload issues.
+        static shared_ptr<GPUMatrix<ElemType>> onesCache[32];   // cache of objects
+        if (deviceId >= _countof(onesCache))
+            LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", (int)_countof(onesCache), (int)deviceId+1);
+        auto p = onesCache[deviceId];
+        if (!p || p->GetNumRows() < N)  // must (re-)allocate
+        {
+            p = make_shared<GPUMatrix<ElemType>>(GPUMatrix<ElemType>::Ones(N, 1, deviceId));
+            onesCache[deviceId] = p;    // this will replace the pointer thread-safely (although weird race conditions may happen where a larger entry is overwritten by a smaller one; will still run correctly)
+        }
+        return p;
+    }
+
     // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
     template<class ElemType>
@@ -4455,19 +4467,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
         // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
         if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
-        {
-////if (op == 1)fprintf(stderr, "LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
             return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
-////if (op == 1)fprintf(stderr, "Done LaunchUnaryTensorOp %d\n", (int)regularOpDims[0]);
+
+        // special case: recuding a matrix onto a column vector; can be done with SGEMM
+        else if (op == ElementWiseOperator::opCopy &&                                                       // we are just adding to target without any further operation
+                 regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 &&     // we are processing a column
+                 reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t)regularOpDims[0])        // reducing across columns and no overlap
+        {
+            assert(reducingStrides[1][0] == 0);
+            auto ARows = regularOpDims[0];              // vertical steps
+            auto ACols = reducingOpDims[0];             // horizontal steps (reduction)
+            auto ALd   = reducingStrides[0][0];         // horizontal step width through matrix
+            cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int)/*CRows=*/ARows, /*CCols=*/1, (int)ACols, &alpha,
+                                     /*A00=*/a.m_pArray + offsets[0], (int)ALd,
+                                     /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->m_pArray, (int)/*BRows=*/ACols, &beta,
+                                     /*C00=*/m_pArray + offsets[1], (int)/*CRows=*/ARows));
+            return;
         }
 
         // regular case
         else
-        {
-////if (op == 1)fprintf(stderr, "TensorOpN<2> %d\n", (int)regularOpDims[0]);
             return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-////if (op == 1)fprintf(stderr, "Done TensorOpN<2> %d\n", (int)regularOpDims[0]);
-        }
     }
 
     // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -4480,6 +4501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
+
         return TensorOpN<ElemType, 3>(beta, array<ElemType*, 3> { a.m_pArray, b.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
