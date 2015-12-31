@@ -272,6 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // set up the various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
+            // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
+            //       Why not just pass everything to the engine creator, and get one object that holds everything.
             if (m_factory == nullptr)
                 m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_convEng == nullptr)
