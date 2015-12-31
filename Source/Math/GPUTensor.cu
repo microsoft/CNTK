@@ -167,6 +167,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // function to compute the value for a given output location (this version performs reduction if needed)
     // -----------------------------------------------------------------------
 
+//#define ReduceElemType double
+#define ReduceElemType ElemType
+
     template<class ElemType, C_size_t N, C_int M, C_int m>
     struct TensorOpReduce
     {
@@ -175,8 +178,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                            const FixedArray<C_unsigned_int, M> & reducingOpDims, const FixedMatrix<C_int, N, M> & reducingStrides)
         {
             // start with index 0
-            // Using 'double' since we are memory-bound anyway.
-            double/*ElemType*/ aggregate = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
+            // We may use 'double' since we are memory-bound anyway.
+            ReduceElemType aggregate = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
             // apply this index to the pointers
             C_size_t dim = reducingOpDims[m];
             for (C_size_t k = 1/*done with k=0 already*/; k < dim; k++)
@@ -359,7 +362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
             // compute the operation for this input coordinate
-            double sum = 0;
+            ReduceElemType sum = 0;
             for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
             {
                 auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
@@ -367,7 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
-            __shared__ double accumulators[GridDim::maxThreadsPerBlock/*tids*/];
+            __shared__ ReduceElemType accumulators[GridDim::maxThreadsPerBlock/*tids*/];
             accumulators[tid] = sum;
             __syncthreads();
             static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
@@ -544,7 +547,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (beta == 1 || numBlocksZ == 1)
             {
 //////if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
-                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
 //////if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             }
             else
@@ -552,8 +555,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //////if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
                 // We need more than one chunk, we will use atomicAdd().
                 // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
-                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
-                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(double), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
+                _launchTensorOpWithReduction<ElemType, N, M, K> << <dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream >> >(/*beta=*/1, pointers, alpha, op, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize);
 //////if (op == 1)fprintf(stderr, "LaunchTensorOpWithReduction: %d", (int)__LINE__);
             }
         }
