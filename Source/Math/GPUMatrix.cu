@@ -4470,6 +4470,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
 
         // special case: recuding a matrix onto a column vector; can be done with SGEMM
+        // Note: A minor risk is that with this, our own reduction function will rarely be used.
+        // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
         else if (op == ElementWiseOperator::opCopy &&                                                       // we are just adding to target without any further operation
                  regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 &&     // we are processing a column
                  reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t)regularOpDims[0])        // reducing across columns and no overlap
