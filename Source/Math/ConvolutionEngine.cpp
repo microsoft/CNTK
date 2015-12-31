@@ -410,23 +410,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     template<class ElemType>
-    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, EngineType engType)
+    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind)
     {
         if (engType == EngineType::Auto)
         {
             // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-            if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
-                return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
-            return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+            if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId) && imageLayoutKind == ImageLayoutKind::CHW)
+                return Create(deviceId, EngineType::CuDnn, imageLayoutKind);
+            else
+                return Create(deviceId, EngineType::Legacy, imageLayoutKind);
         }
         else if (engType == EngineType::CuDnn)
         {
+            if (imageLayoutKind != ImageLayoutKind::CHW)
+                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the cuDNN engine.", ToString(imageLayoutKind).c_str());
             if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId))
                 return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>();
             RuntimeError("cuDNN convolution engine is not supported, check the device id and whether the code was compiled with cuDNN.");
         }
         else if (engType == EngineType::Legacy)
+        {
+            if (imageLayoutKind != ImageLayoutKind::HWC)
+                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the cuDNN engine.", ToString(imageLayoutKind).c_str());
             return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
+        }
 
         RuntimeError("Not supported convolution engine type: %d.", engType);
     }

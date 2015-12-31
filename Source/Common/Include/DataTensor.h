@@ -450,11 +450,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // image layouts used in CNTK
     // Nodes that do semantic interpretation of width, height, channel information must know which index they are in.
     // Eventually this can go away once we switch completely to cudnn layout.
+    // The cudnn layout is actually our layout in order W,H,C.
     enum ImageLayoutKind
     {
         HWC,    // legacy; default for NDL
         CHW     // cudnn; default for BrainScript
     };
+    static inline std::string ToString(ImageLayoutKind imageLayoutKind)
+    {
+        if       (imageLayoutKind == ImageLayoutKind::CHW) return "CHW";
+        else  if (imageLayoutKind == ImageLayoutKind::HWC) return "HWC";
+        else LogicError("ImageLayout: Invalid ImageLayoutKind");
+    }
     static inline ImageLayoutKind ImageLayoutKindFrom(const wstring & s)
     {
         if      (s == L"CHW" || s == L"cudnn")  return ImageLayoutKind::CHW;
