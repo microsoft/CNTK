@@ -532,6 +532,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
+			// TODO(DataASGD): should have another mechanism.
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
@@ -690,6 +691,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         delete inputMatrices;
+		delete m_multiverso;
     }
 
     // -----------------------------------------------------------------------

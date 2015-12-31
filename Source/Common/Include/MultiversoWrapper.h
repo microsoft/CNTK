@@ -120,6 +120,7 @@ namespace Microsoft {
 #endif
 
 					multiverso::FinishTrain();
+					multiverso::Close(false);
 				}
 
 				//As for Multiverso, parameters store in server.
