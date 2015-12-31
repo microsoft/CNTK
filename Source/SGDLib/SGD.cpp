@@ -691,7 +691,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         delete inputMatrices;
-		delete m_multiverso;
+		if (m_parallelizationMethod == ParallelizationMethod::DataParallelASGD)
+		{
+			delete m_multiverso;
+		}
     }
 
     // -----------------------------------------------------------------------
