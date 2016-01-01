@@ -431,7 +431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (engType == EngineType::Legacy)
         {
             if (imageLayoutKind != ImageLayoutKind::HWC)
-                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the cuDNN engine.", ToString(imageLayoutKind).c_str());
+                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
             return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
         }
 
