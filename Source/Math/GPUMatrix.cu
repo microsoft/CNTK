@@ -3291,7 +3291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
         if (k!=l) 
             RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-        CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.m_pArray), (int)a.m_numRows, reinterpret_cast<float*>(b.m_pArray), (int)b.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.m_pArray), (int)c.m_numRows));
+        CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.m_pArray, (int)a.m_numRows, b.m_pArray, (int)b.m_numRows, &beta, c.m_pArray, (int)c.m_numRows));
         c.m_numRows=m;
         c.m_numCols=n;
     }
