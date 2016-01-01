@@ -504,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
                     if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1))  // looks like an image: use WHC notation
-                        fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
+                        fprintf(stderr, "%ls[%lu [%s] {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(),
                                 child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0], mbSizeMark, child->GetNumCols());
                     //BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
                     else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
@@ -820,7 +820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
             SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
-            // BUGBUG: This looses the sample layout (tensor shape). It should be serialized as well.
+            // BUGBUG: This looses the sample layout (tensor shape). The caller must know this and fix it up if needed (currently needed for LearnableParameterNode).
         }
 
         // reader updated m_functionValue--update our internal state, i.e. m_numCols

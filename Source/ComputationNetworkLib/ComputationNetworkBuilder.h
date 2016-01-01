@@ -46,9 +46,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr CreateInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);
         ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const TensorShape & imageLayout, const size_t numImages);
         ComputationNodePtr CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols);
-        ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
-        ComputationNodePtr CreateMaxPoolingNode(const std::wstring & nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
-        ComputationNodePtr CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
+        ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
+        ComputationNodePtr CreateMaxPoolingNode(const std::wstring & nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
+        ComputationNodePtr CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
         // this is the catch-all for all cases not covered as special cases above
         // Unlike the specialized ones above, this one creates nodes by type given as a string.
         ComputationNodePtr CreateComputationNode(const std::wstring & nodeType, const std::wstring & nodeName);
@@ -61,25 +61,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"");
         ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                        const ComputationNodePtr inputValues,
-                                       const size_t kernelWidth,
-                                       const size_t kernelHeight,
-                                       const size_t outputChannels,
-                                       const size_t horizontalSubsample,
-                                       const size_t verticalSubsample,
-                                       const bool zeroPadding = false,
-                                       const std::wstring nodeName = L"",
-                                       const size_t maxTempMemSizeInSamples = 0);
+                                       const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                                       const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+                                       const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0,
+                                       const std::wstring nodeName = L"");
         ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
-                                      const size_t windowWidth,
-                                      const size_t windowHeight,
-                                      const size_t horizontalSubsample,
-                                      const size_t verticalSubsample,
+                                      const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                       const std::wstring nodeName = L"");
         ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
-                                          const size_t windowWidth,
-                                          const size_t windowHeight,
-                                          const size_t horizontalSubsample,
-                                          const size_t verticalSubsample,
+                                          const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                           const std::wstring nodeName = L"");
         ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");

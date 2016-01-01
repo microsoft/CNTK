@@ -215,37 +215,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring & nodeName,
                                                                             const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                                                             const size_t horizontalSubsample, const size_t verticalSubsample,
-                                                                            const bool zeroPadding,
+                                                                            ImageLayoutKind imageLayoutKind, const bool zeroPadding,
                                                                             const size_t maxTempMemSizeInSamples)
     {
         return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-            kernelWidth, kernelHeight,
-            outputChannels,
-            horizontalSubsample,
-            verticalSubsample, zeroPadding,
-            maxTempMemSizeInSamples));
+                                                                           kernelWidth, kernelHeight, outputChannels,
+                                                                           horizontalSubsample, verticalSubsample, imageLayoutKind,
+                                                                           zeroPadding,
+                                                                           maxTempMemSizeInSamples));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateMaxPoolingNode(const std::wstring & nodeName,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample)
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
     {
-        return net.AddNodeToNetWithElemType(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample));
+        return net.AddNodeToNetWithElemType(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind));
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth,
-        const size_t windowHeight, const size_t horizontalSubsample,
-        const size_t verticalSubsample)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateAveragePoolingNode(const std::wstring & nodeName,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
     {
-        return net.AddNodeToNetWithElemType(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample));
+        return net.AddNodeToNetWithElemType(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind));
     }
 
     // this is the catch-all for all cases not covered as special cases above
@@ -274,49 +263,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convolution(const ComputationNodePtr weight,
         const ComputationNodePtr inputValues,
-        const size_t kernelWidth,
-        const size_t kernelHeight,
-        const size_t outputChannels,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
-        const bool zeroPadding,
-        const std::wstring nodeName,
-        const size_t maxTempMemSizeInSamples)
+        const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
+        const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-            kernelWidth, kernelHeight,
-            outputChannels,
-            horizontalSubsample,
-            verticalSubsample, zeroPadding,
+            kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
             maxTempMemSizeInSamples),
             weight, inputValues);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPooling(const ComputationNodePtr inputValues,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
         const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample),
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
             inputValues);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AveragePooling(const ComputationNodePtr inputValues,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
         const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample),
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
             inputValues);
     }
 

@@ -28,6 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // LearnableParameter (/*no input*/)
     // represents weight matrices and biases
+    // TODO: add -Node to the class name
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -96,7 +97,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
             fstream << m_parameterUpdateRequired;
-            fstream << GetNumRows() << GetNumCols(); 
+            fstream << (size_t)0/*#rows in a legacy file format*/ << GetNumCols();
+            m_sampleLayout.Save(fstream);
             fstream << Value();
         }
 
@@ -108,8 +110,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_parameterUpdateRequired;
             fstream >> rows >> cols;
 
-            SetDims(TensorShape(rows), cols);
+            TensorShape sampleLayout;
+            if (rows != 0)      // legacy file format
+                sampleLayout = TensorShape(rows);
+            else
+                sampleLayout.Load(fstream);
             LoadValue(fstream);
+            SetDims(sampleLayout, cols);    // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
         }
 
         // initialize with random numbers
@@ -235,6 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // InputValueBase (/*no input*/)
     // Base class for InputValue and SparseInputValue (typically fed by a DataReader)
     // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
+    // TODO: add -Node to the class names
     // -----------------------------------------------------------------------
 
     template<class ElemType>
