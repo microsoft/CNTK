@@ -4473,6 +4473,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: A minor risk is that with this, our own reduction function will rarely be used.
         // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
         else if (op == ElementWiseOperator::opCopy &&                                                       // we are just adding to target without any further operation
+#ifdef _DEBUG
+                 sizeof(ElemType) == sizeof(float) &&                                                       // in debug don't shortcut 'double' so we have some test of our own codepath
+#endif
                  regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 &&     // we are processing a column
                  reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t)regularOpDims[0])        // reducing across columns and no overlap
         {

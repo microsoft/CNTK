@@ -249,12 +249,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
         // interpretation as an image tensor
-        size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
-        size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
-        size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
-        // heuristics used for pretty-printing
-        // TODO: This will go away.
-        bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
+        //size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
+        //size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
+        //size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
+        // legacy helper function for RowSliceNode. Will go away.
         bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
         // indexing
@@ -468,19 +466,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"HWC" || s == L"legacy") return ImageLayoutKind::HWC;
         else InvalidArgument("ImageLayoutKindFrom: Unknown ImageLayoutKind '%ls', must be 'CHW' (cudnn) or 'HWC' (CNTK legacy)", s.c_str());
     }
-    static inline TensorShape ImageLayout(size_t width, size_t height, size_t channels, ImageLayoutKind imageLayoutKind)
-    {
-        if       (imageLayoutKind == ImageLayoutKind::CHW) return TensorShape(width, height, channels);
-        else  if (imageLayoutKind == ImageLayoutKind::HWC) return TensorShape(channels, width, height);
-        else LogicError("ImageLayout: Invalid ImageLayoutKind");
-    }
 
-    // When constructing an image tensor with the usual W, H, C format, use the following function instead.
-    // This will sort the three parameters into the correct order.
-    // BUGBUG: This only works for ImageLayoutKind::HWC. Also the naming is bad.
-    static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
+    // interpret TensorShape as an image descriptor
+    // considering that we support two ways of storingimages
+    struct ImageDimensions
     {
-        return TensorShape(channels, width, height);
-    }
+        size_t m_width, m_height, m_numChannels;
+        // interpret TensorShape as image
+        ImageDimensions(const TensorShape & shape, ImageLayoutKind imageLayoutKind)
+        {
+            if (shape.GetRank() != 3)
+                InvalidArgument("Convolution operation currently only supports 1D or 2D convolution on 3D tensors.");
+            if (imageLayoutKind == ImageLayoutKind::CHW)
+            {
+                m_width       = shape[0];
+                m_height      = shape[1];
+                m_numChannels = shape[2];
+            }
+            else  if (imageLayoutKind == ImageLayoutKind::HWC)
+            {
+                m_width       = shape[1];
+                m_height      = shape[2];
+                m_numChannels = shape[0];
+            }
+            else LogicError("WHC: Invalid ImageLayoutKind");
+        }
+        ImageDimensions(size_t width, size_t height, size_t numChannels) : m_width(width), m_height(height), m_numChannels(numChannels) {}
+        // intepret image as TensorShape
+        static TensorShape AsTensorShape(size_t width, size_t height, size_t numChannels, ImageLayoutKind imageLayoutKind/* = ImageLayoutKind::HWC*/)
+        {
+            if       (imageLayoutKind == ImageLayoutKind::CHW) return TensorShape(width, height, numChannels);
+            else  if (imageLayoutKind == ImageLayoutKind::HWC) return TensorShape(numChannels, width, height);
+            else LogicError("ImageLayout: Invalid ImageLayoutKind");
+        }
+        TensorShape AsTensorShape(ImageLayoutKind imageLayoutKind) { return AsTensorShape(m_width, m_height, m_numChannels, imageLayoutKind); }
+    };
 
 }}}
