@@ -25,6 +25,52 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifdef ENABLE_TENSORVIEW
+    // -----------------------------------------------------------------------
+    // SigmoidNode (input) -- sigmoid non-linearity
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class SigmoidNode : public UnaryElementWiseNode<ElemType>
+    {
+        typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Sigmoid"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
+        SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result =           ValueTensorFor(rank, fr);
+            auto input  = Input(0)->ValueTensorFor(rank, fr);
+            result.AssignSigmoidOf(input);
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            assert(inputIndex == 0); inputIndex;
+
+            // get the args
+            // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
+            size_t rank = DetermineElementwiseTensorRank();
+            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);  // propagate from this one...
+            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);  // ...to this one
+            auto sliceInputValue  = Input(0)->ValueTensorFor(rank, fr);
+            //auto sliceInputValue  = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueTensorFor(rank, fr) : TensorView<ElemType>();
+            //auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ?           ValueTensorFor(rank, fr) : TensorView<ElemType>();
+
+            // do the actual operation
+            sliceInputGrad.AddElementwiseProductWithSigmoidDerivativeOf(sliceOutputGrad, sliceInputValue);
+        }
+
+        // We don't need our output values in backprop.
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    };
+#endif
+
     // -----------------------------------------------------------------------
     // NonlinearityNodeBase (input) -- abstract base class that holds what's shared
     // between non-linearity nodes like Sigmoid
@@ -151,51 +197,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RectifiedLinearNode<float>;
     template class RectifiedLinearNode<double>;
 
+#ifndef ENABLE_TENSORVIEW
     // -----------------------------------------------------------------------
     // SigmoidNode (input) -- sigmoid non-linearity
     // -----------------------------------------------------------------------
 
-#ifdef ENABLE_TENSORVIEW
-    template<class ElemType>
-    class SigmoidNode : public UnaryElementWiseNode<ElemType>
-    {
-        typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Sigmoid"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
-        SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name)
-        { }
-
-        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
-        {
-            size_t rank = DetermineElementwiseTensorRank();
-            auto result =           ValueTensorFor(rank, fr);
-            auto input  = Input(0)->ValueTensorFor(rank, fr);
-            result.AssignSigmoidOf(input);
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            assert(inputIndex == 0); inputIndex;
-
-            // get the args
-            // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
-            size_t rank = DetermineElementwiseTensorRank();
-            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);  // propagate from this one...
-            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);  // ...to this one
-            auto sliceInputValue  = Input(0)->ValueTensorFor(rank, fr);
-            //auto sliceInputValue  = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueTensorFor(rank, fr) : TensorView<ElemType>();
-            //auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ?           ValueTensorFor(rank, fr) : TensorView<ElemType>();
-
-            // do the actual operation
-            sliceInputGrad.AddElementwiseProductWithSigmoidDerivativeOf(sliceOutputGrad, sliceInputValue);
-        }
-
-        // We don't need our output values in backprop.
-        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    };
-#else
     template<class ElemType>
     class SigmoidNode : public NonlinearityNodeBase<ElemType>
     {

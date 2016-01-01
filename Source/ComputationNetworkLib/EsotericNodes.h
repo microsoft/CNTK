@@ -18,6 +18,386 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This header collects special-purpose nodes.
     // It is likely that these are no longer functional.
 
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
+    // -----------------------------------------------------------------------
+    // ScaleNode (scalar scaling factor, matrix)
+    //
+    // Identical to ElementTimesNode with tensor lib (broadcasting). Can be removed.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ScaleNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Scale"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(ScaleNode);
+        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+#ifdef ENABLE_TENSORVIEW    // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
+            size_t rank = DetermineElementwiseTensorRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+            auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->GetNumCols() < GetNumCols())
+                MaskMissingGradientColumnsToZero(fr);
+            if (Input(inputIndex)->GetNumCols() < Input(1 - inputIndex)->GetNumCols())
+                Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+#else
+            if (inputIndex == 0)        // left derivative
+            {
+                // this is a reduction over frames, so we must mask gaps to zero
+                Input(0)->Gradient() += Matrix<ElemType>::InnerProductOfMatrices(MaskedGradientFor(fr), Input(1)->MaskedValueFor(fr)); // element-wise product summed up over all
+            }
+            else if (inputIndex == 1)   // right derivative
+            {
+                Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Input(0)->Value()/*1x1*/, GradientFor(fr), 1.0f, sliceInput1Grad);
+            }
+#endif
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ScaleNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
+        {
+#ifdef ENABLE_TENSORVIEW
+            static int c = 0; if (c++ == 0) { fprintf(stderr, "#SCALE#\n"); }
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result = ValueTensorFor(rank, fr);
+            auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+            result.AssignElementwiseProductOf(input0, input1);
+#else
+            ValueFor(fr).Assign1x1ProductOf(Input(0)->Value()/*1x1*/, Input(1)->ValueFor(fr));
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
+            // left node must be a scalar
+            if (isFinalValidationPass && (Input(0)->GetNumRows() != 1 || Input(0)->GetNumCols() != 1))
+                RuntimeError("The left value of ScaleNode must be a scalar value.");
+
+            SetDims(Input(1));
+        }
+    };
+
+    template class ScaleNode<float>; 
+    template class ScaleNode<double>;
+
+    // -----------------------------------------------------------------------
+    // RowElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class RowElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowElementTimes"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(RowElementTimesNode);
+        RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        void BackpropToMap(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                InvalidArgument("RowElementTimes operation only takes two inputs.");
+
+            if (inputIndex == 0)
+            {
+                BackpropToLeftS(Input(1)->Value(), Input(0)->Gradient(), Gradient(), *m_tempMatrix);
+            }
+            else
+            {
+                BackpropToRightS(Input(0)->Value(), Input(1)->Gradient(), Gradient(), *m_tempMatrix);
+            }
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+
+            Matrix<ElemType> sliceInput1Value = Input(1 - inputIndex)->ValueFor(fr);
+
+            if (inputIndex == 0)
+            {
+                BackpropToLeftS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+            }
+            else
+            {
+                BackpropToRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+            }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The RowElementTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        //left (input 0) is a matrix
+        /*TODO: merge with call site*/void BackpropToLeftS(Matrix<ElemType>& input1FunctionValues,
+            Matrix<ElemType>& input0GradientValues, 
+            const Matrix<ElemType>& gradientValues, 
+            Matrix<ElemType>& tempMatrix)
+        {
+            tempMatrix.SetValue(gradientValues);
+            tempMatrix.RowElementMultiplyWith(input1FunctionValues);
+            input0GradientValues += tempMatrix;
+
+#if NANCHECK
+            input0GradientValues.HasNan("RowElementTimes");
+#endif
+        }
+
+        //right (input 1) is a row vector
+        /*TODO: merge with call site*/void BackpropToRightS(Matrix<ElemType>& input0FunctionValues, 
+            Matrix<ElemType>& input1GradientValues, 
+            const Matrix<ElemType>& gradientValues, 
+            Matrix<ElemType>& tempMatrix)
+        {
+            tempMatrix.AssignInnerProductOf(gradientValues, input0FunctionValues, true);
+            input1GradientValues += tempMatrix;
+
+#if NANCHECK
+            input1GradientValues.HasNan("RowElementTimes");
+#endif
+        }
+        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        {
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
+        }
+
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        {
+            functionValues.SetValue(input0);
+            functionValues.RowElementMultiplyWith(input1);
+
+#if NANCHECK
+            functionValues.HasNan("RowElementTimes");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols(); rows0;
+            if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
+                LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
+
+            SetDims(Input(0));
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeBackprop(matrixPool);
+            RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
+            ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+        }
+
+    private:
+        shared_ptr<Matrix<ElemType>> m_tempMatrix;
+    };
+
+    template class RowElementTimesNode<float>;
+    template class RowElementTimesNode<double>;
+
+    // -----------------------------------------------------------------------
+    // ColumnElementTimesNode (left, right)  --TODO: what are left and right?
+    //
+    // TODO: This is subsumed by ElementTimes with tensor lib.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ColumnElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(ColumnElementTimesNode);
+        ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        void BackpropToMap(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                InvalidArgument("ColumnElementTimes operation only takes two inputs.");
+
+            if (inputIndex == 0)
+            {
+                BackpropToLeftS(Input(1)->Value(), Input(0)->Gradient(), Gradient(), *m_tempMatrix);
+            }
+            else
+            {
+                BackpropToRightS(Input(0)->Value(), Input(1)->Gradient(), Gradient(), *m_tempMatrix);
+            }
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+
+            if (inputIndex == 0)
+            {
+                Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+
+                BackpropToLeftS(Input(1)->Value(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
+            }
+            else
+            {
+                Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+                BackpropToRightS(sliceInput0Value, Input(1)->Gradient(), sliceOutputGrad, *m_tempMatrix);
+            }
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ColumnElementTimesNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        //left (input 0) is a matrix
+        /*TODO: merge with call site*/void BackpropToLeftS(Matrix<ElemType>& input1FunctionValues,
+            Matrix<ElemType>& input0GradientValues,
+            const Matrix<ElemType>& gradientValues,
+            Matrix<ElemType>& tempMatrix)
+        {
+            tempMatrix.SetValue(gradientValues);
+            tempMatrix.ColumnElementMultiplyWith(input1FunctionValues);
+            input0GradientValues += tempMatrix;
+
+#if NANCHECK
+            input0GradientValues.HasNan("ColumnElementTimes");
+#endif
+        }
+
+        //right (input 1) is a col vector
+        /*TODO: merge with call site*/void BackpropToRightS(Matrix<ElemType>& input0FunctionValues,
+            Matrix<ElemType>& input1GradientValues,
+            const Matrix<ElemType>& gradientValues,
+            Matrix<ElemType>& tempMatrix)
+        {
+            tempMatrix.AssignInnerProductOf(gradientValues, input0FunctionValues, false);
+            input1GradientValues += tempMatrix;
+
+#if NANCHECK
+            input1GradientValues.HasNan("ColumnElementTimes");
+#endif
+        }
+        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        {
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value());
+        }
+
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        {
+            functionValues.SetValue(input0);
+            functionValues.ColumnElementMultiplyWith(input1);
+
+#if NANCHECK
+            functionValues.HasNan("ColumnElementTimes");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
+            //derive number of rows if possible
+            for (size_t index = 0; index < 2; index++)
+            {
+                size_t rows = Input(index)->GetNumRows() == 0 ? Input(1 - index)->GetNumRows() : Input(index)->GetNumRows();
+                size_t cols = Input(index)->GetNumCols() == 0 ? Input(1 - index)->GetNumCols() : Input(index)->GetNumCols();
+                ValidateInferInputDims(index, rows, cols);
+            }
+
+            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
+            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols(); cols0;
+            if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
+                LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
+
+            SetDims(Input(0));
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeBackprop(matrixPool);
+            RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
+            ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+        }
+
+    private:
+        shared_ptr<Matrix<ElemType>> m_tempMatrix;
+    };
+
+    template class ColumnElementTimesNode<float>;
+    template class ColumnElementTimesNode<double>;
+#endif
+
     // -----------------------------------------------------------------------
     /// DummyCriterionNode (objectives, derivatives, prediction)
     // -----------------------------------------------------------------------
