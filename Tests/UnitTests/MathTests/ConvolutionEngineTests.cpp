@@ -24,14 +24,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
     static bool IsCuDnnSupported()
     {
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         try
         {
+            // TODO: Will this ever return nullptr?
             return ConvFact::Create(0, ConvFact::EngineType::CuDnn, ImageLayoutKind::CHW) != nullptr;
         }
         catch (std::runtime_error)
         {
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             return false;
         }
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
     }
 
     BOOST_AUTO_TEST_SUITE(ConvolutionSuite)
@@ -56,6 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
         for (int deviceId : { 0 })
         {
             // BUGBUG: These will fail depending on whether we built with cuDNN or not. Without cuDNN we should use HWC
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto tt = typeid(fact).name();
             UNUSED(tt);
@@ -66,12 +71,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
             auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
             auto biasT = fact->CreateTensor(1, 1, cmapOut, 1);
 
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             vec buf(inW * inH * cmapIn * n);
             int seed = 0;
             // Create input, cmapIn feature maps, inW x inH each (NCHW format).
             std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmapIn); });
             SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
 
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             seed = 0;
             buf.resize(kW * kH * cmapIn * cmapOut);
             // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
@@ -81,7 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
             SingleMatrix out(outW * outH * cmapOut, n, deviceId);
             SingleMatrix temp(deviceId);
 
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out, temp);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Output is in NCHW format.
             std::array<float, 4 * 2 * 2> expBuf = {
@@ -91,19 +100,24 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
                 15219.0f, 15921.0f, 18729.0f, 19431.0f
             };
             SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             BOOST_CHECK_MESSAGE(out.IsEqualTo(exp), "Unexpected convolution output.");
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             float b[] = { 1.0f, 2.0f };
             SingleMatrix bias(cmapOut, 1, b, matrixFlagNormal, deviceId);
 
             SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             eng->AddBias(*outT, out, *biasT, bias, plusB);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Bias is per-channel.
             seed = 0;
             std::transform(expBuf.begin(), expBuf.end(), expBuf.begin(),
                 [=, &seed, &b](const float& a) { return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)]; });
             SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             BOOST_CHECK_MESSAGE(plusB.IsEqualTo(expPlusB), "Unexpected (convolution + bias) output.");
         }
     }
