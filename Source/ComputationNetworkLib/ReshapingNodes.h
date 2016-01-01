@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_targetImageLayout(imageLayout)
         { }
         ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
-            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")))
+            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC/*legacy*/))
         {
             // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
             AttachInputs(configp, this->GetExpectedNumInputs());
@@ -215,7 +215,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
             }
-            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
+            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
+            // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -248,7 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // setting any dimension to 0 means lose the tensor, flatten to vector
             // TODO: We can use 0 to indicate "infer". One value can be 0. It will be filled in to match row dim.
-            if (m_targetImageLayout.GetWidth() == 0 || m_targetImageLayout.GetHeight() == 0 || m_targetImageLayout.GetNumChannels() == 0)
+            if (m_targetImageLayout[1] == 0 || m_targetImageLayout[2] == 0 || m_targetImageLayout[0] == 0)
             {
                 if (Input(0)->HasSampleLayout())
                     fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
@@ -382,32 +383,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Say in one sentence what this logic does.
         void InferTargetSampleLayout()
         {
-            // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
-            if (m_targetImageLayout.GetWidth() > 0)
+            // BUGBUG: Below is the result of refactoring and only works for rank-3 tensors. Generalize.
+            if (m_targetImageLayout[1] > 0)
             {
-                if (m_targetImageLayout.GetHeight() > 0)
+                if (m_targetImageLayout[2] > 0)
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
                         if (m_targetImageLayout.GetNumElements() != m_numTargetRows)
                             RuntimeError("Image dimensions do not match row size.");
                     }
                     else
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[1] * m_targetImageLayout[2]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()));
+                            m_targetImageLayout = TensorShape(m_numTargetRows / (m_targetImageLayout[1] * m_targetImageLayout[2]), m_targetImageLayout[1], m_targetImageLayout[2]);
                     }
                 }
                 else
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[1] * m_targetImageLayout[0]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetNumChannels());
+                            m_targetImageLayout = TensorShape(m_targetImageLayout[0], m_targetImageLayout[1], m_numTargetRows / (m_targetImageLayout[1] * m_targetImageLayout[0]));
                     }
                     else
                     {
@@ -417,22 +418,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (m_targetImageLayout.GetHeight() > 0)
+                if (m_targetImageLayout[2] > 0)
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[2] * m_targetImageLayout[0]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_numTargetRows / (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
+                            m_targetImageLayout = TensorShape(m_targetImageLayout[0], m_numTargetRows / (m_targetImageLayout[2] * m_targetImageLayout[0]), m_targetImageLayout[2]);
                     }
                     else
                         RuntimeError("At least two image dimensions must be specified.");
                 }
-                else if (m_targetImageLayout.GetNumChannels() > 0)
+                else if (m_targetImageLayout[0] > 0)
                     RuntimeError("At least two image dimensions must be specified.");
                 else
-                    m_targetImageLayout = ImageLayoutWHC(m_numTargetRows, 1, 1);
+                    m_targetImageLayout = TensorShape(1, m_numTargetRows, 1);
             }
         }
     };

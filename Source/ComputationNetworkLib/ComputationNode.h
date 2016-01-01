@@ -503,9 +503,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
-                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout.GetWidth() != 1 || child->m_sampleLayout.GetNumChannels() != 1))  // looks like an image: use WHC notation
+                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1))  // looks like an image: use WHC notation
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
-                                child->m_sampleLayout.GetWidth(), child->m_sampleLayout.GetHeight(), child->m_sampleLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
+                                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0], mbSizeMark, child->GetNumCols());
+                    //BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
                     else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
                         fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
                     else
@@ -538,14 +539,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsOutputNeededDuringBackprop() const 
         {
             return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
-        }
-
-        // TODO: Remove this.
-        // used from:
-        //  - Plus/Minus/ElementTimesNode --> replace by max dim over inputs. Make this standard behavior for all binary element-wise ops.
-        bool IsInputAnImage(const size_t index) const
-        {
-            return m_inputs[index]->m_sampleLayout.IsInputAnImage();
         }
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
@@ -1528,7 +1521,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::m_deviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
+    using Base::m_deviceId; using Base::GetDeviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
@@ -1547,7 +1540,7 @@ protected: \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::Input; using Base::SetInput; \
-    using Base::IsInputAnImage; using Base::IsEqualTo; using Base::IsOutputOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
+    using Base::IsEqualTo; using Base::IsOutputOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
     using Base::Load; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::Save; using Base::UpdateFunctionMBSize; \

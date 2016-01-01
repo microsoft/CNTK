@@ -26,7 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
     {
         try
         {
-            return ConvFact::Create(0, ConvFact::EngineType::CuDnn) != nullptr;
+            return ConvFact::Create(0, ConvFact::EngineType::CuDnn, ImageLayoutKind::CHW) != nullptr;
         }
         catch (std::runtime_error)
         {
@@ -55,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto tt = typeid(fact).name();
             UNUSED(tt);
             auto eng = fact->CreateConvEngine(deviceId, 0);
@@ -128,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { -1, 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -231,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -346,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -406,7 +406,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -456,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);

@@ -279,7 +279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!isImage)
                 Init(configp->Get(L"shape"), isSparse);
             else
-                Init(ImageLayout(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse);
+                Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse);
         }
     public:
 

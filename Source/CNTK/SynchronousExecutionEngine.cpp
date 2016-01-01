@@ -111,7 +111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1; // BUGBUG: This comes through MBLayout, and should be forbidden.
                 ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
+                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (cnNodeType == L"SparseImageInput")
@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
                 ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateSparseInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
+                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -325,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageLayoutWHC(img_width, img_height, img_channels), name);   // BUGBUG: use a tensor descriptor instead
+                nodePtr = builder.Reshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
