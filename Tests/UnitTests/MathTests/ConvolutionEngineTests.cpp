@@ -60,7 +60,6 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         for (int deviceId : { 0 })
         {
             // BUGBUG: These will fail depending on whether we built with cuDNN or not. Without cuDNN we should use HWC
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto tt = typeid(fact).name();
             UNUSED(tt);
@@ -71,14 +70,12 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
             auto biasT = fact->CreateTensor(1, 1, cmapOut, 1);
 
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             vec buf(inW * inH * cmapIn * n);
             int seed = 0;
             // Create input, cmapIn feature maps, inW x inH each (NCHW format).
             std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmapIn); });
             SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
 
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             seed = 0;
             buf.resize(kW * kH * cmapIn * cmapOut);
             // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
@@ -88,9 +85,7 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             SingleMatrix out(outW * outH * cmapOut, n, deviceId);
             SingleMatrix temp(deviceId);
 
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out, temp);
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Output is in NCHW format.
             std::array<float, 4 * 2 * 2> expBuf = {
@@ -100,24 +95,19 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
                 15219.0f, 15921.0f, 18729.0f, 19431.0f
             };
             SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             BOOST_CHECK_MESSAGE(out.IsEqualTo(exp), "Unexpected convolution output.");
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             float b[] = { 1.0f, 2.0f };
             SingleMatrix bias(cmapOut, 1, b, matrixFlagNormal, deviceId);
 
             SingleMatrix plusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             eng->AddBias(*outT, out, *biasT, bias, plusB);
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Bias is per-channel.
             seed = 0;
             std::transform(expBuf.begin(), expBuf.end(), expBuf.begin(),
                 [=, &seed, &b](const float& a) { return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)]; });
             SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
-fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             BOOST_CHECK_MESSAGE(plusB.IsEqualTo(expPlusB), "Unexpected (convolution + bias) output.");
         }
     }
@@ -144,13 +134,20 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
         for (int deviceId : { -1, 0 })
         {
             auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto eng = fact->CreateConvEngine(deviceId, 0);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Input in NCHW format.
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), matrixFlagNormal, deviceId);
             // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
             SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), matrixFlagNormal, deviceId);
@@ -158,7 +155,9 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             SingleMatrix out(outW * outH * cmapOut, n, deviceId);
             SingleMatrix temp(deviceId);
 
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out, temp);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
             // Output is in NCHW format.
             float expBuf[] = {

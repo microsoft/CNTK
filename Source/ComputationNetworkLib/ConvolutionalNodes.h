@@ -72,8 +72,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             SetDims(ImageDimensions::AsTensorShape(1, 1, 0, m_imageLayoutKind), 0);
         }
-        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample,
-                        const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0, ImageLayoutKind imageLayoutKind = ImageLayoutKind::HWC) :
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+                        const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
             Base(deviceId, name),
             m_outputChannels(outputChannels),
             m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
@@ -86,8 +86,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
-                            configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"),
-                            configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+                            configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")),
+                            configp->Get(L"zeroPadding"), configp->Get(L"maxTempMemSizeInSamples"))
         {
             // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
             AttachInputs(configp, this->GetExpectedNumInputs());
@@ -338,17 +338,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
-            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
+            m_imageLayoutKind(ImageLayoutKind::HWC)
         { }
-        PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+        PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind) :
             Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
+            m_imageLayoutKind(imageLayoutKind)
         {
             m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, ImageLayoutKind::HWC/*m_imageLayoutKind*/);
         }
         PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
-            PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"))
+            PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
         {
             // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
             AttachInputs(configp, this->GetExpectedNumInputs());
@@ -357,13 +359,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Save(File& fstream) const override
         {
             Base::Save(fstream);
-            fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
+            uint32_t imageLayoutKind = (uint32_t)m_imageLayoutKind;
+            uint32_t windowWidth = (uint32_t)m_windowWidth;
+            fstream << imageLayoutKind << windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
         void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
-            fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
+            uint32_t imageLayoutKind, windowWidth;
+            fstream >> imageLayoutKind >> windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
+            m_windowWidth = windowWidth;
+            m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
         }
 
         void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -381,6 +388,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
+
+                node->m_imageLayoutKind = m_imageLayoutKind;
             }
         }
 
@@ -419,7 +428,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
 
             // get input tensor shape and interpret as image dimensions
-    const auto m_imageLayoutKind = ImageLayoutKind::HWC;        // BUGBUG: Finish this. Must be serialized.
             auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);
 
             if (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight)
@@ -450,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_inT == nullptr)
                 m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
             if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(m_sampleLayout[1], m_sampleLayout[2], m_sampleLayout[0], 1);
+                m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
         }
 
         void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -471,16 +479,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        size_t m_windowWidth, m_windowHeight;
+        size_t m_horizontalSubsample, m_verticalSubsample;
+        size_t m_inputSizePerSample, m_outputSizePerSample;
+
+        ImageLayoutKind m_imageLayoutKind;  // how to interpret the tensor (which dimensions are X/Y and C)
+
         std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
         std::unique_ptr<PoolingEngine<ElemType>> m_poolEng;
 
         std::unique_ptr<ConvolutionTensor4D> m_inT;
         std::unique_ptr<ConvolutionTensor4D> m_outT;
         std::unique_ptr<PoolingDescriptor> m_poolDesc;
-
-        size_t m_windowWidth, m_windowHeight;
-        size_t m_horizontalSubsample, m_verticalSubsample;
-        size_t m_inputSizePerSample, m_outputSizePerSample;
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
@@ -501,8 +511,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"MaxPooling"; }
     public:
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
-        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind) :
+            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
         { }
         MaxPoolingNode(const ScriptableObjects::IConfigRecordPtr configp) :
             Base(configp)
@@ -530,8 +540,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
-        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind) :
+            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
         { }
         AveragePoolingNode(const ScriptableObjects::IConfigRecordPtr configp) :
             Base(configp)

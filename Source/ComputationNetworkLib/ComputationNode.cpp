@@ -185,9 +185,6 @@ namespace Microsoft {
             if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
                 layoutPlausible = false;
         }
-        // some code initializes it to (1,1,rowDim)
-        if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
-            layoutPlausible = false;
         // check dimension
         if (GetNumRows() != m_sampleLayout.GetNumElements())
             layoutPlausible = false;
