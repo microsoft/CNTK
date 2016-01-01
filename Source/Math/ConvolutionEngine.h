@@ -253,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;
 
         enum class EngineType { Auto, CuDnn, Legacy };
-        static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind = ImageLayoutKind::HWC/*TODO: get rid of default*/);
+        static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind);
 
     public:
         ConvolutionEngineFactory(const ConvolutionEngineFactory&) = delete;

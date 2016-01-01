@@ -55,7 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            // BUGBUG: These will fail depending on whether we built with cuDNN or not. Without cuDNN we should use HWC
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto tt = typeid(fact).name();
             UNUSED(tt);
             auto eng = fact->CreateConvEngine(deviceId, 0);
@@ -128,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { -1, 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -175,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -231,7 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreateConvEngine(deviceId, 0);
             auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
             auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
@@ -296,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -346,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -406,7 +407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);
@@ -456,7 +457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test
 
         for (int deviceId : { 0 })
         {
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
             auto eng = fact->CreatePoolEngine(deviceId);
             auto inT = fact->CreateTensor(inW, inH, cmap, n);
             auto outT = fact->CreateTensor(outW, outH, cmap, n);

@@ -345,7 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
         {
-            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto/*..., m_imageLayoutKind*/);
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, ImageLayoutKind::HWC/*m_imageLayoutKind*/);
         }
         PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"))
