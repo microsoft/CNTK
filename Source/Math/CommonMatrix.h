@@ -54,14 +54,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         opCopy,
         opNegate, opNot,
         opAbs,
-        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine,
+        opSigmoid, opTanh, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
+        // unary ops for use by Matrix class only (there is no TensorView implementation)
+        opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
         // binary
         opSum, opDifference, opElementwiseProduct, opElementwiseQuotient,
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
         opAnd, opOr, opXor,
         opMaskNegative,
-        opElementwiseProductWithSigmoidDerivative/* a * dsigmoid/dx(b) */,
+        opElementwiseProductWithSigmoidDerivative/* a * dsigmoid/dx(b) */, opElementwiseProductWithTanhDerivative, opElementwiseProductWithExp,
+        opElementwiseProductWithLinearRectifierDerivative, opElementwiseProductWithCosDerivative,
         // ternary
         opCond/*a ? b : c*/, opClip/*clip a within interval b..c*/
         // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
@@ -75,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(Copy); \
     Macro(Negate); Macro(Not); \
     Macro(Abs); \
-    Macro(Sigmoid); Macro(SigmoidDerivative); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifierDerivative); Macro(Cosine); Macro(NegativeSine);
+    Macro(Sigmoid); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifier); Macro(Cosine);
 
 #define ForAllBinaryOps(Macro) \
     Macro(Sum); Macro(Difference); Macro(ElementwiseProduct); Macro(ElementwiseQuotient); \
@@ -83,7 +86,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
     Macro(And); Macro(Or); Macro(Xor);\
     Macro(MaskNegative); \
-    Macro(ElementwiseProductWithSigmoidDerivative);
+    Macro(ElementwiseProductWithSigmoidDerivative); Macro(ElementwiseProductWithTanhDerivative); Macro(ElementwiseProductWithExp); \
+    Macro(ElementwiseProductWithLinearRectifierDerivative); Macro(ElementwiseProductWithCosDerivative);
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond); Macro(Clip);

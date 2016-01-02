@@ -86,11 +86,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void Test();
 
-    private:
-
         void DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op);
         void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op);
         void DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op);
+
+    private:
 
         // -------------------------------------------------------------------
         // accessors
