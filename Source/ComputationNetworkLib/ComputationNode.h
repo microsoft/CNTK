@@ -26,7 +26,8 @@
 #include <sstream>
 #include <iostream>
 
-#define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
+// remove these following two #defines once the tensor lib works
+#define ENABLE_TENSORVIEW   // if set then tensor lib is used instead of old Matrix implementations, wherever such an implementation exists
 #define ENABLE_BROADCASTING_ELEMENTTIMES    // if set then ScaleNode and Row/ColumnElementTimes are redirected to ElementTimes
 
 #define DEFAULT_HIDDEN_ACTIVATION 0.1

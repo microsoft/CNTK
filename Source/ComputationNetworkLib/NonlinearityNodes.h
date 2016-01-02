@@ -91,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class Name ## Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward> \
     { \
         typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward> Base; UnaryElementWiseWithOpCodeNodeBaseMembers; \
-        static const std::wstring TypeName() { return L#Name; } \
+        static const std::wstring TypeName() { return L ## #Name; } \
     public: \
         DeclareConstructorFromConfigWithNumInputs(Name ## Node); \
         Name ## Node(DEVICEID_TYPE deviceId, const wstring & Name) : \
