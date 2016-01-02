@@ -96,6 +96,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return sqrt_(z > 0 ? z : 0);
     }
 
+    template<class ElemType>
+    DECL ElemType ClippedLog(ElemType z)
+    {
+        return z < EPS_IN_LOG ? LOG_OF_EPS_IN_LOG : log_(z);
+    }
+
+    template<class ElemType>
+    DECL ElemType ClippedQuotient(ElemType a, ElemType b)
+    {
+        if (fabs(b) < EPS_IN_INVERSE)   // clip the denominator
+        {
+            if (b > 0)
+                b = EPS_IN_INVERSE;
+            else
+                b = -EPS_IN_INVERSE;
+        }
+        return a / b;
+    }
+
     template<typename ElemType>
     DECL ElemType LogAdd(ElemType x, ElemType y)
     {
@@ -135,13 +154,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DefUnaryOp(Copy, a);
     DefUnaryOp(Negate, -a); DefUnaryOp(Not, !a);
     DefUnaryOp(Abs, fabs_(a));
-    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, log_(a)); DefUnaryOp(LinearRectifier, a > 0 ? a : 0); DefUnaryOp(Cosine, cos_(a));
+    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, ClippedLog(a)); DefUnaryOp(LinearRectifier, a > 0 ? a : 0); DefUnaryOp(Cosine, cos_(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
     #define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a, ElemType b) { return expr; }
 
-    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a * b); DefBinaryOp(ElementwiseQuotient, a / b);
+    DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a * b); DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
     DefBinaryOp(LogSum, LogAdd(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
     DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
     DefBinaryOp(And, (float)((!!a) && (!!b))); DefBinaryOp(Or, (float)((!!a) || (!!b))); DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
