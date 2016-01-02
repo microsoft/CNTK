@@ -133,8 +133,8 @@ fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
 
         for (int deviceId : { -1, 0 })
         {
-            fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
-            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, ImageLayoutKind::CHW);
+fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
+            auto fact = ConvFact::Create(deviceId, ConvFact::EngineType::Auto, deviceId >= 0 ? ImageLayoutKind::CHW : ImageLayoutKind::HWC);
 fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
             auto eng = fact->CreateConvEngine(deviceId, 0);
 fprintf(stderr, "ConvolutionEngineTests.cpp %d\n", __LINE__);
