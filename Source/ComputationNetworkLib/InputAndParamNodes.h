@@ -133,7 +133,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_value->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
             if (uniformInit)
             {
-                ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
+                // TODO: move these crazy extra factors out from here and into NDL, and make them visible in BS
+                ElemType randRange = 0.05f * initValueScale;
                 Value().SetUniformRandomValue(-randRange, randRange, randomSeed);
             }
             else

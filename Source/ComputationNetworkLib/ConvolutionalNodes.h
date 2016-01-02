@@ -82,7 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_imageLayoutKind(imageLayoutKind)
         {
             SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: necessary?
-            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
         }
         ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
@@ -267,16 +267,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::DumpNodeInfo(printValues, fstream);
 
-            auto inputSampleLayout = GetInputSampleLayout(1);
+            auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
+            auto outDims = ImageDimensions(m_sampleLayout, m_imageLayoutKind);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout[1], inputSampleLayout[2], inputSampleLayout[0]);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inDims.m_width, inDims.m_height, inDims.m_numChannels);
             fstream << string(str);
             sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_sampleLayout[1], m_sampleLayout[2], m_sampleLayout[0]);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", outDims.m_width, outDims.m_height, outDims.m_numChannels);
             fstream << string(str);
-            sprintf(str, "ZeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
+            sprintf(str, "zeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
             fstream << string(str);
         }
 
@@ -328,8 +329,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PoolingNodeBase (input)
     // -----------------------------------------------------------------------
 
-    // Max/Average Pooling: support multi channel
-    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
     class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -347,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
             m_imageLayoutKind(imageLayoutKind)
         {
-            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, ImageLayoutKind::HWC/*m_imageLayoutKind*/);
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
         }
         PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
@@ -371,6 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> imageLayoutKind >> windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
             m_windowWidth = windowWidth;
             m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
         }
 
         void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -451,8 +451,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // set up various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
-            if (m_factory == nullptr)
-                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+            assert(m_factory);
+            //if (m_factory == nullptr)
+            //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_poolEng == nullptr)
                 m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
             if (m_inT == nullptr)
@@ -723,7 +724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             SetDims(Input(0));
 
-    const auto m_imageLayoutKind = ImageLayoutKind::HWC;        // BUGBUG: Finish this. Must be serialized.
+    const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
             auto dims = ImageDimensions(GetSampleLayout(), m_imageLayoutKind);
 
             if (m_factory == nullptr)
@@ -783,11 +784,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         VersionInfo m_version;
 
     private:
-        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
-        std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-        std::unique_ptr<ConvolutionTensor4D> m_inT;
-        std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
-
         // Determines whether to use training or inference(evaluation) mode.
         bool m_eval;
         // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
@@ -803,6 +799,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_dScale;
         // Stores bias derivatives.
         shared_ptr<Matrix<ElemType>> m_dBias;
+
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionTensor4D> m_scaleBiasT;
     };
 
     template class BatchNormalizationNode<float>; 
