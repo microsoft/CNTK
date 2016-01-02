@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-#if 0//def ENABLE_TENSORVIEW
+#ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUSBP#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient      =                    GradientTensorFor(rank, fr);
@@ -123,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
-#if 0//def ENABLE_TENSORVIEW
+#ifdef ENABLE_TENSORVIEW
             static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);

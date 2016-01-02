@@ -4491,6 +4491,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         }
 
+        // TODO: Add a special case for tensor bias reduction. cudnn is ~7% faster on Image/QuickE2E.
+
         // regular case
         else
             return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
