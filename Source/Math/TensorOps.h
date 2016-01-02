@@ -115,6 +115,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType> DECL ElemType Sqr(ElemType z) { return z * z; }
+
     // -----------------------------------------------------------------------
     // ElementWiseOperator implementations
     //
@@ -133,7 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DefUnaryOp(Copy, a);
     DefUnaryOp(Negate, -a); DefUnaryOp(Not, !a);
     DefUnaryOp(Abs, fabs_(a));
-    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(SigmoidDerivative, SigmoidDerivative(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, log_(a)); DefUnaryOp(LinearRectifierDerivative, LinearRectifierDerivative(a)); DefUnaryOp(Cosine, cos_(a)); DefUnaryOp(NegativeSine, -sin_(a));
+    DefUnaryOp(Sigmoid, Sigmoid(a)); DefUnaryOp(Tanh, tanh_(a)); DefUnaryOp(Sqrt, Sqrt(a)); DefUnaryOp(Exp, exp_(a)); DefUnaryOp(Log, log_(a)); DefUnaryOp(LinearRectifier, a > 0 ? a : 0); DefUnaryOp(Cosine, cos_(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -145,6 +147,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DefBinaryOp(And, (float)((!!a) && (!!b))); DefBinaryOp(Or, (float)((!!a) || (!!b))); DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
     DefBinaryOp(MaskNegative, b >= 0 ? a : 0);
     DefBinaryOp(ElementwiseProductWithSigmoidDerivative, a * SigmoidDerivative(b));
+    DefBinaryOp(ElementwiseProductWithTanhDerivative, a * (1 - Sqr(tanh_(b))));
+    DefBinaryOp(ElementwiseProductWithExp, a * exp_(b));
+    DefBinaryOp(ElementwiseProductWithLinearRectifierDerivative, b > 0 ? a : 0);
+    DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b));
+
 #pragma pop_macro("DefBinaryOp")
 
 #pragma push_macro("DefTernaryOp")
