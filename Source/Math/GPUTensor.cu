@@ -7,7 +7,6 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "BestGpu.h"
-//#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -140,6 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         static __device__ ElemType Compute(const FixedArray<ElemType*, 3> & pointers, ElementWiseOperator op)
         {
+            //const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
             ElemType a = *(pointers[0]);
             ElemType b = *(pointers[1]);
 #define CaseBinaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a,b)
@@ -434,7 +434,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         FixedArray<C_unsigned_int, K> regularOpStrides(regularOpStrideVector);
         FixedMatrix<C_int, N, K> regularStrides(regularStrideVectors);
-        FixedArray<C_unsigned_int, /*M=*/0> reducingOpDims;
+        FixedArray<C_unsigned_int, /*M=*/0> reducingOpDims; // empty reduction dimensions
         FixedMatrix<C_int, N, /*M=*/0> reducingStrides;
 
         // launch the kernel

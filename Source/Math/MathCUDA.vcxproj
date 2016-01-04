@@ -175,6 +175,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
   <ItemGroup>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <FileType>CppCode</FileType>

@@ -136,6 +136,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> DECL ElemType Sqr(ElemType z) { return z * z; }
 
+    // IndexElement reindexes a tensor along one dimension.
+    // For the indexed dimension, the tensor op is prepared by setting 'a' to be broadcasting along the indexed dimension.
+    // I.e. pa = &a points to the first element (as if index == 0).
+    // This function then must now adjust the address:
+    //  pa <- pa + stride * index
+    // The stride is passed in as third parameter.
+    //template<class ElemType> DECL ElemType IndexElement(const ElemType & a, ElemType b, int stride) { const ElemType * pa = &a; return pa[stride * (ptrdiff_t)b]; }
+
     // -----------------------------------------------------------------------
     // ElementWiseOperator implementations
     //
@@ -159,6 +167,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma push_macro("DefBinaryOp")
     #define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a, ElemType b) { return expr; }
+    //#define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(const ElemType & a, ElemType b, int i = 0) { UNUSED(i); return expr; }
 
     DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a * b); DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
     DefBinaryOp(LogSum, LogAdd(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
@@ -170,6 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DefBinaryOp(ElementwiseProductWithExp, a * exp_(b));
     DefBinaryOp(ElementwiseProductWithLinearRectifierDerivative, b > 0 ? a : 0);
     DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b));
+    //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
 
