@@ -65,6 +65,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         opMaskNegative,
         opElementwiseProductWithSigmoidDerivative/* a * dsigmoid/dx(b) */, opElementwiseProductWithTanhDerivative, opElementwiseProductWithExp,
         opElementwiseProductWithLinearRectifierDerivative, opElementwiseProductWithCosDerivative,
+        // binary ops for indexing
+        //opIndex,
         // ternary
         opCond/*a ? b : c*/, opClip/*clip a within interval b..c*/
         // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
@@ -87,7 +89,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(And); Macro(Or); Macro(Xor);\
     Macro(MaskNegative); \
     Macro(ElementwiseProductWithSigmoidDerivative); Macro(ElementwiseProductWithTanhDerivative); Macro(ElementwiseProductWithExp); \
-    Macro(ElementwiseProductWithLinearRectifierDerivative); Macro(ElementwiseProductWithCosDerivative);
+    Macro(ElementwiseProductWithLinearRectifierDerivative); Macro(ElementwiseProductWithCosDerivative); \
+    //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond); Macro(Clip);

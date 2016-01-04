@@ -379,8 +379,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
-        // this patches up m_targetImageLayout according to some rules
-        // TODO: Say in one sentence what this logic does.
+        // This infers dimensions in m_targetImageLayout.
+        // Users are allowed to provide 2 (out of 3) image dimensions.
+        // One missing dimension can be inferred. If two dimensions are
+        // unspecified it throws a runtime error.
+        // TODO: Generalize this to any number of dimensions.
         void InferTargetSampleLayout()
         {
             // BUGBUG: Below is the result of refactoring and only works for rank-3 tensors. Generalize.
@@ -813,5 +816,196 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class RowRepeatNode<float>;
     template class RowRepeatNode<double>;
+
+    /*
+
+notes on tensor operations
+==========================
+
+reshaping
+---------
+
+ - on dimension index 'dim' and 'tensorShape'
+ - tensorShape: a vector of dimensions, e.g. 640:480:3:30 could describe a 1-second RGB video of VGA dimensions at 30 fps
+ - 'dim' specifies a specific tensor index
+    - dim > 0 is a regular sample index. E.g. for a matrix, dim=1 would be the row dimension, and dim=2 in the above example has dimension 480.
+    - dim < 0 denote time indices (recurrent loops). Rank=-1 is the innermost time index.
+    - dim = 0 denotes the index of the parallel sequence
+       - Since all operations logically operate on a single sequence, i.e. parallel sequences generally cannot be indexed by the user.
+       - Exceptions: training criteria, BatchNormalization, ...WithNegativeSamples (we should not need this)
+    - I don't like that 'dim' refers to the index of the dimension as well as the number of elements in that dimension. Axis (numpy)?
+
+ - Reshaping:   --these are all implemented in C++ by ReshapeNode
+    - Reshape(x, tensorShape, beginDim=0, endDim=0)
+        - just replaces metadata m_sampleLayout
+        - one dimension may be specified as 0 and will be inferred
+        - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
+        - may not be applied to time; use Permute() or Transpose()
+    - ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginDim=dim, endDim=dim+1)
+       - reinterprets one dimension as multiple, where the number of elements remains the same
+       - one of the new dimensions may be specified as 0 and will be inferred
+    - FlattenDimensions(x, dim, num) = Reshape(x, 0, beginDim=dim, endDim=dim+1)
+       - replace two or more consecutive dims by a single dim with the same number of elements
+    - SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
+       - splits a dimension into a new tensor dimension, injecting them into a new dimension
+       - to split stacked frames into a new time dimension:
+         insert new time dim with ReshapeDimension(., -1, 0:1), SplitDimension(., dim, N), Transpose(., dim+1, -1), then Select(., dim+1, 0) away the new time dim
+         This would make 4 copies presently. We may need a compound C++ node for now.
+       - note: to split into multiple outputs (like tf.split()), use a BrainScript loop with Slice().
+ - Slicing   --all implemented in C++ by SliceNode
+    - Slice(x, dim, begin, end, stride=1, phase=0)
+       - reduces a dim to index range [begin,end)
+       - negative bounds specify "from end" (end=0 means end if stride>0, and begin=0 means end if stride<0)
+       - also applies to time, e.g.:
+          - pick last frame of a sequence (for s2s): Slice(x, -1, -1, 0)    // first -1 is dim and means the time index
+          - trim first and last 3 frames of a sequence: Slice(x, -1, 3, -3) // 3 means begin at frame 3, -3 means end is 3rd frame from the end
+          - this will update MBLayout
+       - the optional stride and phase parameters are for implementing downsampling (stride>1) and reversing (begin=-1, stride=-1)
+       - multiple slice operations can be combined by concatenating the spec vector, e.g. Slice(x, dim1:dim2, begin1:begin2, end1:end2)
+       - today's RowSlice(begin, num, x) = Slice(x, 1, begin, begin + num)
+       - like torch.narrow()
+       - can implement TF unpack() and Torch split() as a BrainScript loop with multiple Slice() operations
+       - internally implemented by tensor lib opCopy with manipulated m_strides/m_offset
+    - Select(x, dim, index) = FlattenDimensions(Slice(x, dim, index, index+1), index > 1 ? index-1 : index, index > 1 ? index : index+1)
+       - narrow dim to a single index, then drop the dim. Result will have one dim less.
+       - like torch.select()
+       - can implement squeezing a dim-1 dim: Select(x, dim:0)
+ - Splicing:   --all implemented in C++ by SpliceNode
+    - Splice(inputs, dim)
+       - splice multiple inputs inputs[0]:inputs[1]:... along given dim (=RowStack for vectors)
+       - inputs must have identical dimensions except for:
+          - the specified dim
+          - broadcasting dimensions (e.g. used to implement Pad())
+       - one can splice in time
+          - e.g. prepend a vector to a time sequence
+          - this will create a new MBLayout
+       - like tf.concat()
+    - Pack(inputs, dim) = ReshapeDimension(Splice(inputs, dim), dim, (0:Length(inputs)) )
+       - like splice but creates inserts new dim of dimension Length(inputs)
+       - inputs must have identical dimensions for all dims (except for broadcasting)
+       - dim can be a time dimension; then a new inner-most time dimension will be inserted
+       - like tf.pack()
+    - Pad(x, dim, howManyBefore, howManyAfter, with=0) = Splice(Constant(with, tensorShape=1*(dim-1):howManyBefore),  x,  Constant(with, tensorShape=1*(dim-1):howManyAfter), dim)
+       - inverse of slice, pad with a constant value
+       - dimensions specified relative, can pad at start and end
+       - in time: pad neighbor frames
+    - Repeat(x, dim, numRepeats) = Splice(x*numRepeats, dim)
+       - generalizes CNTK RowRepeat(x, numRepeats) = Repeat(x, 1, numRepeats)
+       - to repeat multiple, specify vectors, e.g. Repeat(x, dim1:dim2, numRepeats1:numRepeats2)
+       - like tf.tile() and Matlab's repmat()
+ - Transposition (permuting dims):   --implemented in C++ by PermuteDimensionsNode
+    - PermuteDimensionsOf(x, dim1:dim2:...:dimN)
+       - dims are rotated to dim2:dim3:...:dimN:dim1; other dims remain untouched
+         To rotate the other way round, specify them in opposite order.
+         We specify it this way to be able to reference the time dimension without having to know the rank of the m_sampleLayout.
+       - time dims must have a constant duration for all items in the minibatch
+       - internally implemented with tensor lib by shuffling dimensions with their strides  --TODO: check if TensorShape optimization is still correct
+    - Transpose(x, dim1, dim2) = PermuteDimensions(x, dim1:dim2)
+       - any two dimensions; including time (must have constant duration)
+       - like torch.transpose()
+ - Re-indexing:   --implemented by ReindexRankNode and SliceNode
+    - ReindexDimension(x, dim, indexVector)
+       - splice x[..., indexVector[0], ...], x[..., indexVector[1], ...], etc. with indexVector[.] at given dim
+       - indexVector must be invertible if it is intended to backpropagate through this node
+    - DownsampleDimension(x, dim, n, phase=0) = Slice(x, dim, 0, 0, stride=n)
+       - select every n-th element, starting with index 'phase'
+       - time dims allowed. Phase is then a modulus w.r.t. where a sequence is inside the minibatch (may require a ReconcileLayout() before to match layouts)
+    - ReverseDimension(x, dim) = Slice(x, dim, -1, 0, stride=-1)
+       - reverses the direction of a dim
+       - when applied to time dims, this creates a new layout (which is also flipped)
+
+ - misc.:
+    - note: much would look more natural if we had OO syntax, e.g. x.Slice(dim, begin, end).FlattenDimensions(...)
+      Could be done by exposing all methods on ComputationNode... not currently feasible with BrainScript, but e.g. with Python bindings
+    - torch.unfold (dim, size, step)
+       - create a convolution matrix (stride magic)
+    - CyclicallyPermuteRank(x, dim, step)
+       - rotates indices
+       - also applies to time dimensions
+    - duplicate elements
+    - Gather
+       - from Torch and TF
+    - TF also has:
+       - 'gather': reindexing
+       - 'dynamic_partition', 'dynamic_stitch'
+    - Torch:
+       - expand (dim, range): broadcasts dimension 'dim' as a new dimension with 'range'. Not needed I think.
+       - repeatTensor: like tile but with weird reshaping
+       - squeeze: removes all singleton dimensions, or a specific one. We can remove a specific one with Select().
+    - TODO:
+       - give names to dimensions?
+       - do we want to allow time offsets in layouts?
+
+reductions
+----------
+
+ - ReduceSum
+    - sum over all elements of a dimension, or over time
+ - ReduceMax
+    - max
+ - ReduceMean
+    - av
+ - ArgMax, ArgMin
+    - we already have that somewhere, for evaluation
+ - All, Any
+    - logical test --must be done over sequences
+ - TF also has:
+    - reduce_prod, reduce_min
+    - segment_sum etc.; we use sequences
+    - listdiff
+    - where: indices of 'true' values  -> 2D tensor of coordinates
+    - unique (1D only)
+    - edit_distance
+    - invert_permutation: invert a permutation index vector
+    - top_k
+
+convolutions
+------------
+
+ - convolution
+    - convolution with filter
+    - max pool (=convolution with weights 1 and max reduction)
+    - av pool (=convolution with uniform filter)
+ - also in time: by specifying more filter dimensions [TODO]
+    - tricky bit: boundaries; may need expansion or reduction of sequences
+
+element-wise operations
+-----------------------
+
+ - PlusNode, MinusNode, ElementTimes
+ - with broadcasting, these implement:
+    - PlusNode with bias, PlusNode for images
+    - 1-x
+    - ScaleNode, RowElementTimes, ColumnElementTimes
+ - elementwise nonlinearities as usual  [TODO: complete them]
+ - logical ops (can be done by comparison ops actually)
+ - Clamp
+    - bounds are passed as 'Const'
+ - TF: in_top_k
+ - Torch performs these ops (e.g. add) as vector, without broadcasting
+    - e.g. max reduces, while cmax does not. Our solution is better... really? How to specify reduce?
+
+gradient operations
+-------------------
+
+ - TF: are nodes, e.g. clip_by_value
+    - input should be parameters as well, so they can be computed
+ - need a node to stop gradient propagation?
+ - can we use nodes to specify things like AdaGrad and momentum?
+
+debugging
+---------
+
+ - node that prints activations
+ - node that prints mean/var of gradients
+
+other
+-----
+
+ - per-node learning rate: can specify additional parameter for each node? Maybe fold with updateLearnableParameter?
+ - give dimensions a name?
+ - can we interleave variable-length ones? Concat into a single dimensions, using strides?
+
+ */
 
 }}}
