@@ -108,9 +108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
                 size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
-                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1; // BUGBUG: This comes through MBLayout, and should be forbidden.
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (cnNodeType == L"SparseImageInput")
@@ -126,8 +127,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateSparseInputNode(name, ImageLayoutWHC(imageWidth, imageHeight, imageChannels), numImages);
+                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
             }
         }
         else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -323,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageLayoutWHC(img_width, img_height, img_channels), name);
+                nodePtr = builder.Reshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
@@ -383,16 +385,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t outputChannels = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
-            
                 assert (id == 5);
 
-                //optional
+                // optional
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
                 bool zeroPadding = node->GetOptionalParameter("zeroPadding", "false");
                 size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
 
-
                 nodePtr = builder.Convolution(NULL, NULL, kernelWidth, kernelHeight, outputChannels,
-                                              horizontalSubsample, verticalSubsample, zeroPadding, name, maxTempMemSizeInSamples);
+                                              horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding, maxTempMemSizeInSamples, name);
             }
         }
         else if (cnNodeType == OperationNameOf(MaxPoolingNode))
@@ -415,11 +416,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
-            
                 assert (id == 4);
 
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
+
                 nodePtr = builder.MaxPooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight,
-                                             horizontalSubsample, verticalSubsample, name);
+                    horizontalSubsample, verticalSubsample, imageLayoutKind, name);
             }
         }
         else if (cnNodeType == OperationNameOf(AveragePoolingNode))
@@ -442,11 +444,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
                 size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                assert(id == 4);
 
-                assert (id == 4);
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
                 nodePtr = builder.AveragePooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight,
-                                                 horizontalSubsample, verticalSubsample, name);
+                                                 horizontalSubsample, verticalSubsample, imageLayoutKind, name);
             }
         }
         else if (cnNodeType == OperationNameOf(BatchNormalizationNode))

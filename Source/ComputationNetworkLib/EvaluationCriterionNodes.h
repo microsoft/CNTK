@@ -77,13 +77,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxValues->Resize(m_topK, cols);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            m_sampleLayout = TensorShape();
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);

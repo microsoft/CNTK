@@ -1725,7 +1725,7 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 }
 
 template<class ElemType>
-bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/)
+bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/, size_t & firstPosInSentence)
 {
     bool bDataIsThere = true; 
 
@@ -1751,6 +1751,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         Reset();
 
         mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
+        firstPosInSentence = mLastPosInSentence;
         if (mNumRead == 0) return false;
 
         std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
@@ -1760,7 +1761,8 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
     }
 
     /// add one minibatch 
-    size_t i = mLastPosInSentence; 
+    firstPosInSentence = mLastPosInSentence;
+    size_t i = mLastPosInSentence;
     size_t j = 0;
     // exclude the last token since it is the last label to be predicted
     for (i = mLastPosInSentence; j < m_mbSize &&  i < sLn-1; i++ , j++)
@@ -1835,7 +1837,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     if (m_mbSize == 0)
         return false;
 
-    bool moreData = EnsureDataAvailable(m_mbStartSample);
+    size_t firstPosInSentence;
+    bool moreData = EnsureDataAvailable(m_mbStartSample, firstPosInSentence);
     if (!moreData)
     {
         m_pMBLayout->Init(mToProcess.size(), 0);
@@ -1857,13 +1860,32 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
 
+        // create MBLayout
+        size_t nT = actualmbsize / mToProcess.size();
+        m_pMBLayout->Init(mToProcess.size(), nT);
+        for (size_t s = 0; s < mToProcess.size(); s++)
+        {
+            size_t seq = mToProcess[s];
+            size_t len = m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1;    // -1 because last one is label
+            ptrdiff_t begin = -(ptrdiff_t)firstPosInSentence;
+            ptrdiff_t end = (ptrdiff_t)len - (ptrdiff_t)firstPosInSentence;
+            if (begin >= (ptrdiff_t)nT)
+                LogicError("BatchSequenceReader: Sentence begin outside minibatch?");
+            if (end < 0)
+                LogicError("BatchSequenceReader: Sentence end outside minibatch?");
+            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, begin, (size_t)end);
+            if (begin > 0)
+                m_pMBLayout->AddGap(s, 0, (size_t)begin);
+            if (end < (ptrdiff_t)nT)
+                m_pMBLayout->AddGap(s, end, nT);
+        }
+
         // copy m_featureData to matrix
+        // m_featureData is a sparse, already with interleaved parallel sequences. We copy it into a dense matrix.
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
-        size_t nT = actualmbsize / mToProcess.size();
-        m_pMBLayout->Init(mToProcess.size(), nT);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1878,15 +1900,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         for (size_t j = 0; j < actualmbsize; ++j)   // note: this is a loop over matrix columns, not time steps or parallel sequences
         {
             // vector of feature data goes into matrix column
-            size_t idx = (size_t)m_featureData[j];
-
-            /// actual time position
-            size_t timeIdx = (size_t)j / mToProcess.size();
-            size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
+            size_t idx = (size_t)m_featureData[j];      // one-hot index of the word, indexed by column (i.e. already interleaved)
 
             features.SetValue(idx, j, (ElemType)1);
 
-            SetSentenceBegin(idx, uttIdx, timeIdx);
+            // actual time position
+            //size_t timeIdx = (size_t)j / mToProcess.size();
+            //size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
         }
 
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
@@ -1992,6 +2012,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentence
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
+    size_t firstPosInSentence;
     bool ret = false;
     switch (endDataType)
     {
@@ -2000,7 +2021,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     case endDataEpoch:
     case endDataSet:
-        ret = !EnsureDataAvailable(m_mbStartSample);
+        ret = !EnsureDataAvailable(m_mbStartSample, firstPosInSentence);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
         if (mSentenceEnd)

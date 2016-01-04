@@ -170,8 +170,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_targetImageLayout(imageLayout)
         { }
         ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
-            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageLayoutWHC(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels")))
+            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC/*legacy*/))
         {
+            // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
 
@@ -200,26 +201,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_targetImageLayout.Load(fstream);
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, true);
-            InferImageDimensions();
-
-            // setting any dimension to 0 means lose the tensor, flatten to vector
-            // TODO: We can use 0 to indicate "infer". One value can be 0. It will be filled in to match row dim.
-            if (m_targetImageLayout.GetWidth() == 0 || m_targetImageLayout.GetHeight() == 0 || m_targetImageLayout.GetNumChannels() == 0)
-            {
-                // TODO: We need to decide what reshaping means in presence of a tensor.
-                m_sampleLayout = TensorShape(m_numTargetRows);
-                if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
-                    fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
-            }
-            else
-            {
-                m_sampleLayout = m_targetImageLayout;
-            }
-        }
-
         virtual void /*IComputationNode::*/PrintSelfBeforeValidation() const override
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
@@ -234,12 +215,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
             }
-            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
+            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
+            // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            if (factor() == 1)          // canonical case: keeps the MBLayout(e.g. only changing the TensorShape)
+                m_pMBLayout = Input(0)->GetMBLayout();
+            else if (Input(0)->HasMBLayout())
+            {
+                if (!m_pMBLayout)
+                    m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates a new layout
+            }
+            else
+                assert(!m_pMBLayout);                       // reshaping non-mini-batch data
 
             size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
             // Note: During initial validation, cols may not be a multiple. E.g. cols may be 1 or 3. So we cannot check here whether the integer-multiple conditions are fulfilled.
@@ -253,17 +244,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
             }
 
-            SetDims(m_numTargetRows, newCols);
-            if (factor() == 1)          // canonical case: no reshaping actually (e.g. only changing the TensorShape)
-                m_pMBLayout = Input(0)->GetMBLayout();
-            else if (Input(0)->HasMBLayout())
+            // patch up m_targetImageLayout, which was originally a construction parameter
+            InferTargetSampleLayout();
+
+            // setting any dimension to 0 means lose the tensor, flatten to vector
+            // TODO: We can use 0 to indicate "infer". One value can be 0. It will be filled in to match row dim.
+            if (m_targetImageLayout[1] == 0 || m_targetImageLayout[2] == 0 || m_targetImageLayout[0] == 0)
             {
-                if (!m_pMBLayout)
-                    m_pMBLayout = make_shared<MBLayout>();  // mini-batch data: this generates its own layout
+                if (Input(0)->HasSampleLayout())
+                    fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
+                // TODO: We need to decide what reshaping means in presence of a tensor.
+                SetDims(TensorShape(m_numTargetRows), newCols);
             }
             else
-                assert(!m_pMBLayout);                       // reshaping non-mini-batch data
-            InferImageDimsFromInputs();
+            {
+                if (m_numTargetRows != m_targetImageLayout.GetNumElements())
+                    LogicError("ReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int)m_numTargetRows);
+                SetDims(m_targetImageLayout, newCols);
+            }
         }
 
         virtual void UpdateFunctionMBSize() override
@@ -277,7 +275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
             }
             else
-                SetDims(m_numTargetRows, newCols);
+                SetNumCols(newCols);
         }
 
         // TODO: there seems to be semantic overlap between BeginForwardProp() and UpdateFunctionMBSize()
@@ -381,33 +379,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
-        void InferImageDimensions()
+        // this patches up m_targetImageLayout according to some rules
+        // TODO: Say in one sentence what this logic does.
+        void InferTargetSampleLayout()
         {
-            if (m_targetImageLayout.GetWidth() > 0)
+            // BUGBUG: Below is the result of refactoring and only works for rank-3 tensors. Generalize.
+            if (m_targetImageLayout[1] > 0)
             {
-                if (m_targetImageLayout.GetHeight() > 0)
+                if (m_targetImageLayout[2] > 0)
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
                         if (m_targetImageLayout.GetNumElements() != m_numTargetRows)
                             RuntimeError("Image dimensions do not match row size.");
                     }
                     else
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[1] * m_targetImageLayout[2]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_targetImageLayout.GetHeight(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetHeight()));
+                            m_targetImageLayout = TensorShape(m_numTargetRows / (m_targetImageLayout[1] * m_targetImageLayout[2]), m_targetImageLayout[1], m_targetImageLayout[2]);
                     }
                 }
                 else
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[1] * m_targetImageLayout[0]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_targetImageLayout.GetWidth(), m_numTargetRows / (m_targetImageLayout.GetWidth() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetNumChannels());
+                            m_targetImageLayout = TensorShape(m_targetImageLayout[0], m_targetImageLayout[1], m_numTargetRows / (m_targetImageLayout[1] * m_targetImageLayout[0]));
                     }
                     else
                     {
@@ -417,22 +418,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (m_targetImageLayout.GetHeight() > 0)
+                if (m_targetImageLayout[2] > 0)
                 {
-                    if (m_targetImageLayout.GetNumChannels() > 0)
+                    if (m_targetImageLayout[0] > 0)
                     {
-                        if (m_numTargetRows % (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()) > 0)
+                        if (m_numTargetRows % (m_targetImageLayout[2] * m_targetImageLayout[0]) > 0)
                             RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
-                            m_targetImageLayout = ImageLayoutWHC(m_numTargetRows / (m_targetImageLayout.GetHeight() * m_targetImageLayout.GetNumChannels()), m_targetImageLayout.GetHeight(), m_targetImageLayout.GetNumChannels());
+                            m_targetImageLayout = TensorShape(m_targetImageLayout[0], m_numTargetRows / (m_targetImageLayout[2] * m_targetImageLayout[0]), m_targetImageLayout[2]);
                     }
                     else
                         RuntimeError("At least two image dimensions must be specified.");
                 }
-                else if (m_targetImageLayout.GetNumChannels() > 0)
+                else if (m_targetImageLayout[0] > 0)
                     RuntimeError("At least two image dimensions must be specified.");
                 else
-                    m_targetImageLayout = ImageLayoutWHC(m_numTargetRows, 1, 1);
+                    m_targetImageLayout = TensorShape(1, m_numTargetRows, 1);
             }
         }
     };
@@ -483,14 +484,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
             if (isFinalValidationPass && (!Input(0)->HasMBLayout() || !Input(1)->HasMBLayout()))
                 RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
             m_pMBLayout = Input(1)->GetMBLayout(); // output layout is that of 'layoutInput'
             // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
             SetDims(Input(0));
-            InferImageDimsFromInputs();
         }
     };
 
@@ -576,26 +575,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // RowSlice cannot slice tensors.
             // TODO: Create a TensorSlice operation, or just Slice.
-            if (isFinalValidationPass && Input(0)->GetSampleLayout().GetRank() != 1
+            if (isFinalValidationPass && Input(0)->HasSampleLayout()
                 && !Input(0)->GetSampleLayout().IsVectorStoredAsImage()   // legacy
                 )
                 RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
             SetDims(TensorShape(m_sliceHeight), Input(0)->GetNumCols());
-            //InferImageDimsFromInputs(); 
         }
-
-#if 0
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: This is outdated.
-            InferImageDimsFromInput(0, true);
-            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_sliceHeight, m_sampleLayout.GetNumChannels());
-
-            // warn that this node will destroy the image size information from the child
-            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
-                fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
-        }
-#endif
 
     private:
         size_t m_startIndex, m_sliceHeight;
@@ -663,10 +648,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numCols = Input(0)->GetNumCols();
 
+            // we must fuse all tensor shapes
+            // All dimensions but the last must be the same.
+            // Note that trailing ones may be stripped, so we must first pad.
+            SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
+            size_t maxRank = 0;
+            for (int i = 0; i < GetNumInputs(); i++)
+                if (maxRank < GetInputSampleLayout(i).GetRank())
+                    maxRank = GetInputSampleLayout(i).GetRank();
+            dims.resize(maxRank-1, 1);        // pad and/or strip trailing dimension
+
             // count totalRows and form m_startRowIndices[] array, which is the cumulative sum of matrix heights
             m_startRowIndices.resize(GetNumInputs());
             size_t totalRows = 0;
-
+            size_t totalTrailingDim = 0;                // last tensor dimension is what gets stacked up
             for (int i = 0; i < GetNumInputs(); i++)
             {
                 if (isFinalValidationPass && !HasMBLayout() && Input(i)->GetNumCols() != numCols)
@@ -674,24 +669,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 m_startRowIndices[i] = totalRows;
                 totalRows += Input(i)->GetNumRows();
+                SmallVector<size_t> thisDims = Input(i)->GetSampleLayout().GetDims();
+                thisDims.resize(maxRank, 1);            // pad and/or strip trailing dimension
+                totalTrailingDim += thisDims.back();    // count total trailing dimensions (that's what we have after stacking)
+                thisDims.resize(maxRank - 1);           // verify that dimensions match
+                if (dims != thisDims)
+                    InvalidArgument("%ls %ls operation: Incompatible tensor dimension [%s] for input %ls %ls",
+                                    NodeName().c_str(), OperationName().c_str(), std::string(Input(i)->GetSampleLayout()).c_str(),
+                                    Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str());
             }
 
-            SetDims(totalRows, numCols);
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, true);
-#if 0
-            // TODO: stacked elements should become another tensor dimension
-#else
-            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), GetNumRows(), m_sampleLayout.GetNumChannels());
-#endif
-
             // warn that this node will destroy the image size information from the child
-            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
+            if (Input(0)->HasSampleLayout())
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
+
+            dims.push_back(totalTrailingDim);
+            SetDims(TensorShape(dims), numCols);
+
+            if (totalRows != GetNumRows())
+                LogicError("%ls RowStack operation: Tensor shapes of inputs were not compatible after all?", NodeName().c_str());
         }
 
     private:
@@ -743,20 +739,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_numRepeat;
         }
 
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, true);
-#if 0
-            // TODO: This should add another tensor dimension.
-#else
-            m_sampleLayout = ImageLayoutWHC(m_sampleLayout.GetWidth(), m_inputSampleLayout.GetHeight() * m_numRepeat, m_sampleLayout.GetNumChannels());
-#endif
-
-            // watn that this node will destroy the image size information from the child
-            if (m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetNumChannels() != 1)
-                fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
-        }
-
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
@@ -790,10 +772,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            SetDims(Input(0)->GetNumRows() * m_numRepeat, Input(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
+
+            // the trailing dimension gets multiplied
+            // TODO: Or should we add an additional dimension?
+            SmallVector<size_t> dims = GetInputSampleLayout(0).GetDims();
+            dims.back() *= m_numRepeat;
+
+            SetDims(TensorShape(dims), Input(0)->GetNumCols());
         }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override

@@ -35,7 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // please keep this table sorted
         if      (nodeType == OperationNameOf(CRFNode))	                            return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_TENSORVIEW
+#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
         else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
         else if (nodeType == OperationNameOf(ColumnElementTimesNode))               return New<ColumnElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RectifiedLinearNode))	            return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ReshapeNode))	                    return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_TENSORVIEW
+#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
         else if (nodeType == L"RowElementTimes")	                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
         else if (nodeType == OperationNameOf(RowElementTimesNode))	            return New<RowElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -85,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(DiagonalNode))	                    return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RowSliceNode))	                    return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(RowStackNode))	                    return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_TENSORVIEW
+#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
         else if (nodeType == L"Scale")	                                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
         else if (nodeType == OperationNameOf(ScaleNode))	                    return New<ScaleNode<ElemType>>(forward<_Types>(_Args)...);
@@ -215,37 +215,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring & nodeName,
                                                                             const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                                                             const size_t horizontalSubsample, const size_t verticalSubsample,
-                                                                            const bool zeroPadding,
+                                                                            ImageLayoutKind imageLayoutKind, const bool zeroPadding,
                                                                             const size_t maxTempMemSizeInSamples)
     {
         return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-            kernelWidth, kernelHeight,
-            outputChannels,
-            horizontalSubsample,
-            verticalSubsample, zeroPadding,
-            maxTempMemSizeInSamples));
+                                                                           kernelWidth, kernelHeight, outputChannels,
+                                                                           horizontalSubsample, verticalSubsample, imageLayoutKind,
+                                                                           zeroPadding,
+                                                                           maxTempMemSizeInSamples));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateMaxPoolingNode(const std::wstring & nodeName,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample)
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
     {
-        return net.AddNodeToNetWithElemType(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample));
+        return net.AddNodeToNetWithElemType(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind));
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth,
-        const size_t windowHeight, const size_t horizontalSubsample,
-        const size_t verticalSubsample)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateAveragePoolingNode(const std::wstring & nodeName,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
     {
-        return net.AddNodeToNetWithElemType(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample));
+        return net.AddNodeToNetWithElemType(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind));
     }
 
     // this is the catch-all for all cases not covered as special cases above
@@ -274,49 +263,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convolution(const ComputationNodePtr weight,
         const ComputationNodePtr inputValues,
-        const size_t kernelWidth,
-        const size_t kernelHeight,
-        const size_t outputChannels,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
-        const bool zeroPadding,
-        const std::wstring nodeName,
-        const size_t maxTempMemSizeInSamples)
+        const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
+        const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
-            kernelWidth, kernelHeight,
-            outputChannels,
-            horizontalSubsample,
-            verticalSubsample, zeroPadding,
+            kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
             maxTempMemSizeInSamples),
             weight, inputValues);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPooling(const ComputationNodePtr inputValues,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
         const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample),
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
             inputValues);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AveragePooling(const ComputationNodePtr inputValues,
-        const size_t windowWidth,
-        const size_t windowHeight,
-        const size_t horizontalSubsample,
-        const size_t verticalSubsample,
+        const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
         const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-            windowWidth, windowHeight,
-            horizontalSubsample,
-            verticalSubsample),
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
             inputValues);
     }
 
@@ -486,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<ScaleNode<ElemType>>(net.GetDeviceId(), nodeName), scalar, matrix);
@@ -513,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
-#ifndef ENABLE_TENSORVIEW
+#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<RowElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);

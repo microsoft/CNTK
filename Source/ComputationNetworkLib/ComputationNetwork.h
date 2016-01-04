@@ -279,9 +279,7 @@ public:
     {
         auto & featureNodes = FeatureNodes();
         for (auto & nodeIter : featureNodes)
-        {
-            nodeIter->SetDims(nodeIter->GetNumRows(), cols);
-        }
+            nodeIter->SetNumCols(cols);
     }
 
     // When external code (readers, namely) updates InputValue's m_value,

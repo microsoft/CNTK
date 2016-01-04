@@ -10,11 +10,7 @@
 #ifdef USE_CUDNN
 #include <cudnn.h>
 
-template<> const char* CudaErrString(cudnnStatus_t x)
-{
-    return cudnnGetErrorString(x);
-}
-#define CUDNN_CALL(expr)     (CudaCall((expr), #expr, "cuDNN", CUDNN_STATUS_SUCCESS))
+template<> const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x) { return cudnnGetErrorString(x); }
 
 // A note on the formats: CNTK originally used NHWC for input/output tensors and CHWN for filters.
 // Such formats have very limited support in cuDNN and not used in other frameworks.
