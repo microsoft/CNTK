@@ -379,8 +379,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t factor() const { return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows; }   // factor by which we stack or unstack
         TensorShape m_targetImageLayout;
 
-        // this patches up m_targetImageLayout according to some rules
-        // TODO: Say in one sentence what this logic does.
+        // This allows the user to provide 2 (out of 3) image dimensions.
+        // One missing dimension can be inferred. If two dimensions are
+        // unspecified it throws a runtime error.
         void InferTargetSampleLayout()
         {
             // BUGBUG: Below is the result of refactoring and only works for rank-3 tensors. Generalize.
