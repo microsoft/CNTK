@@ -6,7 +6,7 @@ ndlMnistMacros = [
     ImageH = 28
     LabelDim = 10
 
-    features = ImageInput(ImageW, ImageH, 1, tag="feature")
+    features = ImageInput(ImageW, ImageH, 1, imageLayout="HWC", tag="feature")
     featScale = Const(0.00390625)
     featScaled = Scale(featScale, features)
     labels = Input(LabelDim, tag="label")

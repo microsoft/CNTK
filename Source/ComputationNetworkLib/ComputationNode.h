@@ -26,12 +26,13 @@
 #include <sstream>
 #include <iostream>
 
-// #define ENABLE_TENSORVIEW   // flip this switch once the tensor lib is confirmed to be working
+// remove these following two #defines once the tensor lib works
+#define ENABLE_TENSORVIEW   // if set then tensor lib is used instead of old Matrix implementations, wherever such an implementation exists
+#define ENABLE_BROADCASTING_ELEMENTTIMES    // if set then ScaleNode and Row/ColumnElementTimes are redirected to ElementTimes
 
-//#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
-#pragma warning (disable: 4267)
+#pragma warning (disable: 4267) // conversion from size_t to int or other types
 
 // version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
@@ -97,7 +98,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
 
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
-        virtual void InferImageDimsFromInputs() = 0;
         virtual void Save(File& fstream) const = 0;
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) = 0;
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
@@ -267,7 +267,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_parameterUpdateRequired = m_parameterUpdateRequired;
                 node->m_nodeName = newName;
 
-                node->m_inputSampleLayout = m_inputSampleLayout;
                 node->m_sampleLayout = m_sampleLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
@@ -293,7 +292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // dimensions
 
-        size_t GetNumRows() const { return m_numRows; }
+        size_t GetNumRows() const { assert(m_numRows == m_sampleLayout.GetAllocation()); return m_numRows; }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
@@ -302,29 +301,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - LearnableParameterNode (init, load)
         //  - InputValue (init, load)
         //  - DelayedValueNodeBase (Init())
-        // only changes col dim:
-        //  - ResizeAllFeatureNodes()
         // use a different name for these:
-        //  - ReshapeNode::UpdateFunctionMBSize()    --??
         //  - various unit tests
-        //  - ComputationNetwork::FixupInputMinibatchSize()
+        // deprecated ones:
         //  - TimeReverseNode (first step--deprecate and/or move to UpdateMB... function)
         //  - StrideTimesNode
         //  - PairNetworkNode
         //  - LSTMNode
-        //  - MultiNetworks-
-        void SetDims(size_t rows, size_t cols)
-        {
-            m_numRows = rows;
-            m_numCols = cols;
-            // actual memory allocation happens elsewhere
-        }
-        void SetDims(ComputationNodeBasePtr node) { SetDims(node->GetNumRows(), node->GetNumCols()); }
+        // set our dimensions (rows, cols, sample layout)
+        // TODO: Separate SetDims() into version with and without MBLayout.
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
             m_sampleLayout = sampleLayout;
             m_numRows = m_sampleLayout.GetNumElements();
             m_numCols = cols;
+        }
+        // copy dimensions (rows, cols, sample layout) from another node
+        void SetDims(const ComputationNodeBasePtr & node)
+        {
+            SetDims(node->GetSampleLayout(), node->GetNumCols());
+        }
+        // use this only for testing code. Everywhere else, be explicit on the TensorShape.
+        void SetDims1(size_t rows, size_t cols)
+        {
+            SetDims(TensorShape(rows), cols);
+        }
+        // update number of columns (in response to MB size)
+        void SetNumCols(size_t cols)
+        {
+            m_numCols = cols;
+            // actual memory allocation happens elsewhere
         }
         virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal state, e.g. m_numRows, m_numCols
         void VerifyDims(size_t rows, size_t cols)
@@ -340,11 +346,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
+        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }  // meaning does it have a layout that is not just a vector
     protected:
-        // TODO: There are temporarily two confusing functions; either unify them, or name them better:
-        //  - GetSampleLayout() just reads out m_sampleLayout, which is the layout of matrix coluns
-        //  - GetSampleShape() makes up a sample layout in case of a bad m_sampleLayout, and includes columns in case of no MBLayout
-        TensorShape GetSampleShape() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
+        // TODO: There are temporarily a second version of GetSampleLayout() that verifies that m_sampleLayout is consistent with matrix dims
+        const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
     public:
         TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
@@ -416,7 +421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         const std::vector<ComputationNodeBasePtr> & GetInputs() const { return m_inputs; }
-        ComputationNodeBasePtr Input(size_t index) const { return m_inputs[index]; } // TODO: delete this; change to m_inputs
+        const ComputationNodeBasePtr & Input(size_t index) const { return m_inputs[index]; }
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
@@ -439,7 +444,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
-        MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
+        //MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
+        const MBLayoutPtr & GetMBLayout() const { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
         std::wstring GetName() const { return m_nodeName; }
@@ -498,9 +504,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
-                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout.GetWidth() != 1 || child->m_sampleLayout.GetNumChannels() != 1))  // looks like an image: use WHC notation
-                        fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
-                                child->m_sampleLayout.GetWidth(), child->m_sampleLayout.GetHeight(), child->m_sampleLayout.GetNumChannels(), mbSizeMark, child->GetNumCols());
+                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1))  // looks like an image: use WHC notation
+                        fprintf(stderr, "%ls[%lu [%s] {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(),
+                                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0], mbSizeMark, child->GetNumCols());
+                    //BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
                     else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
                         fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
                     else
@@ -534,26 +541,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
         }
-
-        virtual void /*IComputationNode::*/InferImageDimsFromInputs()
-        {
-            if (!IsLeaf())
-                InferImageDimsFromInput(0); //copy from child 0 by default.
-        }
-
-        virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
-
-        // TODO: Remove this.
-        // used from:
-        //  - Plus/Minus/ElementTimesNode --> replace by max dim over inputs. Make this standard behavior for all binary element-wise ops.
-        bool IsInputAnImage(const size_t index) const
-        {
-            return m_inputs[index]->m_sampleLayout.IsInputAnImage();
-        }
-
-        const TensorShape & GetImageLayout() const { return m_sampleLayout; }
-
-        pair<TensorShape, TensorShape> GetImageLayouts() const { return make_pair(m_inputSampleLayout, m_sampleLayout); }   // helper for Validate()
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
 
@@ -611,18 +598,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
+    public:
+
+        virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
+
     protected:
 
-        void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
+        const TensorShape & GetInputSampleLayout(const size_t index) const
         {
-            if (index >= GetNumInputs())
-                InvalidArgument("InferImageDimsFromInput: output index");
-
-            const auto & child = m_inputs[index];
-            if (child != nullptr)
-                m_inputSampleLayout = child->m_sampleLayout;
-            if (outputSameAsInput)
-                m_sampleLayout = m_inputSampleLayout;
+            return m_inputs[index]->GetSampleLayout();
         }
 
         void InferMBLayoutFromInputsForStandardCase();
@@ -783,9 +767,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape m_sampleLayout;    // and the output
         MBLayoutPtr m_pMBLayout;
 
-        TensorShape m_inputSampleLayout;     // how to interpret each column in the input as an image
-        // TODO: Why is the input layout not just the layout of the input node?
-
         // flags related to gradient propagation
         bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
         bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
@@ -839,8 +820,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CreateMatrixIfNull(m_value);
             fstream >> Value();
             // above reads dimensions, so we must update our own m_numRows/m_numCols
-            m_numRows = Value().GetNumRows();
-            m_numCols = Value().GetNumCols();
+            SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
+            // BUGBUG: This looses the sample layout (tensor shape). The caller must know this and fix it up if needed (currently needed for LearnableParameterNode).
         }
 
         // reader updated m_functionValue--update our internal state, i.e. m_numCols
@@ -983,7 +964,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        // update size (#columns) of node to match MBLayout
+        // update size (m_numCols) of node to match MBLayout (but does not do the actual Resize())
         // This must be called right before ForwardProp() the first time for a given minibatch.
         // Currently overridden by
         //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
@@ -995,7 +976,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void UpdateFunctionMBSize() override
         {
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                SetDims(GetNumRows(), m_pMBLayout->GetNumCols());
+                SetNumCols(m_pMBLayout->GetNumCols());
         }
         virtual void VerifyDimsMatch() const override final
         {
@@ -1113,9 +1094,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType>& Gradient() const { return *m_gradient; }
         Matrix<ElemType>& Gradient()             { return *m_gradient; }
 
-    protected:
-        std::vector<TensorView<ElemType>> GetTensorsForwardBinary(const FrameRange & fr);
-
     public:
         // Function to return the number of columns for whole batch or single frame
         size_t GetNumColsFor(const FrameRange & fr/*select frame or entire batch*/)
@@ -1164,6 +1142,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GradientFor(fr);
         }
         // tensor variants
+        TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
+        {
+            return TensorView<ElemType>(DataFor(data, fr), GetTensorShape(rank, fr));
+        }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
             return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
@@ -1187,7 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::BeginForwardProp();
 
-            // update dimensions based on MB size
+            // update m_numCols based on MB size
             UpdateFunctionMBSize();
 
             // update the actual m_value allocation
@@ -1472,7 +1454,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: There are too many of these. This indicates improper class hierarchies.
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { NOT_IMPLEMENTED; }
         virtual void Validate(bool isFinalValidationPass) override { NOT_IMPLEMENTED; }          // main base validation function
-        virtual void InferImageDimsFromInputs() override { NOT_IMPLEMENTED; }
         virtual void Save(File& fstream) const override { NOT_IMPLEMENTED; }
         virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
@@ -1541,26 +1522,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::m_deviceId; using Base::SetDims; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
+    using Base::m_deviceId; using Base::GetDeviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \
-    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
+    using Base::MaskedValueFor; using Base::MaskedGradientFor; using Base::DataTensorFor; using Base::ValueTensorFor; using Base::GradientTensorFor; \
     using Base::ForwardProp; using Base::BackpropTo; \
     using Base::m_inputs; using Base::m_value; using Base::m_gradient; \
-    using Base::m_inputSampleLayout; using Base::m_sampleLayout; \
+    using Base::m_sampleLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
     using Base::CreateUniqId; \
     using Base::GetNumInputs; using Base::ZeroGradientsOfInputs; using Base::VerifyDims; \
     using Base::ConstOnes; \
-    using Base::GetTensorsForwardBinary; using Base::DetermineElementwiseTensorRank; \
-    using Base::GetImageLayout; using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::DetermineElementwiseTensorRank; \
+    using Base::GetSampleLayout; using Base::GetInputSampleLayout; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; using Base::GetInputsFromConfig; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::Input; using Base::SetInput; \
-    using Base::IsInputAnImage; using Base::IsEqualTo; using Base::IsOutputOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
+    using Base::IsEqualTo; using Base::IsOutputOlderThanInputs; using Base::IsLeaf; using Base::SetParameterUpdateRequired; \
     using Base::Load; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::Save; using Base::UpdateFunctionMBSize; \
@@ -1571,7 +1552,7 @@ protected: \
 public: \
     using Base::RequiresPreCompute; \
     using Base::AttachInputs; using Base::CreateGradientMatrixIfNull; using Base::NodeName; \
-    using Base::Value; using Base::GetTensorShape;
+    using Base::Value;
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
@@ -1584,6 +1565,31 @@ protected:    /* some boilerplate goes here */ \
     // =======================================================================
     // a few standard base classes for N-nary operations
     // =======================================================================
+
+    // -----------------------------------------------------------------------
+    // UnaryElementWiseNode (operand)
+    //
+    // unary elementwise operations that are implemented with the tensor lib
+    //
+    // Derived clases only need to override ForwardProp() and BackpropTo().
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class UnaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        UnaryElementWiseNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+    };
+
+#define UsingUnaryElementwiseNodeBaseMembers UsingComputationNodeMembersBoilerplate;
 
     // -----------------------------------------------------------------------
     // BinaryElementWiseNode (operand1, operand2)
@@ -1613,13 +1619,9 @@ protected:    /* some boilerplate goes here */ \
 #endif
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-        {
-            // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
+        // By default, the BinaryElementWiseNode does not require any of it's input's values for computing
+        // the gradients of its input nodes
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
         virtual void /*IComputationNode::*/BeginForwardProp() override             // called before first iteration step of ForwardProp()
         {
@@ -1632,15 +1634,6 @@ protected:    /* some boilerplate goes here */ \
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            // TODO: change to infer as maximum of the two
-            if (IsInputAnImage(0))
-                InferImageDimsFromInput(0);
-            else
-                InferImageDimsFromInput(1);
         }
     };
 

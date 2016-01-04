@@ -34,11 +34,7 @@ static
 #endif
 cudaStream_t t_stream;
 
-
-// support for CudaCall() function template
-static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-static const char * CudaErrString(cublasStatus_t)   { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
-static const char * CudaErrString(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
+template<> const char * CudaErrString<cusparseStatus_t>(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -2573,7 +2569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/GridDim::maxThreadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _inplaceTruncateBottom<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(NzValues(), threshold, N);
+        _assignTruncateBottom<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(NzValues(), NzValues(), threshold, N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -2617,7 +2613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/GridDim::maxThreadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _inplaceTruncateTop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(NzValues(), threshold, N);
+        _assignTruncateTop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(NzValues(), NzValues(), threshold, N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
