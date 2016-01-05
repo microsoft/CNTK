@@ -69,8 +69,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t startSampleId = i * subBatchSize;
                 size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
                 size_t smallBatchSize = endSampleId - startSampleId;
-
-                workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Mat inputSubBatch;
 
                 // We optimize for three different scenarios here by handling them slightly differently.
@@ -80,10 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (in.GetMatrixType() == MatrixType::DENSE)
                     inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
                 else
-                {
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
-                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                }
 
                 if (gpuSparse1D)
                 {
@@ -96,6 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                     workspace.AssignPackedConvolutionInput(inputSubBatch,
                         inT.w(), inT.h(), inT.c(),
                         outT.w(), outT.h(), outT.c(),
@@ -103,6 +99,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         convDesc.padding());
 
                     Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
+
+                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Mat::Multiply(filter, false, workspace, false, outputSubBatch);
                 }
             }
