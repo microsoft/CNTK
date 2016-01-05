@@ -7,8 +7,8 @@ ndlMnistMacros = [
     ImageC = 3
     LabelDim = 10
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
-    featOffs = Const(128, rows = 3072)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
+    featOffs = Const(128)
     featScaled = Minus(features, featOffs)
     labels = Input(LabelDim, tag = label)
     
@@ -28,7 +28,7 @@ DNN=[
     # conv1
     kW1 = 5
     kH1 = 5
-    cMap1 = 32
+    cMap1 = 36
     hStride1 = 1
     vStride1 = 1
     # weight[cMap1, kW1 * kH1 * ImageC]
@@ -48,7 +48,7 @@ DNN=[
     hStride2 = 1
     vStride2 = 1
     # weight[cMap2, kW2 * kH2 * cMap1]
-    conv2_act = ConvReLULayer(pool1, cMap2, 800, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue)
+    conv2_act = ConvReLULayer(pool1, cMap2, 900, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue)
 
     # pool2
     pool2W = 3
