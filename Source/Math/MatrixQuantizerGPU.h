@@ -1,7 +1,7 @@
 #pragma once
 
 #include "QuantizedMatrix.h"    // TODO: strangely, this must be included first, although it is the first thing MatrixQuantizer.h includes. Without, nvcc fails.
-#include "MatrixQuantizer.h"
+#include "MatrixQuantizerImpl.h"
 #include "ColumnQuantizer.h"
 #include "GPUMatrix.h"
 #ifndef CPUONLY
@@ -14,10 +14,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
             
     template<class ElemType>
-    class MatrixQuantizerGPU : public MatrixQuantizer<ElemType>
+    class MatrixQuantizerGPU : public MatrixQuantizerImpl<ElemType>
     {
     public:
-        MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync = false);
+        MatrixQuantizerGPU(int deviceId, bool useDedicatedComputeStream, bool forceSync = false);
         ~MatrixQuantizerGPU();
 
         // Disallow copy and move construction and assignment
@@ -26,7 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixQuantizerGPU(MatrixQuantizerGPU&&) = delete;
         MatrixQuantizerGPU& operator=(MatrixQuantizerGPU&&) = delete;
 
-        void QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit) override;
+        void QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit) override;
         void WaitQuantizeAsyncDone() override;
     
         void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
@@ -34,7 +34,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:        
         // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
-        QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated);
+        QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t numRows, size_t numCols, size_t nBits, bool& newlyAllocated);
         
 #ifndef CPUONLY
         // Record a event to flag the completion of quantization/unquantization kernel on the compute stream
