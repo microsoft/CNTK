@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool isSparse = (OperationNameOf(SparseInputValue) == cnNodeType);
             if (parameter.size() < 1)
-                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [rows, cols]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]).", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -111,7 +111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!isImage)
             {
                 if (parameter.size() < 1)
-                    RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [rows, cols]) plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                    RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
             }
             else
             {
