@@ -20,7 +20,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         static MatrixQuantizerImpl<ElemType>* CreateMatrixQuantizerImpl(int deviceId, bool useAsync);
-        virtual ~MatrixQuantizerImpl() {}
+        virtual ~MatrixQuantizerImpl() 
+        {
+        }
 
         // Disallow copy and move construction and assignment
         MatrixQuantizerImpl(const MatrixQuantizerImpl&) = delete;
@@ -35,7 +37,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void WaitUnquantizeAsyncDone() = 0;
 
     protected:
-        MatrixQuantizerImpl(int deviceId) : m_deviceId(deviceId) {}
+        MatrixQuantizerImpl(int deviceId) 
+            : m_deviceId(deviceId) 
+        {
+        }
         
         int GetDeviceId() const
         {
