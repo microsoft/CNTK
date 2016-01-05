@@ -1174,7 +1174,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
 #pragma region MatrixQuantizerGPU functions
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync)
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(int deviceId, bool useDedicatedComputeStream, bool forceSync)
     {
     }
 
@@ -1184,7 +1184,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit)
     {
     }
 
