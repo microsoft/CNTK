@@ -125,6 +125,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
                 size_t i = 0;
                 auto tensorShape = ProcessTensorShapeParameters(node, params, i, isImage, cnNodeType);
+                if (isImage)
+                    tensorShape.AppendInPlace(3, 1);    // this goes into the column dimension
                 bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
                 nodePtr = builder.CreateLearnableParameter(name, tensorShape);
@@ -313,12 +315,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                  cnNodeType == OperationNameOf(FutureValueNode))
         {
             if (parameter.size() < 2 || parameter.size() > 3)   // we allow 3 for legacy (cols parameter which is now unused)
-                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [timeStep=1, defaultPastValue=0.1]).");
-            // TODO: allow a tensor descriptor
+                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, input, [timeStep=1, defaultPastValue=0.1]).");
+            // TODO: allow a tensor descriptor. Or allow 0 (inference). Maybe already supported--check this.
 
-            nodeParamCount = 1;
-            nodeParamStart = parameter.size() > 2?2:1;
-            // TODO: What are these ^^ for? We are not setting this for InputValue
+            nodeParamCount = 1;                             // number of inputs
+            nodeParamStart = parameter.size() > 2?2:1;      // index of input
 
             if (pass == ndlPassInitial)
             {
