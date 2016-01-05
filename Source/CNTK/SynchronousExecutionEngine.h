@@ -290,7 +290,7 @@ public:
             {
                 fprintf(stderr, "'multiSeq' tag is defunct.\n");
             }
-            else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
+            else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters. Yikes!!
             {
                 SetOutputNode(m_net->EvaluationNodes(), compNode);
             }
@@ -326,9 +326,10 @@ public:
         return nullptr;
     }
 
-    virtual ~SynchronousNodeEvaluator()
-    {
-    }
+    virtual ~SynchronousNodeEvaluator() { }
+
+protected:
+    TensorShape ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*> & params, size_t & i, bool isImage, const wstring & cnNodeType/*for error messages only*/);
 
 private:
     ComputationNetworkPtr m_net;
