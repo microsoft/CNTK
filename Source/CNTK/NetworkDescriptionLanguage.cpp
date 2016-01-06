@@ -152,7 +152,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput"))
         ret = true; 
-    else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter"), L"ImageParameter")
+    else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter"))
         ret = true;   
     else if (EqualInsensitive(nodeType, L"ImageParameter"))
         ret = true;
