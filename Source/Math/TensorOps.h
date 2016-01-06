@@ -174,11 +174,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
     DefBinaryOp(And, (float)((!!a) && (!!b))); DefBinaryOp(Or, (float)((!!a) || (!!b))); DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
     DefBinaryOp(MaskNegative, b >= 0 ? a : 0);
-    DefBinaryOp(ElementwiseProductWithSigmoidDerivative, a * SigmoidDerivative(b));
-    DefBinaryOp(ElementwiseProductWithTanhDerivative, a * (1 - Sqr(tanh_(b))));
-    DefBinaryOp(ElementwiseProductWithExp, a * exp_(b));
-    DefBinaryOp(ElementwiseProductWithLinearRectifierDerivative, b > 0 ? a : 0);
-    DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b));
+    DefBinaryOp(ElementwiseProductWithSigmoidDerivativeFromOutput,         a * (b * (1 - b)));  // b = output
+    DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput,            a * (1 - b * b));
+    DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a : 0);
+    DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput,             a * exp_(-b));
+    DefBinaryOp(ElementwiseProductWithCosDerivative,                       a * -sin_(b));       // note: b = input for cos()
     //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

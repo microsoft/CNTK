@@ -33,7 +33,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // only inputs (but not // function values) are used.
     // -----------------------------------------------------------------------
 
-    template<class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward>
+    template<class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, bool gradientFromOutput>
     class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
@@ -58,12 +58,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // get the args
             size_t rank = DetermineElementwiseTensorRank();
-            auto sliceOutputGrad  =           GradientTensorFor(rank, fr);  // propagate from this one...
-            auto sliceInputGrad   = Input(0)->GradientTensorFor(rank, fr);  // ...to this one
-            auto sliceInputValue  = Input(0)->ValueTensorFor(rank, fr);
-
-            // do the actual operation
-            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceInputValue, 1, opBackward);
+            auto sliceOutputGrad =              GradientTensorFor(rank, fr);    // propagate from this one...
+            auto sliceInputGrad  =    Input(0)->GradientTensorFor(rank, fr);    // ...to this one
+            auto sliceValue = gradientFromOutput ? ValueTensorFor(rank, fr) :   // using input or output value
+                                         Input(0)->ValueTensorFor(rank, fr);
+            // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
+            // Not possible for Cos().
+            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -88,11 +89,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
 #pragma push_macro("DeclareUnaryTensorOp")
-#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward) \
+#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput) \
     template<class ElemType>                                                                             \
-    class Name ## Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward> \
+    class Name ## Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward, gradientFromOutput> \
     { \
-        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward> Base; UnaryElementWiseWithOpCodeNodeBaseMembers; \
+        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward, gradientFromOutput> Base; UnaryElementWiseWithOpCodeNodeBaseMembers; \
         static const std::wstring TypeName() { return L ## #Name; } \
     public: \
         DeclareConstructorFromConfigWithNumInputs(Name ## Node); \
@@ -102,12 +103,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     //                                    Name             Forward and      Backward opcodes
-    DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivative);
-    DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivative);
-    DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivative);
-    DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseQuotient);
-    DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProductWithExp);
-    DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative);
+    DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         true);
+    DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            true);
+    DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true);
+    DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true);
+    DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true);
+    DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false);
 
 #pragma pop_macro("DeclareUnaryTensorOp")
 #endif

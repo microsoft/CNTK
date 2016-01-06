@@ -1,6 +1,6 @@
 // TensorShape.h -- tensor descriptor that describes the inner structure of data vectors
 //
-// <copyright file="Sequences.h" company="Microsoft">
+// <copyright file="TensorShape.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

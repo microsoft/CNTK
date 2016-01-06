@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "TensorShape.h"
+#include "ComputationNode.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,10 +22,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
