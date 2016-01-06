@@ -543,7 +543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else if (zeroIndex == SIZE_MAX)
                     zeroIndex = k;
                 else
-                    InvalidArgument("%ls %ls operation: More than one dimension was specified as zero in the replacement (sub-)dimensions [%s]", string(m_replacementSampleLayout).c_str());
+                    InvalidArgument("%ls %ls operation: More than one dimension was specified as zero in the replacement (sub-)dimensions [%s]", NodeName().c_str(), OperationName().c_str(), string(m_replacementSampleLayout).c_str());
             }
             if (zeroIndex != SIZE_MAX)
                 replacementDims[zeroIndex] = inputElements / targetElements;    // infer the number (ignore errors at this point)
