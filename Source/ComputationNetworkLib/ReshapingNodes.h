@@ -530,6 +530,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     beginDim = endDim;
             }
 
+            // TODO: We should allow to reduce to a 0-length tensor if the dimension is 0
+
             // if a dimension is specified as zero then infer it, otherwise verify that total #elements matches
             size_t inputElements = 1;                       // get #elements in range to be replaced
             for (size_t k = beginDim; k < endDim; k++)
@@ -1017,6 +1019,7 @@ reshaping
        - narrow dim to a single index, then drop the dim. Result will have one dim less.
        - like torch.select()
        - can implement squeezing a dim-1 dim: Select(x, dim:0)
+    - Squeeze(x, dim) = Select(x, dim, 0)
  - Splicing:   --all implemented in C++ by SpliceNode
     - Splice(inputs, dim)
        - splice multiple inputs inputs[0]:inputs[1]:... along given dim (=RowStack for vectors)
