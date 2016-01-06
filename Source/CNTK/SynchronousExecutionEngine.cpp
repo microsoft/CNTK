@@ -15,8 +15,11 @@
 #include "ConvolutionalNodes.h"
 #include "NonlinearityNodes.h"
 #include "ReshapingNodes.h"
+#include "DataTensor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace std;
 
     template<class ElemType>
     void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass)
@@ -58,48 +61,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         
-        if (OperationNameOf(InputValue) == cnNodeType)
+        if (OperationNameOf(InputValue) == cnNodeType || OperationNameOf(SparseInputValue) == cnNodeType)
         {
-            if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
+            bool isSparse = (OperationNameOf(SparseInputValue) == cnNodeType);
+            if (parameter.size() < 1)
+                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]).", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
                 // evaluate only scalar parameters
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+                size_t i = 0;
+                auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
                 // first look for this node already existing in the network
+                // BUGBUG: How does this set the dimensions then?
                 if (m_net->NodeNameExists(name))
                     nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
+                else if (isSparse)
+                    nodePtr = builder.CreateSparseInputNode(name, tensorShape);
                 else
-                    nodePtr = builder.CreateInputNode(name, rows, cols);
+                    nodePtr = builder.CreateInputNode      (name, tensorShape);
             }
         }
-        else if (OperationNameOf(SparseInputValue) == cnNodeType)
+        else if (cnNodeType == L"ImageInput" || cnNodeType == L"SparseImageInput")
         {
-            if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
-
-            if (pass == ndlPassInitial)
-            {
-                // evaluate only scalar parameters
-                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
-
-                // first look for this node already existing in the network
-                if (m_net->NodeNameExists(name))
-                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
-                else
-                    nodePtr = builder.CreateSparseInputNode(name, rows, cols);
-            }
-        }
-        else if (cnNodeType == L"ImageInput")
-        {
-            if (parameter.size() < 3 || parameter.size() > 4)
-                RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+            bool isSparse = (cnNodeType == L"SparseImageInput");
+            if (parameter.size() < 3 || parameter.size() > 4)   // we allow 4 for legacy (numImages, was ignored)
+                RuntimeError("%ls should have 3 parameters[imageWidth, imageHeight, imageChannels].", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -108,46 +97,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
                 size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
-                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1; // BUGBUG: This comes through MBLayout, and should be forbidden.
                 ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
 
-                nodePtr = builder.CreateInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
+                if (isSparse)
+                    nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
+                else
+                    nodePtr = builder.CreateInputNode      (name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind));
             }
         }
-        else if (cnNodeType == L"SparseImageInput")
+        else if (OperationNameOf(LearnableParameter) == cnNodeType || cnNodeType == L"ImageParameter")
         {
-            if (parameter.size() < 3 || parameter.size() > 4)
-                RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+            bool isImage = (cnNodeType == L"ImageParameter");
+            if (!isImage)
+            {
+                if (parameter.size() < 1)
+                    RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+            }
+            else
+            {
+                if (parameter.size() < 3)
+                    RuntimeError("%ls should have 3 parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+            }
 
             if (pass == ndlPassInitial)
             {
                 // evaluate only scalar parameters
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-                size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
-                size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
-                size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
-                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
-                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
-
-                nodePtr = builder.CreateSparseInputNode(name, ImageDimensions::AsTensorShape(imageWidth, imageHeight, imageChannels, imageLayoutKind), numImages);
-            }
-        }
-        else if (OperationNameOf(LearnableParameter) == cnNodeType)
-        {
-            if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
-
-            if (pass == ndlPassInitial)
-            {
-                // evaluate only scalar parameters
-                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
-
+                size_t i = 0;
+                auto tensorShape = ProcessTensorShapeParameters(node, params, i, isImage, cnNodeType);
+                if (isImage)
+                    tensorShape.AppendInPlace(3, 1);    // this goes into the column dimension
                 bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
-                nodePtr = builder.CreateLearnableParameter(name, rows, cols);
-
+                nodePtr = builder.CreateLearnableParameter(name, tensorShape);
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
             else if (pass == ndlPassFinal)
@@ -307,7 +289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
-        else if (cnNodeType == OperationNameOf(ReshapeNode))
+        else if (cnNodeType == L"Reshape"/*OperationNameOf(ReshapeNode)*/)
         {
             if (parameter.size() < 2 || parameter.size() > 5)
                 RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
@@ -325,18 +307,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
+                nodePtr = builder.DeprecatedReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
         else if (cnNodeType == OperationNameOf(PastValueNode) || 
                  cnNodeType == OperationNameOf(FutureValueNode))
         {
-            if (parameter.size() <2 || parameter.size() >3)
-                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
+            if (parameter.size() < 2 || parameter.size() > 3)   // we allow 3 for legacy (cols parameter which is now unused)
+                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, input, [timeStep=1, defaultPastValue=0.1]).");
+            // TODO: allow a tensor descriptor. Or allow 0 (inference). Maybe already supported--check this.
 
-            nodeParamCount = 1;
-            nodeParamStart = parameter.size() > 2?2:1;
+            nodeParamCount = 1;                             // number of inputs
+            nodeParamStart = parameter.size() > 2?2:1;      // index of input
 
             if (pass == ndlPassInitial)
             {
@@ -344,24 +327,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
                 size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
                 // if we have three parameters the second is columns
-                size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+                // ignore legacy size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
-                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                //bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");   // TODO: parameter should be called 'defaultHiddenActivation'
 
-                //for backward compatibility we check timeStep first
+                // for backward compatibility we check 'timeStep' first
                 size_t timeStep = node->GetOptionalParameter("timeStep", "1");
                 if (timeStep == 1)
-                {
                     timeStep = node->GetOptionalParameter("delayTime", "1");
-                }
 
                 if (cnNodeType == OperationNameOf(PastValueNode))
-                    nodePtr = builder.PastValue(NULL, defaultHiddenActivity, rows, cols, timeStep, name);
+                    nodePtr = builder.PastValue(NULL, defaultHiddenActivity, rows, timeStep, name);
                 else
-                    nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, cols, timeStep, name);
+                    nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
 
-                nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
+                //nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
             }
         }    
         else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -544,6 +525,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         case ndlPassFinal:
             break;
         }
+    }
+
+    // ProcessTensorShapeParameters - assume positional parameters starting from position i are tensor dimensions--parse those.
+    // Is isImage then must be a 3D tensor, which is interpreted as (W,H,C), and optional parameter 'imageLayout' says how.
+    template<class ElemType>
+    TensorShape SynchronousNodeEvaluator<ElemType>::ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*> & params, size_t & i, bool isImage, const wstring & cnNodeType/*for error messages only*/)
+    {
+        // gather dims
+        vector<size_t> dims;
+        dims.push_back(((NDLNode<ElemType>*)params[i])->GetScalar());   // first is mandatory
+        for (i++; i < params.size(); i++)
+            dims.push_back(((NDLNode<ElemType>*)params[i])->GetScalar());
+
+        // turn into tensor
+        TensorShape tensorShape(dims);
+
+        // if image then interpret as W, H, C with layout according to optional imageLayout parameter
+        if (isImage)
+        {
+            if (dims.size() != 3)
+                RuntimeError("%ls should have 3 parameters [width, height, numChannels].", cnNodeType.c_str());
+            ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "HWC"));
+            tensorShape = ImageDimensions::AsTensorShape(tensorShape[0], tensorShape[1], tensorShape[2], imageLayoutKind);
+        }
+
+        return tensorShape;
     }
 
     template class SynchronousExecutionEngine<float>;

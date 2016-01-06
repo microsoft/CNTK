@@ -649,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // We do call validate(final) as many times as needed, since stuff may have changed underneath.
                 node->PrintSelfBeforeValidation();
                 node->Validate(isFinalValidationPass/*final*/);      // all nodes have been visited: do verification instead of just inference
-                fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
+                fprintf(stderr, " -> [%lu [%s], %s%lu]", node->GetNumRows(), string(node->GetSampleLayout()).c_str(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
                 node->m_visited = true;
                 // also take the opportunity to propagate m_needsGradient
                 auto needsGradient = node->m_needsGradient;

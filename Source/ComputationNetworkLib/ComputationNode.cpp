@@ -102,7 +102,7 @@ namespace Microsoft {
                 dims[k] = dim1;         // then use dimension we broadcast to
             else if (dim1 == 1)         // if [1] is broadcasting
                 ;                       // dims is already correct
-            else if (dim1 != dims[k])   // no broadcasting: they must match
+            else if (isFinalValidationPass && dim1 != dims[k])   // no broadcasting: they must match
                 InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
                                 NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
         }

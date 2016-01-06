@@ -74,8 +74,8 @@ speechTrain = new TrainAction [
             C(c) = DiagTimes(WeightParam(cellDim, 1), Stabilize(c)) // cell-to-hiddden
 
             // LSTM cell
-            dh = PastValue(outputDim, 1, output);                   // hidden state(t-1)
-            dc = PastValue(cellDim, 1, ct);                         // cell(t-1)
+            dh = PastValue(outputDim, output);                   // hidden state(t-1)
+            dc = PastValue(cellDim, ct);                         // cell(t-1)
 
             // note: the W(inputx) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
             it = Sigmoid(W(inputx) + B() + H(dh) + C(dc))       // input gate(t)
