@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample;
             uint32_t imageLayoutKind = (uint32_t)m_imageLayoutKind;
             uint32_t outputChannels = (uint32_t)m_outputChannels;
-            fstream << imageLayoutKind << outputChannels;
+            fstream << outputChannels << imageLayoutKind;
             fstream << m_zeroPadding << m_maxTempMemSizeInSamples;
         }
 
@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Load(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample;
             uint32_t imageLayoutKind, outputChannels;
-            fstream >> imageLayoutKind >> outputChannels;
+            fstream >> outputChannels >> imageLayoutKind;
             m_imageLayoutKind = (ImageLayoutKind) imageLayoutKind;
             m_outputChannels = outputChannels;
             SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0);  // TODO: needed?
@@ -208,9 +208,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
 
             // get input and output tensor shape and interpret as image dimensions
-            auto inDims  = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
+            auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayoutKind);
 
-            if (inDims.m_width < m_kernelWidth || inDims.m_height < m_kernelHeight)
+            if (isFinalValidationPass && (inDims.m_width < m_kernelWidth || inDims.m_height < m_kernelHeight))
                 InvalidArgument("%ls %ls operation requires that input width be >= kernelWidth and input height >= kernelHeight.", NodeName().c_str(), OperationName().c_str());
 
             // determine output tensor shape
@@ -241,26 +241,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // that's our dimension
             SetDims(outDims.AsTensorShape(m_imageLayoutKind), Input(1)->GetNumCols());
 
-            // set up the various engines and descriptor objects
-            // REVIEW alexeyk: is there a better place to create engines?
-            assert(m_factory);
-            //if (m_factory == nullptr)
-            //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
-            //       Why not just pass everything to the engine creator, and get one object that holds everything.
-            if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
-            if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
-            if (m_filterT == nullptr)
-                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, inDims.m_numChannels, m_outputChannels);
-            if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
-            if (m_convDesc == nullptr)
-                m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
-            // REVIEW alexeyk: create per-channel bias (shared across all pixels). Consider adding other types of biases.
-            if (m_biasT == nullptr)
-                m_biasT = m_factory->CreateTensor(1, 1, outDims.m_numChannels, 1);
+            if (isFinalValidationPass)
+            {
+                // set up the various engines and descriptor objects
+                // REVIEW alexeyk: is there a better place to create engines?
+                assert(m_factory);
+                //if (m_factory == nullptr)
+                //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+                // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
+                //       Why not just pass everything to the engine creator, and get one object that holds everything.
+                if (m_convEng == nullptr)
+                    m_convEng = m_factory->CreateConvEngine(m_deviceId, m_maxTempMemSizeInSamples);
+                if (m_inT == nullptr)
+                    m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
+                if (m_filterT == nullptr)
+                    m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, inDims.m_numChannels, m_outputChannels);
+                if (m_outT == nullptr)
+                    m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
+                if (m_convDesc == nullptr)
+                    m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+                // REVIEW alexeyk: create per-channel bias (shared across all pixels). Consider adding other types of biases.
+                if (m_biasT == nullptr)
+                    m_biasT = m_factory->CreateTensor(1, 1, outDims.m_numChannels, 1);
+            }
         }
 
         void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -360,14 +363,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Save(fstream);
             uint32_t imageLayoutKind = (uint32_t)m_imageLayoutKind;
             uint32_t windowWidth = (uint32_t)m_windowWidth;
-            fstream << imageLayoutKind << windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
+            fstream << windowWidth << imageLayoutKind << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
         void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
             uint32_t imageLayoutKind, windowWidth;
-            fstream >> imageLayoutKind >> windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
+            fstream >> windowWidth >> imageLayoutKind >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
             m_windowWidth = windowWidth;
             m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
             m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
@@ -430,7 +433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get input tensor shape and interpret as image dimensions
             auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);
 
-            if (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight)
+            if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight))
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
             // determine output tensor shape
@@ -449,17 +452,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             SetDims(outDims.AsTensorShape(m_imageLayoutKind), Input(0)->GetNumCols());
 
-            // set up various engines and descriptor objects
-            // REVIEW alexeyk: is there a better place to create engines?
-            assert(m_factory);
-            //if (m_factory == nullptr)
-            //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_poolEng == nullptr)
-                m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
-            if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
-            if (m_outT == nullptr)
-                m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
+            if (isFinalValidationPass)
+            {
+                // set up various engines and descriptor objects
+                // REVIEW alexeyk: is there a better place to create engines?
+                assert(m_factory);
+                //if (m_factory == nullptr)
+                //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+                if (m_poolEng == nullptr)
+                    m_poolEng = m_factory->CreatePoolEngine(m_deviceId);
+                if (m_inT == nullptr)
+                    m_inT = m_factory->CreateTensor(inDims.m_width, inDims.m_height, inDims.m_numChannels, 1);
+                if (m_outT == nullptr)
+                    m_outT = m_factory->CreateTensor(outDims.m_width, outDims.m_height, outDims.m_numChannels, 1);
+            }
         }
 
         void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -522,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-            if (m_poolDesc == nullptr)
+            if (isFinalValidationPass && m_poolDesc == nullptr)
                 m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
     };
@@ -566,7 +572,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-            if (m_poolDesc == nullptr)
+            if (isFinalValidationPass && m_poolDesc == nullptr)
                 m_poolDesc = m_factory->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample, 0, 0);
         }
     };
@@ -614,6 +620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // Read and check version.
             // REVIEW alexeyk: extract version checking so it can be re-used in other places.
+            // BUGBUG: We must serialize m_inputLayout.
             int32_t verWritten;
             int32_t verReadable;
             fstream >> verWritten >> verReadable;
@@ -724,21 +731,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             SetDims(Input(0));
 
-    const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
-            auto dims = ImageDimensions(GetSampleLayout(), m_imageLayoutKind);
-
-            if (m_factory == nullptr)
-                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
-            if (m_convEng == nullptr)
-                m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
-            if (m_inT == nullptr)
-                m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-            if (m_scaleBiasT == nullptr)
+            if (isFinalValidationPass)
             {
-                if (m_spatial)
-                    m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-                else
-                    m_scaleBiasT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
+                auto dims = ImageDimensions(GetSampleLayout(), m_imageLayoutKind);
+
+                if (m_factory == nullptr)
+                    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+                if (m_convEng == nullptr)
+                    m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
+                if (m_inT == nullptr)
+                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                if (m_scaleBiasT == nullptr)
+                {
+                    if (m_spatial)
+                        m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
+                    else
+                        m_scaleBiasT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                }
             }
         }
 

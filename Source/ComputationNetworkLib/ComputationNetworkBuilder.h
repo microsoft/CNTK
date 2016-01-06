@@ -117,7 +117,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr Minus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
         ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
-        ComputationNodePtr Reshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape & imageLayout, const std::wstring nodeName = L"");
+        ComputationNodePtr Reshape(const ComputationNodePtr a, const TensorShape & imageLayout, const std::wstring nodeName = L"");
+#if 1   // legacy
+        ComputationNodePtr DeprecatedReshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape & imageLayout, const std::wstring nodeName = L"");
+#endif
         ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
         ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");

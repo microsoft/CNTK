@@ -289,7 +289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
-        else if (cnNodeType == OperationNameOf(ReshapeNode))
+        else if (cnNodeType == L"Reshape"/*OperationNameOf(ReshapeNode)*/)
         {
             if (parameter.size() < 2 || parameter.size() > 5)
                 RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
@@ -307,7 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
+                nodePtr = builder.DeprecatedReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC/*legacy*/), name);   // BUGBUG: use a tensor descriptor instead
                 nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }

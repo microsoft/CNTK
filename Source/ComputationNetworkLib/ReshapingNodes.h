@@ -126,8 +126,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingReinterpretNodeBaseMembers UsingComputationNodeMembersBoilerplate
 
+    // TODO: This ReshapeNode is currently not used. Its function will be taken over by Transpose and the Reshape that follows this one below.
+
     // -----------------------------------------------------------------------
-    // ReshapeNode (input) -- reinterpret input matrix as having different dimensions
+    // DeprecatedReshapeNode (input) -- reinterpret input matrix as having different dimensions
     // where the new row dimension is given, and the column dimension is inferred.
     // Also optionally associate a different TensorShape with the data.
     //
@@ -149,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //       E.g. ReinterpretRowStackAsSequence and ReinterpretSequenceAsRowStack.
     // BUGBUG: This is not actually implemented yet. Instead, it goes from 1 to K steps or from K to 1 step. This is temporary/experimental, until the plumbing for nesting is there.
     //
-    // Thirdly, ReshapeNode can also be used to update only the TensorShape. In that case, the MBLayout is kept as is.
+    // Thirdly, DeprecatedReshapeNode can also be used to update only the TensorShape. In that case, the MBLayout is kept as is.
     //
     // Note: The new row dimension must be a straight multiple or divisor of the current row dimension.
     // To reshape to a non-multiple go to row dim 1 first.
@@ -159,18 +161,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ReshapeNode : public ReinterpretNodeBase<ElemType>
+    class DeprecatedReshapeNode : public ReinterpretNodeBase<ElemType>
     {
         typedef ReinterpretNodeBase<ElemType> Base; UsingReinterpretNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Reshape"; }
+        static const std::wstring TypeName() { return L"DeprecatedReshape"; }
     public:
-        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const TensorShape & imageLayout = TensorShape()) :
+        DeprecatedReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const TensorShape & imageLayout = TensorShape()) :
             Base(deviceId, name),
             m_numTargetRows(numRows),
             m_targetImageLayout(imageLayout)
         { }
-        ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
-            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC/*legacy*/))
+        DeprecatedReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            DeprecatedReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC/*legacy*/))
         {
             // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
             AttachInputs(configp, this->GetExpectedNumInputs());
@@ -181,7 +183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
+                auto node = dynamic_pointer_cast<DeprecatedReshapeNode<ElemType>>(nodeP);
                 node->m_numTargetRows = m_numTargetRows;
                 node->m_targetImageLayout = m_targetImageLayout;
             }
@@ -198,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_numTargetRows;
-            m_targetImageLayout.Load(fstream);
+            m_targetImageLayout.Load(fstream, /*acceptLegacyFormat=*/true);
         }
 
         virtual void /*IComputationNode::*/PrintSelfBeforeValidation() const override
@@ -259,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 if (m_numTargetRows != m_targetImageLayout.GetNumElements())
-                    LogicError("ReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int)m_numTargetRows);
+                    LogicError("DeprecatedReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int)m_numTargetRows);
                 SetDims(m_targetImageLayout, newCols);
             }
         }
@@ -291,7 +293,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // going from many samples to one: layout entry will get no flags
                     if (Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows != 1)
-                        LogicError("ReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
+                        LogicError("DeprecatedReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
                     // we are in frame mode now
                     m_pMBLayout->InitAsFrameMode(Input(0)->GetNumParallelSequences());
                 }
@@ -299,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                     if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
-                        LogicError("ReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
+                        LogicError("DeprecatedReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
                     m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
                     for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
                         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
@@ -327,7 +329,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
             {
-                // TODO: It does not make sense to run ReshapeNode frame-by-frame inside a loop, because it changes the time base.
+                // TODO: It does not make sense to run DeprecatedReshapeNode frame-by-frame inside a loop, because it changes the time base.
                 //       However, in the future, we should be able to run inside an outer loop.
                 if (!fr.IsAllFrames())
                     InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
@@ -360,14 +362,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
         {
-            // The ReshapeNode does not require its output value for computing
+            // The DeprecatedReshapeNode does not require its output value for computing
             // the gradients of its input nodes
             return false;
         }
 
         virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
-            // The ReshapeNode does not require any of it's input's values for computing
+            // The DeprecatedReshapeNode does not require any of it's input's values for computing
             // the gradients of its input nodes
             UNREFERENCED_PARAMETER(childIndex);
             return false;
@@ -439,6 +441,135 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_targetImageLayout = TensorShape(1, m_numTargetRows, 1);
             }
         }
+    };
+
+    template class DeprecatedReshapeNode<float>;
+    template class DeprecatedReshapeNode<double>;
+
+    // -----------------------------------------------------------------------
+    // Reshape(x, tensorShape, beginDim=0, endDim=0) -- reinterpret input samples as having different tensor dimensions
+    //     - just replaces metadata m_sampleLayout, does not change data values
+    //     - one dimension may be specified as 0 and will be inferred
+    //     - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
+    //     - may not be applied to time; use Permute() or Transpose()
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ReshapeNode : public UnaryElementWiseNode<ElemType>
+    {
+        typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Reshape"; }
+    public:
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & replacementSampleLayout = TensorShape(), int beginDim = 1, int endDim = 0) :
+            Base(deviceId, name),
+            m_replacementSampleLayout(replacementSampleLayout), m_beginDimParameter(beginDim), m_endDimParameter(endDim)
+        { }
+        ReshapeNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            ReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"), configp->Get(L"beginDim"), configp->Get(L"endDim"))
+        {
+            AttachInputs(configp, this->GetExpectedNumInputs());
+        }
+
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
+                node->m_replacementSampleLayout = m_replacementSampleLayout;
+            }
+        }
+
+        virtual void Save(File& fstream) const override
+        {
+            Base::Save(fstream);
+            fstream << m_beginDimParameter << m_endDimParameter;
+            m_replacementSampleLayout.Save(fstream);
+        }
+
+        virtual void Load(File& fstream, size_t modelVersion) override
+        {
+            Base::Load(fstream, modelVersion);
+            fstream >> m_beginDimParameter >> m_endDimParameter;
+            m_replacementSampleLayout.Load(fstream, /*acceptLegacyFormat=*/false);
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            // BUGBUG: For inputs without MBLayout, the sample layout should include the column dimension, but it does not currently. Needs to be fleshed out.
+            const auto & inputSampleLayout = Input(0)->GetSampleLayout();
+            const auto & inputDims = inputSampleLayout.GetDims();
+
+            auto replacementDims = m_replacementSampleLayout.GetDims();
+
+            size_t beginDim = m_beginDimParameter > 0 ? m_beginDimParameter - 1 : 0;
+            size_t endDim   = m_endDimParameter   > 0 ? m_endDimParameter   - 1 : inputDims.size();
+            if (!isFinalValidationPass) // non-final: be tolerant, no errors
+            {
+                if (endDim > inputDims.size())
+                    endDim = inputDims.size();
+                if (beginDim > endDim)
+                    beginDim = endDim;
+            }
+
+            // if a dimension is specified as zero then infer it, otherwise verify that total #elements matches
+            size_t inputElements = 1;                       // get #elements in range to be replaced
+            for (size_t k = beginDim; k < endDim; k++)
+                inputElements *= inputDims[k];
+            size_t targetElements = 1;                      // check/infer #elements to replace with
+            size_t zeroIndex = SIZE_MAX;
+            for (size_t k = 0; k < replacementDims.size(); k++)
+            {
+                if (replacementDims[k] != 0)
+                    targetElements *= replacementDims[k];
+                else if (zeroIndex == SIZE_MAX)
+                    zeroIndex = k;
+                else
+                    InvalidArgument("%ls %ls operation: More than one dimension was specified as zero in the replacement (sub-)dimensions [%s]", string(m_replacementSampleLayout).c_str());
+            }
+            if (zeroIndex != SIZE_MAX)
+                replacementDims[zeroIndex] = inputElements / targetElements;    // infer the number (ignore errors at this point)
+
+            // assemble actual full dimension vector
+            SmallVector<size_t> dims;
+            dims.append(inputDims.begin(), inputDims.begin() + beginDim);
+            dims.append(replacementDims.begin(), replacementDims.end());
+            dims.append(inputDims.begin() + endDim, inputDims.end());
+            auto sampleLayout = TensorShape(dims);
+
+            // validate total dimension
+            if (isFinalValidationPass && inputSampleLayout.GetNumElements() != sampleLayout.GetNumElements())
+            {
+                auto subShape = TensorShape(std::vector<size_t>(inputDims.begin() + beginDim, inputDims.begin() + endDim));
+                InvalidArgument("%ls %ls operation: Input (sub-)dimensions [%s] incompatible with desired (sub-)dimensions [%s], number of elements %s.",
+                                NodeName().c_str(), OperationName().c_str(),
+                                string(subShape).c_str(), string(m_replacementSampleLayout).c_str(),
+                                zeroIndex != SIZE_MAX ? "must be the same" : "is not an integer multiple of the non-0 dimensions");
+            }
+
+            // that's it
+            SetDims(sampleLayout, 0);   // BUGBUG: This is incorrect if we have no MBLayout, e.g. reshaping a bias vector into a different tensor dimension
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            ValueFor(fr).SetValue(Input(0)->ValueFor(fr));
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            Input(inputIndex)->GradientFor(fr).SetValue(GradientFor(fr));
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    private:
+        TensorShape m_replacementSampleLayout;  // user-specified dimensions to replace dimensions [beginDim, endDim]
+        int m_beginDimParameter;                // 1-based index range as specified
+        int m_endDimParameter;
     };
 
     template class ReshapeNode<float>;
@@ -835,7 +966,7 @@ reshaping
        - Exceptions: training criteria, BatchNormalization, ...WithNegativeSamples (we should not need this)
     - I don't like that 'dim' refers to the index of the dimension as well as the number of elements in that dimension. Axis (numpy)?
 
- - Reshaping:   --these are all implemented in C++ by ReshapeNode
+ - Reshaping:   --these are all implemented in C++ by DeprecatedReshapeNode
     - Reshape(x, tensorShape, beginDim=0, endDim=0)
         - just replaces metadata m_sampleLayout
         - one dimension may be specified as 0 and will be inferred
