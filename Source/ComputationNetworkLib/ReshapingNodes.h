@@ -448,10 +448,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // Reshape(x, tensorShape, beginDim=0, endDim=0) -- reinterpret input samples as having different tensor dimensions
-    //     - just replaces metadata m_sampleLayout, does not change data values
-    //     - one dimension may be specified as 0 and will be inferred
-    //     - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
-    //     - may not be applied to time; use Permute() or Transpose()
+    //  - just replaces metadata m_sampleLayout, does not change data values
+    //  - one dimension may be specified as 0 and will be inferred
+    //  - optional beginDim/endDim denote to only replace a sub-range of dims, for implementing ReshapeDimension() and FlattenRank()
+    //  - may not be applied to time; use Permute() or Transpose()
+    //
+    // Derived operations:
+    //
+    // ReshapeDimension(x, dim, tensorShape) = Reshape(x, tensorShape, beginDim=dim, endDim=dim+1)
+    //  - reinterprets one dimension as multiple, where the number of elements remains the same
+    //  - one of the new dimensions may be specified as 0 and will be inferred
+    //
+    // FlattenDimensions(x, dim, num) = Reshape(x, 0, beginDim=dim, endDim=dim+num)
+    //  - replace two or more consecutive dims by a single dim with the same number of elements
+    //
+    // SplitDimension(x, dim, N) = ReshapeDimension(x, dim, 0:N)
+    //  - splits a dimension into a new tensor dimension, injecting them into a new dimension
+    //  - to split stacked frames into a new time dimension:
+    //    insert new time dim with ReshapeDimension(., -1, 0:1), SplitDimension(., dim, N), Transpose(., dim+1, -1), then Select(., dim+1, 0) away the new time dim
+    //    This would make 4 copies presently. We may need a compound C++ node for now.
+    //  - note: to split into multiple outputs (like tf.split()), use a BrainScript loop with Slice().
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -491,7 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Load(fstream, modelVersion);
             fstream >> m_beginDimParameter >> m_endDimParameter;
-            m_replacementSampleLayout.Load(fstream, /*acceptLegacyFormat=*/false);
+            m_replacementSampleLayout.Load(fstream);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -543,10 +559,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && inputSampleLayout.GetNumElements() != sampleLayout.GetNumElements())
             {
                 auto subShape = TensorShape(std::vector<size_t>(inputDims.begin() + beginDim, inputDims.begin() + endDim));
-                InvalidArgument("%ls %ls operation: Input (sub-)dimensions [%s] incompatible with desired (sub-)dimensions [%s], number of elements %s.",
+                InvalidArgument("%ls %ls operation: Input (sub-)dimensions [%s] incompatible with desired (sub-)dimensions [%s]. Number of elements %s.",
                                 NodeName().c_str(), OperationName().c_str(),
                                 string(subShape).c_str(), string(m_replacementSampleLayout).c_str(),
-                                zeroIndex != SIZE_MAX ? "must be the same" : "is not an integer multiple of the non-0 dimensions");
+                                zeroIndex == SIZE_MAX ? "must be the same" : "is not an integer multiple of the non-0 dimensions");
             }
 
             // that's it

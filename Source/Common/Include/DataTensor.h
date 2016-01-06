@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void Load(File& fstream, bool acceptLegacyFormat)
+        void Load(File& fstream, bool acceptLegacyFormat = false)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
             // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
@@ -227,9 +227,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else            // detected the old size_t W, H, C format
             {
-                m_dims.resize(3);     // current format is hard-coded for 3, for back compat
+                m_dims.resize(3);
                 m_dims[1] = rank;
-                fstream >> m_dims[2] >> m_dims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+                fstream >> m_dims[2] >> m_dims[0]; // stored in order C, W, H
             }
             InitAsNoSlice();
         }
@@ -248,10 +248,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const SmallVector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
         const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
-        // interpretation as an image tensor
-        //size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
-        //size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
-        //size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
         // legacy helper function for RowSliceNode. Will go away.
         bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
@@ -319,8 +315,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //   m_dims    =   I   1    J   K
                     //   m_strides =   1   I    I   I*J
                     // dropping the second dimension
-                    //   m_dims    =   I   %    J   K
-                    //   m_strides =   1   %    I   I*J
+                    //   m_dims    =   I        J   K
+                    //   m_strides =   1        I   I*J
                     m_dims[j]    = m_dims[k];
                     m_strides[j] = m_strides[k];
                     j++;
