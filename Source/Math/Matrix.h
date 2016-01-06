@@ -13,7 +13,7 @@
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
-#include "DataTensor.h" // only for SmallVector; I was hoping to keep this out
+#include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include <limits.h>
 #include <memory>       // for shared_ptr
 #include <array>

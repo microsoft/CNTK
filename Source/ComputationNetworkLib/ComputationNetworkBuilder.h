@@ -9,7 +9,7 @@
 #include "ComputationNetwork.h"
 #include "TrainingCriterionNodes.h" // for NCEEvalMode
 #include "ScriptableObjects.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 #include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {

@@ -378,6 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (tid < i && tid + i < tids) accumulators[tid] += accumulators[tid + i];
                 if (0 + i < tids) __syncthreads();    // sync if condition true for at least one thread
+                // TODO: use volatile* and then we can skip the __syncthreads() for the last 32 values
             }
 
             // now set final value to output coordinate

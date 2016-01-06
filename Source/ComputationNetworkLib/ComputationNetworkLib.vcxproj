@@ -155,7 +155,7 @@
     <ClInclude Include="..\Common\Include\Basics.h" />
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\Config.h" />
-    <ClInclude Include="..\Common\Include\DataTensor.h" />
+    <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="..\Common\Include\Platform.h" />

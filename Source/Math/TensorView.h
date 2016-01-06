@@ -10,7 +10,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 
 #pragma warning (push)
 #pragma warning (disable: 4251) // needs to have dll-interface to be used by clients of... caused by TensorView::m_shape which is only private. We use the same compiler everywhere.

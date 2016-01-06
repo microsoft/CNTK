@@ -10,7 +10,7 @@
 #include "TensorView.h"
 #include "ScriptableObjects.h"
 #include "Sequences.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 #include "MatrixPool.h"
 
 #include <unordered_set>
