@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows != 0)      // legacy file format
                 sampleLayout = TensorShape(rows);
             else
-                sampleLayout.Load(fstream);
+                sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
             LoadValue(fstream);
             SetDims(sampleLayout, cols);    // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
         }
@@ -302,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows, colsDummy;
             fstream >> rows >> colsDummy;
             TensorShape sampleLayout;
-            sampleLayout.Load(fstream);
+            sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
             // some older files may have inconsistent tensor information
             if (rows != sampleLayout.GetNumElements())
             {
