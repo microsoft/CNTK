@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows != 0)      // legacy file format
                 sampleLayout = TensorShape(rows);
             else
-                sampleLayout.Load(fstream);
+                sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
             LoadValue(fstream);
             SetDims(sampleLayout, cols);    // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
         }
@@ -263,23 +263,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_parameterUpdateRequired = false;
         }
     protected:
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & sampleLayout, bool isSparse) :
+            Base(deviceId, name)
+        {
+            Init(sampleLayout, isSparse);
+        }
+        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, bool isSparse) :
+            InputValueBase(deviceId, name, TensorShape(rows), isSparse)
+        { }
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
-            Base(deviceId, name)
-        {
-            Init(TensorShape(), isSparse);
-        }
-        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse) :
-            Base(deviceId, name)
-        {
-            cols;   // BUGBUG: There should be no 'cols' parameter for InputValues, since they must be minibatches.
-            Init(TensorShape(rows), isSparse);
-        }
-        InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages, bool isSparse) :
-            Base(deviceId, name)
-        {
-            numImages;   // BUGBUG: There should be no 'numImages' parameter for InputValues, since they must be minibatches.
-            Init(imageLayout, isSparse);
-        }
+            InputValueBase(deviceId, name, TensorShape(), isSparse)
+        { }
         InputValueBase(const ScriptableObjects::IConfigRecordPtr configp, bool isSparse) :
             Base(configp->Get(L"deviceId"), L"<placeholder>")
         {
@@ -308,7 +302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows, colsDummy;
             fstream >> rows >> colsDummy;
             TensorShape sampleLayout;
-            sampleLayout.Load(fstream);
+            sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
             // some older files may have inconsistent tensor information
             if (rows != sampleLayout.GetNumElements())
             {
@@ -361,11 +355,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name, false)
         { }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-            Base(deviceId, name, rows, cols, false)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows) :
+            Base(deviceId, name, rows, false)
         { }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages) :
-            Base(deviceId, name, imageLayout, numImages, false)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & sampleLayout) :
+            Base(deviceId, name, sampleLayout, false)
         { }
         InputValue(const ScriptableObjects::IConfigRecordPtr configp) :
             Base(configp, false)
@@ -390,11 +384,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name, true)
         { }
-        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-            Base(deviceId, name, rows, cols, true)
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows) :
+            Base(deviceId, name, rows, true)
         { }
-        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout, size_t numImages) :
-            Base(deviceId, name, imageLayout, numImages, true)
+        SparseInputValue(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & imageLayout) :
+            Base(deviceId, name, imageLayout, true)
         { }
         SparseInputValue(const ScriptableObjects::IConfigRecordPtr configp) :
             Base(configp, true)
