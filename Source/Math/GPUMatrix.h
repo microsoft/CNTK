@@ -9,7 +9,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
-#include "DataTensor.h" // only for SmallVector; I was hoping to keep this out
+#include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 #include "ConcStack.h"

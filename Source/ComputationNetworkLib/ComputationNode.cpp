@@ -9,7 +9,7 @@
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
-#include "DataTensor.h"
+#include "TensorShape.h"
 
 #ifndef let
 #define let const auto

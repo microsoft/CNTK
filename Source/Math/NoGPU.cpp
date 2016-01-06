@@ -13,7 +13,7 @@
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
 #include "CuDnnConvolutionEngine.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
