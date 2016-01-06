@@ -1,7 +1,7 @@
-ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
+ConvReLULayer(inp, outMap, inMap, kW, kH, hStride, vStride, wScale, bValue)
 {
-    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
-    b = Parameter(1, 1, outMap, init = fixedValue, value = bValue, imageLayout = "cudnn")
+    W = ImageParameter(kW, kH, inMap, init = Gaussian, initValueScale = wScale, imageLayout = "cudnn")
+    b = ImageParameter(1, 1, outMap, init = fixedValue, value = bValue, imageLayout = "cudnn")
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
     p = Plus(c, b);
     y = RectifiedLinear(p);
