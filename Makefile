@@ -239,6 +239,7 @@ MATH_SRC +=\
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
 	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cpp \
+	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
 MATH_SRC +=\
