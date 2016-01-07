@@ -150,6 +150,9 @@
     <ClInclude Include="IComputationNetBuilder.h">
       <Filter>MultiNetworks</Filter>
     </ClInclude>
+    <ClInclude Include="SimpleDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

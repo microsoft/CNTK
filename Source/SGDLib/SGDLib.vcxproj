@@ -185,6 +185,7 @@
     <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
+    <ClInclude Include="SimpleDistGradAggregator.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />

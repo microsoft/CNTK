@@ -6,6 +6,7 @@
 #include "SGD.h"
 #include "DataReaderHelpers.h"
 #include "AllReduceDistGradAggregator.h"
+#include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
 #include <map>
@@ -1887,7 +1888,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_distGradAgg == nullptr)
             {
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
                 m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#else
+                if (m_numGradientBits != (8 * sizeof(ElemType)))
+                {
+                    RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
+                }
+
+                m_distGradAgg = new SimpleDistGradAggregator<ElemType>(g_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+#endif // !QUANTIZED_GRADIENT_AGGREGATION
+
             }
 
             if (m_gradHeader == nullptr)

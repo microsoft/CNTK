@@ -21,10 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~MatrixQuantizerGPU();
 
         // Disallow copy and move construction and assignment
-        MatrixQuantizerGPU(const MatrixQuantizerGPU&) = delete;
-        MatrixQuantizerGPU& operator=(const MatrixQuantizerGPU&) = delete;
-        MatrixQuantizerGPU(MatrixQuantizerGPU&&) = delete;
-        MatrixQuantizerGPU& operator=(MatrixQuantizerGPU&&) = delete;
+        DISABLE_COPY_AND_MOVE(MatrixQuantizerGPU);
 
         void QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit) override;
         void WaitQuantizeAsyncDone() override;
@@ -96,6 +93,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         template <typename ElemType>
         void SynchronizeQuantizationComputeStreamWithEvent();
+
+        template <typename ElemType>
+        void SynchronizeDataTransferFetchStreamWithEvent();
 
     private:
 #ifndef CPUONLY

@@ -25,10 +25,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Disallow copy and move construction and assignment
-        MatrixQuantizerImpl(const MatrixQuantizerImpl&) = delete;
-        MatrixQuantizerImpl& operator=(const MatrixQuantizerImpl&) = delete;
-        MatrixQuantizerImpl(MatrixQuantizerImpl&&) = delete;
-        MatrixQuantizerImpl& operator=(MatrixQuantizerImpl&&) = delete;
+        DISABLE_COPY_AND_MOVE(MatrixQuantizerImpl);
 
         virtual void QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit) = 0;
         virtual void WaitQuantizeAsyncDone() = 0;
@@ -63,6 +60,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         template <typename ElemType>
         void SynchronizeQuantizationComputeStreamWithEvent();
+
+        template <typename ElemType>
+        void SynchronizeDataTransferFetchStreamWithEvent();
 
     protected:
         MatrixComputeStreamEvent(int deviceId);
