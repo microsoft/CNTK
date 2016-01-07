@@ -2978,10 +2978,10 @@ __global__ void _reshape(
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
 
-    for (int oldCol = oldColLower; oldCol <= oldNumCols; oldCol++)
+    for (int oldCol = oldColLower; oldCol < oldNumCols; oldCol++)
     {
         int start = oldColumnIndex[oldCol];
-        int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+        int end = oldColumnIndex[oldCol + 1];
         bool done = false;
 
         for (int j = start; j < end; j++)  //j points to the value
