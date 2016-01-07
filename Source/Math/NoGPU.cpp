@@ -14,6 +14,7 @@
 #include "MatrixQuantizerGPU.h"
 #include "CuDnnConvolutionEngine.h"
 #include "TensorShape.h"
+#include "GPUDataTransferer.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -1218,20 +1219,57 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     void GPUMatrixComputeStreamEvent::SynchronizeEvent() { };
     template<> void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>() { };
     template<> void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>() { };
+    template<> void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<float>() { };
+    template<> void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<double>() { };
 
 #pragma endregion GPUMatrixComputeStreamEvent functions
+
+#pragma region GPUDataTransferer functions
+
+    template<class ElemType>
+    GPUDataTransferer<ElemType>::GPUDataTransferer(int, bool)
+    {
+    }
+
+    template<class ElemType>
+    GPUDataTransferer<ElemType>::~GPUDataTransferer()
+    {
+    }
+
+    template<class ElemType>
+    void GPUDataTransferer<ElemType>::CopyGPUToCPUAsync(ElemType*, size_t, ElemType*)
+    {
+    }
+
+    template<class ElemType>
+    void GPUDataTransferer<ElemType>::WaitForCopyGPUToCPUAsync()
+    {
+    }
+
+    template<class ElemType>
+    void GPUDataTransferer<ElemType>::CopyCPUToGPUAsync(ElemType*, size_t, ElemType*)
+    {
+    }
+
+    template<class ElemType>
+    void GPUDataTransferer<ElemType>::WaitForCopyCPUToGPUAsync()
+    {
+    }
+
+#pragma endregion GPUDataTransferer functions
 
     template class GPUMatrix<char>;
     template class GPUMatrix<float>;
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
     template class DeviceBoundNumber<double>;
-    //template MatrixQuantizerGPU<float>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool);
-    //template MatrixQuantizerGPU<double>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool);
     template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
     template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
-    template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, QuantizedMatrix<float>&, bool);
-    template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, QuantizedMatrix<double>&, bool);
+    template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, const Matrix<float>&, QuantizedMatrix<float>&, Matrix<float>&, bool);
+    template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, const Matrix<double>&, QuantizedMatrix<double>&, Matrix<double>&, bool);
+
+    template class GPUDataTransferer<float>;
+    template class GPUDataTransferer<double>;
 
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
