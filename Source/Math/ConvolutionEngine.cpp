@@ -454,8 +454,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (engType == EngineType::Legacy)
         {
+            // REVIEW alexeyk: temp hack to allow this to work in MEL scenarios. InvalidArgument should be used instead.
             if (imageLayoutKind != ImageLayoutKind::HWC)
-                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
+                fprintf(stderr, "WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.\n");
+                //InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
             return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
         }
 
