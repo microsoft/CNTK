@@ -2,6 +2,7 @@
 #include "MatrixQuantizerGPU.h"
 #include "MatrixQuantizer_kernel.cu"
 #include "GPUMatrix.h"
+#include "GPUDataTransferer.h"
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
@@ -370,8 +371,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaStreamWaitEvent(MatrixQuantizerGPU<ElemType>::GetComputeStream(), m_mainGPUComputeStreamCUDAEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
     }
 
+    template <typename ElemType>
+    void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent()
+    {
+        cudaStreamWaitEvent(GPUDataTransferer<ElemType>::GetFetchStream(), m_mainGPUComputeStreamCUDAEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    }
+
     // Explicit template instantiations
     template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>();
     template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>();
+    template void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<float>();
+    template void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<double>();
 
 }}}

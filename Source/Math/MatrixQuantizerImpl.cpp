@@ -54,6 +54,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template <typename ElemType>
+    void MatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent()
+    {
+        if (m_deviceId >= 0)
+        {
+            GPUMatrixComputeStreamEvent* GPUEvent = dynamic_cast<GPUMatrixComputeStreamEvent*>(this);
+            GPUEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
+        }
+    }
+
     MatrixComputeStreamEvent::MatrixComputeStreamEvent(int deviceId) 
         : m_deviceId(deviceId)
     {
@@ -62,4 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Explicit template instantiations
     template MATH_API void MatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>();
     template MATH_API void MatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>();
+    template MATH_API void MatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<float>();
+    template MATH_API void MatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<double>();
+
 }}}
