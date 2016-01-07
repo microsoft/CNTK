@@ -493,34 +493,22 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit, RandomSeedFixtu
     }
 }
 
-#if 0 // Temporarily disabling
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixLargeIsEqual, RandomSeedFixture)
-{
-    const int rows = 33553921;
-    const int cols = 1;
-
-    Matrix<float> m0 = Matrix<float>::Zeros(rows, cols, c_deviceIdZero);
-    Matrix<float> m1 = Matrix<float>::Ones(rows, cols, c_deviceIdZero);
-
-    BOOST_CHECK(!m1.IsEqualTo(m0, c_epsilonFloatE5));
-}
-
 BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture)
 {
-    const int inChannels = 2;// 50;
-    const int inWidth = 4;// 10;
+    const int inChannels = 50;
+    const int inWidth = 10;
     const int inHeight = 1;
-    const int batchSize = 3;// 20;
-    const int kernelWidth = 2;// 3;
+    const int batchSize = 20;
+    const int kernelWidth = 3;
     const int kernelHeight = inHeight;
     const int horizontalSubsample = 1;
     const int verticalSubsample = 1;
     const bool zeroPadding = false;
-    const int outChannels = 2;// 3;
-    const int outWidth = zeroPadding ? inWidth : (inWidth >= kernelWidth ? 1 + (inWidth - kernelWidth) / horizontalSubsample : 0);
+    const int outChannels = 3;
+    const int outWidth = zeroPadding ? (inWidth / horizontalSubsample) : (inWidth >= kernelWidth ? 1 + (inWidth - kernelWidth) / horizontalSubsample : 0);
     const int outHeight = inHeight;
-    const float randomInitLowerBound = 1.0f;
-    const float randomInitUpperBound = 5.0f;
+    const float randomInitLowerBound = -1.0f;
+    const float randomInitUpperBound = 1.0f;
     Matrix<float> outputGradientSubBatch = Matrix<float>::RandomUniform(outChannels, batchSize*outWidth, randomInitLowerBound, randomInitUpperBound, IncrementCounter(), c_deviceIdZero);
     Matrix<float> inputSubBatch = Matrix<float>::RandomUniform(inChannels*inWidth, batchSize, randomInitLowerBound, randomInitUpperBound, IncrementCounter(), c_deviceIdZero);
     Matrix<float> tempMatrix(1, 1, c_deviceIdZero);
@@ -550,30 +538,8 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture
     Matrix<float>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, inputGradientValues2, batchSize, horizontalSubsample, zeroPadding, false);
     inputGradientValues2.Reshape(outChannels, inChannels*kernelWidth);
 
-    const int dim = outChannels*inChannels*kernelWidth;
-    float* base = inputGradientValues1.CopyToArray();
-    float baseA[dim];
-    fprintf(stderr, "[BASE]");
-    for (int i = 0; i < dim; i++)
-    {
-        baseA[i] = base[i];
-        fprintf(stderr, "%f ", baseA[i]);
-    }
-    fprintf(stderr, "\n");
-
-    float* exp = inputGradientValues2.CopyToArray();
-    float expA[dim];
-    fprintf(stderr, "[EXP]");
-    for (int i = 0; i < dim; i++)
-    {
-        expA[i] = exp[i];
-        fprintf(stderr, "%f ", expA[i]);
-    }
-    fprintf(stderr, "\n");
-
-    BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE5));
+    BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE2));
 }
-#endif
 
 BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
 {
@@ -595,10 +561,10 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
 }
-#if 0
+
 BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 {
-    size_t D = 10, S = 10, M = 10, K = 10, T = 10;
+    size_t D = 13, S = 11, M = 7, K = 15, T = 8;
     GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D * S * M * K, T, c_deviceIdZero, -1, 1, IncrementCounter());
     GPUMatrix<float> denseMatrixB(D*S*M*K, T, c_deviceIdZero);
     GPUMatrix<float> denseMatrixC(D*S*M*K, T, c_deviceIdZero);
@@ -612,7 +578,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
 }
-#endif
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
 

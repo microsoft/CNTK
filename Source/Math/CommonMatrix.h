@@ -39,7 +39,7 @@
 
 MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
-namespace Microsoft { namespace MSR { namespace CNTK {    
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ElementWiseOperator -- This enum represents which function to apply.
@@ -48,41 +48,52 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum ElementWiseOperator
     {
+        // nullary
+        opConstOne,
         // unary (or binary with constant parameter)
         opCopy,
         opNegate, opNot,
         opAbs,
-        opSigmoid, opSigmoidDerivative, opTanh, opSqrt, opExp, opLog, opLinearRectifierDerivative, opCosine, opNegativeSine,
-        // these are not implemented yet:
-        opSaturateBetaAlpha, opSumAlpha, opSubDifferenceToAlpha, opSubDifferenceFromAlpha,
+        opSigmoid, opTanh, opSqrt, opExp, opLog, opLinearRectifier, opCosine,
+        // unary ops for use by Matrix class only (there is no TensorView implementation)
+        opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
         // binary
         opSum, opDifference, opElementwiseProduct, opElementwiseQuotient,
         opLogSum, opMax, opMin,
         opEQ, opNE, opGT, opLT, opGE, opLE,
+        opAnd, opOr, opXor,
         opMaskNegative,
+        opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
+        opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput, opElementwiseProductWithCosDerivative,
+        // binary ops for indexing
+        //opIndex,
         // ternary
-        opCond
-        // Note: not all of the above are actually implement at present; and not all that's implemented has an opcode.
+        opCond/*a ? b : c*/, opClip/*clip a within interval b..c*/
+        // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
     };
 
     // helper to apply a C macro for all operations of each kind
+#define ForAllNullaryOps(Macro) \
+    Macro(ConstOne);
+
 #define ForAllUnaryOps(Macro) \
     Macro(Copy); \
     Macro(Negate); Macro(Not); \
     Macro(Abs); \
-    Macro(Sigmoid); Macro(SigmoidDerivative); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifierDerivative); Macro(Cosine); Macro(NegativeSine);
-
-#define ForAllParameterizedUnaryOps(Macro) \
-    Macro(SaturateBetaAlpha); Macro(SumAlpha); Macro(SubDifferenceToAlpha); Macro(SubDifferenceFromAlpha);
+    Macro(Sigmoid); Macro(Tanh); Macro(Sqrt); Macro(Exp); Macro(Log); Macro(LinearRectifier); Macro(Cosine);
 
 #define ForAllBinaryOps(Macro) \
     Macro(Sum); Macro(Difference); Macro(ElementwiseProduct); Macro(ElementwiseQuotient); \
     Macro(LogSum); Macro(Max); Macro(Min); \
     Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
-    Macro(MaskNegative);
+    Macro(And); Macro(Or); Macro(Xor);\
+    Macro(MaskNegative); \
+    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput); Macro(ElementwiseProductWithTanhDerivativeFromOutput); \
+    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); Macro(ElementwiseProductWithLogDerivativeFromOutput); Macro(ElementwiseProductWithCosDerivative); \
+    //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
-    Macro(Cond);
+    Macro(Cond); Macro(Clip);
 
     // -----------------------------------------------------------------------
     // various enums to describe 

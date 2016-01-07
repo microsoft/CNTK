@@ -157,7 +157,9 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="cudalatticeops.h" />
     <ClInclude Include="cudalib.h" />
     <ClInclude Include="CuDnnConvolutionEngine.h" />
+    <ClInclude Include="GPUTensor.h" />
     <ClInclude Include="latticefunctionskernels.h" />
+    <ClInclude Include="TensorOps.h" />
     <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
@@ -171,6 +173,10 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="GPUTensor.cu">
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+    </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
@@ -202,7 +208,7 @@ if exist "$(CuDnnDll)" (xcopy /Y "$(CuDnnDll)" $(OutputPath))
     <CudaCompile Include="GPUMatrix.cu">
       <FileType>CppCode</FileType>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
-      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</InterleaveSourceInPTX>
     </CudaCompile>
     <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>

@@ -489,7 +489,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             std::vector<C> res;
             res.reserve(GetSize(Fail));
             for (const auto & val : values)
-                res.push_back(val);
+                res.push_back(val.ResolveValue());  // resolve upon access
             return res;
         }
     };

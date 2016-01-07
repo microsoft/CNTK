@@ -1,9 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -25,22 +23,31 @@
     <ClCompile Include="MatrixQuantizerCPU.cpp">
       <Filter>CPU\1bitSGD</Filter>
     </ClCompile>
-    <ClCompile Include="MatrixQuantizer.cpp" />
-    <ClCompile Include="QuantizedMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp">
       <Filter>GPU\1bitSGD</Filter>
     </ClCompile>
-    <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="TensorView.cpp">
       <Filter>Tensors</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="ConvolutionEngine.cpp">
+      <Filter>Convolution</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="QuantizedMatrix.cpp">
+      <Filter>1bitSGD</Filter>
+    </ClCompile>
+    <ClCompile Include="MatrixQuantizer.cpp">
+      <Filter>1bitSGD</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
-    <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -59,22 +66,39 @@
     <ClInclude Include="MatrixQuantizerCPU.h">
       <Filter>CPU\1bitSGD</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixQuantizer.h" />
-    <ClInclude Include="QuantizedMatrix.h" />
     <ClInclude Include="MemAllocator.h" />
     <ClInclude Include="CUDAPageLockedMemAllocator.h">
       <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\DebugUtil.h" />
-    <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="TensorView.h">
       <Filter>Tensors</Filter>
     </ClInclude>
     <ClInclude Include="TensorOps.h">
       <Filter>Tensors</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\DataTensor.h">
+    <ClInclude Include="..\Common\Include\TensorShape.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Helpers.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\DebugUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvolutionEngine.h">
+      <Filter>Convolution</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="QuantizedMatrix.h">
+      <Filter>1bitSGD</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixQuantizer.h">
+      <Filter>1bitSGD</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -112,6 +136,15 @@
     </Filter>
     <Filter Include="Tensors">
       <UniqueIdentifier>{70fb07cf-603e-4444-bc10-f0add4920fd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{62b92193-92d0-4e5b-8c3e-67ffd01a98c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Convolution">
+      <UniqueIdentifier>{3a49e94d-14ee-4ca1-a56e-a1472206a076}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="1bitSGD">
+      <UniqueIdentifier>{546cacbd-253e-485b-8c8c-8b9ee0e2f631}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

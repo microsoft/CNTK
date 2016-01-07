@@ -1,6 +1,6 @@
-// DataTensor.h -- tensor descriptor that describes the inner structure of data vectors
+// TensorShape.h -- tensor descriptor that describes the inner structure of data vectors
 //
-// <copyright file="Sequences.h" company="Microsoft">
+// <copyright file="TensorShape.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -90,6 +90,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         T m_data[12];
         size_t m_size;
+#ifdef _DEBUG
+        void DebugWipe() { memset(m_data, 0, sizeof(m_data)); } // initialize to 0 to make it look prettier in the debugger
+#else
+        void DebugWipe() { }
+#endif
     public:
         size_t capacity() const { return _countof(m_data); }
         size_t size() const { return m_size; }
@@ -103,12 +108,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class ITER>
         void assign(ITER beg, const ITER & end) { clear(); append(beg,end); }
         void operator=(const SmallVector & other) { m_size = other.m_size; memcpy(m_data, other.m_data, other.m_size * sizeof(T)); }
-        SmallVector(const SmallVector & other) { *this = other; }
-        SmallVector(size_t sz, const T & val) { assign(sz, val); }
+        SmallVector(const SmallVector & other) { DebugWipe(); *this = other; }
+        SmallVector(size_t sz, const T & val) { DebugWipe(); assign(sz, val); }
         SmallVector(size_t sz) : SmallVector(sz, 0) { }
         SmallVector() : SmallVector(0) { }
-        SmallVector(const std::vector<T>           & v) { assign(v.begin(), v.end()); }
-        SmallVector(const std::initializer_list<T> & l) { assign(l.begin(), l.end()); }
+        SmallVector(const std::vector<T>           & v) { DebugWipe(); assign(v.begin(), v.end()); }
+        SmallVector(const std::initializer_list<T> & l) { DebugWipe(); assign(l.begin(), l.end()); }
         bool operator==(const SmallVector & other) const { return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T)); }
         bool operator!=(const SmallVector & other) const { return !operator==(other); } // duh
         T   operator[](size_t i) const { if (i >= size()) LogicError("SmallVector: index overflow"); return m_data[i]; }
@@ -203,28 +208,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void Load(File& fstream)
+        void Load(File& fstream, bool acceptLegacyFormat = false)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
             // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
-            uint32_t n, dim;
-            fstream >> n >> dim;
-            if (dim)        // heuristic to detect the old format. Old format stores a size_t, i.e. the second uint32_t is 0 (no dimensions are > 4G)
+            uint32_t rank, dim0;
+            fstream >> rank >> dim0;
+            if (!acceptLegacyFormat || dim0 != 0)        // heuristic to detect the old format. Old format stores a size_t, i.e. the second uint32_t is 0 (no dimensions are > 4G)
             {
-                m_dims.resize(n);
-                m_dims[0] = dim;
-                for (size_t i = 1; i < n; i++)
+                m_dims.resize(rank);
+                m_dims[0] = dim0;
+                for (size_t i = 1; i < rank; i++)
                 {
-                    fstream >> dim;
-                    m_dims[i] = dim;
+                    fstream >> dim0;
+                    m_dims[i] = dim0;
                 }
-                assert(n == m_dims.size());
+                assert(rank == m_dims.size());
             }
             else            // detected the old size_t W, H, C format
             {
-                m_dims.resize(3);     // current format is hard-coded for 3, for back compat
-                m_dims[1] = n;
-                fstream >> m_dims[2] >> m_dims[0]; // currently stored in order W, H, C. TODO: general tensor format will be different
+                m_dims.resize(3);
+                m_dims[1] = rank;
+                fstream >> m_dims[2] >> m_dims[0]; // stored in order C, W, H
             }
             InitAsNoSlice();
         }
@@ -243,13 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const SmallVector<size_t> & GetDims() const { return m_dims; }    // get all, e.g. for logging or for constructing derived tensors with edited dimensions
         const SmallVector<ptrdiff_t> & GetStrides() const { return m_strides; }
 
-        // interpretation as an image tensor
-        size_t GetNumChannels() const { if (m_dims.empty()) return 0; else return m_dims.size() > 0 ? m_dims[0] : 1; }
-        size_t GetWidth()       const { if (m_dims.empty()) return 0; else return m_dims.size() > 1 ? m_dims[1] : 1; }
-        size_t GetHeight()      const { if (m_dims.empty()) return 0; else return m_dims.size() > 2 ? m_dims[2] : 1; }
-        // heuristics used for pretty-printing
-        // TODO: This will go away.
-        bool IsInputAnImage() const { return GetRank() == 3 && (GetWidth() != 1 || GetNumChannels() != 1); }
+        // legacy helper function for RowSliceNode. Will go away.
         bool IsVectorStoredAsImage() const { return GetRank() == 3 && m_dims[0] == 1 && m_dims[1] == 1; }
 
         // indexing
@@ -316,8 +315,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //   m_dims    =   I   1    J   K
                     //   m_strides =   1   I    I   I*J
                     // dropping the second dimension
-                    //   m_dims    =   I   %    J   K
-                    //   m_strides =   1   %    I   I*J
+                    //   m_dims    =   I        J   K
+                    //   m_strides =   1        I   I*J
                     m_dims[j]    = m_dims[k];
                     m_strides[j] = m_strides[k];
                     j++;
@@ -442,15 +441,61 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Does the same trick work for 2D images?
     };
 
-    // When constructing an image tensor with the usual W, H, C format, use the following function instead.
-    // This will sort the three parameters into the correct order.
-    // BUGBUG: at several places, a comment says "after multiplication the structure is lost" and the vector dimension
-    //         is set as the image height. However, the image height is actually the wrong dimension since images are assumed transposed.
-    //         This will get fixed once we get more complete arbitrary tensor support throughout, including better-defined inference rules.
-    static inline TensorShape ImageLayoutWHC(size_t width, size_t height, size_t channels)
+    // image layouts used in CNTK
+    // Nodes that do semantic interpretation of width, height, channel information must know which index they are in.
+    // Eventually this can go away once we switch completely to cudnn layout.
+    // The cudnn layout is actually our layout in order W,H,C.
+    enum ImageLayoutKind
     {
-        return TensorShape(channels, width, height);
+        HWC,    // legacy; default for NDL
+        CHW     // cudnn; default for BrainScript
+    };
+    static inline std::string ToString(ImageLayoutKind imageLayoutKind)
+    {
+        if       (imageLayoutKind == ImageLayoutKind::CHW) return "CHW";
+        else  if (imageLayoutKind == ImageLayoutKind::HWC) return "HWC";
+        else LogicError("ImageLayout: Invalid ImageLayoutKind");
     }
-    // TODO: we need a constructor from config; that will allow us to generalize
+    static inline ImageLayoutKind ImageLayoutKindFrom(const wstring & s)
+    {
+        if      (s == L"CHW" || s == L"cudnn")  return ImageLayoutKind::CHW;
+        else if (s == L"HWC" || s == L"legacy") return ImageLayoutKind::HWC;
+        else InvalidArgument("ImageLayoutKindFrom: Unknown ImageLayoutKind '%ls', must be 'CHW' (cudnn) or 'HWC' (CNTK legacy)", s.c_str());
+    }
+
+    // interpret TensorShape as an image descriptor
+    // considering that we support two ways of storingimages
+    struct ImageDimensions
+    {
+        size_t m_width, m_height, m_numChannels;
+        // interpret TensorShape as image
+        ImageDimensions(const TensorShape & shape, ImageLayoutKind imageLayoutKind)
+        {
+            if (shape.GetRank() != 3)
+                InvalidArgument("Convolution operation currently only supports 1D or 2D convolution on 3D tensors.");
+            if (imageLayoutKind == ImageLayoutKind::CHW)
+            {
+                m_width       = shape[0];
+                m_height      = shape[1];
+                m_numChannels = shape[2];
+            }
+            else  if (imageLayoutKind == ImageLayoutKind::HWC)
+            {
+                m_width       = shape[1];
+                m_height      = shape[2];
+                m_numChannels = shape[0];
+            }
+            else LogicError("WHC: Invalid ImageLayoutKind");
+        }
+        ImageDimensions(size_t width, size_t height, size_t numChannels) : m_width(width), m_height(height), m_numChannels(numChannels) {}
+        // intepret image as TensorShape
+        static TensorShape AsTensorShape(size_t width, size_t height, size_t numChannels, ImageLayoutKind imageLayoutKind/* = ImageLayoutKind::HWC*/)
+        {
+            if       (imageLayoutKind == ImageLayoutKind::CHW) return TensorShape(width, height, numChannels);
+            else  if (imageLayoutKind == ImageLayoutKind::HWC) return TensorShape(numChannels, width, height);
+            else LogicError("ImageLayout: Invalid ImageLayoutKind");
+        }
+        TensorShape AsTensorShape(ImageLayoutKind imageLayoutKind) { return AsTensorShape(m_width, m_height, m_numChannels, imageLayoutKind); }
+    };
 
 }}}

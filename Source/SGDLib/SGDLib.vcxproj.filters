@@ -141,7 +141,7 @@
     <ClInclude Include="..\Common\Include\Sequences.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\DataTensor.h">
+    <ClInclude Include="..\Common\Include\TensorShape.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\Config.h">

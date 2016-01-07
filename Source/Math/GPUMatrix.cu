@@ -5,25 +5,27 @@
 //
 
 #include "stdafx.h"
+#include "Basics.h"
 #include "BestGpu.h"
 #include "DebugUtil.h"
 
 #ifndef CPUONLY
 
-#include "cublas_v2.h"
-#include "Basics.h"
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"
 #include "GPUSparseMatrix.h"
+#include "GPUTensor.h"
 #include "CommonMatrix.h"
 #define TENSOR_OPS_DECL __device__ __host__
 #include "TensorOps.h"
 #include "device_launch_parameters.h"
-#include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
+#include "cublas_v2.h"
+#include <assert.h>
+#include <memory>
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
@@ -47,8 +49,6 @@ bool do_sync = true;
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread)
-#else
-static
 #endif
 cudaStream_t t_stream = cudaStreamDefault;
 
@@ -78,9 +78,9 @@ cudaStream_t MATH_API GetStream()
     performElementWiseFunction(ElementWiseOperator::op##f, a.m_pArray); \
     return *this; }
 
-static const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-static const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
-static const char * CudaErrString(curandStatus)   { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
+template<> const char * CudaErrString<cudaError_t>(cudaError_t x)     { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
+template<> const char * CudaErrString<cublasStatus_t>(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
+template<> const char * CudaErrString<curandStatus>(curandStatus)     { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -384,7 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors and Destructor
 
-   //should only be used by constructors.
+    // should only be used by constructors
     template<class ElemType>
     void GPUMatrix<ElemType>::ZeroInit(int deviceId)
     {
@@ -449,13 +449,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numRows = moveFrom.m_numRows;
         m_numCols = moveFrom.m_numCols;
         m_computeDevice = moveFrom.m_computeDevice;
-        m_pArray = moveFrom.m_pArray;  //shallow copy the pointer       
+        m_pArray = moveFrom.m_pArray;  // shallow copy the pointer       
         m_matrixName=moveFrom.m_matrixName;
         m_elemSizeAllocated = moveFrom.m_elemSizeAllocated;
         m_format = moveFrom.m_format;
         m_externalBuffer = moveFrom.m_externalBuffer;
 
-        //release the pointer from the source object so that the destructor won't release it twice
+        // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroInit(0);       
     }
 
@@ -477,10 +477,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &moveFrom)
         {
-            if (OwnBuffer() && m_pArray!=NULL)
-            {
+            if (OwnBuffer() && m_pArray)
                 CUDA_CALL(cudaFree(m_pArray));  
-            }
 
             m_numRows = moveFrom.m_numRows;
             m_numCols = moveFrom.m_numCols;
@@ -500,8 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUMatrix<ElemType>::~GPUMatrix(void)
     {
         Clear();
-        if (m_workspace != nullptr)
-            delete m_workspace;
+        delete m_workspace;
     }
 
     template<class ElemType>
@@ -3259,6 +3256,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Other helper functions
 
 #pragma region Static BLAS Functions
+    // float/double overloads of cublasSgemm()/cublasDgemm()
+    static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const float *A, int lda, const float *B, int ldb, const float *beta, float *C, int ldc)
+    {
+        return cublasSgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    }
+    static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double *alpha, const double *A, int lda, const double *B, int ldb, const double *beta, double *C, int ldc)
+    {
+        return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    }
+
     template<class ElemType>
     void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, 
         ElemType beta, GPUMatrix<ElemType>& c)
@@ -3278,28 +3285,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (beta == 0)
             c.Resize(m,n);
         else
-            c.VerifySize(m, n); // Can't resize if beta != 0
+            c.VerifySize(m, n);     // Can't resize if beta != 0
 
         if (!(m>0 && k>0 && l>0 && n>0)) 
-        {
             RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
-        }
         if (k!=l) 
-        {
             RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-        }
-        if (sizeof(ElemType)==sizeof(float))
-        {
-            CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
-        }
-        else if (sizeof(ElemType)==sizeof(double))
-        {            
-            CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
-        }
-        else 
-        {
-            RuntimeError("Unsupported template argument in GPUMatrix");             
-        }
+        CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.m_pArray, (int)a.m_numRows, b.m_pArray, (int)b.m_numRows, &beta, c.m_pArray, (int)c.m_numRows));
         c.m_numRows=m;
         c.m_numCols=n;
     }
@@ -4436,395 +4428,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaFree(d_zeta));
     };
 
-    // =======================================================================
-    // TensorView support
-    // =======================================================================
-
-    // BUGBUG: This is a stub that currently is just the CPU code. This is not functional yet.
-
-    // To save time, this makes extensive use of templates and macros.
-
     // -----------------------------------------------------------------------
-    // simple fixed-size arrays for passing dimension information by value
-    // since CUDA can't just take our std::array and std::vector
+    // TensorView entry points from Matrix.cpp
     // -----------------------------------------------------------------------
 
-    template<typename T, size_t N>
-    struct FixedArray
-    {
-        T m_data[N];
-        __device__ __host__ size_t size() const { return N; }
-        __device__ __host__ T & operator[](size_t n)       { return m_data[n]; }
-        __device__ __host__ T   operator[](size_t n) const { return m_data[n]; }
-        template<class VEC> FixedArray(const VEC & data)    // construct from CPU-side STL array or vector
-        {
-            assert(data.size() == N);
-            for (size_t n = 0; n < N; n++)
-            {
-                m_data[n] = (T)data[n];
-                if (m_data[n] != data[n])   // overflow check
-                    InvalidArgument("FixedArray: Dimensions out of range, too few bits.");
-            }
-        }
-    };
-    template<typename T>        // specialized version for 0 elements
-    struct FixedArray<T, 0>
-    {
-        __device__ __host__ size_t size() const { return 0; }
-        template<class VEC> FixedArray(const VEC & data) { assert(data.size() == 0); UNUSED(data); }
-    };
-
-    template<typename T, size_t N, size_t K>    // N = which input/output; K = index depth
-    struct FixedMatrix
-    {
-        T m_data[N][K];
-        __device__ __host__ size_t getNumRows() const { return N; }
-        __device__ __host__ size_t getNumCols() const { return K; }
-        __device__ __host__ T & operator()(size_t n, size_t k)       { return m_data[n][k]; }
-        __device__ __host__ T   operator()(size_t n, size_t k) const { return m_data[n][k]; }
-        template<typename U> FixedMatrix(const array<SmallVector<U>, N> & data)  // construct from CPU-side array of vectors
-        {
-            assert(data.size() == N);
-            for (size_t n = 0; n < N; n++)
-            {
-                assert(data[n].size() == K);
-                for (size_t k = 0; k < K; k++)
-                {
-                    m_data[n][k] = (T)data[n][k];
-                    if (m_data[n][k] != data[n][k])   // overflow check
-                        InvalidArgument("FixedArray: Dimensions out of range, too few bits.");
-                }
-            }
-        }
-    };
-    template<typename T, size_t N>        // specialized version for 0 elements
-    struct FixedMatrix<T, N, 0>
-    {
-        __device__ __host__ size_t getNumRows() const { return N; }
-        __device__ __host__ size_t getNumCols() const { return 0; }
-        template<typename U> FixedMatrix(const array<SmallVector<U>, N> & data) { assert(data.size() == N); for (size_t n = 0; n < N; n++) assert(data[n].size() == 0); UNUSED(data); }
-    };
-
-    // -----------------------------------------------------------------------
-    // function to actually compute a function of (N-1) inputs based on the opcode
-    // -----------------------------------------------------------------------
-
+    // helper to provide a vector of ones of at least the given number of elements
+    // TODO: Use this to implement ComputationNode::ConstOnes? Or do we even need that anymore?
     template<class ElemType>
-    struct TensorOps
+    static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
     {
-        static __device__ ElemType Compute(const FixedArray<ElemType*, 2> & pointers, ElementWiseOperator op)
+        // using an array of shared_ptrs because those are thread-safe. The objects themselves are immutable.
+        // And using a plain array so this will never get freed, avoiding free-after-DLL-unload issues.
+        static shared_ptr<GPUMatrix<ElemType>> onesCache[32];   // cache of objects
+        if (deviceId >= _countof(onesCache))
+            LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", (int)_countof(onesCache), (int)deviceId+1);
+        auto p = onesCache[deviceId];
+        if (!p || p->GetNumRows() < N)  // must (re-)allocate
         {
-            ElemType a = *(pointers[0]);
-#define CaseUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a)
-            switch (op)
-            {
-            ForAllUnaryOps(CaseUnaryTensorOp);
-            default: return 0;  // (failure)
-            }
+            p = make_shared<GPUMatrix<ElemType>>(GPUMatrix<ElemType>::Ones(N, 1, deviceId));
+            onesCache[deviceId] = p;    // this will replace the pointer thread-safely (although weird race conditions may happen where a larger entry is overwritten by a smaller one; will still run correctly)
         }
-        static __device__ ElemType Compute(const FixedArray<ElemType*, 3> & pointers, ElementWiseOperator op)
-        {
-            ElemType a = *(pointers[0]);
-            ElemType b = *(pointers[1]);
-#define CaseBinaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a,b)
-            switch (op)
-            {
-            ForAllBinaryOps(CaseBinaryTensorOp);    // note: this costs about 6% compared to having only a single case
-            default: return 0;  // (failure)
-            }
-        }
-        static __device__ ElemType Compute(const FixedArray<ElemType*, 4> & pointers, ElementWiseOperator op)
-        {
-            ElemType a = *(pointers[0]);
-            ElemType b = *(pointers[1]);
-            ElemType c = *(pointers[2]);
-#define CaseTernaryTensorOp(oper) case ElementWiseOperator::op ## oper: return Op ## oper(a,b,c)
-            switch (op)
-            {
-            ForAllTernaryOps(CaseTernaryTensorOp);
-            default: return 0;  // (failure)
-            }
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    // function to compute the value for a given output location (perform reduction if needed)
-    // -----------------------------------------------------------------------
-
-#define C_size_t       CUDA_LONG
-#define C_int          CUDA_LONG
-#define C_unsigned_int CUDA_LONG
-
-    template<class ElemType, C_size_t N, C_int M, C_int m>
-    struct TensorOpReduce
-    {
-        // this version for m >= 0
-        static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
-                                           const FixedArray<C_unsigned_int, M> & reducingOpDims, const FixedMatrix<C_int, N, M> & reducingStrides)
-        {
-            // start with index 0
-            // Using 'double' since we are memory-bound anyway.
-            double/*ElemType*/ aggregate = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
-            // apply this index to the pointers
-            C_size_t dim = reducingOpDims[m];
-            for (C_size_t k = 1/*done with k=0 already*/; k < dim; k++)
-            {
-                // bump the pointers
-                for (C_size_t i = 0; i < N; i++)
-                    pointers[i] += reducingStrides(i,(C_size_t)m);
-                ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
-                aggregate += val;
-            }
-            return (ElemType)aggregate;
-        }
-    };
-
-    // this one terminates the template recursion over reduction dimensions
-    // The pointers are pointing to the input element.
-    template<class ElemType, C_size_t N, C_int M>
-    struct TensorOpReduce<ElemType, N, M, /*m=*/-1>
-    {
-        // this version for m = -1
-        // the pointers are pointing to the right location(s) to take the operation over
-        static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
-                                           const FixedArray<C_unsigned_int, M> & /*reducingOpDims*/, const FixedMatrix<C_int, N, M> & /*reducingStrides*/)
-        {
-            return TensorOps<ElemType>::Compute(pointers, op);   // finally computing something!
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    // perform loop over regular index k for N-nary operations (N counting the output)
-    // -----------------------------------------------------------------------
-
-    // The canonical case, vector op without reduction, is this PTX function:
-    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi3ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
-    //                                   float ^      ^ aggregate loop
-    //                                      args? ^       ^ input dims
-    // _ZN9Microsoft3MSR4CNTK15_launchTensorOpIfLi2ELi0ELi1EEEvT_NS1_10FixedArrayIPS3_XT0_EEES3_NS1_19ElementWiseOperatorENS4_IiXT2_EEENS1_11FixedMatrixIiXT0_EXT2_EEENS4_IiXT1_EEENS9_IiXT0_EXT1_EEEi
-
-    // increment a pointer by a number of elements
-    // This will later change into pre-scaled strides.
-    template<class ElemType>
-    static __device__ void IncPtr(ElemType * &p, C_int index, C_int stride)
-    {
-        //p = (ElemType*)(byteOffset + (char *)p);
-        p = p + index * stride;
+        return p;
     }
-
-    // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-    template<class ElemType, C_size_t N, C_int M, C_int K, C_int k>
-    struct TensorOpElement
-    {
-        // template-recursive version loops over indices
-        static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                       const FixedArray<C_unsigned_int, K> & regularOpStrides,  const FixedMatrix<C_int, N, K> & regularStrides,
-                                       const FixedArray<C_unsigned_int, M> & reducingOpDims, const FixedMatrix<C_int, N, M> & reducingStrides)
-        {
-            // map id (location on grid) to index[k]
-            C_size_t stride = regularOpStrides[(C_size_t)k];
-            C_size_t index = id / stride;             // this dimension
-            id = id % stride;                       // remaining dimensions inside this
-            // apply this index to the pointers
-            for (C_size_t i = 0; i < N; i++)
-                pointers[i] += index * regularStrides(i,(C_size_t)k);    // now this dimension is taken care of
-            // process the previous index
-            TensorOpElement<ElemType, N, M, K, k - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
-        }
-    };
-
-    // specialization for k=0 where stride is guaranteed to be 1
-    template<class ElemType, C_size_t N, C_int M, C_int K>
-    struct TensorOpElement<ElemType, N, M, K, /*k=*/0>
-    {
-        // template-recursive version loops over indices
-        static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                       const FixedArray<C_unsigned_int, K> & regularOpStrides,  const FixedMatrix<C_int, N, K> & regularStrides,
-                                       const FixedArray<C_unsigned_int, M> & reducingOpDims,    const FixedMatrix<C_int, N, M> & reducingStrides)
-        {
-            // map id (location on grid) to index[k]
-            C_size_t index = id;                      // this dimension
-            // apply this index to the pointers
-            for (C_size_t i = 0; i < N; i++)
-                pointers[i] += index * regularStrides(i,0);    // now this dimension is taken care of
-            // process the previous index
-            TensorOpElement<ElemType, N, M, K, -1>::Compute(/*id*/0, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
-        }
-    };
-
-    // specialization for k = -1 terminates the template recursion
-    template<class ElemType, C_size_t N, C_int M, C_int K>
-    struct TensorOpElement<ElemType, N, M, K, /*k=*/-1>
-    {
-        // template-recursion-teminating version computes the actual value for this output location
-        // now the pointers point to the right element
-        static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                       const FixedArray<C_unsigned_int, K> & /*regularOpStrides*/, const FixedMatrix<C_int, N, K> & /*regularStrides*/,
-                                       const FixedArray<C_unsigned_int, M> & reducingOpDims,       const FixedMatrix<C_int, N, M> & reducingStrides)
-        {
-            // compute the operation for this output coordinate
-            // This may still involve a reduction over inverse-broadcasting dimensions.
-            ElemType val = TensorOpReduce<ElemType, N, M, M - 1>::Compute(pointers, op, reducingOpDims, reducingStrides);
-            // scale
-            val *= alpha;
-            // combine with previous value in target matrix, then write it out
-            auto * pout = pointers[N - 1];
-            if (beta != 0)
-                val += beta * *pout;
-            // save
-            *pout = val;
-        }
-    };
-
-    // -----------------------------------------------------------------------
-    // kernel and launch
-    // -----------------------------------------------------------------------
-
-    // the top-level kernel
-    template<class ElemType, C_size_t N, C_int M, C_int K>
-    __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
-                                    FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides,
-                                    FixedArray<C_unsigned_int, M> reducingOpDims,   FixedMatrix<C_int, N, M> reducingStrides, CUDA_LONG numElements)
-    {
-        CUDA_LONG id = GridDim::GetLinearThreadId();
-        if (id >= numElements)
-            return;
-        TensorOpElement<ElemType, N, M, K, K - 1>::Compute(id, beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides);
-    }
-
-    // launch tensor op with CUDA
-    // All dimensions (N-ariness, number of input dimensions K and number of reduction dimensions M) are bound to template parameters now.
-    template<class ElemType, C_size_t N, C_int M, C_int K>
-    static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op,
-                               const SmallVector<size_t> & regularOpDims,       const array<SmallVector<ptrdiff_t>, N> & regularStrideVectors,
-                               const SmallVector<size_t> & reducingOpDimVector, const array<SmallVector<ptrdiff_t>, N> & reducingStrideVectors)
-    {
-        // copy all parameters to CUDA-compatible data structures
-        FixedArray<ElemType*, N> pointers(pointerVector);
-        SmallVector<C_size_t> regularOpStrideVector;    // kernel needs the strides for converting thread index back to multi-dimensional tensor index
-        C_size_t numElements = 1;
-        for (C_size_t k = 0; k < regularOpDims.size(); k++)
-        {
-            regularOpStrideVector.push_back(numElements);
-            numElements *= (C_size_t)regularOpDims[k];
-        }
-        FixedArray<C_unsigned_int, K> regularOpStrides(regularOpStrideVector);
-        FixedMatrix<C_int, N, K> regularStrides(regularStrideVectors);
-        FixedArray<C_unsigned_int, M> reducingOpDims(reducingOpDimVector);
-        FixedMatrix<C_int, N, M> reducingStrides(reducingStrideVectors);
-        
-        CUDA_LONG NN = (CUDA_LONG)numElements;
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        GridDim grid(NN);
-        _launchTensorOp<ElemType, N, M, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pointers, alpha, op, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, NN);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-    }
-
-    // for linear unary ops, we need to define a functor for every function for use as a template parameter (lambda syntax doesn't work in CUDA 7)
-    #define DefineUnaryTensorFunctor(oper) \
-        struct Functor ## oper { template<class ElemType> static __device__ ElemType f(ElemType a) { return Op ## oper(a); } };
-    ForAllUnaryOps(DefineUnaryTensorFunctor);
-
-    // the top-level kernel for linear unary ops
-    // Note: If we have a beta, we have 2 memory accesses, so this optimization may no longer be needed as we are memory-bound.
-    template<class ElemType, class FN>
-    __global__ void _launchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, CUDA_LONG numElements)
-    {
-        CUDA_LONG id = GridDim::GetLinearThreadId();
-        if (id >= numElements)
-            return;
-        ElemType a = pa[id];
-        ElemType val = FN::f(a);
-        val *= alpha;
-        if (beta != 0)
-            val += beta * pb[id];
-        pb[id] = val;
-    }
-    // version without beta and alpha
-    template<class ElemType, class FN>
-    __global__ void _launchUnaryTensorOp(const ElemType * pa, ElemType * pb, CUDA_LONG numElements)
-    {
-        CUDA_LONG id = GridDim::GetLinearThreadId();
-        if (id >= numElements)
-            return;
-        ElemType a = pa[id];
-        ElemType val = FN::f(a);
-        pb[id] = val;
-    }
-
-    // special case of linear unary operation
-    template<class ElemType>
-    static void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
-    {
-        CUDA_LONG NN = (CUDA_LONG)regularOpDim;
-
-        #define CaseLaunchUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: \
-            if (beta == 0 && alpha == 1) \
-                return _launchUnaryTensorOp<ElemType,Functor ## oper> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(pa, pb, NN); \
-            else \
-                return _launchUnaryTensorOp<ElemType,Functor ## oper> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(beta, pa, pb, alpha, NN);
-
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        GridDim grid(NN);
-        switch (op)
-        {
-        ForAllUnaryOps(CaseLaunchUnaryTensorOp);
-        default: LogicError("LaunchTensorOp1: Unknown op code %d.", (int)op);
-        }
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-    }
-
-    // -----------------------------------------------------------------------
-    // map runtime parameters N to template parameters
-    // -----------------------------------------------------------------------
-
-    // tensor operation with k+1 dimensions (-1 means scalar)
-    template<class ElemType, C_size_t N, C_int K>
-    static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, ElementWiseOperator op,
-                                        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
-                                        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
-    {
-        size_t dims = reducingOpDims.size();
-        switch (dims)
-        {
-        case 2: return LaunchTensorOp<ElemType, N, 2, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 1: return LaunchTensorOp<ElemType, N, 1, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 0: return LaunchTensorOp<ElemType, N, 0, K>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        default: LogicError("TensorOp: %d non-flattened reduction dimensions are not supported.", (C_int)dims);
-        }
-    }
-
-    // tensor operation, generalized in number of arguments
-    // This function now expands into different k. It also eliminates the offsets by adding them to the pointers.
-    template<class ElemType, C_size_t N>
-    static void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, ElementWiseOperator op,
-                               const array<size_t, N> & offsets,
-                               const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
-                               const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
-    {
-        for (C_size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
-            pointers[i] += offsets[i];
-        size_t dims = regularOpDims.size();
-        switch (dims)
-        {
-        case 4: return TensorOpWithRegularLoop<ElemType, N, 4>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 3: return TensorOpWithRegularLoop<ElemType, N, 3>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 2: return TensorOpWithRegularLoop<ElemType, N, 2>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 1: return TensorOpWithRegularLoop<ElemType, N, 1>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        case 0: return TensorOpWithRegularLoop<ElemType, N, 0>(beta, pointers, alpha, op, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        default: LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (C_int)dims);
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // entry points from Matrix.cpp
-    // -----------------------------------------------------------------------
 
     // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
     // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
@@ -4844,6 +4469,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
             return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
 
+        // special case: recuding a matrix onto a column vector; can be done with SGEMM
+        // Note: A minor risk is that with this, our own reduction function will rarely be used.
+        // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
+        else if (op == ElementWiseOperator::opCopy &&                                                       // we are just adding to target without any further operation
+#ifdef _DEBUG
+                 sizeof(ElemType) == sizeof(float) &&                                                       // in debug don't shortcut 'double' so we have some test of our own codepath
+#endif
+                 regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 &&     // we are processing a column
+                 reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t)regularOpDims[0])        // reducing across columns and no overlap
+        {
+            assert(reducingStrides[1][0] == 0);
+            auto ARows = regularOpDims[0];              // vertical steps
+            auto ACols = reducingOpDims[0];             // horizontal steps (reduction)
+            auto ALd   = reducingStrides[0][0];         // horizontal step width through matrix
+            cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int)/*CRows=*/ARows, /*CCols=*/1, (int)ACols, &alpha,
+                                     /*A00=*/a.m_pArray + offsets[0], (int)ALd,
+                                     /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->m_pArray, (int)/*BRows=*/ACols, &beta,
+                                     /*C00=*/m_pArray + offsets[1], (int)/*CRows=*/ARows));
+            return;
+        }
+
+        // TODO: Add a special case for tensor bias reduction. cudnn is ~7% faster on Image/QuickE2E.
+
         // regular case
         else
             return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2> { a.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
@@ -4859,6 +4508,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId())
             InvalidArgument("All matrices must be on the same GPU");
+
         return TensorOpN<ElemType, 3>(beta, array<ElemType*, 3> { a.m_pArray, b.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
@@ -4875,7 +4525,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return TensorOpN<ElemType, 4>(beta, array<ElemType*, 4> { a.m_pArray, b.m_pArray, c.m_pArray, m_pArray }, alpha, op, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
-
     // =======================================================================
     // explicit instantiations business
     // =======================================================================
@@ -4886,10 +4535,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DeviceBoundNumber<double>;
 
     template<class ElemType>
-    cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus]={0};
+    cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
     template<class ElemType>
-    void* GPUMatrix<ElemType>::s_curandGenerator=NULL;    
+    void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explicitly instantiate the methods we need for that purpose

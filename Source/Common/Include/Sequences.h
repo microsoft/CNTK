@@ -196,7 +196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
             // remember it
-#ifdef _DEBUG
+#if 0//def _DEBUG
             auto cap = m_sequences.capacity();  // Some sanity check for debugging a speed regression. This should only show up during the first minibatches, and growing only.
             m_sequences.push_back(seqDesc);
             if (cap != m_sequences.capacity())

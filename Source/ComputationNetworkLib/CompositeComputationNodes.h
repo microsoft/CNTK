@@ -251,7 +251,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Load(fstream, modelVersion);
             fstream >> m_hasComputed;
             LoadValue(fstream);
-         }
+            // Note: This loses the sample layout, but that is recovered by Validate().
+        }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {

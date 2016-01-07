@@ -2593,6 +2593,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // the total number of epochs to run.
         m_maxEpochs = configSGD(L"maxEpochs");
 
+        // Note: Momentum is best specified as a MB-size agnostic fashion.
+        // Because momentum per sample is a number very close to 1, it is more handy to use a logarithmic specification.
+        // We use 'momentumAsTimeConstant' to specify the time constant of the low-pass filter that momentum really is.
+        // To convert a typical per-MB momentum value of 'm' used with a MB size of 'N', use momentumAsTimeConstant = -N/ln(m).
+        // For the common configuration of momentum 0.9 at MB size of 256, that is momentumAsTimeConstant = 2429.8.
         floatargvector momentumPerMB          = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumPerSample      = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));

@@ -9,7 +9,7 @@
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
 #include "ComputationNetworkBuilder.h"  // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
-#include "DataTensor.h"
+#include "TensorShape.h"
 
 #ifndef let
 #define let const auto
@@ -72,6 +72,7 @@ namespace Microsoft {
         size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
         size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
 
+#if 1//ndef ENABLE_TENSORVIEW
         // TODO: This test will go away once we switch to full tensor lib.
         if (isFinalValidationPass && !(
                (rows0 == rows1 && (Input(0)->GetMBLayout() == Input(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
@@ -81,6 +82,9 @@ namespace Microsoft {
         {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
+#else
+        rows0; rows1;
+#endif
 
         // result has tensor shape with dimensions being the max over both
         let shape0 = GetInputSampleLayout(0);
@@ -98,7 +102,7 @@ namespace Microsoft {
                 dims[k] = dim1;         // then use dimension we broadcast to
             else if (dim1 == 1)         // if [1] is broadcasting
                 ;                       // dims is already correct
-            else if (dim1 != dims[k])   // no broadcasting: they must match
+            else if (isFinalValidationPass && dim1 != dims[k])   // no broadcasting: they must match
                 InvalidArgument("%ls %ls operation: Input dimensions [%s] and [%s] are not compatible.",
                                 NodeName().c_str(), OperationName().c_str(), string(shape0).c_str(), string(shape1).c_str());
         }
@@ -181,9 +185,6 @@ namespace Microsoft {
             if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
                 layoutPlausible = false;
         }
-        // some code initializes it to (1,1,rowDim)
-        if (m_sampleLayout.GetRank() == 3 && m_sampleLayout.GetDim(0) == 1 && m_sampleLayout.GetDim(1) == 1)
-            layoutPlausible = false;
         // check dimension
         if (GetNumRows() != m_sampleLayout.GetNumElements())
             layoutPlausible = false;
@@ -204,6 +205,8 @@ namespace Microsoft {
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
             size_t rank = Input(i)->GetAndValidateSampleLayout().GetRank();
+            if (!HasMBLayout())                         // no MBLayout: last dim is column dimension
+                rank++;
             if (maxRank < rank)
                 maxRank = rank;
         }
@@ -215,8 +218,9 @@ namespace Microsoft {
     TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
     {
         //GetAndValidateSampleLayout();     // no need to validate because rank comes from DetermineElementwiseTensorRank() which validates all
-        if (!HasMBLayout())                         // no MBLayout: just return sample layout (if other participants have layout, tensor lib will broadcast)
-            return GetSampleLayout();    //  .Pad(rank); // no need for padding
+        if (!HasMBLayout())
+            return GetSampleLayout().Append(GetSampleLayout().GetRank(), GetNumCols());    //  last dim is column dimension
+            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
         else if (fr.IsAllFrames())
         {
             // we have an MBLayout, and for refers to the entire MB
@@ -301,6 +305,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
         {
             const auto & valp = config[L"dims"];
+            // TODO: Add code that if input is already a tensor shape it is also OK.
             if (valp.Is<ConfigArray>())
                 return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
             else

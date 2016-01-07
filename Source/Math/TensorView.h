@@ -10,7 +10,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 
 #pragma warning (push)
 #pragma warning (disable: 4251) // needs to have dll-interface to be used by clients of... caused by TensorView::m_shape which is only private. We use the same compiler everywhere.
@@ -48,7 +48,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //      c.AssignDiffOf(c,a) means c -= a,
         //  and c.AddElementwiseProductOf(a, b, 1) means c += a .* b.
         // All operators support elementwise in-place operations, i.e. a, b, and c
-        // may all reference the same underlying SOB.
+        // may all reference the same underlying SOB, with onee exception:
+        // The output cannot be in-place and inverse-broadcasting at the same time.
+        // E.g. with c=[10] and a=[10 x 20], c.AssignDiffOf(c,a) will fail.
+        // In that case, you can use c.AddCopyOf(a,-1).
+        // Aliasing is not detected, so don't pass distinct TensorView objects that
+        // reference overlapping but not identical slices.
         // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
         // -------------------------------------------------------------------
 
@@ -59,7 +64,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void    Add ## oper ## Of(               const TensorView & a, ElemType alpha = 1.0f) { DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op ## oper); }
 
         ForAllUnaryOps(DeclareUnaryTensorOp);
-        ForAllParameterizedUnaryOps(DeclareUnaryTensorOp);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
@@ -82,11 +86,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void Test();
 
-    private:
-
         void DoUnaryOpOf(ElemType beta, const TensorView & a, ElemType alpha, ElementWiseOperator op);
         void DoBinaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, ElemType alpha, ElementWiseOperator op);
         void DoTernaryOpOf(ElemType beta, const TensorView & a, const TensorView & b, const TensorView & c, ElemType alpha, ElementWiseOperator op);
+
+    private:
 
         // -------------------------------------------------------------------
         // accessors

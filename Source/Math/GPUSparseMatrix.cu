@@ -34,11 +34,7 @@ static
 #endif
 cudaStream_t t_stream;
 
-
-// support for CudaCall() function template
-static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-static const char * CudaErrString(cublasStatus_t)   { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
-static const char * CudaErrString(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
+template<> const char * CudaErrString<cusparseStatus_t>(cusparseStatus_t) { cudaDeviceSynchronize(); return "(see cusparse.h & look for cusparseStatus_t or CUSPARSE_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -137,13 +133,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_elemSizeAllocated, deepCopy.m_format, true, false);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.GetNumNZElements(), deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
-        m_sliceViewOffset = 0; // reset to zero as we only start copying starting from the offset in the source matrix
+        m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
-        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
-        CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(BufferPointer(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocationWithSliceViewOffset(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
+
+        if (deepCopy.m_sliceViewOffset > 0)
+        {
+            int blocksPerGrid = (int)ceil(1.0*SecondaryIndexCount() / GridDim::maxThreadsPerBlock);
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
+                SecondaryIndexLocation(),
+                SecondaryIndexCount()
+                );
+
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
 
         m_externalBuffer = false;
         SetMatrixName(deepCopy.m_matrixName);
@@ -1002,7 +1013,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
-        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
             RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
@@ -1133,7 +1144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        CUDA_LONG N = (CUDA_LONG)c.GetNumCols();
+        CUDA_LONG N = (CUDA_LONG)c.GetNumNZElements();
         int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
         _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
             reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
@@ -1142,7 +1153,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
             c.RowLocation(),
             c.ColLocation(),
-            D, S, M, K, T);
+            D, S, M, K, T,
+            c.GetNumNZElements());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1934,6 +1946,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
     {
         return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(b,a);
+    }
+
+    template<class ElemType>
+    bool GPUSparseMatrix<ElemType>::IsValid() const
+    {
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        PrepareDevice();
+        long *res = new long[3];
+        res[0] = 1;
+        res[1] = 0;
+        res[2] = 0;
+        long *d_res = nullptr;
+        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 3));
+        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 3, cudaMemcpyHostToDevice));
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / GridDim::maxThreadsPerBlock);
+        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
+        
+        if (res[0] == 1)
+            return true;
+        else
+            return false;
     }
 
     template<class ElemType>

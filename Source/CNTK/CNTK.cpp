@@ -903,12 +903,12 @@ void DoTrain(const ConfigRecordType & config)
         };
     }
     // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
-    else if (config.Exists(L"ExperimentalNetworkBuilder"))
+    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder"/*legacy*/))
     {
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
-        wstring sourceCode = config(L"ExperimentalNetworkBuilder");
+        wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
         let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
             + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
             + sourceCode, vector<wstring>());    // source code has the form [ ... ]
