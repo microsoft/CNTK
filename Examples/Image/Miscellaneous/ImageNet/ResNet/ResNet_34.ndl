@@ -7,9 +7,7 @@ ndlMacros = [
     ImageC = 3
     LabelDim = 1000
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
-    featOffs = Const(0, rows = 150528)
-    featScaled = Plus(features, featOffs)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     labels = Input(LabelDim, tag = label)
     
     # Kernels width and height.
@@ -35,8 +33,8 @@ ndlMacros = [
 
 DNN=[
     cMap1 = 64
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
-    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs)
+    conv1 = ConvBNReLULayer(features, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
+    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
     
     rn1_1 = ResNetNode2(pool1, cMap1, 576, kW, kH, convWScale, convBValue, scValue)
     rn1_2 = ResNetNode2(rn1_1, cMap1, 576, kW, kH, convWScale, convBValue, scValue)
@@ -64,7 +62,7 @@ DNN=[
     rn4_2 = ResNetNode2(rn4_1, cMap4, 4608, kW, kH, convWScale, convBValue, scValue)
     rn4_3 = ResNetNode2(rn4_2, cMap4, 4608, kW, kH, convWScale, convBValue, scValue)
 
-    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs)
+    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     ol = DnnLayer(4608, labelDim, pool5, fcWScale, fcBValue)
     

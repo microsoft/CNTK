@@ -12,14 +12,13 @@ DnnReLULayer(inDim, outDim, x, wScale, bValue)
 DnnBNReLULayer(inDim, outDim, x, wScale, bValue)
 {
     W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
-    b = Parameter(inDim, 1, init = fixedValue, value = bValue) 
-    sc = Parameter(inDim, 1, init = Gaussian, initValueScale = 0.01)
-    m = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
-    isd = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
-    
-    bn = BatchNormalization(x, sc, b, m, isd, eval = false, spatial = false)
-    t = Times(W, bn)
-    y = RectifiedLinear(t)
+    b = Parameter(outDim, 1, init = fixedValue, value = bValue) 
+    sc = Parameter(outDim, 1, init = Gaussian, initValueScale = 0.01)
+    m = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    t = Times(W, x)
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false)
+    y = RectifiedLinear(bn)
 }
 
 # Fully-connected layer.
