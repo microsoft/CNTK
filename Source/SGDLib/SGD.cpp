@@ -5,7 +5,13 @@
 #include "Basics.h"
 #include "SGD.h"
 #include "DataReaderHelpers.h"
+
+#include "MatrixQuantizerImpl.h"
+
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
 #include "AllReduceDistGradAggregator.h"
+#endif
+
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 

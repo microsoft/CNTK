@@ -7,7 +7,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
     
     template<class ElemType>
-    /*static*/ MatrixQuantizerImpl<ElemType>* MatrixQuantizerImpl<ElemType>::CreateMatrixQuantizerImpl(int deviceId, bool useAsync)
+    /*static*/ MatrixQuantizerImpl<ElemType>* MatrixQuantizerImpl<ElemType>::Create(int deviceId, bool useAsync)
     {
         if (deviceId >= 0)
         {
