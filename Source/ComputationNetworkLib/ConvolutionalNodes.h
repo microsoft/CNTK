@@ -751,23 +751,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    assert(shape.GetRank() == 1);
-                    if (shape.GetRank() != 1)
-                        InvalidArgument("Batch normalization with spatial=false expects 1D tensor as an input.");
                     if (m_inT == nullptr)
-                        m_inT = m_factory->CreateTensor(shape[0], 1, 1, 1);
+                        m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
                     if (m_scaleBiasT == nullptr)
-                        m_scaleBiasT = m_factory->CreateTensor(shape[0], 1, 1, 1);
+                        m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
                 }
-                //if (m_inT == nullptr)
-                //    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                //if (m_scaleBiasT == nullptr)
-                //{
-                //    if (m_spatial)
-                //        m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-                //    else
-                //        m_scaleBiasT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                //}
             }
         }
 

@@ -8,8 +8,6 @@ ndlMacros = [
     LabelDim = 1000
 
     features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
-    featOffs = Const(0)
-    featScaled = Plus(features, featOffs)
     labels = Input(LabelDim, tag = label)
     
     # Kernels width and height.
@@ -39,7 +37,7 @@ ndlMacros = [
 
 DNN=[
     cMap1 = 64
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 27, kW, kH, hs, vs, convWScale, convBValue, scValue)
+    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv2 = ConvBNReLULayer(conv1, cMap1, 576, kW, kH, hs, vs, convWScale, convBValue, scValue)
 
     pool1 = MaxPooling(conv2, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
