@@ -1281,42 +1281,60 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     ElemType* cnzValues,  //target nz values
     GPUSPARSE_INDEX_TYPE* cRowIndex,
     GPUSPARSE_INDEX_TYPE* cColCSCIndex,
-    size_t D, size_t S, size_t M, size_t K, size_t T)
+    size_t D, size_t S, size_t M, size_t K, size_t T,
+    size_t nz)
 {
-    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (col >= T)
+    CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (N >= nz || N < aColCSCIndex[0])
         return;
 
-    size_t N = D * S * M * K;
+    size_t col;
+    for (col = 0; col < T; col++)
+    {
+        if (aColCSCIndex[col + 1] > N)
+            break;
+    }
+
+    size_t na = aRowIndex[N];
     int start = aColCSCIndex[col];
     int end = aColCSCIndex[col + 1];
-    int current = start;
 
-    for (size_t nc = 0; nc < N; nc++)
+    // recover the 5 indices from the loop counter
+    size_t d = (na                  ) % D;
+    size_t s = (na / D              ) % S;
+    size_t m = (na / D / S          ) % M;
+    size_t k = (na / D / S / M      ) % K;
+
+    // compute index for the a and b/c tensors
+    size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+
+    int rowIdx = start;
+    for (size_t na_i = start; na_i < end; na_i++)
     {
         // recover the 5 indices from the loop counter
-        size_t d = (nc                  ) % D;
-        size_t s = (nc / D              ) % S;
-        size_t m = (nc / D / S          ) % M;
-        size_t k = (nc / D / S / M      ) % K;
+        size_t d_i = (na_i              ) % D;
+        size_t s_i = (na_i / D          ) % S;
+        size_t m_i = (na_i / D / S      ) % M;
+        size_t k_i = (na_i / D / S / M  ) % K;
 
         // compute index for the a and b/c tensors
-        size_t na = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
-
-        for (size_t j = start; j < end; j++)
+        size_t nc_i = ((s_i * M + m_i) * K + k_i) * D + d_i;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+        if (nc_i < nc)
         {
-            if (aRowIndex[j] == na)
-            {
-                cnzValues[current] = anzValues[j];
-                cRowIndex[current] = nc;
-                current++;
-                break;
-            }
+            rowIdx++;
         }
     }
 
-    cColCSCIndex[col] = start;
-    cColCSCIndex[col + 1] = end;
+    cnzValues[rowIdx] = anzValues[N];
+    cRowIndex[rowIdx] = nc;
+
+    if (N == nz - 1)
+    {
+        for (int i = 0; i <= T; i++)
+        {
+            cColCSCIndex[i] = aColCSCIndex[i];
+        }
+    }
 }
 
 template<class ElemType>
@@ -2759,25 +2777,82 @@ __global__ void _sparseCSRElemMulDense(
     }
 }
 
+template<class ElemType>
+__global__ void _isValid(
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int rows,
+    const int cols,
+    const int nz,
+    long* d_res
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    int start = colCSCIndex[id];
+    int end = colCSCIndex[id + 1];
+    d_res[0] = 1;
+
+    if (start > end)
+    {
+        d_res[0] = -1;
+        d_res[1] = start;
+        d_res[2] = end;
+    }
+    else if (end > nz)
+    {
+        d_res[0] = -2;
+        d_res[1] = end;
+        d_res[2] = nz;
+    }
+    else
+    {
+        for (int j = start; j < end; j++)  //j points to the value
+        {
+            if (rowIndex[j] > rows)
+            {
+                d_res[0] = -3;
+                d_res[1] = rowIndex[j];
+                d_res[2] = rows;
+                break;
+            }
+        }
+    }
+}
+
+template<class ElemType>
+__global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
+    GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int cols
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
+}
 
 //c = alpha * op(a) * op(b) + beta*c
 // TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    int m,                  // rowDense
-    int k,                  // colDense
-    int n,                  // colSparse
-    int numChannels,        // input num channels
-    int numSteps,           // convolution num steps
-    int horizontalSubsample,// convolution step size
-    bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
-    ElemType alpha,
+    const int m,                  // rowDense
+    const int k,                  // colDense
+    const int n,                  // colSparse
+    const int numChannels,        // input num channels
+    const int numSteps,           // convolution num steps
+    const int horizontalSubsample,// convolution step size
+    const bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
+    const ElemType alpha,
     const ElemType* a,      //dense
-    bool transposeA,
+    const bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType beta,
+    const ElemType beta,
     ElemType* c  //dense target
     )
 {
@@ -2899,15 +2974,15 @@ __global__ void _reshape(
 
     int currentCol = id;
     int oldColLower = (newNumRows * currentCol) / oldNumRows;
-    int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
 
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
 
-    for (int oldCol = oldColLower; oldCol <= min(oldColUpper, oldNumCols); oldCol++)
+    for (int oldCol = oldColLower; oldCol <= oldNumCols; oldCol++)
     {
         int start = oldColumnIndex[oldCol];
         int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+        bool done = false;
 
         for (int j = start; j < end; j++)  //j points to the value
         {
@@ -2916,11 +2991,21 @@ __global__ void _reshape(
             int newCol = index / newNumRows;
             int newRow = index % newNumRows;
 
-            newRowIndex[j] = newRow;
+            if (newCol == currentCol)
+                newRowIndex[j] = newRow;
 
             if (newCol >= currentCol && currentColStart > j)
                 currentColStart = j;
+
+            if (newCol > currentCol)
+            {
+                done = true;
+                break;
+            }
         }
+
+        if (done)
+            break;
     }
 
     newColumnIndex[currentCol] = currentColStart;

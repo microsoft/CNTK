@@ -1367,6 +1367,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         }
+
+        // Release gradient and temp matrices that are no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterBackprop(matrixPool);
+            ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+            ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+            ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+        }
+
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticepair>> * getLatticePtr()
         {

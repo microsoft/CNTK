@@ -76,7 +76,7 @@
     <ClInclude Include="TensorOps.h">
       <Filter>Tensors</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\DataTensor.h">
+    <ClInclude Include="..\Common\Include\TensorShape.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="Helpers.h">

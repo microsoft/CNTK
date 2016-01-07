@@ -107,6 +107,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == L"Delay")                                              return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+#if 1
+        else if (nodeType == OperationNameOf(DeprecatedReshapeNode))	            return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
         else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
     }
 
@@ -116,14 +119,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring & nodeType, _Types&&... _Args)
     {
         // check more types
-        if      (nodeType == OperationNameOf(AveragePoolingNode)) return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ConvolutionNode))	  return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SparseInputValue))	  return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(InputValue))	  return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LearnableParameter)) return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MaxPoolingNode))	  return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
+        if      (nodeType == OperationNameOf(AveragePoolingNode))     return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(BatchNormalizationNode)) return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ConvolutionNode))	      return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SparseInputValue))	      return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(InputValue))	      return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LearnableParameter))     return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MaxPoolingNode))	      return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
         //else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
         else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
     }
 
@@ -175,6 +178,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols));
     }
 
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring & paramName, const TensorShape & tensorShape)
+    {
+        return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
+    }
+
 #if 0   // not functional at present
     //sparse matrix size is optionally specified
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size)
@@ -183,28 +191,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 #endif
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName, const size_t rows)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, rows, cols));
+        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, rows));
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName, const size_t rows)
     {
-        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, rows, cols));
+        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, rows));
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName,
-                                                                                                                        const TensorShape & imageLayout,
-                                                                                                                        const size_t numImages)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName, const TensorShape & sampleLayout)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
+        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, sampleLayout));
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName,
-                                                                                                                              const TensorShape & imageLayout,
-                                                                                                                              const size_t numImages)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName, const TensorShape & imageLayout)
     {
-        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages));
+        return net.AddNodeToNetWithElemType(New<SparseInputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols)
@@ -531,12 +535,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reshape(const ComputationNodePtr a,
-                                                                                                                const size_t numRows,
                                                                                                                 const TensorShape & imageLayout,
                                                                                                                 const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), a);
+        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, imageLayout), a);
     }
+#if 1
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DeprecatedReshape(const ComputationNodePtr a,
+                                                                                                                          const size_t numRows,
+                                                                                                                          const TensorShape & imageLayout,
+                                                                                                                          const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<DeprecatedReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, numRows, imageLayout), a);
+    }
+#endif
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName)
     {
@@ -548,14 +560,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, size_t timeStep, const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size, timeStep), a);
+        return net.AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), a);
     }
 
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, size_t timeStep, const std::wstring nodeName)
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, col_size, timeStep), a);
+        return net.AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(net.GetDeviceId(), nodeName, initHiddenActivity, row_size, timeStep), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)

@@ -51,6 +51,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // GPU and 1-dimensional image
             bool gpuSparse1D = (inT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                convDesc.wStride() == 1 &&
+                !convDesc.padding() &&
                 in.GetMatrixType() == MatrixType::SPARSE);
 
             out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
@@ -67,8 +69,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t startSampleId = i * subBatchSize;
                 size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
                 size_t smallBatchSize = endSampleId - startSampleId;
-
-                workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Mat inputSubBatch;
 
                 // We optimize for three different scenarios here by handling them slightly differently.
@@ -78,10 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (in.GetMatrixType() == MatrixType::DENSE)
                     inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
                 else
-                {
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
-                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                }
 
                 if (gpuSparse1D)
                 {
@@ -94,6 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
                     workspace.AssignPackedConvolutionInput(inputSubBatch,
                         inT.w(), inT.h(), inT.c(),
                         outT.w(), outT.h(), outT.c(),
@@ -101,6 +99,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         convDesc.padding());
 
                     Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
+
+                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Mat::Multiply(filter, false, workspace, false, outputSubBatch);
                 }
             }
@@ -197,6 +197,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // GPU and 1-dimensional image
             bool gpuSparse1D = (inT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                convDesc.wStride() == 1 &&
+                !convDesc.padding() &&
                 in.GetMatrixType() == MatrixType::SPARSE);
 
             if (numSubBatches == 1 && allowReuse && !gpuSparse1D)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
@@ -209,18 +211,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t startSampleID = i * subBatchSize;
                     size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
                     size_t smallBatchSize = endSampleID - startSampleID;
-
-                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                    Matrix<ElemType> inputSubBatch = in.ColumnSlice(startSampleID, smallBatchSize);
-                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
-                    workspace.AssignPackedConvolutionInput(inputSubBatch,
-                        inT.w(), inT.h(), inT.c(),
-                        srcGradT.w(), srcGradT.h(), srcGradT.c(),
-                        filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
-                        convDesc.padding());
-
                     Matrix<ElemType> outputGradientSubBatch = srcGradTmp.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filter);
+
+                    // We optimize for three different scenarios here by handling them slightly differently.
+                    // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
+                    // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
+                    // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
+                    if (gpuSparse1D)
+                    {
+                        Matrix<ElemType> inputSubBatch;
+                        inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
+                        inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w());
+                        Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, inT.w(), 1, smallBatchSize, inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
+
+                        Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * srcGradT.w(), srcGradT.c(), outputGradientSubBatch.GetDeviceId());
+                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, srcGradT.w(), 1, smallBatchSize, srcGradT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
+
+                        filter.Reshape(srcGradT.c() * filterT.w(), inT.c());
+                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize, convDesc.wStride(), convDesc.padding(), false);
+                        filter.Reshape(srcGradT.c(), inT.c() * filterT.w());
+                    }
+                    else
+                    {
+                        workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                        Matrix<ElemType> inputSubBatch = in.ColumnSlice(startSampleID, smallBatchSize);
+                        inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
+                        workspace.AssignPackedConvolutionInput(inputSubBatch,
+                            inT.w(), inT.h(), inT.c(),
+                            srcGradT.w(), srcGradT.h(), srcGradT.c(),
+                            filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
+                            convDesc.padding());
+
+                        Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, workspace, true, filter);
+                    }
                 }
             }
 

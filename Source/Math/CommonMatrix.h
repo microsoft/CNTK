@@ -63,8 +63,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         opEQ, opNE, opGT, opLT, opGE, opLE,
         opAnd, opOr, opXor,
         opMaskNegative,
-        opElementwiseProductWithSigmoidDerivative/* a * dsigmoid/dx(b) */, opElementwiseProductWithTanhDerivative, opElementwiseProductWithExp,
-        opElementwiseProductWithLinearRectifierDerivative, opElementwiseProductWithCosDerivative,
+        opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
+        opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput, opElementwiseProductWithCosDerivative,
+        // binary ops for indexing
+        //opIndex,
         // ternary
         opCond/*a ? b : c*/, opClip/*clip a within interval b..c*/
         // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
@@ -86,8 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Macro(EQ); Macro(NE); Macro(GT); Macro(LT); Macro(GE); Macro(LE); \
     Macro(And); Macro(Or); Macro(Xor);\
     Macro(MaskNegative); \
-    Macro(ElementwiseProductWithSigmoidDerivative); Macro(ElementwiseProductWithTanhDerivative); Macro(ElementwiseProductWithExp); \
-    Macro(ElementwiseProductWithLinearRectifierDerivative); Macro(ElementwiseProductWithCosDerivative);
+    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput); Macro(ElementwiseProductWithTanhDerivativeFromOutput); \
+    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); Macro(ElementwiseProductWithLogDerivativeFromOutput); Macro(ElementwiseProductWithCosDerivative); \
+    //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \
     Macro(Cond); Macro(Clip);
