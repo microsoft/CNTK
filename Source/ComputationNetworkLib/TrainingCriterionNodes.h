@@ -1438,7 +1438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 		//request matrices needed to do node function value evaluation
-		virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+		virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
 		{
 			Base::ReleaseMatricesAfterForwardProp(matrixPool);
 			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
