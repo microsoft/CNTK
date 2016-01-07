@@ -18,7 +18,7 @@
 #endif
 
 #include "Matrix.h"
-#include "DataTensor.h" // for ImageLayoutKind
+#include "TensorShape.h" // for ImageLayoutKind
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

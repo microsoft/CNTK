@@ -136,6 +136,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> DECL ElemType Sqr(ElemType z) { return z * z; }
 
+    // IndexElement reindexes a tensor along one dimension.
+    // For the indexed dimension, the tensor op is prepared by setting 'a' to be broadcasting along the indexed dimension.
+    // I.e. pa = &a points to the first element (as if index == 0).
+    // This function then must now adjust the address:
+    //  pa <- pa + stride * index
+    // The stride is passed in as third parameter.
+    //template<class ElemType> DECL ElemType IndexElement(const ElemType & a, ElemType b, int stride) { const ElemType * pa = &a; return pa[stride * (ptrdiff_t)b]; }
+
     // -----------------------------------------------------------------------
     // ElementWiseOperator implementations
     //
@@ -159,17 +167,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma push_macro("DefBinaryOp")
     #define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(ElemType a, ElemType b) { return expr; }
+    //#define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(const ElemType & a, ElemType b, int i = 0) { UNUSED(i); return expr; }
 
     DefBinaryOp(Sum, a + b); DefBinaryOp(Difference, a - b); DefBinaryOp(ElementwiseProduct, a * b); DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
     DefBinaryOp(LogSum, LogAdd(a, b)); DefBinaryOp(Max, a > b ? a : b); DefBinaryOp(Min, a < b ? a : b);
     DefBinaryOp(EQ, a == b); DefBinaryOp(NE, a != b); DefBinaryOp(GT, a > b); DefBinaryOp(LT, a < b); DefBinaryOp(GE, a >= b); DefBinaryOp(LE, a <= b);
     DefBinaryOp(And, (float)((!!a) && (!!b))); DefBinaryOp(Or, (float)((!!a) || (!!b))); DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
     DefBinaryOp(MaskNegative, b >= 0 ? a : 0);
-    DefBinaryOp(ElementwiseProductWithSigmoidDerivative, a * SigmoidDerivative(b));
-    DefBinaryOp(ElementwiseProductWithTanhDerivative, a * (1 - Sqr(tanh_(b))));
-    DefBinaryOp(ElementwiseProductWithExp, a * exp_(b));
-    DefBinaryOp(ElementwiseProductWithLinearRectifierDerivative, b > 0 ? a : 0);
-    DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b));
+    DefBinaryOp(ElementwiseProductWithSigmoidDerivativeFromOutput,         a * (b * (1 - b)));  // b = output
+    DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput,            a * (1 - b * b));
+    DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a : 0);
+    DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput,             a * exp_(-b));
+    DefBinaryOp(ElementwiseProductWithCosDerivative,                       a * -sin_(b));       // note: b = input for cos()
+    //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
 

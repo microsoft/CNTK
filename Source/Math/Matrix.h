@@ -13,7 +13,7 @@
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
-#include "DataTensor.h" // only for SmallVector; I was hoping to keep this out
+#include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include <limits.h>
 #include <memory>       // for shared_ptr
 #include <array>
@@ -348,7 +348,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
-        
+
+        bool IsValid() const;
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
         static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
@@ -437,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
         static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
-        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);

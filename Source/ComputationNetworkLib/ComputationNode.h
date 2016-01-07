@@ -10,7 +10,7 @@
 #include "TensorView.h"
 #include "ScriptableObjects.h"
 #include "Sequences.h"
-#include "DataTensor.h"
+#include "TensorShape.h"
 #include "MatrixPool.h"
 
 #include <unordered_set>
@@ -1399,7 +1399,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args)
     {
         return make_shared<C>(forward<_Types>(_Args)...);
-        //return ComputationNode<typename C::OurElemType>::template New<C>(forward<_Types>(_Args)...);
     }
 
     // =======================================================================
