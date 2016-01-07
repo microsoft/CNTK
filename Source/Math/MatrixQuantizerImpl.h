@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MATH_API MatrixQuantizerImpl
     {
     public:
-        static MatrixQuantizerImpl<ElemType>* CreateMatrixQuantizerImpl(int deviceId, bool useAsync);
+        static MatrixQuantizerImpl<ElemType>* Create(int deviceId, bool useAsync);
         virtual ~MatrixQuantizerImpl() 
         {
         }
