@@ -405,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (recurrenceDirections.empty())
                 recurrenceDirections = dirs;
             else if (recurrenceDirections != dirs)
-                InvalidArgument("It is not allowed to have multiple different recurrence directions in the same loop (loop connected to %ls %os operation).",
+                InvalidArgument("It is not allowed to have multiple different recurrence directions in the same loop (loop connected to %ls %ls operation).",
                                 nestedNodes.front()->NodeName().c_str(), nestedNodes.front()->OperationName().c_str());
         }
 
