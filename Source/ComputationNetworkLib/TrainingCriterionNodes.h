@@ -1808,7 +1808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			RequestMatrixFromPool(m_CTCposterior, matrixPool);
 		}
 
-		virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+		virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
 		{
 			Base::ReleaseMatricesAfterForwardProp(matrixPool);
 			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
