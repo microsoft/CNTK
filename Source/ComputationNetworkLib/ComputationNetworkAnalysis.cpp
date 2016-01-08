@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class?
 
-    static const vector<int> & GetRecurrenceDirections(const ComputationNodeBasePtr &);
+    static int GetRecurrenceSteppingDirection(const ComputationNodeBasePtr &);
 
     // FormRecurrentLoops() -- MAIN ENTRY POINT for network recurrent-loop analysis. All other functions in this CPP are called only from this one.
     // This function analysis the networks for recurrent loops present in the computation of 'rootNode.'
@@ -92,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const auto & node = iter->m_nestedNodes[j];
                 for (size_t i = 0; i < node->GetNumInputs(); i++)
                 {
-                    if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceDirections(node).empty())
+                    if (node->Input(i)->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0)
                     {
                         //assert(node->Input(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
                         node->Input(i)->m_indexInLoop++;               // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere other than PurgeStateForFormingRecurrentLoops(). i-1?
@@ -168,13 +168,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // checks whether a node is recurrent, and which direction
-    static vector<int> emptyVector;
-    static const vector<int> & GetRecurrenceDirections(const ComputationNodeBasePtr & node)
+    static int GetRecurrenceSteppingDirection(const ComputationNodeBasePtr & node)
     {
         if (node->Is<IRecurrentNode>())
-            return node->As<IRecurrentNode>()->GetRecurrenceDirections();
+            return node->As<IRecurrentNode>()->GetRecurrenceSteppingDirection();
         else
-            return emptyVector;
+            return 0;
     }
 
     static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes);
@@ -308,7 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (GetRecurrenceDirections(cur).empty())   // recurrence stops at delays
+            if (GetRecurrenceSteppingDirection(cur) == 0)   // recurrence stops at delay nodes
             {
                 for (size_t i = 0; i < cur->GetNumInputs(); i++)
                     if (cur->Input(i)->m_loopId == cur->m_loopId)
@@ -395,25 +394,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // BUGBUG: Need to extend to multi-dimensional loop directions. Use a vector<int>.
     static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr> & nestedNodes)
     {
-        vector<int> recurrenceDirections;
+        int steppingDirection = 0;
 
         for (auto & node : nestedNodes)
         {
-            const auto & dirs = GetRecurrenceDirections(node);
-            if (dirs.empty())   // not a recurrent node
+            int dir = GetRecurrenceSteppingDirection(node);
+            if (dir == 0)   // not a recurrent node
                 continue;
-            if (recurrenceDirections.empty())
-                recurrenceDirections = dirs;
-            else if (recurrenceDirections != dirs)
-                InvalidArgument("It is not allowed to have multiple different recurrence directions in the same loop (loop connected to %ls %ls operation).",
+            if (steppingDirection == 0)
+                steppingDirection = dir;
+            else if (steppingDirection != dir)
+                InvalidArgument("It is not allowed to have multiple different stepping directions in the same loop (loop connected to %ls %ls operation).",
                                 nestedNodes.front()->NodeName().c_str(), nestedNodes.front()->OperationName().c_str());
         }
 
-        if (recurrenceDirections.empty())
+        if (steppingDirection == 0)
             LogicError("There is no recurrent node in the loop connected to %ls %ls operation.",
                        nestedNodes.front()->NodeName().c_str(), nestedNodes.front()->OperationName().c_str());
         // BUGBUG: Multiple recurrence dimensions not yet supported beyond this point.
-        return -recurrenceDirections[0];
+        return steppingDirection;
     }
 
 }}}
