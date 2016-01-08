@@ -305,8 +305,9 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
         {
             const auto & valp = config[L"dims"];
-            // TODO: Add code that if input is already a tensor shape it is also OK.
-            if (valp.Is<ConfigArray>())
+            if (valp.Is<TensorShape>())
+                return valp.AsRef<TensorShape>();   // UNTESTED
+            else if (valp.Is<ConfigArray>())
                 return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
             else
                 return TensorShape(std::vector<size_t>(1, (size_t)valp));       // single element
@@ -315,6 +316,26 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         BoxedTensorShape(const IConfigRecordPtr configp) : BoxOf<TensorShape>(TensorShapeFromConfig(*configp)) { }
     };
 
-    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensoShape(L"TensorShape");
+    template<typename E>
+    class BoxedVector : public BoxOf<vector<E>>
+    {
+        // create a vector from config
+        static vector<E> VectorFromConfig(const IConfigRecord & config)
+        {
+            const auto & valp = config[L"items"];
+            if (valp.Is<vector<E>>())
+                return valp.AsRef<vector<E>>(); // UNTESTED
+            else if (valp.Is<ConfigArray>())
+                return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring & msg){ valp.Fail(msg); });
+            else
+                return std::vector<E>(1, (E)valp);       // single element
+        }
+    public:
+        BoxedVector(const IConfigRecordPtr configp) : BoxOf<vector<E>>(VectorFromConfig(*configp)) { }
+    };
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape>    registerTensorShape(L"TensorShape");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>>    registerIntVector(L"IntVector");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
 
 }}}

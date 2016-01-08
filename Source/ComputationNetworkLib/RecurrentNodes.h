@@ -51,6 +51,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // (default 0 means after the last sample dimension). Special considerations:
     //  - If the boundaryValue is not wide enough, the sequence will be dropped (e.g. if you pull in 5 history frames,
     //    but the sequence in boundaryValue only has 4 samples).
+    //  - If you feed back such an expanded output into this node in a loop, you get an inconsistency
+    //    and will eventually fail. You must pull the dimensions apart.
     //  - If the current time step (offset 0) is included in the range (e.g. fromOffset=-1, offsetRange=3) then
     //    this node cannot participate in a recurrence.
     //
@@ -68,24 +70,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ShiftNode : public ComputationNode<ElemType>, public ILateAttachingNode, public IStatefulNode,  public NumInputs<2>
+    class ShiftNode : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode,  public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Shift"; }
     public:
-        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & fromOffset, int shiftDimension, const TensorShape & offsetRange, int expandDimension) :
-            Base(deviceId, name), m_fromOffsetBegin(fromOffset.GetDims()),
+        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, const std::vector<int> & fromOffset, int shiftDimension, const std::vector<size_t> & offsetRange, int expandDimension) :
+            Base(deviceId, name), m_fromOffsetBegin(fromOffset),
             m_shiftDimension(shiftDimension), m_expandDimension(expandDimension),
             m_insertExpandShapeAt(SIZE_MAX/*uninitialized at this point*/)
         {
             // determine m_fromOffsetEnd from fromOffset/offsetRange
+            bool anyNonRecurrent = false;
             for (size_t k = 0; k < m_fromOffsetBegin.size(); k++)
-                m_fromOffsetEnd.push_back(m_fromOffsetBegin[k] + (k < offsetRange.size() ? offsetRange[k] : 1));
+            {
+                m_fromOffsetEnd.push_back(m_fromOffsetBegin[k] + (k < offsetRange.size() ? (int)offsetRange[k] : 1));
+                if (m_fromOffsetEnd[k] <= 0)
+                    m_recurrenceDirections.push_back(-1);
+                else if (m_fromOffsetBegin[k] > 0)
+                    m_recurrenceDirections.push_back(+1);
+                else
+                    m_recurrenceDirections.push_back(0);
+                anyNonRecurrent |= m_recurrenceDirections[k] == 0;
+            }
+            if (anyNonRecurrent)
+                m_recurrenceDirections.clear();
             CreateMatrixIfNull(m_value);
             SetDims(TensorShape(), 0);  // empty for now
         }
         ShiftNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ShiftNode(deviceId, name, TensorShape(1), -1, TensorShape(1), 0)
+            ShiftNode(deviceId, name, std::vector<int> { 1 }, -1, std::vector<size_t> { 1 }, 0)
         { }
         ShiftNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ShiftNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fromOffset"), configp->Get(L"dim"), configp->Get(L"offsetRange"), configp->Get(L"multiOffsetDim"))
@@ -109,20 +123,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Save(fstream);
 
-            TensorShape(m_fromOffsetBegin).Save(fstream);
-            TensorShape(m_fromOffsetEnd).Save(fstream);
+            fstream << m_fromOffsetBegin;
+            fstream << m_fromOffsetEnd;
             fstream << m_shiftDimension;
             fstream << m_expandDimension;
+            fstream << m_recurrenceDirections;
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
 
-            m_fromOffsetBegin = TensorShape().Load(fstream).GetDims();
-            m_fromOffsetEnd   = TensorShape().Load(fstream).GetDims();
+            fstream >> m_fromOffsetBegin;
+            fstream >> m_fromOffsetEnd;
             fstream >> m_shiftDimension;
             fstream >> m_expandDimension;
+            fstream >> m_recurrenceDirections;
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -151,14 +167,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            assert(m_inputs.size() == 1);
+            assert(m_inputs.size() == 2);
             ComputationNodeBase::Validate(isFinalValidationPass);
+
+            if (isFinalValidationPass)
+                sin(1.0f);
 
             // MBLayout is just inherited
             m_pMBLayout = Input(0)->GetMBLayout();
             if (isFinalValidationPass && !m_pMBLayout)
                 InvalidArgument("%ls %ls operation must operate on data (must have an MB Layout).", NodeName().c_str(), OperationName().c_str());
-            InferMBLayoutFromInputsForStandardCase();
 
             // determine expandShape--empty if no multiple offsets; otherwise the 1 or more dimensions that need to be added at m_expandDimension
             m_expandShape.clear();
@@ -175,16 +193,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_expandShape.resize(m_fromOffsetBegin.size(), 1);  // pad ones to end
             // now it either matches the dimensions to insert, or is empty if none to append
 
+            // determine final sample layout
             auto inputSampleLayout = Input(0)->GetSampleLayout();
             auto inputDims = inputSampleLayout.GetDims();
             if (m_expandDimension < 0)
                 InvalidArgument("%ls %ls operation: Specified insertion location %d refers to a time dimension, but this is not allowed.", 
                                 NodeName().c_str(), OperationName().c_str(), m_expandDimension);
             m_insertExpandShapeAt = m_expandShape.empty() ? 0 : (m_expandDimension > 0 ? m_expandDimension - 1 : inputDims.size());
-            if (m_insertExpandShapeAt >= inputDims.size())
-                InvalidArgument("%ls %ls operation: Specified insertion location %d beyond end of input sample layout [%s].", 
-                                NodeName().c_str(), OperationName().c_str(), m_expandDimension, string(inputSampleLayout).c_str());
+            if (m_insertExpandShapeAt > inputDims.size())
+                if (isFinalValidationPass)
+                    InvalidArgument("%ls %ls operation: Specified insertion location %d beyond end of input sample layout [%s].",
+                                    NodeName().c_str(), OperationName().c_str(), m_expandDimension, string(inputSampleLayout).c_str());
+                else
+                    m_insertExpandShapeAt = inputDims.size();   // this may be an error, but we want to catch that only in the final pass
             SmallVector<size_t> dims;
+            if (!m_expandShape.empty() && inputDims.size() + m_expandShape.size() > dims.capacity())
+                InvalidArgument("%ls %ls operation: Too many dimensions. Did you feed back output of this node without stripping the extra dimensions?",
+                                NodeName().c_str(), OperationName().c_str());
             dims.append(inputDims.begin(), inputDims.begin() + m_insertExpandShapeAt);
             dims.append(m_expandShape.begin(), m_expandShape.end());
             dims.append(inputDims.begin() + m_insertExpandShapeAt, inputDims.end());
@@ -193,19 +218,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(sampleLayout, 0);
         }
 
+        // special interface for use by loop detection
+        virtual const std::vector<int> & /*IRecurrentNode::*/GetRecurrenceDirections() const override
+        {
+            return m_recurrenceDirections;
+        }
+
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<ShiftNode<ElemType>>(nodeP);
-                node->m_fromOffsetBegin     = m_fromOffsetBegin;
-                node->m_fromOffsetEnd       = m_fromOffsetEnd;
-                node->m_shiftDimension      = m_shiftDimension;
-                node->m_expandDimension     = m_expandDimension;
-                node->m_expandShape         = m_expandShape;
-                node->m_insertExpandShapeAt = m_insertExpandShapeAt;
-                node->m_state               = m_state;
+                node->m_fromOffsetBegin      = m_fromOffsetBegin;
+                node->m_fromOffsetEnd        = m_fromOffsetEnd;
+                node->m_recurrenceDirections = m_recurrenceDirections;
+                node->m_shiftDimension       = m_shiftDimension;
+                node->m_expandDimension      = m_expandDimension;
+                node->m_expandShape          = m_expandShape;
+                node->m_insertExpandShapeAt  = m_insertExpandShapeAt;
+                node->m_state                = m_state;
             }
         }
 
@@ -228,14 +260,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         // parameters remembered from construction
-        SmallVector<size_t> m_fromOffsetBegin;      // offset to pull from; first offset in case of offset range
-        SmallVector<size_t> m_fromOffsetEnd;        // end of offset range
+        std::vector<int> m_fromOffsetBegin;         // offset to pull from; first offset in case of offset range
+        std::vector<int> m_fromOffsetEnd;           // end of offset range
         int m_shiftDimension;                       // dimension to shift (default: time)
         int m_expandDimension;                      // in case of offset range, this is where a new dimension will be inserted
 
         // derived params set up in Validate()
         SmallVector<size_t> m_expandShape;          // offsetEnd-offsetBegin if >1 offset in any dimension; empty otherwise
         size_t m_insertExpandShapeAt;               // at which dimension to insert (internal 0-based index)
+        std::vector<int> m_recurrenceDirections;    // for GetRecurrenceDirections()
 
         ShiftNodeStatePtr m_state;                  // saves the activation of the previous step that this node points to
 
@@ -306,8 +339,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/  /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
-    class DelayedValueNodeBase : public ComputationNode<ElemType>, public
-                                 ILateAttachingNode, public IStatefulNode,  public NumInputs<1>
+    class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode,
+                                 public ILateAttachingNode, public IStatefulNode,  public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr; 
@@ -317,6 +350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
+            m_recurrenceDirections.push_back(direction);
             CreateMatrixIfNull(m_value);
             SetDims(sampleLayout, 0);
             m_value->SetValue(m_initialActivationValue);        // is this needed?
@@ -553,6 +587,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
+        // special interface for use by loop detection
+        virtual const std::vector<int> & /*IRecurrentNode::*/GetRecurrenceDirections() const override
+        {
+            return m_recurrenceDirections;
+        }
+
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -569,11 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //========================================
-        // implement the IStatefulNode interface
-        //========================================
-
-        virtual NodeStatePtr ExportState()
+        virtual NodeStatePtr /*IStatefulNode::*/ExportState() override
         {
             NodeStatePtr pExportedState;
             size_t nT = m_pMBLayout->GetNumTimeSteps();
@@ -661,7 +697,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return pExportedState;
         }
-        virtual void ImportState(NodeStatePtr && pImportedState) override
+
+        virtual void /*IStatefulNode::*/ImportState(NodeStatePtr && pImportedState) override
         {
             DelayedNodeStatePtr pState = dynamic_pointer_cast<DelayedValueNodeState<ElemType>> (pImportedState); 
 
@@ -692,15 +729,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {// it is really a compile error ? 
                 RuntimeError("Unrecognized direction in DelayedValueNodeBase");
             }
-
         }
     protected:
 
         ElemType m_initialActivationValue;          // starting value for hidden activation vector at boundary
         Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
         MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
-        int      m_timeStep;                        // delay in frames (typ. 1)
+        int m_timeStep;                             // delay in frames (typ. 1)
         function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
+        std::vector<int> m_recurrenceDirections;    // for GetRecurrenceDirections()
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
