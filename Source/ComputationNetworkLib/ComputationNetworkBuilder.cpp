@@ -33,82 +33,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstring & nodeType, _Types&&... _Args)
     {
         // please keep this table sorted
-        if      (nodeType == OperationNameOf(CRFNode))	                            return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
+        if (nodeType == OperationNameOf(CRFNode))                              return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef ENABLE_BROADCASTING_ELEMENTTIMES
         else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
         else if (nodeType == OperationNameOf(ColumnElementTimesNode))               return New<ColumnElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
-        else if (nodeType == OperationNameOf(CosDistanceNode))	                    return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(CosineNode))	                    return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(CrossEntropyNode))	                    return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))	    return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))	            return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(DiagTimesNode))	                    return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(DropoutNode))	                    return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(DummyCriterionNode))	            return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ElementTimesNode))	                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ErrorPredictionNode))	            return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ExpNode))	                            return New<ExpNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(FutureValueNode))	                    return New<FutureValueNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(CosineNode))                           return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ErrorPredictionNode))                  return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ExpNode))                              return New<ExpNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(FutureValueNode))                      return New<FutureValueNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))                 return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(HardmaxNode))	                    return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(InvStdDevNode))	                    return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(HardmaxNode))                          return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LSTMNode))	                            return New<LSTMNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LogNode))	                            return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LogSoftmaxNode))	                    return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LookupTableNode))	                    return New<LookupTableNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MatrixL1RegNode))	                    return New<MatrixL1RegNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MatrixL2RegNode))	                    return New<MatrixL2RegNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MeanNode))	                            return New<MeanNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(MinusNode))	                    return New<MinusNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(NegateNode))	                    return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LSTMNode))                             return New<LSTMNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LogSoftmaxNode))                       return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LookupTableNode))                      return New<LookupTableNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MatrixL1RegNode))                      return New<MatrixL1RegNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MatrixL2RegNode))                      return New<MatrixL2RegNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MeanNode))                             return New<MeanNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(MinusNode))                            return New<MinusNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(NegateNode))                           return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(NoiseContrastiveEstimationNode))       return New<NoiseContrastiveEstimationNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(PairNetworkNode))	                    return New<PairNetworkNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ParallelNode))	                    return New<ParallelNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(PairNetworkNode))                      return New<PairNetworkNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ParallelNode))                         return New<ParallelNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(PastValueNode))                        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))       return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))	    return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(PlusNode))	                            return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(RectifiedLinearNode))	            return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(ReshapeNode))	                    return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))                return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef ENABLE_BROADCASTING_ELEMENTTIMES
-        else if (nodeType == L"RowElementTimes")	                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == L"RowElementTimes")                                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
-        else if (nodeType == OperationNameOf(RowElementTimesNode))	            return New<RowElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(RowElementTimesNode))                  return New<RowElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
-        else if (nodeType == OperationNameOf(RowRepeatNode))	                    return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(DiagonalNode))	                    return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(RowSliceNode))	                    return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(RowStackNode))	                    return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(RowSliceNode))                         return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef ENABLE_BROADCASTING_ELEMENTTIMES
-        else if (nodeType == L"Scale")	                                            return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == L"Scale")                                              return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #else
-        else if (nodeType == OperationNameOf(ScaleNode))	                    return New<ScaleNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ScaleNode))                            return New<ScaleNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
-        else if (nodeType == OperationNameOf(SequenceDecoderNode))	            return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SigmoidNode))	                    return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SoftmaxNode))	                    return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SquareErrorNode))	                    return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(LogisticNode))	                    return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(StrideTimesNode))	                    return New<StrideTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(ShiftNode))                            return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(StrideTimesNode))                      return New<StrideTimesNode<ElemType>>(forward<_Types>(_Args)...);
         else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(SumElementsNode))	                    return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(TanhNode))	                            return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(TimeReverseNode))	                    return New<TimeReverseNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(TimesNode))	                    return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(TransposeNode))	                    return New<TransposeNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == OperationNameOf(TransposeTimesNode))	            return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(TanhNode))                             return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(TimeReverseNode))                      return New<TimeReverseNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(TransposeNode))                        return New<TransposeNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
         // old names we also support
         else if (nodeType == L"Delay")                                              return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-        else if (nodeType == L"PerDimMeanVarNormalizationNode")	                    return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
 #if 1
-        else if (nodeType == OperationNameOf(DeprecatedReshapeNode))	            return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+        else if (nodeType == OperationNameOf(DeprecatedReshapeNode))                return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
         else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
     }

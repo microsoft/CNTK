@@ -230,12 +230,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::map<wstring, vector<shared_ptr<INodeState>>>   m_NetStates;            // m_NetStatefulNodes[node][i] caches the state of i-th subminibatch of node
             bool                                                m_hasLattices; 
 
-            Matrices                                            m_CachedGraident;
+            Matrices                                            m_cachedGradient;
             // we also need to remember where to put into the net
             MBLayoutPtr                                         m_NetMBLayoutPtr;
             std::map<wstring, shared_ptr<ComputationNode<ElemType>>>    m_LearnableNodePtr;
             // followings are lattice-related 
-            Matrices                                            m_NetInputMatrixPtr;
+            Matrices                                            m_NetInputMatrixPtr;    // TODO: camelCase for all m_Net...
             LatticePtr                                          m_NetLatticePtr;
             UidPtr                                              m_NetUidPtr;
             ExtrauttMapPtr                                      m_NetExtrauttMapPtr;
@@ -248,18 +248,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::vector<shared_ptr<ComputationNode<ElemType>>>  m_NetCriterionNodes;
             std::vector<shared_ptr<ComputationNode<ElemType>>>  m_NetEvaluationNodes;
-            std::map<wstring, shared_ptr<IStateFulNode>>        m_NetStatefulNodes;      // we need to Export/Import states of stateful nodes when we swtich subminibatches 
+            std::map<wstring, shared_ptr<IStatefulNode>>        m_NetStatefulNodes;      // we need to Export/Import states of stateful nodes when we swtich subminibatches 
 
         private:
 
-            void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStateFulNode>>& statefulnode)
+            void EnumerateStatefulNodeWithRoot(ComputationNetwork& net, ComputationNodeBasePtr root, std::map<wstring, shared_ptr<IStatefulNode>>& statefulnode)
             {
                 const std::list<ComputationNodeBasePtr> evalorder = net.GetEvalOrder(root);
                 for (auto& x : evalorder)
                 {
                     wstring name = x->GetName();
                     if (statefulnode.find(name) != statefulnode.end()) continue; // already in the list 
-                    shared_ptr<IStateFulNode> pNode = dynamic_pointer_cast<IStateFulNode>(x);
+                    shared_ptr<IStatefulNode> pNode = dynamic_pointer_cast<IStatefulNode>(x);
                     if (pNode)
                     {
                         statefulnode[name] = pNode;
@@ -267,20 +267,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            std::map<wstring, shared_ptr<IStateFulNode>> EnumerateStatefulNode(ComputationNetwork& net,
+            std::map<wstring, shared_ptr<IStatefulNode>> EnumerateStatefulNode(ComputationNetwork& net,
                                                                                const std::vector<ComputationNodeBasePtr>& criterionNode,
                                                                                const std::vector<ComputationNodeBasePtr>& evaluationNode)
             {
-                std::map<wstring, shared_ptr<IStateFulNode>> statefulnodes;
+                std::map<wstring, shared_ptr<IStatefulNode>> statefulNodes;
                 for (auto& root : criterionNode)
                 {
-                    EnumerateStatefulNodeWithRoot(net, root, statefulnodes);
+                    EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
                 }
                 for (auto& root : evaluationNode)
                 {
-                    EnumerateStatefulNodeWithRoot(net, root, statefulnodes);
+                    EnumerateStatefulNodeWithRoot(net, root, statefulNodes);
                 }
-                return statefulnodes;
+                return statefulNodes;
             }
 
         public:
@@ -353,7 +353,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete x.second;
                 }
 
-                for (auto x : m_CachedGraident)
+                for (auto x : m_cachedGradient)
                 {
                     delete x.second;
                 }
@@ -418,11 +418,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         auto funvalue = pLearnableNode->Value();   // gradient may not be allocated when this function is first called 
                         size_t nrow = funvalue.GetNumRows();
                         size_t ncol = funvalue.GetNumCols();
-                        if (m_CachedGraident.find(nodeName) == m_CachedGraident.end())
+                        if (m_cachedGradient.find(nodeName) == m_cachedGradient.end())
                         {
                             // not allocated yet 
-                            m_CachedGraident[nodeName] = new Matrix<ElemType>(nrow, ncol, funvalue.GetDeviceId());
-                            m_CachedGraident[nodeName]->SetValue((ElemType)0);
+                            m_cachedGradient[nodeName] = new Matrix<ElemType>(nrow, ncol, funvalue.GetDeviceId());
+                            m_cachedGradient[nodeName]->SetValue((ElemType)0);
                         }
                     }
                 }
@@ -511,9 +511,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto& x : m_NetStatefulNodes)
                 {
                     wstring name = x.first;
-                    shared_ptr<IStateFulNode>   pNode = x.second;
+                    shared_ptr<IStatefulNode>   pNode = x.second;
                     if (m_NetStates[name][iSubminibatch])
-                        pNode->ImportState(m_NetStates[name][iSubminibatch]);
+                        pNode->ImportState(std::move(m_NetStates[name][iSubminibatch]));
                 }
             }
 
@@ -521,7 +521,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             void DoneWithCurrentSubMinibatch(size_t iSubminibatch)
             {
                 // accumulate gradient here 
-                for (auto x : m_CachedGraident)
+                for (auto x : m_cachedGradient)
                 {
                     wstring nodename = x.first;
                     if (m_LearnableNodePtr.find(nodename) == m_LearnableNodePtr.end())
@@ -529,7 +529,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LeanrableNode", nodename.c_str());
                     }
                     shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
-                    m_CachedGraident[nodename]->operator+=(pNode->Gradient());
+                    m_cachedGradient[nodename]->operator+=(pNode->Gradient());
                     pNode->Gradient().SetValue((ElemType)0);
                 }
                 // accumulate criterion value 
@@ -554,7 +554,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             void DoneWithCurrentMinibatch()
             {
-                for (auto& x : m_CachedGraident)
+                for (auto& x : m_cachedGradient)
                 {
                     wstring name = x.first;
                     Matrix<ElemType>* accumulategrad = x.second;

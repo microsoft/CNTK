@@ -132,12 +132,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~INodeState() {} 
     };
 
-    struct /*interface*/ IStateFulNode
+    struct /*interface*/ IStatefulNode
     {
         typedef std::shared_ptr<INodeState> NodeStatePtr;
         virtual NodeStatePtr ExportState() = 0;
-        virtual void ImportState(const NodeStatePtr& pImportedState) = 0;
+        virtual void ImportState(NodeStatePtr && state) = 0;
     };
+    typedef IStatefulNode::NodeStatePtr NodeStatePtr;
 
     // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork

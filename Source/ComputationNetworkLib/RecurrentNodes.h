@@ -26,6 +26,225 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
+    // ShiftNode (input, fromOffset, boundaryValue, dim=-1, offsetRange=1, multiOffsetDim=0) -- delay and rolling window
+    //
+    // This shifts the input by (-fromOffset) steps. In other words, output(t) will be input(t+fromOffset).
+    // E.g. for fromOffset=-1, this gives the past value.
+    // This node has quite some options that make it powerful for many use cases.
+    //
+    // This node can be used in a recurrent loop. This requires special handling by the ComputationNetwork,
+    // for both execution (sequential execution) and creation (avoiding circular references).
+    // TODO: When outside a recurrent loop and used with frame randomization, this will communicate to the reader
+    // that additional frames are needed, which will then return a frame range. TODO: This will not match
+    // the labels, which are still 1 frame. Think through which dimension this should go in.
+    //
+    // Values shifted in from beyond sequence boundaries will be copied from boundaryValue.
+    // Normally, this is a scalar Constant(). However, it can be any node, which will be indexed from the end
+    // (e.g. for fromOffset=-1, the last frame of boundaryValue will be used). This can implement
+    // sequence-to-sequence models. Broadcasting is supported, so it can be e.g. a single output-dimension vector
+    // applied to all sequences.
+    //
+    // To delay (past value), use negative fromOffset. To access future value, use positive fromOffset.
+    //
+    // To pull in multiple offsets, use offsetRange>1. This will pull in offsetRange consecutive offsets starting
+    // with fromOffset. This implements a rolling window. A new dimension will be inserted at multiOffsetDim
+    // (default 0 means after the last sample dimension). Special considerations:
+    //  - If the boundaryValue is not wide enough, the sequence will be dropped (e.g. if you pull in 5 history frames,
+    //    but the sequence in boundaryValue only has 4 samples).
+    //  - If the current time step (offset 0) is included in the range (e.g. fromOffset=-1, offsetRange=3) then
+    //    this node cannot participate in a recurrence.
+    //
+    // By default, this shifts over the time dimension, but you can choose to shift over any
+    // sample tensor dimension instead using 'dim' (-1 stands for time). This will only work, however,
+    // when all involved nodes are implemented using the tensor library. Nodes implemented using
+    // Matrix slices can only support iterating over time.
+    //
+    // The fromOffset can also be a tensor, e.g. (1,1). In that case, iteration will be over multiple
+    // consecutive dimensions. offsetRange must have the same number of dimensions.
+    //
+    // If the boundaryValue has 0 elements, the sequence will be trimmed (frames reaching beyond the boundary
+    // are dropped). This will initially not be implemented for the time dimension (as it would require
+    // change of MBLayout).
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ShiftNode : public ComputationNode<ElemType>, public ILateAttachingNode, public IStatefulNode,  public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Shift"; }
+    private:
+    protected:
+        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & fromOffset, int shiftDimension, const TensorShape & offsetRange, int expandDimension) :
+            Base(deviceId, name), m_fromOffsetBegin(fromOffset.GetDims()),
+            m_shiftDimension(shiftDimension), m_expandDimension(expandDimension),
+            m_insertExpandShapeAt(SIZE_MAX/*uninitialized at this point*/)
+        {
+            // determine m_fromOffsetEnd from fromOffset/offsetRange
+            for (size_t k = 0; k < m_fromOffsetBegin.size(); k++)
+                m_fromOffsetEnd.push_back(m_fromOffsetBegin[k] + (k < offsetRange.size() ? offsetRange[k] : 1));
+            CreateMatrixIfNull(m_value);
+            SetDims(TensorShape(), 0);  // empty for now
+        }
+        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ShiftNode(deviceId, name, TensorShape(1), -1, TensorShape(1), 0)
+        { }
+        ShiftNode(const ScriptableObjects::IConfigRecordPtr configp) :
+            ShiftNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fromOffset"), configp->Get(L"dim"), configp->Get(L"offsetRange"), configp->Get(L"multiOffsetDim"))
+        {
+            // We do NOT attach the inputs, as we cannot resolve the main input without causing a circular reference.
+            // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
+            // This is a contract between ComputationNetwork and this specific node type.
+            // (TODO: We could force-evaluate the boundary input here.)
+            m_attachInputsFn = [this, configp]()   // This is the lambda to complete the process. Note that config captured as a shared_ptr.
+            {
+                AttachInputs(GetInputsFromConfig(configp));    // this is executed by network builder while iterating the nodes
+            };
+        }
+        virtual void /*ILateAttachingNode::*/LateAttachInputs() override final
+        {
+            m_attachInputsFn();
+            m_attachInputsFn = [](){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
+        }
+    public:
+        void Save(File& fstream) const
+        {
+            Base::Save(fstream);
+
+            TensorShape(m_fromOffsetBegin).Save(fstream);
+            TensorShape(m_fromOffsetEnd).Save(fstream);
+            fstream << m_shiftDimension;
+            fstream << m_expandDimension;
+        }
+
+        virtual void Load(File& fstream, size_t modelVersion) override
+        {
+            Base::Load(fstream, modelVersion);
+
+            m_fromOffsetBegin = TensorShape().Load(fstream).GetDims();
+            m_fromOffsetEnd   = TensorShape().Load(fstream).GetDims();
+            fstream >> m_shiftDimension;
+            fstream >> m_expandDimension;
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            assert(inputIndex == 0); inputIndex;
+            fr;
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {return false; }
+
+        virtual void EndForwardProp() override        // called after last iteration step of ForwardProp()
+        {
+            Base::EndForwardProp();
+
+            // In BPTT, we carry over left-to-right state across minibatches.
+            // TODO: package up the state using ExportState(). Then in BeginForwardProp() bring it back. In-between, the packages can be moved around.
+        }
+
+        // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
+        // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
+        virtual void ForwardProp(const FrameRange & fr) override
+        {
+            fr;
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            assert(m_inputs.size() == 1);
+            ComputationNodeBase::Validate(isFinalValidationPass);
+
+            // MBLayout is just inherited
+            m_pMBLayout = Input(0)->GetMBLayout();
+            if (isFinalValidationPass && !m_pMBLayout)
+                InvalidArgument("%ls %ls operation must operate on data (must have an MB Layout).", NodeName().c_str(), OperationName().c_str());
+            InferMBLayoutFromInputsForStandardCase();
+
+            // determine expandShape--empty if no multiple offsets; otherwise the 1 or more dimensions that need to be added at m_expandDimension
+            m_expandShape.clear();
+            for (size_t k = 0; k < m_fromOffsetBegin.size(); k++)
+            {
+                size_t dim = m_fromOffsetEnd[k] - m_fromOffsetBegin[k];
+                if (dim > 1)
+                {
+                    m_expandShape.resize(k, 1);
+                    m_expandShape.push_back(dim);
+                }
+            }
+            if (!m_expandShape.empty())
+                m_expandShape.resize(m_fromOffsetBegin.size(), 1);  // pad ones to end
+            // now it either matches the dimensions to insert, or is empty if none to append
+
+            auto inputSampleLayout = Input(0)->GetSampleLayout();
+            auto inputDims = inputSampleLayout.GetDims();
+            if (m_expandDimension < 0)
+                InvalidArgument("%ls %ls operation: Specified insertion location %d refers to a time dimension, but this is not allowed.", 
+                                NodeName().c_str(), OperationName().c_str(), m_expandDimension);
+            m_insertExpandShapeAt = m_expandShape.empty() ? 0 : (m_expandDimension > 0 ? m_expandDimension - 1 : inputDims.size());
+            if (m_insertExpandShapeAt >= inputDims.size())
+                InvalidArgument("%ls %ls operation: Specified insertion location %d beyond end of input sample layout [%s].", 
+                                NodeName().c_str(), OperationName().c_str(), m_expandDimension, string(inputSampleLayout).c_str());
+            SmallVector<size_t> dims;
+            dims.append(inputDims.begin(), inputDims.begin() + m_insertExpandShapeAt);
+            dims.append(m_expandShape.begin(), m_expandShape.end());
+            dims.append(inputDims.begin() + m_insertExpandShapeAt, inputDims.end());
+            auto sampleLayout = TensorShape(dims);
+
+            SetDims(sampleLayout, 0);
+        }
+
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<ShiftNode<ElemType>>(nodeP);
+                node->m_fromOffsetBegin     = m_fromOffsetBegin;
+                node->m_fromOffsetEnd       = m_fromOffsetEnd;
+                node->m_shiftDimension      = m_shiftDimension;
+                node->m_expandDimension     = m_expandDimension;
+                node->m_expandShape         = m_expandShape;
+                node->m_insertExpandShapeAt = m_insertExpandShapeAt;
+                node->m_state               = m_state;
+            }
+        }
+
+        template<class ElemType>
+        class ShiftNodeState : public INodeState
+        {
+            Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
+        };
+        typedef std::shared_ptr<ShiftNodeState<ElemType>> ShiftNodeStatePtr;
+
+        // state export/import
+        // This is done with a shared_ptr. The moment state is exported, the internal state is cleared; ownership is transferred to the exporting entity.
+        // This way, the next invocation does not overwrite the exported state, but is required to create a new one if needed.
+        // On the other hand, once imported, the state object is owned by the node and will be overwritten with the next state.
+        virtual NodeStatePtr ExportState() { return std::move(m_state); }
+        virtual void ImportState(NodeStatePtr && state) override
+        {
+            m_state = dynamic_pointer_cast<ShiftNodeState<ElemType>>(state);
+            if (state && !m_state)
+                LogicError("ImportState: Wrong state object passed (wrong type).");
+        }
+    protected:
+        // parameters remembered from construction
+        SmallVector<size_t> m_fromOffsetBegin;      // offset to pull from; first offset in case of offset range
+        SmallVector<size_t> m_fromOffsetEnd;        // end of offset range
+        int m_shiftDimension;                       // dimension to shift (default: time)
+        int m_expandDimension;                      // in case of offset range, this is where a new dimension will be inserted
+
+        // derived params set up in Validate()
+        SmallVector<size_t> m_expandShape;          // offsetEnd-offsetBegin if >1 offset in any dimension; empty otherwise
+        size_t m_insertExpandShapeAt;               // at which dimension to insert (internal 0-based index)
+
+        ShiftNodeStatePtr m_state;                  // saves the activation of the previous step that this node points to
+
+        function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
+    };
+
+    // -----------------------------------------------------------------------
     // DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.
     // This is used for sub-minibatching in case of truncated BPTT.
     // -----------------------------------------------------------------------
@@ -76,12 +295,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
+    // This is an old node which will be replaced by ShiftNode (with Past/FutureValueNode being emulated).
+    //
+    // This is planned:
+    //  - carrying over state at sentence boundaries from other nodes (for s2s)
+    //  - ranges of neighbor frames as a secondary tensor dimension (i.e. can be used to implement a rolling window)
+    //  - full support/efficiency of non-recurrent use (in which case the range can be from negative to positive, e.g. a symmetric rolling window)
+    //  - denoting which tensor dimension to loop over (this may not be completed, but I will plant a seed)
+    //  - support for Yongqiang’s sub-minibatching with BPTT (export/import state)
+    //  - more efficient storage of carried-over state (only store the needed frames, not a full copy of the previous MB as currently; which will on the other hand also allow windows that reach back beyond a minibatch)
     // -----------------------------------------------------------------------
 
     // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/  /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public
-                                 ILateAttachingNode, public IStateFulNode,  public NumInputs<1>
+                                 ILateAttachingNode, public IStatefulNode,  public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr; 
@@ -92,8 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             CreateMatrixIfNull(m_value);
-            SetDims(sampleLayout, 0);              // TODO: needed? Can we not infer it? How about setting a sample layout?
-            m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination, which is deprecated
+            SetDims(sampleLayout, 0);
             m_value->SetValue(m_initialActivationValue);        // is this needed?
         }
     protected:
@@ -139,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
-            // the node has already been initialized e.g. w.r.t. direction and sequence flags
+            // the node has already been initialized e.g. w.r.t. direction
             Base::Load(fstream, modelVersion);
 
             fstream >> m_timeStep;
@@ -154,63 +381,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (modelVersion >= CNTK_MODEL_VERSION_2)
                 fstream >> m_initialActivationValue;
         }
-
-#if 0
-    private:
-        // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
-        // This post-processed layout has its bits spread out over m_timeStep, to help detect if we'd hop across a boundary.
-        void CacheMBLayout()
-        {
-            if (m_timeStep <= 0)
-                LogicError("timeStep should be 1 or larger");
-
-            m_pShiftedMBLayout->CopyFrom(m_pMBLayout);      // it gets modified below
-            if (m_timeStep == 1)
-                return;
-
-#if 1
-            LogicError("CacheMBLayout: m_timeStep > 1 temporarily disabled until MBLayout update completed.");
-#else
-            // modify m_pShiftedMBLayout
-            // If two utterances are packed together (S: start, E: end, N: no input) and we need to get values 2 steps in the past
-            //    S X X X E S X X X X E N N
-            // then this becomes
-            //    S S X X E S S X X X E N N
-
-            size_t numSeq = GetNumParallelSequences();
-
-            // each row has a number to indicate how many values should be reset for that utterance
-            // TODO: This algorithm is not obvious and should be explained. E.g. how come it is direction independent?
-            vector<int> numResetLeft(numSeq, 0);
-            for (size_t i = 0; i < GetNumTimeSteps(); i++)   // i = frame index (time)
-            {
-                if (m_pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
-                {
-                    // we set timeStep-1 elements following it to be SequenceStart until met NoInput
-                    for (size_t j = 0; j < numSeq; j++)        // j = stream
-                    {
-                        // we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
-                        if (m_pMBLayout->Is(j, i, SequenceStart_or_End))
-                            numResetLeft[j] = m_timeStep;
-                        else if (m_pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
-                            numResetLeft[j] = 0;
-                    }
-                }
-
-                // now set the sequence-boundary flag
-                for (size_t j = 0; j < numSeq; j++)
-                {
-                    if (numResetLeft[j]-- > 0)
-                    {
-                        m_pShiftedMBLayout->Mask(j, i, MinibatchPackingFlags::NoLabel); // keep only this flag
-                        m_pShiftedMBLayout->Set(j, i, SequenceStart_or_End);            // now implant the boundary flag
-                    }
-                }
-            }
-#endif
-        }
-    public:
-#endif
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
@@ -283,12 +453,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        //virtual void BeginForwardProp() override      // called before first iteration step of ForwardProp()
-        //{
-        //    Base::BeginForwardProp();
-        //    CacheMBLayout();
-        //}
-
         virtual void EndForwardProp() override        // called after last iteration step of ForwardProp()
         {
             // In BPTT, we carry over left-to-right state across minibatches.
@@ -299,12 +463,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - we don't need to keep anything if all sequences are closed (sentence end)
             //    This condition includes full-sequence mode.
             // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-            if (!m_isHistoryCarryOverManagedExternally) // means it's externally managed (for PairNetworkNode)
-            {
-                m_delayedActivation = Input(0)->Value();
-                if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
-                m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
-            }
+            m_delayedActivation = Input(0)->Value();
+            if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
+            m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
 
             Base::EndForwardProp();
         }
@@ -350,6 +511,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
+                    if (m_pMBLayout->IsGap(fr.Sequence(id)))    // if output is in a gap then don't bother filling it
+                        continue;
+
                     Matrix<ElemType> out = ValueFor(fr.Sequence(id));
 
                     //assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
@@ -391,36 +555,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        // this function is only used for PairNetworkNode (on PastValueNode)
-        // BUGBUG: Need to transfer the layout as well. PairNetworkNode will go away.
-        bool GetHistory(Matrix<ElemType>& hist, bool)
-        {
-            DEVICEID_TYPE device = hist.GetDeviceId();
-            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
-
-            hist.SetValue(Input(0)->Value());
-
-            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
-            return true;
-        }
-
-        // this function is only used for PairNetworkNode (on PastValueNode)
-        void SetHistory(const Matrix<ElemType>& hist)
-        {
-            DEVICEID_TYPE device = hist.GetDeviceId();
-            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
-
-            m_delayedActivation.SetValue(hist);
-            m_isHistoryCarryOverManagedExternally = true;
-
-            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
-
-            // need a layout as well
-            // ForwardProp() expects it to have the same number of parallel sequences.
-            if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
-            m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences());
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -434,12 +568,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
                 else
                     node->m_delayedActivationMBLayout = nullptr;
-                node->m_isHistoryCarryOverManagedExternally = false;
             }
         }
 
         //========================================
-        // implement the IStateFulNode interface
+        // implement the IStatefulNode interface
         //========================================
 
         virtual NodeStatePtr ExportState()
@@ -530,7 +663,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return pExportedState;
         }
-        virtual void ImportState(const NodeStatePtr& pImportedState) override
+        virtual void ImportState(NodeStatePtr && pImportedState) override
         {
             DelayedNodeStatePtr pState = dynamic_pointer_cast<DelayedValueNodeState<ElemType>> (pImportedState); 
 
@@ -569,14 +702,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
         MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
         int      m_timeStep;                        // delay in frames (typ. 1)
-        //MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
-        bool m_isHistoryCarryOverManagedExternally; // for PastValueNode only
         function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
-    using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
-    /*using Base::m_pShiftedMBLayout;*/ using Base::m_isHistoryCarryOverManagedExternally;
+    using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep;
 
     // -----------------------------------------------------------------------
     // PastValueNode (input) -- delay node
@@ -606,12 +736,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class PastValueNode<float>; 
     template class PastValueNode<double>;
 
-
     // -----------------------------------------------------------------------
     // FutureValueNode (input) -- delay node in future direction
     // -----------------------------------------------------------------------
 
-    //get value from future (used in the bi-directional models)
+    // get value from future (used in the bi-directional models)
     template<class ElemType>
     class FutureValueNode : public DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/>
     {

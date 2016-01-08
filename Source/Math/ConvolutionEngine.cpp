@@ -100,7 +100,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
 
-                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    //workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
                     Mat::Multiply(filter, false, workspace, false, outputSubBatch);
                 }
             }
