@@ -11,7 +11,8 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
 {
     W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     b = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    sc = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    #sc = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    sc = Parameter(outMap, 1, init = fixedValue, value = 1)
     m = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
@@ -24,7 +25,8 @@ ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scScale)
 {
     W1 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     b1 = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    #sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    sc1 = Parameter(outMap, 1, init = fixedValue, value = 1)
     m1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
@@ -34,7 +36,8 @@ ResNetNode2(inp, outMap, inWCount, kW, kH, wScale, bValue, scScale)
     
     W2 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     b2 = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    #sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    sc2 = Parameter(outMap, 1, init = fixedValue, value = 1)
     m2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
@@ -48,7 +51,8 @@ ResNetNode2Inc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scScale, W
 {
     W1 = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
     b1 = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    #sc1 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    sc1 = Parameter(outMap, 1, init = fixedValue, value = 1)
     m1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd1 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
@@ -58,7 +62,8 @@ ResNetNode2Inc(inp, outMap, inWCount, wCount, kW, kH, wScale, bValue, scScale, W
     
     W2 = Parameter(outMap, wCount, init = Gaussian, initValueScale = wScale)
     b2 = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    #sc2 = Parameter(outMap, 1, init = Gaussian, initValueScale = scScale)
+    sc2 = Parameter(outMap, 1, init = fixedValue, value = 1)
     m2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd2 = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
