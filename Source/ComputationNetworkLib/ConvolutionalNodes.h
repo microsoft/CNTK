@@ -733,21 +733,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass)
             {
-const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
-                auto dims = ImageDimensions(GetSampleLayout(), m_imageLayoutKind);
+                const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
+
+                auto shape = GetSampleLayout();
 
                 if (m_factory == nullptr)
                     m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
                 if (m_convEng == nullptr)
                     m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                if (m_scaleBiasT == nullptr)
+                if (m_spatial)
                 {
-                    if (m_spatial)
+                    auto dims = ImageDimensions(shape, m_imageLayoutKind);
+                    if (m_inT == nullptr)
+                        m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                    if (m_scaleBiasT == nullptr)
                         m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-                    else
-                        m_scaleBiasT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                }
+                else
+                {
+                    if (m_inT == nullptr)
+                        m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
+                    if (m_scaleBiasT == nullptr)
+                        m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
                 }
             }
         }

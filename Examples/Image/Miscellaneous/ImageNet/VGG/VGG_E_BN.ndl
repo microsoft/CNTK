@@ -7,9 +7,7 @@ ndlMacros = [
     ImageC = 3
     LabelDim = 1000
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
-    featOffs = Const(0, rows = 150528)
-    featScaled = Plus(features, featOffs)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     labels = Input(LabelDim, tag = label)
     
     # Kernels width and height.
@@ -39,16 +37,16 @@ ndlMacros = [
 
 DNN=[
     cMap1 = 64
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 27, kW, kH, hs, vs, convWScale, convBValue, scValue)
+    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv2 = ConvBNReLULayer(conv1, cMap1, 576, kW, kH, hs, vs, convWScale, convBValue, scValue)
 
-    pool1 = MaxPooling(conv2, poolW, poolH, poolhs, poolvs)
+    pool1 = MaxPooling(conv2, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     cMap3 = 128
     conv3 = ConvBNReLULayer(pool1, cMap3, 576, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv4 = ConvBNReLULayer(conv3, cMap3, 1152, kW, kH, hs, vs, convWScale, convBValue, scValue)
    
-    pool2 = MaxPooling(conv4, poolW, poolH, poolhs, poolvs)
+    pool2 = MaxPooling(conv4, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     cMap5 = 256
     conv5 = ConvBNReLULayer(pool2, cMap5, 1152, kW, kH, hs, vs, convWScale, convBValue, scValue)
@@ -56,7 +54,7 @@ DNN=[
     conv7 = ConvBNReLULayer(conv6, cMap5, 2304, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv8 = ConvBNReLULayer(conv7, cMap5, 2304, kW, kH, hs, vs, convWScale, convBValue, scValue)
 
-    pool3 = MaxPooling(conv8, poolW, poolH, poolhs, poolvs)
+    pool3 = MaxPooling(conv8, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     cMap9 = 512
     conv9 = ConvBNReLULayer(pool3, cMap9, 2304, kW, kH, hs, vs, convWScale, convBValue, scValue)
@@ -64,7 +62,7 @@ DNN=[
     conv11 = ConvBNReLULayer(conv10, cMap9, 4608, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv12 = ConvBNReLULayer(conv11, cMap9, 4608, kW, kH, hs, vs, convWScale, convBValue, scValue)
 
-    pool4 = MaxPooling(conv12, poolW, poolH, poolhs, poolvs)
+    pool4 = MaxPooling(conv12, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     cMap13 = 512
     conv13 = ConvBNReLULayer(pool4, cMap13, 4608, kW, kH, hs, vs, convWScale, convBValue, scValue)
@@ -72,7 +70,7 @@ DNN=[
     conv15 = ConvBNReLULayer(conv14, cMap13, 4608, kW, kH, hs, vs, convWScale, convBValue, scValue)
     conv16 = ConvBNReLULayer(conv15, cMap13, 4608, kW, kH, hs, vs, convWScale, convBValue, scValue)
 
-    pool5 = MaxPooling(conv16, poolW, poolH, poolhs, poolvs)
+    pool5 = MaxPooling(conv16, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     hiddenDim = 4096
     h1 = DnnBNReLULayer(25088, hiddenDim, pool5, fc1WScale, fc1BValue)
