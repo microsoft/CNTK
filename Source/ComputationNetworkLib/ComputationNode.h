@@ -1142,14 +1142,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tensor variants
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
-            TensorShape tensorShape = GetSampleLayout();
+            TensorShape tensorShape = GetSampleLayout();    // TODO: Can this tensor arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
             if (!HasMBLayout())
                 tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
-            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
+            // TODO: This is not nice! Instead, if no MBLayout then have sample layout explain whole matrix.
             else if (fr.IsAllFrames()) // we have an MBLayout, and for refers to the entire MB
-                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumCols());
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, GetMBLayout()->GetNumTimeSteps());
             else  // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
-                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, 1);
             // TODO: determine SmallVector begin, end bounds first, get a narrow full shape, squeeze the dims, then return the tensor
             return TensorView<ElemType>(DataFor(data, fr), tensorShape);
         }
