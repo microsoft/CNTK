@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // construction
         // -------------------------------------------------------------------
 
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_columnsValidityMask(CPUDEVICE), m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
         MBLayout() : MBLayout(1, 0) { }
 
         // copy the content of another MBLayoutPtr over
