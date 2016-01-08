@@ -445,7 +445,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
-        //MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         const MBLayoutPtr & GetMBLayout() const { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
@@ -1505,6 +1504,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+
+    // =======================================================================
+    // IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+    // =======================================================================
+
+    struct IRecurrentNode { virtual const std::vector<int> & GetRecurrenceDirections() const = 0; };
 
 
     // =======================================================================
