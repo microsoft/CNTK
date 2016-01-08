@@ -362,6 +362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TensorShape & AppendInPlace(size_t rank, size_t newDim)  // concatenate one new dimension at position 'rank'
         {
             PadInPlace(rank);
+            // TODO: How to do this right in case of arbitrary strides? Compute the new stride based on m_allocation or something? Is it even possible? Or do we need to guard?
             m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
             m_dims.push_back(newDim);
             m_allocation *= newDim;
