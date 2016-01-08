@@ -610,9 +610,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input, 
         const ComputationNodePtr scale, const ComputationNodePtr bias, const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev,
-        bool eval, bool spatial, double expAvgFactor, const std::wstring nodeName)
+        bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind, const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, eval, spatial, expAvgFactor), 
+        return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, eval, spatial, expAvgFactor, imageLayoutKind), 
             input, scale, bias, runMean, runInvStdDev);
     }
 
