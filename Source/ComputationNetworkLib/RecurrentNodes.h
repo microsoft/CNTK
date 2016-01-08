@@ -72,8 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Shift"; }
-    private:
-    protected:
+    public:
         ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & fromOffset, int shiftDimension, const TensorShape & offsetRange, int expandDimension) :
             Base(deviceId, name), m_fromOffsetBegin(fromOffset.GetDims()),
             m_shiftDimension(shiftDimension), m_expandDimension(expandDimension),

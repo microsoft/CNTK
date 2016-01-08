@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(inT.c() == filterT.c());
             assert(outT.c() == filterT.k());
 
-            size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
+            //size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
             size_t packedInputColsPerSample = outT.w() * outT.h();
             size_t outputSizePerChannel = packedInputColsPerSample;
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
