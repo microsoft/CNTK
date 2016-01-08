@@ -12,14 +12,13 @@ DnnReLULayer(inDim, outDim, x, wScale, bValue)
 DnnBNReLULayer(inDim, outDim, x, wScale, bValue)
 {
     W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
-    b = Parameter(inDim, 1, init = fixedValue, value = bValue) 
-    sc = Parameter(inDim, 1, init = Gaussian, initValueScale = 0.01)
-    m = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
-    isd = Parameter(inDim, 1, init = fixedValue, value = 0, needGradient = false)
-    
-    bn = BatchNormalization(x, sc, b, m, isd, eval = false, spatial = false)
-    t = Times(W, bn)
-    y = RectifiedLinear(t)
+    b = Parameter(outDim, 1, init = fixedValue, value = bValue) 
+    sc = Parameter(outDim, 1, init = Gaussian, initValueScale = 0.01)
+    m = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    isd = Parameter(outDim, 1, init = fixedValue, value = 0, needGradient = false)
+    t = Times(W, x)
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false)
+    y = RectifiedLinear(bn)
 }
 
 # Fully-connected layer.
@@ -35,8 +34,8 @@ DnnLayer(inDim, outDim, x, wScale, bValue)
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
 {
     W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
-    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
-    b = Parameter(outMap, 1, init = fixedValue, value = bValue)
+    b = ImageParameter(1, 1, outMap, init = fixedValue, value = bValue, imageLayout = "cudnn")
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
     z = Plus(c, b);
     y = RectifiedLinear(z);
 }
@@ -50,7 +49,7 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
     m = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     isd = Parameter(outMap, 1, init = fixedValue, value = 0, needGradient = false)
     
-    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
-    bn = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true)
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
+    bn = BatchNormalization(c, sc, b, m, isd, eval = false, spatial = true, imageLayout = "cudnn")
     y = RectifiedLinear(bn);
 }

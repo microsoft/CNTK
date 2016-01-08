@@ -47,6 +47,7 @@ using namespace std;
         L"PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
         L"FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
         // TODO: ^^ DelayedValues no longer need to know their dimension. That is inferred in Validation.
+        L"Shift(input, fromOffsets, boundaryValue, dim=-1, offsetRanges=1, multiOffsetDim=0, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) ; fromOffset = new IntVector [ items = fromOffsets ] ; offsetRange = new SizeVector [items=    new SizeVector [ items = offsetRanges ]   ]/*plus the function args*/ ]\n"
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"

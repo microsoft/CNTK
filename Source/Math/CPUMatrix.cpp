@@ -5621,7 +5621,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma omp parallel for
                 for (int k = 0; k < (int)K; k++)
                     TensorOpIteration<ElemType, OPFN, 3, true/*vectorizable*/, -1/*no reduction*/, -1/*scalar*/>::Loop(0, array<ElemType*, 3> { pa + k, pb + k, pc + k }, 1, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-            // TODO: somehow this does not use 4-way parallelism with SSE (VS 2013), and the signedness of k (required for omp) causes an extra sign-extend
+            // TODO: According to Amit, the VS compiler is not able to vectorize into lambdas. Solution: change the lambda to take an N, or to implement the loop inside (with 1 element by default).
+            // TODO: The signedness of k (required for omp) causes an extra sign-extend.
             // TODO: OMP adds LOTS of overhead. Do we need a guard, a min size when to use it?
         }
     };
@@ -5737,6 +5738,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
                                        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
     {
+        // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
         #define CaseUnaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
                 return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2> & pp) { return Op ## oper((*(pp[0]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)

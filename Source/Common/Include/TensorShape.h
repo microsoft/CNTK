@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void Load(File& fstream, bool acceptLegacyFormat = false)
+        const TensorShape & Load(File& fstream, bool acceptLegacyFormat = false)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
             // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
@@ -232,6 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream >> m_dims[2] >> m_dims[0]; // stored in order C, W, H
             }
             InitAsNoSlice();
+            return *this;
         }
 
         // accessors
@@ -404,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_strides.resize(m_dims.size());
             for (size_t k = 0; k < m_dims.size(); k++)
                 m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
-            m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t)m_strides.back();
+            m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t)m_strides.back();   // TODO: Or should an empty shape mean it's a scalar?
         }
 
     private:
