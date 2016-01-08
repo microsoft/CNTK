@@ -353,8 +353,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
     public:
-        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
-
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
 
@@ -1144,15 +1142,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tensor variants
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(DataFor(data, fr), GetTensorShape(rank, fr));
+            TensorShape tensorShape = GetSampleLayout();
+            if (!HasMBLayout())
+                tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
+            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
+            else if (fr.IsAllFrames()) // we have an MBLayout, and for refers to the entire MB
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumCols());
+            else  // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
+            // TODO: determine SmallVector begin, end bounds first, get a narrow full shape, squeeze the dims, then return the tensor
+            return TensorView<ElemType>(DataFor(data, fr), tensorShape);
         }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Value(), rank, fr);
         }
         TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(GradientFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Gradient(), rank, fr);
         }
 
         // update the actual matrix allocation for m_value based on the node dimension
@@ -1509,7 +1516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
     // =======================================================================
 
-    struct IRecurrentNode { virtual const std::vector<int> & GetRecurrenceDirections() const = 0; };
+    struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
 
 
     // =======================================================================

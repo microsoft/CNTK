@@ -213,30 +213,6 @@ namespace Microsoft {
         return maxRank;
     }
 
-    // determine the full tensor dimension including padding and multiple samples (MBLayout)
-    // but without trailing ones (assuming they will be auto-padded by the tensor op)
-    TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
-    {
-        //GetAndValidateSampleLayout();     // no need to validate because rank comes from DetermineElementwiseTensorRank() which validates all
-        if (!HasMBLayout())
-            return GetSampleLayout().Append(GetSampleLayout().GetRank(), GetNumCols());    //  last dim is column dimension
-            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
-        else if (fr.IsAllFrames())
-        {
-            // we have an MBLayout, and for refers to the entire MB
-            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumCols());
-        }
-        //else if (fr.Sequence != SIZE_MAX)     // needs a slice and a two-dim tensor
-        //{
-        //    return GetAndValidateSampleLayout();  // .Append(rank, 1);  // no need to append ones
-        //}
-        else
-        {
-            // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
-            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumParallelSequences());
-        }
-    }
-
     // -----------------------------------------------------------------------
     // others
     // -----------------------------------------------------------------------
