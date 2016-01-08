@@ -208,6 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
+            refNet->InvalidateCompiledNetwork(); // prepare to re-compile
             refNet->CompileNetwork();
 
             // allocate memory for forward computation
