@@ -210,12 +210,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        template<class ElemType>
         class ShiftNodeState : public INodeState
         {
             Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
         };
-        typedef std::shared_ptr<ShiftNodeState<ElemType>> ShiftNodeStatePtr;
+        typedef std::shared_ptr<ShiftNodeState> ShiftNodeStatePtr;
 
         // state export/import
         // This is done with a shared_ptr. The moment state is exported, the internal state is cleared; ownership is transferred to the exporting entity.
@@ -224,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual NodeStatePtr ExportState() { return std::move(m_state); }
         virtual void ImportState(NodeStatePtr && state) override
         {
-            m_state = dynamic_pointer_cast<ShiftNodeState<ElemType>>(state);
+            m_state = dynamic_pointer_cast<ShiftNodeState>(state);
             if (state && !m_state)
                 LogicError("ImportState: Wrong state object passed (wrong type).");
         }
