@@ -148,7 +148,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
                 SecondaryIndexLocation(),
-                SecondaryIndexCount()
+                SecondaryIndexCount(),
+                NzCount()
                 );
 
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));
@@ -689,7 +690,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaMemcpy(pArray, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
 
             GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + m_elemSizeAllocated);
-            GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_elemSizeAllocated, m_format);
+            GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_nz, m_format);
 
             int blocksPerGrid = (int)ceil(1.0*numCols/ GridDim::maxThreadsPerBlock);
             cudaEvent_t done = nullptr;
@@ -1948,6 +1949,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(b,a);
     }
 
+    // This is an utility function useful for debugging issues with sparse matrices.
+    // It just checks that the CSC format indices are not corrupted / pointing to invalid memory.
     template<class ElemType>
     bool GPUSparseMatrix<ElemType>::IsValid() const
     {
@@ -1965,8 +1968,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / GridDim::maxThreadsPerBlock);
-        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
+        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexCount()) / GridDim::maxThreadsPerBlock);
+        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumNZElements(), d_res);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1974,9 +1977,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
         
         if (res[0] == 1)
+        {
             return true;
+        }
         else
+        {
+            fprintf(stderr, "GPUSparseMatrix::IsValid %d %d %d", res[0], res[1], res[2]);
             return false;
+        }
     }
 
     template<class ElemType>

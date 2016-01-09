@@ -2804,14 +2804,14 @@ __global__ void _isValid(
     else if (end > nz)
     {
         d_res[0] = -2;
-        d_res[1] = end;
-        d_res[2] = nz;
+        d_res[1] = id + 1;
+        d_res[2] = end;
     }
     else
     {
         for (int j = start; j < end; j++)  //j points to the value
         {
-            if (rowIndex[j] > rows)
+            if (rowIndex[j] >= rows)
             {
                 d_res[0] = -3;
                 d_res[1] = rowIndex[j];
@@ -2825,7 +2825,8 @@ __global__ void _isValid(
 template<class ElemType>
 __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
     GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    const int cols
+    const int cols,
+    const int nz
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -2833,6 +2834,12 @@ __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
         return;
 
     colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
+
+    if (colCSCIndex[id] > nz)
+        colCSCIndex[id] = nz;
+
+    if (id == cols - 1)
+        colCSCIndex[cols] = nz;
 }
 
 //c = alpha * op(a) * op(b) + beta*c
@@ -2973,7 +2980,7 @@ __global__ void _reshape(
         return;
 
     int currentCol = id;
-    int oldColLower = (newNumRows * currentCol) / oldNumRows;
+    int oldColLower = newNumRows / oldNumRows * currentCol;
 
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
