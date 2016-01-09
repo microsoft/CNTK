@@ -699,5 +699,4 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     }
     template<class V> /*static*/ const std::vector<typename V::value_type> & IConfigRecord::Array(const V & vec) { return static_cast<const std::vector<typename V::value_type> &>(vec); }  // use this specifically for XXXargvector
 
-
 }}} // end namespaces

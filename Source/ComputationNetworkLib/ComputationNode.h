@@ -132,12 +132,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~INodeState() {} 
     };
 
-    struct /*interface*/ IStateFulNode
+    struct /*interface*/ IStatefulNode
     {
         typedef std::shared_ptr<INodeState> NodeStatePtr;
         virtual NodeStatePtr ExportState() = 0;
-        virtual void ImportState(const NodeStatePtr& pImportedState) = 0;
+        virtual void ImportState(NodeStatePtr && state) = 0;
     };
+    typedef IStatefulNode::NodeStatePtr NodeStatePtr;
 
     // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
@@ -352,8 +353,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
         size_t DetermineElementwiseTensorRank() const;
     public:
-        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
-
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
 
@@ -444,7 +443,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
-        //MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         const MBLayoutPtr & GetMBLayout() const { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
@@ -1144,15 +1142,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tensor variants
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(DataFor(data, fr), GetTensorShape(rank, fr));
+            TensorShape tensorShape = GetSampleLayout();
+            if (!HasMBLayout())
+                tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
+            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
+            else if (fr.IsAllFrames()) // we have an MBLayout, and for refers to the entire MB
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumCols());
+            else  // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
+                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
+            // TODO: determine SmallVector begin, end bounds first, get a narrow full shape, squeeze the dims, then return the tensor
+            return TensorView<ElemType>(DataFor(data, fr), tensorShape);
         }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Value(), rank, fr);
         }
         TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(GradientFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Gradient(), rank, fr);
         }
 
         // update the actual matrix allocation for m_value based on the node dimension
@@ -1504,6 +1511,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+
+    // =======================================================================
+    // IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+    // =======================================================================
+
+    struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
 
 
     // =======================================================================

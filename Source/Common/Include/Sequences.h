@@ -748,17 +748,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!pMBLayout)
                     LogicError("DataFor: Attempting to retrieve a parallel sequence from data without layout.");
-#if 1
                 else
-                    LogicError("DataFor: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
-#else
-                // get a reshaped view that stacks all sequences into T long vectors
-                auto mat = data.ColumnSlice(0, data.GetNumCols());
-                mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
-                return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
-                // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
-                // TODO: The tensor version of this will support it.
-#endif
+                    LogicError("DataFor: Individual parallel sequences cannot be retrieved in Matrix representation. Use TensorView instead.");
             }
         }
         // FrameRange refers to a time slice -> return that
@@ -788,6 +779,82 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
         return data.ColumnSlice(columnRange.first, columnRange.second);
+    }
+
+    // -----------------------------------------------------------------------
+    // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange of a Matrix with specified number of columns with a given MBLayout
+    // -----------------------------------------------------------------------
+
+    template<class DimensionVector> // e.g. std::vector<size_t> or SmallVector<size_t>
+    static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayoutFor(const DimensionVector & shape/*of data matrix to slice*/,
+                                                                                         const FrameRange & fr/*select frame or entire batch*/,
+                                                                                         const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
+    {
+        std::pair<DimensionVector, DimensionVector> result;
+
+        // this creates a slice for the entire matrix, which we will then narrow down
+        result.first.resize(shape.size(), 0);
+        result.second = shape;
+       
+        fr; pMBLayout;
+#if 0
+        // MBLayout of data and of FrameRange must be identical pointers,
+        // or in case of broadcasting, respective parent pointers.
+        // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
+        // For those cases, use a ReconcileMBLayout node.
+        if (fr.m_pMBLayout != pMBLayout)
+        {
+            // if broadcast allowed then it is allowed to broadcast from an outer-loop value
+            // Currently, the only 'outer' loop we have is to have no layout.
+            if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
+                return std::pair<size_t, size_t>(0, numCols);
+            if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            else
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+        }
+        // if FrameRange refers to whole minibatch (map mode)
+        // or if we don't even have a layout
+        // then return the whole matrix
+        // but as a reference (e.g. it cannot be resized)
+        if (!pMBLayout || fr.IsAllFrames())
+        {
+            if (fr.m_timeOffset != 0)
+                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");
+            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
+            if (fr.seqIndex == SIZE_MAX)
+                return std::pair<size_t, size_t>(0, numCols);
+            else
+            {
+                if (!pMBLayout)
+                    LogicError("DataFor: Attempting to retrieve a parallel sequence from data without layout.");
+#if 1
+                else
+                    LogicError("DataFor: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
+#else
+                // get a reshaped view that stacks all sequences into T long vectors
+                auto mat = data.ColumnSlice(0, data.GetNumCols());
+                mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
+                return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
+                // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
+                // TODO: The tensor version of this will support it.
+#endif
+            }
+        }
+        // FrameRange refers to a time slice -> return that
+        else
+        {
+            size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
+            size_t startColumn = (fr.timeIdxInSeq + fr.m_timeOffset) * numParallelSequences;
+            if (startColumn >= numCols)
+                LogicError("DataFor: FrameRange specifies a time index that is out of range.");
+            if (fr.seqIndex == SIZE_MAX)
+                return std::pair<size_t, size_t>(startColumn, numParallelSequences);
+            else
+                return std::pair<size_t, size_t>(startColumn + fr.seqIndex, 1);
+        }
+#endif
+        return result;
     }
 
     // -----------------------------------------------------------------------

@@ -46,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t batchSize = inT.n();
             size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
-            assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c());
+            assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c()); UNUSED(packedInputRows);
 
             // GPU and 1-dimensional image
             m_gpuSparseOpt = (filterT.h() == 1 &&
@@ -104,7 +104,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
 
-                    workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    //workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
                     Mat::Multiply(filter, false, workspace, false, outputSubBatch);
                 }
             }
@@ -453,8 +454,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (engType == EngineType::Legacy)
         {
+            // REVIEW alexeyk: temp hack to allow this to work in MEL scenarios. InvalidArgument should be used instead.
             if (imageLayoutKind != ImageLayoutKind::HWC)
-                InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
+                fprintf(stderr, "WARNING: trying to use cuDNN on unsupported platform. It is safe to ignore the warning if it's produced during model editing command.\n");
+                //InvalidArgument("ConvolutionEngineFactory: ImageLayout '%s' is not compatible with the legacy convolution engine.", ToString(imageLayoutKind).c_str());
             return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>();
         }
 

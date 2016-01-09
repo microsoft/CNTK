@@ -7,7 +7,7 @@ ndlMacros = [
     ImageC = 3
     LabelDim = 1000
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     featOffs = Const(0, rows = 150528)
     featScaled = Plus(features, featOffs)
     labels = Input(LabelDim, tag = label)
@@ -42,7 +42,7 @@ DNN=[
     cMap6 = 2048
     
     conv1 = ConvBNReLULayer(featScaled, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
-    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs)
+    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
     
     rn1_1_Wproj = Parameter(cMap3, cMap1, init = fromFile, initFromFilePath = "$Proj64to256Filename$", needGradient = false)
     rn1_1 = ResNetNode3Inc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, rn1_1_Wproj)
@@ -102,7 +102,7 @@ DNN=[
     rn4_2 = ResNetNode3(rn4_1, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
     rn4_3 = ResNetNode3(rn4_2, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
 
-    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs)
+    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
 
     ol = DnnLayer(8192, labelDim, pool5, fcWScale, fcBValue)
     
