@@ -72,8 +72,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        // We don't need our output values in backprop.
-        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return gradientFromOutput; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return !gradientFromOutput; }
     };
 
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
