@@ -684,6 +684,8 @@ void terminate_this() { fprintf(stderr, "terminate_this: aborting\n"), fflush(st
 int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exceptions
 {
     set_terminate (terminate_this); // insert a termination handler to ensure stderr gets flushed before actually terminating
+    _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
+
     // Note: this does not seem to work--processes with this seem to just hang instead of terminating
     __try
     {
