@@ -591,11 +591,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"BatchNormalization"; }
     public:
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_sampleCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
+            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
         {
         }
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind) :
-            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_imageLayoutKind(imageLayoutKind), m_sampleCount(0)
+            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
         {
         }
         BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -614,7 +614,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_spatial;
             fstream << m_expAvgFactor;
             fstream << (int32_t)m_imageLayoutKind;
-            fstream << m_sampleCount;
+            fstream << m_mbCount;
         }
 
         void Load(File& fstream, size_t modelVersion) override
@@ -641,7 +641,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (verWritten >= 0x00010002)
             {
                 fstream >> m_imageLayoutKind;
-                fstream >> m_sampleCount;
+                fstream >> m_mbCount;
             }
         }
 
@@ -724,8 +724,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
             else
             {
-                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, runMean, runInvStdDev,
+                // REVIEW alexeyk: hack, use m_expAvgFactor <= 0 to compute CMA.
+                double expAvgFactor = (m_expAvgFactor > 0) ? m_expAvgFactor : (1.0 / (1.0 + m_mbCount));
+                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                     sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+                m_mbCount++;
             }
 #if NANCHECK
             sliceOutputValue.HasNan("BatchNormalization");
@@ -801,7 +804,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         struct VersionInfo
         {
             //int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
-            int32_t VerWrittenCur() const     { return 0x00010002; }   // Added m_imageLayoutKind and m_sampleCount
+            int32_t VerWrittenCur() const     { return 0x00010002; }   // Added m_imageLayoutKind and m_mbCount
             int32_t VerReadableCur() const    { return 0x00010002; }
             int32_t VerWeCanReadBack() const  { return 0x00010001; }
         };
@@ -817,8 +820,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         double m_expAvgFactor;
         // Layout (e.g. CHW).
         ImageLayoutKind m_imageLayoutKind;
-        // Sample count, used to compute cumulative moving average.
-        size_t m_sampleCount;
+        // Minibatch count, used to compute cumulative moving average.
+        size_t m_mbCount;
 
         // Stores pre-computed on forward pass mean values that are used in gradient computation.
         shared_ptr<Matrix<ElemType>> m_saveMean;
