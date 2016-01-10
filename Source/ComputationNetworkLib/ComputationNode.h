@@ -1142,16 +1142,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tensor variants
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
+            // form the actual tensor that describes the full object
+            // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
             TensorShape tensorShape = GetSampleLayout();    // TODO: Can this tensor arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
             if (!HasMBLayout())
                 tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
             // TODO: This is not nice! Instead, if no MBLayout then have sample layout explain whole matrix.
-            else if (fr.IsAllFrames()) // we have an MBLayout, and for refers to the entire MB
+            else
                 tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, GetMBLayout()->GetNumTimeSteps());
-            else  // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
-                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, 1);
-            // TODO: determine SmallVector begin, end bounds first, get a narrow full shape, squeeze the dims, then return the tensor
-            return TensorView<ElemType>(DataFor(data, fr), tensorShape);
+            // Now tensorShape fully describes the content of the Matrix object.
+
+            // determine the slice dimensions described by the FrameRange
+            // Note: These are dimensions without strides.
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+
+            // narrow the tensor
+            // Note: Tensor itself may have strides.
+            tensorShape.NarrowTo(slice);
+            return TensorView<ElemType>(data, tensorShape);
         }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
