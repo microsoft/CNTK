@@ -479,6 +479,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ret;
         }
 
+        // dimension we are iterating over; -1 means time dimension; 0 means no layout
+        int GetIterationDimension() const
+        {
+            if (!m_pMBLayout)
+                return 0;
+            else
+                return -1;  // TODO: allow user to specify other dimensions
+        }
+
         class IndexIteration    // range for range-based for over sequences
         {
             size_t m_beginIndex, m_endIndex;
@@ -795,8 +804,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // get position of time and sequence index
         // These are only valid if we have a layout.
         // In the future, the 'timeDim' will be identified by the FrameRange.
+        int iterDimParam = fr.GetIterationDimension();
+        size_t iterDim = iterDimParam > 0 ? iterDimParam - 1/*regular dimensions are specified as 1-based*/ : shape.size() + iterDimParam/*-1 for time dimension*/;
         size_t sequenceDim = shape.size() - 2;  // TODO: In case of multiple time dims, this must be adjusted.
-        size_t timeDim = sequenceDim + 1;       // TODO: Get this from the FrameRange object.
 
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
@@ -824,13 +834,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
         }
         // FrameRange refers to a time slice -> return that
-        else  if (result.second[timeDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
+        else  if (result.second[iterDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
         {
             size_t t = fr.timeIdxInSeq + fr.m_timeOffset;
-            if (t >= result.second[timeDim])
+            if (t >= result.second[iterDim])
                 LogicError("DataFor: FrameRange specifies an iteration index that is out of range.");
-            result.first[timeDim]  = t;
-            result.second[timeDim] = t + 1;
+            result.first[iterDim]  = t;
+            result.second[iterDim] = t + 1;
         }
         
         // sequence index

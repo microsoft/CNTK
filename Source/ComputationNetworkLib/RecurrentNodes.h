@@ -26,7 +26,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // ShiftNode (input, fromOffset, boundaryValue, dim=-1, numSteps=1, insertDim=0) -- delay and rolling window
+    // ShiftNode (input, fromOffset, boundaryValue, dim=-1) -- delay and rolling window
     //
     // This shifts the input by (-fromOffset) steps. In other words, output(t) will be input(t+fromOffset).
     // E.g. for fromOffset=-1, this gives the past value.
@@ -34,36 +34,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //
     // This node can be used in a recurrent loop. This requires special handling by the ComputationNetwork,
     // for both execution (sequential execution) and creation (avoiding circular references).
-    // TODO: When outside a recurrent loop and used with frame randomization, this will communicate to the reader
-    // that additional frames are needed, which will then return a frame range. TODO: This will not match
-    // the labels, which are still 1 frame. Think through which dimension this should go in.
     //
     // Values shifted in from beyond sequence boundaries will be copied from boundaryValue.
     // Normally, this is a scalar Constant(). However, it can be any node, which will be indexed from the end
-    // (e.g. for fromOffset=-1, the last frame of boundaryValue will be used). This can implement
-    // sequence-to-sequence models. Broadcasting is supported, so it can be e.g. a single output-dimension vector
+    // (e.g. for fromOffset=-1, the last frame of boundaryValue will be used). This can implement the basic
+    // sequence-to-sequence model. Broadcasting is supported, so it can be e.g. a single output-dimension vector
     // applied to all sequences.
     //
     // To delay (past value), use negative fromOffset. To access future value, use positive fromOffset.
-    //
-    // To pull in multiple offsets, use offsetRange>1. This will pull in offsetRange consecutive offsets starting
-    // with fromOffset. This implements a rolling window. A new dimension will be inserted at multiOffsetDim
-    // (default 0 means after the last sample dimension). Special considerations:
-    //  - If the boundaryValue is not wide enough, the sequence will be dropped (e.g. if you pull in 5 history frames,
-    //    but the sequence in boundaryValue only has 4 samples).
-    //  - If you feed back such an expanded output into this node in a loop, you get an inconsistency
-    //    and will eventually fail. You must pull the dimensions apart.
-    //  - If the current time step (offset 0) is included in the range (e.g. fromOffset=-1, offsetRange=3) then
-    //    this node cannot participate in a recurrence.
     //
     // By default, this shifts over the time dimension, but you can choose to shift over any
     // sample tensor dimension instead using 'dim' (-1 stands for time). This will only work, however,
     // when all involved nodes are implemented using the tensor library. Nodes implemented using
     // Matrix slices can only support iterating over time.
-    //
-    // If the boundaryValue has 0 elements, the sequence will be trimmed (frames reaching beyond the boundary
-    // are dropped). This will initially not be implemented for the time dimension (as it would require
-    // change of MBLayout).
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -74,24 +57,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         enum BoundaryMode : int     // how to fill frames at boundaries
         {
-            reachAcross = -1,       // go across the boundary: use boundaryValue. This is for recurrence.
-            duplicate = 0,          // duplicate frame at boundary, e.g. duplicate first frame. Non-recurrent mode only.
-            trim = 1                // drop frames. Non-recurrent mode only.
+            reachAcross = -1,       // go across the boundary: use boundaryValue
+            duplicate = 0           // duplicate frame at boundary, e.g. duplicate first frame. Non-recurrent mode only.
         };
-        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, int fromOffset, BoundaryMode boundaryMode, int shiftDimension, size_t numSteps, int insertedDimParam) :
-            Base(deviceId, name), m_fromOffset(fromOffset), m_numSteps(numSteps),
+        ShiftNode(DEVICEID_TYPE deviceId, const wstring & name, int fromOffset, BoundaryMode boundaryMode, int shiftDimParam) :
+            Base(deviceId, name), m_fromOffset(fromOffset),
             m_boundaryMode(boundaryMode),
-            m_shiftDimension(shiftDimension), m_insertedDimParam(insertedDimParam),
-            m_insertExpandShapeAt(SIZE_MAX/*uninitialized at this point*/)
+            m_shiftDimParam(shiftDimParam),
+            m_shiftDim(SIZE_MAX)
         {
             CreateMatrixIfNull(m_value);
             SetDims(TensorShape(), 0);  // empty for now
         }
         ShiftNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ShiftNode(deviceId, name, 1, BoundaryMode::reachAcross, -1, 1, 0)
+            ShiftNode(deviceId, name, 1, BoundaryMode::reachAcross, -1)
         { }
         ShiftNode(const ScriptableObjects::IConfigRecordPtr configp) :
-            ShiftNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fromOffset"), (BoundaryMode)(int)configp->Get(L"boundaryMode"), configp->Get(L"dim"), configp->Get(L"numSteps"), configp->Get(L"insertedDim"))
+            ShiftNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fromOffset"), (BoundaryMode)(int)configp->Get(L"boundaryMode"), configp->Get(L"dim"))
         {
             // We do NOT attach the inputs, as we cannot resolve the main input without causing a circular reference.
             // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
@@ -111,13 +93,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Save(File& fstream) const
         {
             Base::Save(fstream);
-            fstream << m_fromOffset << m_numSteps << m_boundaryMode << m_shiftDimension << m_insertedDimParam;
+            fstream << m_fromOffset << m_boundaryMode << m_shiftDimParam;
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
         {
             Base::Load(fstream, modelVersion);
-            fstream >> m_fromOffset >> m_numSteps >> m_boundaryMode >> m_shiftDimension >> m_insertedDimParam;
+            fstream >> m_fromOffset >> m_boundaryMode >> m_shiftDimParam;
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
@@ -133,6 +115,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::BeginForwardProp();
 
+            // TODO: If we have a truncated-BPTT state then verify that the sequence indices match with m_state->m_sequences, and the tensor dimensions.
+
             // in case of trimming, narrow the layout
             // We actually do not drop content, only reduce the range of sequences.
             // This is meant to optimize for the case where we have multiple sequences concatenated while trimming a small amount only.
@@ -142,25 +126,119 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::EndForwardProp();
 
-            // In BPTT, we carry over left-to-right state across minibatches.
+            // In truncated BPTT, we carry over left-to-right state across minibatches.
             // The necessary frames are stored in m_state->m_delayedValue.
 
             // Only if layout has anything exceeding the MB.
         }
 
-        // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
+        typedef std::pair<SmallVector<int>, SmallVector<int>> SliceBounds;  // slice bounds for dimension k are [first[k], second[k]) (think STL begin/end)
+
+        TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, TensorShape shape/*original shape of 'data'*/, SliceBounds slice)
+        {
+            shape.NarrowTo(slice);
+            return TensorView<ElemType>(data, shape);
+        }
+
+        // shift one dimension of SliceBounds by an offset (we need this all the time below)
+        SliceBounds ShiftDim(const SliceBounds & in, int shiftBy)
+        {
+            SliceBounds result = in;
+            // shift the dimension
+            result.first [m_shiftDim] += shiftBy;
+            result.second[m_shiftDim] += shiftBy;
+            return result;
+        }
+
         virtual void ForwardProp(const FrameRange & fr) override
         {
+            if (fr.GetIterationDimension() != m_shiftDimParam)
+                LogicError("ShiftNode::ForwardProp(): FrameRange not iterating over user-specified dimension.");
+
             // STEP 1: whole-sale copy a shifted version of the input to the output
             //  - consider the saved parts from the last minibatch as part of the input at dimensions beyond the bounds
-            //  - ignore boundary conditions for now
+            //  - ignore boundary conditions at this point (will be fixed subsequently)
+            // This will copy a little too much in case of multiple concatenated sequences within a single parallel sequence.
 
-            // get the tensors without shift
+            // get the tensor bounds we operate on (without shift)
             size_t rank = DetermineElementwiseTensorRank();
-            auto result = ValueTensorFor(rank, fr);
-            auto input = Input(0)->ValueTensorFor(rank, fr);
+            auto outShape =           GetTensorShape(rank);                 // bounds of the Value(), including sequence and time dimensions
+            auto inShape  = Input(0)->GetTensorShape(rank);                 // bounds of the Value(), including sequence and time dimensions
+            auto sliceS = TensorSliceWithMBLayoutFor(outShape.GetDims(), fr, GetMBLayout());
+            SliceBounds slice;                          // [slice.first[k], slice.second[k]) are the bounds of our slice
+            slice.first.append(sliceS.first.begin(), sliceS.first.end());   // make slice bounds signed integers
+            slice.second.append(sliceS.second.begin(), sliceS.second.end());
 
-            // shift the dimension in the input
+            // process the range of offsets
+            auto outSlice = slice;
+            auto inSlice  = ShiftDim(slice, m_fromOffset);
+            // this may now have bounds outside
+            // E.g.: FrameRange = [0,99), offset = -2  ->  [-2,97); or FrameRange = 2, offset = -4  ->  [-2,-1)
+            // In that case copy from our history if available (if not, then that's a boundary condition that will be fixed flater).
+            const int T = (int)outShape[m_shiftDim];
+            if (inSlice.first[m_shiftDim] < 0)
+            {
+                if (m_state && !m_state->empty())           // truncated BPTT case
+                {
+                    // determine range to get from state
+                    SliceBounds inSlice2 = inSlice;
+                    if (inSlice2.second[m_shiftDim] > 0)
+                        inSlice2.second[m_shiftDim] = 0;   // trim end; e.g. [-2,97) -> [-2,0), but [-2,-1) remains
+                    // now inSlice2 is where we should copy from, with indices completely out of bounds
+
+                    // map to dimensions of our saved state
+                    SliceBounds inSlice2ForState = ShiftDim(inSlice2, m_state->m_shape[m_shiftDim]);
+                    // E.g. for offset = -4, m_state will be 4 elements, so [-2,0) -> [2,4), and [-2,-1) -> [2,3)
+
+                    // map to target dimensions
+                    SliceBounds outSlice2 = ShiftDim(inSlice2, -m_fromOffset);
+                    assert(inSlice2ForState == outSlice2);     // (in case of negative bounds, they are the same)
+
+                    // and copy
+                    auto from = DataTensorFor(m_state->m_delayedValue, m_state->m_shape,  inSlice2ForState);
+                    auto to   = DataTensorFor(                Value(),         outShape, outSlice2);
+                    to.AssignCopyOf(from);
+                }
+                // else: no truncated BPTT means we must have a proper boundary. So don't write those values here, they will be initialized with boundary values below.
+                // and trim main (if 'from' is entirely outside, such as in the common single-frame case, we get begin >= end)
+                inSlice.first[m_shiftDim] = 0;
+                outSlice;   // TODO: shift
+            }
+            else if (inSlice.second[m_shiftDim] > T)
+            {
+                if (m_state && !m_state->empty())
+                {
+                    // determine range to get from state
+                    SliceBounds inSlice2 = inSlice;
+                    if (inSlice2.first[m_shiftDim] < T)
+                        inSlice2.first[m_shiftDim] = T;     // trim end; e.g. [2,102) -> [100,102), but [101,102) remains
+                    // now inSlice2 is where we should copy from, with indices completely out of bounds
+
+                    // map to dimensions of our saved state
+                    SliceBounds inSlice2ForState = ShiftDim(inSlice2, -T);
+                    // E.g. for offset = 4, m_state will be 4 elements, so [100,102) -> [0,2), and [101,102) -> [1,2)
+
+                    // map to target dimensions
+                    SliceBounds outSlice2 = ShiftDim(inSlice2, T-m_fromOffset);
+                    // E.g. [0,2) -> [96,98), and [1,2) -> [97,98)
+
+                    // and copy
+                    auto from = DataTensorFor(m_state->m_delayedValue, m_state->m_shape,  inSlice2ForState);
+                    auto to   = DataTensorFor(                Value(),         outShape, outSlice2);
+                    to.AssignCopyOf(from);
+                }
+                // and trim main (if 'from' is entirely outside, such as in the common single-frame case, we get begin >= end)
+                inSlice.second[m_shiftDim] = T;
+                outSlice;   // TODO: shift
+            }
+            // now copy what remains (the majority of data is copied here)
+            // This is done such that input can be a tensor with strides.
+            if (inSlice.second[m_shiftDim] > inSlice.first[m_shiftDim])
+            {
+                auto from = DataTensorFor(Input(0)->Value(),  inShape,  inSlice);
+                auto to   = DataTensorFor(          Value(), outShape, outSlice);
+                to.AssignCopyOf(from);
+            }
 
             // STEP 2: fix up the boundary conditions
             //  - fill in xxx
@@ -177,46 +255,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_inputs.size() == 2);
             ComputationNodeBase::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass)
-                sin(1.0f);
-
             // MBLayout is just inherited
             m_pMBLayout = Input(0)->GetMBLayout();
             if (isFinalValidationPass && !m_pMBLayout)
                 InvalidArgument("%ls %ls operation must operate on data (must have an MB Layout).", NodeName().c_str(), OperationName().c_str());
 
-            // determine final sample layout
-            auto inputSampleLayout = Input(0)->GetSampleLayout();
-            auto inputDims = inputSampleLayout.GetDims();
-            if (m_insertedDimParam < 0)
-                InvalidArgument("%ls %ls operation: Specified insertion location %d refers to a time dimension, but this is not allowed.", 
-                                NodeName().c_str(), OperationName().c_str(), m_insertedDimParam);
-            m_insertExpandShapeAt = m_numSteps > 1 ? 0 : (m_insertedDimParam > 0 ? m_insertedDimParam - 1 : inputDims.size());
-            if (m_insertExpandShapeAt > inputDims.size())
-                if (isFinalValidationPass)
-                    InvalidArgument("%ls %ls operation: Specified insertion location %d beyond end of input sample layout [%s].",
-                                    NodeName().c_str(), OperationName().c_str(), m_insertedDimParam, string(inputSampleLayout).c_str());
-                else
-                    m_insertExpandShapeAt = inputDims.size();   // this may be an error, but we want to catch that only in the final pass
-            SmallVector<size_t> dims;
-            if (m_numSteps > 1 && inputDims.size() + 1 > dims.capacity())
-                InvalidArgument("%ls %ls operation: Too many dimensions. Did you feed back output of this node without stripping the extra dimensions?",
-                                NodeName().c_str(), OperationName().c_str());
-            dims.append(inputDims.begin(), inputDims.begin() + m_insertExpandShapeAt);
-            if (m_numSteps > 1)             // insert the new dimension if we expand into more than one step
-                dims.push_back(m_numSteps);
-            dims.append(inputDims.begin() + m_insertExpandShapeAt, inputDims.end());
-            auto sampleLayout = TensorShape(dims);
+            // as is the sample layout
+            SetDims(Input(0));
 
-            SetDims(sampleLayout, 0);
+            // determine the dimension that is to be shifted (convert user-specified as a zero-based index)
+            if (isFinalValidationPass)
+            {
+                size_t rank = DetermineElementwiseTensorRank();
+                auto valueShape = GetTensorShape(rank);                         // bounds of the Value()
+                m_shiftDim = m_shiftDimParam > 0 ? m_shiftDimParam - 1/*regular dimensions are specified as 1-based*/ : valueShape.size() + m_shiftDimParam/*-1 for time dimension*/;
+            }
         }
 
         // special interface for use by loop detection
         virtual int /*IRecurrentNode::*/GetRecurrenceSteppingDirection() const override
         {
-            if (m_boundaryMode != BoundaryMode::reachAcross)
+            if (m_boundaryMode != BoundaryMode::reachAcross)    // duplicating boundary frames cannot be done with recurrence
                 return 0;
-            else if (m_fromOffset + (int)m_numSteps <= 0)
+            else if (m_fromOffset < 0)
                 return +1;
             else if (m_fromOffset > 0)
                 return -1;
@@ -231,20 +292,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto node = dynamic_pointer_cast<ShiftNode<ElemType>>(nodeP);
                 node->m_fromOffset          = m_fromOffset;
-                node->m_numSteps            = m_numSteps;
                 node->m_boundaryMode        = m_boundaryMode;
-                node->m_shiftDimension      = m_shiftDimension;
-                node->m_insertedDimParam    = m_insertedDimParam;
-                node->m_insertExpandShapeAt = m_insertExpandShapeAt;
+                node->m_shiftDimParam       = m_shiftDimParam;
+                node->m_shiftDim = m_shiftDim;
                 node->m_state               = m_state;
             }
         }
 
         class ShiftNodeState : public INodeState
         {
-            Matrix<ElemType> m_delayedValue;            // saves the activation of the previous step that this node points to
-            vector<MBLayout::SequenceInfo> m_delayedSequences;    // and associated sequence info. This is only used for consistency checking (it must match).
+        public:
+            Matrix<ElemType> m_delayedValue;                    // saves the activation of the previous step that this node points to
+            TensorShape m_shape;                                // tensor shape that describes m_delayedValue
+            vector<MBLayout::SequenceInfo> m_delayedSequences;  // and associated sequence info. This is only used for consistency checking (it must match).
             ShiftNodeState(DEVICEID_TYPE deviceId) : m_delayedValue(deviceId) { }
+            bool empty() const { return m_delayedSequences.empty(); }
         };
         typedef std::shared_ptr<ShiftNodeState> ShiftNodeStatePtr;
 
@@ -261,18 +323,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         // parameters remembered from construction
-        int m_fromOffset;                      // offset to pull from
-        int m_numSteps;                             // offset range
-        BoundaryMode m_boundaryMode;                // how to fill at the boundary (reach across, duplicate, or trim)
-        int m_shiftDimension;                       // dimension to shift (default: time)
-        int m_insertedDimParam;                     // in case of multiple steps, this is where a new dimension will be inserted
+        int m_fromOffset;                       // offset to pull from
+        BoundaryMode m_boundaryMode;            // how to fill at the boundary (reach across or duplicate)
+        int m_shiftDimParam;                    // dimension to shift (default: time)
 
-        // derived params set up in Validate()
-        size_t m_insertExpandShapeAt;               // at which dimension to insert (internal 0-based index)
+        size_t m_shiftDim;                      // m_shiftDimParam matvched to the real tensor index
 
-        ShiftNodeStatePtr m_state;                  // saves the activation of the previous step that this node points to
+        ShiftNodeStatePtr m_state;              // saves the activation of the previous step that this node points to
 
-        function<void()> m_attachInputsFn;          // for late expansion of inputs (scripting)
+        function<void()> m_attachInputsFn;      // for late expansion of inputs (scripting)
     };
 
     // -----------------------------------------------------------------------
@@ -333,7 +392,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - ranges of neighbor frames as a secondary tensor dimension (i.e. can be used to implement a rolling window)
     //  - full support/efficiency of non-recurrent use (in which case the range can be from negative to positive, e.g. a symmetric rolling window)
     //  - denoting which tensor dimension to loop over (this may not be completed, but I will plant a seed)
-    //  - support for Yongqiang’s sub-minibatching with BPTT (export/import state)
+    //  - support for Yongqiang’s sub-minibatching with truncated BPTT (export/import state)
     //  - more efficient storage of carried-over state (only store the needed frames, not a full copy of the previous MB as currently; which will on the other hand also allow windows that reach back beyond a minibatch)
     // -----------------------------------------------------------------------
 
@@ -486,7 +545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EndForwardProp() override        // called after last iteration step of ForwardProp()
         {
-            // In BPTT, we carry over left-to-right state across minibatches.
+            // In truncated BPTT, we carry over left-to-right state across minibatches.
             // It is kept in m_delayedValue, m_delayedActivationMBLayout.
             // This could be optimized as follows:
             //  - only keep the required number of frames (m_timeStep)

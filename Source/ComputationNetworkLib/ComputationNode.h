@@ -348,9 +348,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
         bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }      // meaning does it have a layout that is not just a vector
+        TensorShape GetTensorShape(size_t rank) const;                              // form the actual tensor that describes the full object
     protected:
         size_t DetermineElementwiseTensorRank() const;                              // determine tensor rank when considering all inputs with padding
-        TensorShape GetTensorShape(size_t rank) const;                              // form the actual tensor that describes the full object
         TensorShape GetTensorSliceFor(size_t rank, const FrameRange & fr) const;    // form tensor shape of the slice referenced by FrameRange
     public:
         // access to element(0,0) without having to type-cast
