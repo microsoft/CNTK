@@ -16,6 +16,9 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "CompositeComputationNodes.h"
+#ifndef ENABLE_TENSORVIEW
+#include "EsotericNodes.h"  // non-tensor versions have been moved here
+#endif
 
 #pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
 
