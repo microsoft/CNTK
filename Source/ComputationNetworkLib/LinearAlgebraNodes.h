@@ -44,7 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
 #ifdef ENABLE_TENSORVIEW
-            static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUSBP#\n"); }
+            //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUSBP#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient      =                    GradientTensorFor(rank, fr);
             auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -124,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
 #ifdef ENABLE_TENSORVIEW
-            static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
+            //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -267,7 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
 #ifdef ENABLE_TENSORVIEW
-            static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#\n"); }
+            //static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -638,7 +638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
         {
 #ifdef ENABLE_TENSORVIEW
-            static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#\n"); }
+            //static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#\n"); }
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);
             auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
