@@ -26,6 +26,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifdef ENABLE_TENSORVIEW
+
     // -----------------------------------------------------------------------
     // PlusNode (summand1, summand2)
     // -----------------------------------------------------------------------
@@ -111,6 +113,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class MinusNode<float>; 
     template class MinusNode<double>;
+
+#endif // ENABLE_TENSORVIEW
 
     // -----------------------------------------------------------------------
     // NegateNode (input)
@@ -396,6 +400,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TransposeTimesNode<float>;
     template class TransposeTimesNode<double>;
 
+#ifdef ENABLE_TENSORVIEW
+
     // -----------------------------------------------------------------------
     // ElementTimesNode (factor1, factor2)
     //
@@ -444,6 +450,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
+
+#endif // ENABLE_TENSORVIEW
 
     // -----------------------------------------------------------------------
     // DiagTimesNode (vector representing the diagonal of a square matrix, data)
