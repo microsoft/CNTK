@@ -690,7 +690,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaMemcpy(pArray, BufferPointer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
 
             GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + m_elemSizeAllocated);
-            GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_nz, m_format);
+            GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, m_elemSizeAllocated, m_format);
 
             int blocksPerGrid = (int)ceil(1.0*numCols/ GridDim::maxThreadsPerBlock);
             cudaEvent_t done = nullptr;

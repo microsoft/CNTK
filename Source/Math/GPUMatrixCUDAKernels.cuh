@@ -2788,24 +2788,29 @@ __global__ void _isValid(
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= cols)
+    if (id >= cols || d_res[0] <= 0)
         return;
 
     int start = colCSCIndex[id];
     int end = colCSCIndex[id + 1];
-    d_res[0] = 1;
 
     if (start > end)
     {
-        d_res[0] = -1;
-        d_res[1] = start;
-        d_res[2] = end;
+        if (d_res[0] > 0)
+        {
+            d_res[0] = -1;
+            d_res[1] = start;
+            d_res[2] = end;
+        }
     }
     else if (end > nz)
     {
-        d_res[0] = -2;
-        d_res[1] = id + 1;
-        d_res[2] = end;
+        if (d_res[0] > 0)
+        {
+            d_res[0] = -2;
+            d_res[1] = id + 1;
+            d_res[2] = end;
+        }
     }
     else
     {
@@ -2813,10 +2818,23 @@ __global__ void _isValid(
         {
             if (rowIndex[j] >= rows)
             {
-                d_res[0] = -3;
-                d_res[1] = rowIndex[j];
-                d_res[2] = rows;
-                break;
+                if (d_res[0] > 0)
+                {
+                    d_res[0] = -3;
+                    d_res[1] = j;
+                    d_res[2] = rowIndex[j];
+                    break;
+                }
+            }
+            if (j > start && rowIndex[j] < rowIndex[j - 1])
+            {
+                if (d_res[0] > 0)
+                {
+                    d_res[0] = -4;
+                    d_res[1] = j;
+                    d_res[2] = id;
+                    break;
+                }
             }
         }
     }
@@ -2834,9 +2852,6 @@ __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
         return;
 
     colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
-
-    if (colCSCIndex[id] > nz)
-        colCSCIndex[id] = nz;
 
     if (id == cols - 1)
         colCSCIndex[cols] = nz;
@@ -2965,10 +2980,10 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
 
 template<class ElemType>
 __global__ void _reshape(
-    int oldNumRows,                             // old row count
-    int oldNumCols,                             // old col count
-    int newNumRows,                             // new row count
-    int newNumCols,                             // new col count
+    const int oldNumRows,                       // old row count
+    const int oldNumCols,                       // old col count
+    const int newNumRows,                       // new row count
+    const int newNumCols,                       // new col count
     const GPUSPARSE_INDEX_TYPE* oldRowIndex,    // old row index array
     const GPUSPARSE_INDEX_TYPE* oldColumnIndex, // old column index array
     GPUSPARSE_INDEX_TYPE* newRowIndex,          // new row index array

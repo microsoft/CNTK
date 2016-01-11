@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, srcGradT.w(), 1, smallBatchSize * srcGradT.h(), srcGradT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
 
                         filter.Reshape(srcGradT.c() * filterT.w(), inT.c());
-                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize, convDesc.wStride(), convDesc.padding(), false);
+                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize * inT.h(), convDesc.wStride(), convDesc.padding(), false);
                         filter.Reshape(srcGradT.c(), inT.c() * filterT.w());
                     }
                     else
