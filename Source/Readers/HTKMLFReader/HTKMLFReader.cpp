@@ -264,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     expand_wildcards(thisLattice(L"numLatTocFile"), paths);
                     latticetocs.first.insert(latticetocs.first.end(), paths.begin(), paths.end());
                 }
-                RootPathInLatticeTocs = thisLattice(L"prefixPathInToc",L"");
+                RootPathInLatticeTocs =(wstring) thisLattice(L"prefixPathInToc",L"");
             }
 
             //get HMM related file names
@@ -955,7 +955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 {
                                     size_t framenum = m_numFramesToProcess[i];
                                     fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
-                                        framenum, m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
+                                        (int)framenum, (int)m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
                                     ReNewBufferForMultiIO(i);
                                     needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i]; 
                                 }
@@ -1006,7 +1006,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     // the filled number of frames is inconsistent with the number frames in lattices (though it rarely occurs)
                                     // This is just a stopgap, to be removed after the bugs are found and fixed
                                     fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
-                                        framenum, m_latticeBufferMultiUtt[src]->getnumframes(), m_latticeBufferMultiUtt[src]->getkey().c_str());
+                                        (int)framenum, (int)m_latticeBufferMultiUtt[src]->getnumframes(), m_latticeBufferMultiUtt[src]->getkey().c_str());
                                     src++;
                                     continue;
                                 }
