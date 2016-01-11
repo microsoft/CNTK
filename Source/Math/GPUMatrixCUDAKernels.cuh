@@ -2995,7 +2995,7 @@ __global__ void _reshape(
         return;
 
     int currentCol = id;
-    int oldColLower = newNumRows / oldNumRows * currentCol;
+    int oldColLower = (newNumRows * currentCol) / oldNumRows;
 
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
