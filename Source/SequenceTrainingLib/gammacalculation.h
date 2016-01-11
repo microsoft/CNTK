@@ -19,9 +19,9 @@ namespace msra { namespace lattices {
         GammaCalculation() : cpumode(false)
         {
             initialmark = false;
-            lmf = 14.0f; // Note that 9 was best for Fisher  --these should best be configurable
+            lmf = 7.0f; // Note that 9 was best for Fisher  --these should best be configurable
             wp = 0.0f;
-            amf = 14.0f;
+            amf = 7.0f;
             boostmmifactor = 0.0f;
             seqsMBRmode = false;
         }
