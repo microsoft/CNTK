@@ -384,29 +384,6 @@ $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 ########################################
 
 ifdef KALDI_PATH
-KALDIREADER_SRC = \
-	$(SOURCEDIR)/Readers/KaldiReader/DataReader.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/DataWriter.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/KaldiReader/HTKMLFWriter.cpp \
-
-KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
-
-KALDIREADER:=$(LIBDIR)/KaldiReader.so
-#ALL+=$(KALDIREADER)
-#SRC+=$(KALDIREADER_SRC)
-
-$(KALDIREADER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
-
-#KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
-#ALL+=$(KALDIWRITER)
-
-$(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
-
 
 KALDI2READER_SRC = \
 	$(SOURCEDIR)/Readers/Kaldi2Reader/DataReader.cpp \
