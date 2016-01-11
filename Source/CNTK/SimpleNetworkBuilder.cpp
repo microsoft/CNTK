@@ -16,6 +16,9 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "CompositeComputationNodes.h"
+#ifndef ENABLE_TENSORVIEW
+#include "EsotericNodes.h"  // non-tensor versions have been moved here
+#endif
 
 #pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
 
@@ -2617,5 +2620,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SimpleNetworkBuilder<float>;
     template class SimpleNetworkBuilder<double>;
+
+    // -----------------------------------------------------------------------
+    // and some helpers
+    // -----------------------------------------------------------------------
+
+    TrainingCriterion ParseTrainingCriterionString(wstring s)
+    {
+        if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
+            return TrainingCriterion::CrossEntropyWithSoftmax;
+        if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
+            return TrainingCriterion::SequenceWithSoftmax;
+        else if (!_wcsicmp(s.c_str(), L"squareError"))
+            return TrainingCriterion::SquareError;
+        else if (!_wcsicmp(s.c_str(), L"logistic"))
+            return TrainingCriterion::Logistic;
+        else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode"/*spelling error, deprecated*/))
+            return TrainingCriterion::NCECrossEntropyWithSoftmax;
+        else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+            LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
+        return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+    }
+
+    EvalCriterion ParseEvalCriterionString(wstring s)
+    {
+        if (!_wcsicmp(s.c_str(), L"errorPrediction"))
+            return EvalCriterion::ErrorPrediction;
+        else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
+            return EvalCriterion::CrossEntropyWithSoftmax;
+        else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
+            return EvalCriterion::SequenceWithSoftmax;
+        else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))
+            return EvalCriterion::ClassCrossEntropyWithSoftmax;
+        else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode"/*spelling error, deprecated*/))
+            return EvalCriterion::NCECrossEntropyWithSoftmax;
+        else if (!_wcsicmp(s.c_str(), L"logistic"))
+            return EvalCriterion::Logistic;
+        else if (!!_wcsicmp(s.c_str(), L"squareError"))
+            LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
+        return EvalCriterion::SquareError;
+    }
 
 }}}

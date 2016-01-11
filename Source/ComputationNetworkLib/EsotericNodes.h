@@ -20,6 +20,287 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifndef ENABLE_BROADCASTING_ELEMENTTIMES
     // -----------------------------------------------------------------------
+    // PlusNode (summand1, summand2)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class PlusNode : public BinaryElementWiseNode<ElemType>
+    {
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Plus"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(PlusNode);
+        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            Matrix<ElemType> gradientValues = GradientFor(fr);
+            Matrix<ElemType> functionValues = ValueFor(fr);
+            Matrix<ElemType> inputGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
+
+#if DUMPOUTPUT
+            functionValues.Print("PlusNode");
+#endif
+            size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
+            size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
+#if DUMPOUTPUT
+            fprintf(stderr, "input dimensions %lld x %lld,  this node dimensions %lld x %lld\n", rowsc, colsc, rowsp, colsp);
+            gradientValues.Print("Gradient-in");
+            inputGradientValues.Print("child Gradient-in/out");
+#endif
+
+            if (colsc == colsp && rowsc == rowsp)                   // matching dimensions  --this may also trigger for column vector added to a frame, if fr denotes a single frame
+            {
+                // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
+                inputGradientValues += gradientValues;
+            }
+            else if (colsc == 1 && rowsc == 1)                      // child is a scalar
+            {
+                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
+                inputGradientValues += gradientValues.SumOfElements();
+            }
+            else if (colsc == 1 && colsp != 1)                      // child is a broadcasting column vector
+            {
+                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
+                // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
+                // BUGBUG: This is not composable. For example, MinusNode does not allow this.
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
+                    convNode->BackwardBias(gradientValues, inputGradientValues);
+                else
+                {
+                    size_t colspExpand = rowsp*colsp / rowsc;
+                    Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
+                }
+            }
+            else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
+            {
+                Matrix<ElemType>::MultiplyAndAdd(ConstOnes(1, rowsp, functionValues.GetDeviceId()), false, gradientValues, false, inputGradientValues);
+            }
+            else if (colsc != 1 && colsp % colsc == 0)
+            {
+                // the children matrix is [a b] and the parent considers it as [a a a b b b]
+                // Note: There is no need to mask gaps here because this operation is only allowed on non-MBLayout inputs
+                size_t ratio = colsp / colsc; 
+                for (size_t i = 0; i < colsc; i++)
+                {
+                    size_t colspExpand = rowsp*colsp / rowsc / colsc;
+                    Matrix<ElemType> tmp = gradientValues.ColumnSlice(i * ratio, ratio);
+                    tmp.Reshape(rowsc, colspExpand);
+                    Matrix<ElemType> res = inputGradientValues.ColumnSlice(i, 1);
+                    Matrix<ElemType>::MultiplyAndAdd(tmp, false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, res);
+                    inputGradientValues.ColumnSlice(i, 1).SetValue(res);
+                }
+            }
+            else
+                RuntimeError("Plus partial: unexpected condition.");
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
+        {
+            Matrix<ElemType> functionValues = ValueFor(fr);
+            Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
+            Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
+            // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
+
+            size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
+            size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
+
+            if ((rows0 == rows1 && cols0 == cols1/*matching dimensions*/) || ((rows0 == 1 || rows1 == 1)/*one is a broadcasting row vector*/ && cols0 == cols1))
+            {
+                functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1);
+            }
+            else if (cols0 == 1 && rows1 % rows0 == 0 || cols1 == 1 && rows0 % rows1 == 0) // one is col vec with divisable rows, including scalar   --allowing divisable rows can be useful for images
+            {
+                // REVIEW alexeyk: this hack is required to handle bias in convolution node which may
+                // use a format (e.g. NCHW) where bias addition cannot be represented as adding column/row vector to matrix.
+                // Bias does NOT have to be a vector of size equal to number of output feature map (though it's a common case).
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_inputs[1])) != nullptr)
+                {
+                    convNode->AddBias(cols0 == 1 ? inputFunctionValues1 : inputFunctionValues0, 
+                        cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1, functionValues);
+                }
+                else
+                {
+                    // None of the input nodes are convolutional.
+                    if (cols0 == 1)
+                    {
+                        functionValues.Reshape(rows0, rows1 * cols1 / rows0);
+                        functionValues.AssignSumOf(inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0), inputFunctionValues0);
+                    }
+                    else
+                    {
+                        functionValues.Reshape(rows1, rows0 * cols0 / rows1);
+                        functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
+                    }
+                }
+                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
+            }
+            else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  // first summand is a matrix with number of columns that is a multiple of the column number of the second matrix
+            {
+                if (m_pMBLayout)
+                    InvalidArgument("%ls %ls operation applied to mismatching number of columns when columns are samples of a minibatch", NodeName().c_str(), OperationName().c_str());
+                // the children matrix is [a b] and the parent considers it as [a a a b b b]
+                // This can be useful for dealing with images.
+                Matrix<ElemType> tmpMat(inputFunctionValues1.GetDeviceId());
+                size_t ratio = cols0 / cols1;
+                // TODO: Why is this different from MinusNode?
+                for (size_t i = 0; i < cols1; i++)
+                {
+                    tmpMat = Matrix<ElemType>::RepMat(inputFunctionValues1.ColumnSlice(i, 1), 1, ratio);
+                    functionValues.ColumnSlice(i*ratio, ratio).SetValue(tmpMat + inputFunctionValues0.ColumnSlice(i * ratio, ratio)); 
+                }
+            }
+            else
+                LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+#if DUMPOUTPUT
+            functionValues.Print("PlusNode");
+#endif
+        }
+    };
+
+    template class PlusNode<float>; 
+    template class PlusNode<double>;
+
+    // -----------------------------------------------------------------------
+    // MinusNode (minuend, subtrahend)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class MinusNode : public BinaryElementWiseNode<ElemType>
+    {
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+        static const std::wstring TypeName() { return L"Minus"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(MinusNode);
+        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
+            Matrix<ElemType> gradientValues = GradientFor(fr);
+
+            Matrix<ElemType> childGradientValues = Input(inputIndex)->GradientFor(fr.AllowBroadcast());
+
+            size_t rowsc = Input(inputIndex)->GetNumRows(), colsc = Input(inputIndex)->GetNumColsFor(fr.AllowBroadcast());
+            size_t rowsp = this->GetNumRows(), colsp = this->GetNumColsFor(fr);
+
+            if (colsc == colsp && rowsc == rowsp)                   // matching dimensions
+            {
+                // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
+                if (sign > 0)
+                    childGradientValues += gradientValues;
+                else
+                    childGradientValues -= gradientValues;
+            }
+            else if (colsc == 1 && rowsc == 1)                      // child is a scalar (1 x 1)
+            {
+                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
+                if (sign > 0)
+                    childGradientValues += gradientValues.SumOfElements();
+                else
+                    childGradientValues -= gradientValues.SumOfElements();
+            }
+            else if (colsc == 1 && colsp != 1)                      // child is broadcasting column vector
+            {
+                size_t colspExpand = rowsp * colsp / rowsc;
+                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, Value().GetDeviceId()), false, 1, childGradientValues);
+            }
+            else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
+            {
+                Matrix<ElemType>::MultiplyAndWeightedAdd(sign, ConstOnes(1, rowsp, Value().GetDeviceId()), false, gradientValues, false, 1, childGradientValues);
+            }
+            else
+                LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+        }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            Matrix<ElemType> functionValues = ValueFor(fr);
+            Matrix<ElemType> inputFunctionValues0 = Input(0)->ValueFor(fr.AllowBroadcast());
+            Matrix<ElemType> inputFunctionValues1 = Input(1)->ValueFor(fr.AllowBroadcast());
+
+            size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
+            size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
+            functionValues.VerifySize(max(rows0, rows1), max(cols0,cols1));
+
+            if ((rows0 == rows1 && cols0 == cols1/*match*/) || ((rows0 == 1 || rows1 == 1)/*one is a broadcasting row vector*/ && cols0 == cols1))
+            {
+                functionValues.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
+            }
+            else if (cols0 == 1 && rows1 % rows0 == 0)  // one is col vec with divisable rows, including scalar
+            {
+                functionValues.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
+                functionValues.Reshape(max(rows0, rows1), max(cols0,cols1));
+            }
+            else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
+            {
+                functionValues.AssignDifferenceOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
+                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
+            }
+            else
+                LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
+        }
+    };
+
+    template class MinusNode<float>; 
+    template class MinusNode<double>;
+
+    // -----------------------------------------------------------------------
+    // ElementTimesNode (factor1, factor2)
+    //
+    // This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ElementTimesNode : public BinaryElementWiseNode<ElemType>
+    {
+        typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+        static const std::wstring TypeName() { return L"ElementTimes"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(ElementTimesNode);
+        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            Matrix<ElemType> sliceInput0Grad = Input(inputIndex)->GradientFor(fr);
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1-inputIndex)->ValueFor(fr);
+
+            // depending on inputIndex, all the input variables change meaning
+            // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
+            // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
+            sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceInput1Value);
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return true; }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override  
+        {
+            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            //ForwardPropS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
+            sliceOutputValue.AssignElementProductOf(sliceInput0Value, sliceInput1Value);
+        }
+    };
+
+    template class ElementTimesNode<float>; 
+    template class ElementTimesNode<double>;
+
+    // -----------------------------------------------------------------------
     // ScaleNode (scalar scaling factor, matrix)
     //
     // Identical to ElementTimesNode with tensor lib (broadcasting). Can be removed.

@@ -69,8 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SequenceWithSoftmax
     };
 
-    extern TrainingCriterion ParseTrainingCriterionString(wstring s);
-    extern EvalCriterion ParseEvalCriterionString(wstring s);
+    TrainingCriterion ParseTrainingCriterionString(wstring s);
+    EvalCriterion ParseEvalCriterionString(wstring s);
 
     template<class ElemType>
     class SimpleNetworkBuilder

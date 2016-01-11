@@ -347,11 +347,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
-        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }  // meaning does it have a layout that is not just a vector
+        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }      // meaning does it have a layout that is not just a vector
     protected:
-        // TODO: There are temporarily a second version of GetSampleLayout() that verifies that m_sampleLayout is consistent with matrix dims
-        const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
-        size_t DetermineElementwiseTensorRank() const;
+        size_t DetermineElementwiseTensorRank() const;                              // determine tensor rank when considering all inputs with padding
+        TensorShape GetTensorShape(size_t rank) const;                              // form the actual tensor that describes the full object
+        TensorShape GetTensorSliceFor(size_t rank, const FrameRange & fr) const;    // form tensor shape of the slice referenced by FrameRange
     public:
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
@@ -1139,19 +1139,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MaskMissingGradientColumnsToZero(fr);
             return GradientFor(fr);
         }
-        // tensor variants
+        // tensor version of the above functions
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
-            TensorShape tensorShape = GetSampleLayout();
-            if (!HasMBLayout())
-                tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
-            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
-            else if (fr.IsAllFrames()) // we have an MBLayout, and for refers to the entire MB
-                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumCols());
-            else  // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
-                tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
-            // TODO: determine SmallVector begin, end bounds first, get a narrow full shape, squeeze the dims, then return the tensor
-            return TensorView<ElemType>(DataFor(data, fr), tensorShape);
+            try
+            {
+                return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
+            }
+            catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
+            {
+                LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            }
         }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
