@@ -175,42 +175,51 @@ namespace Microsoft {
     // tensor helpers
     // -----------------------------------------------------------------------
 
-    const TensorShape & ComputationNodeBase::GetAndValidateSampleLayout() const
-    {
-        // validate that m_sampleLayout is plausibly configured
-        bool layoutPlausible = true;
-        // some code initializes it to 0 or SIZE_MAX
-        for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
-        {
-            if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
-                layoutPlausible = false;
-        }
-        // check dimension
-        if (GetNumRows() != m_sampleLayout.GetNumElements())
-            layoutPlausible = false;
-        if (!layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
-            LogicError("GetAndValidateSampleLayout: %ls %ls operation has sample layout [%s] that is inconsistent with number of rows %d.",
-                       NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str(), (int)GetNumRows());
-
-        // all good: return it
-        return GetSampleLayout();
-    }
-
     // determine the sample tensor dimension to use for operations based on output and all inputs
     // 'Sample tensor' means we only consider single samples. If we have an MBLayout, that is the sample layout of a single matrix column.
     size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
     {
         // determine largest tensor dimension amongst the sample shapes of output and the selected inputs
-        size_t maxRank = GetAndValidateSampleLayout().GetRank();
+        size_t maxRank = GetSampleLayout().GetRank();
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
-            size_t rank = Input(i)->GetAndValidateSampleLayout().GetRank();
+            size_t rank = Input(i)->GetSampleLayout().GetRank();
             if (!HasMBLayout())                         // no MBLayout: last dim is column dimension
                 rank++;
             if (maxRank < rank)
                 maxRank = rank;
         }
         return maxRank;
+    }
+
+    // form the actual tensor that describes the full object
+    TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
+    {
+        // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
+        TensorShape tensorShape = GetSampleLayout();    // TODO: Can this tensor arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
+        if (!HasMBLayout())
+            tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
+        // TODO: This is not nice! Instead, if no MBLayout then have sample layout explain whole matrix.
+        else
+            tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, GetMBLayout()->GetNumTimeSteps());
+        return tensorShape;
+    }
+
+    // get tensor shape of the slice referenced by a given FrameRange
+    TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange & fr) const
+    {
+        // form the actual tensor that describes the full object
+        // Note: This may have strides.
+        auto tensorShape = GetTensorShape(rank);
+
+        // determine the slice dimensions described by the FrameRange
+        // Note: These are dimensions without strides.
+        auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+
+        // narrow the tensor
+        // Note: Strides are honored correctly.
+        tensorShape.NarrowTo(slice);
+        return tensorShape;
     }
 
     // -----------------------------------------------------------------------
