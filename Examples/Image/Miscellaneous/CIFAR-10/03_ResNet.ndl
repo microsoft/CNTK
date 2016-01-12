@@ -8,8 +8,8 @@ LocalMacros = [
     LabelDim = 10
 
     features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
-    featOffs = Const(128)
-    featScaled = Minus(features, featOffs)
+    #featOffs = Const(128)
+    #featScaled = Minus(features, featOffs)
     labels = Input(LabelDim, tag = label)
     
     convWScale = 7.07
@@ -31,8 +31,9 @@ LocalMacros = [
 ]
 
 DNN=[
+    conv1WScale = 0.26
     cMap1 = 16
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 27, kW, kH, hStride1, vStride1, convWScale, convBValue, scValue, expAvg)
+    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hStride1, vStride1, conv1WScale, convBValue, scValue, expAvg)
 
     rn1_1 = ResNetNode2(conv1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, expAvg)
     rn1_2 = ResNetNode2(rn1_1, cMap1, 144, kW, kH, convWScale, convBValue, scValue, expAvg)
