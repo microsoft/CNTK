@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
                 SecondaryIndexLocation(),
                 SecondaryIndexCount(),
-                NzCount()
+                GetNumNZElements()
                 );
 
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));
