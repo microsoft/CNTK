@@ -1982,7 +1982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            fprintf(stderr, "GPUSparseMatrix::IsValid %l %l %l", res[0], res[1], res[2]);
+            fprintf(stderr, "GPUSparseMatrix::IsValid %ld %ld %ld", res[0], res[1], res[2]);
             return false;
         }
     }
