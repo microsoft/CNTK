@@ -356,9 +356,9 @@ struct latticefunctionskernels
             const size_t te = ts + numframes;               // end time of current unit
 
             size_t state1step0to1 = te;                     // inflection point from state 0 to 1, record in state 1
-			size_t state1stepm1to1 = te;
+			//size_t state1stepm1to1 = te;
             size_t state2step0to1 = te;                     // inflection point from state 0 to 1, record in state 2
-			size_t state2stepm1to1 = te;                     // inflection point from state 0 to 1, record in state 2
+            //size_t state2stepm1to1 = te;                    // inflection point from state 0 to 1, record in state 2
             size_t state2step1to2 = te;                     // inflection point from state 1 to 2, record in state 2
 			size_t state2step0to2 = te;
 
@@ -385,7 +385,7 @@ struct latticefunctionskernels
 				}*/
 				pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
 				pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
-				state1stepm1to1 = ts;
+				//state1stepm1to1 = ts;
 				pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
 				
 
@@ -412,7 +412,7 @@ struct latticefunctionskernels
                     {
                         pathscore2 = pathscore12;
                         state2step0to1 = state1step0to1;                                        // record the inflection point
-						state2stepm1to1 = state1stepm1to1;
+						//state2stepm1to1 = state1stepm1to1;
                         state2step1to2 = t;                                                     // record the inflection point
 						state2step0to2 = te;
                         if (isSil)
@@ -440,7 +440,7 @@ struct latticefunctionskernels
                     {
                         pathscore1 = pathscore01;
                         state1step0to1 = t;                                                     // record the inflection point
-						state1stepm1to1 = te;
+						//state1stepm1to1 = te;
                         if (isSil)
                             backptrmatrix (1, t-ts-1) = 0;
                     }
