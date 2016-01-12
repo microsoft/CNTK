@@ -538,7 +538,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropComputeGradient;
         }
-        if (EqualInsensitive(propName, "batchNormEvalMode"))
+        else if (EqualInsensitive(propName, "batchNormEvalMode"))
         {
             prop = melPropBatchNormMode; 
         }
