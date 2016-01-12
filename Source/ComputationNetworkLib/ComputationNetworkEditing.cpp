@@ -317,32 +317,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
     {
-        vector<ComputationNodeBasePtr>  nodes; 
+        vector<ComputationNodeBasePtr>  nodes;
         if (rootNode == nullptr)
         {
             for (auto pair : m_nameToNodeMap)
             {
-                nodes.push_back(pair.second); 
+                nodes.push_back(pair.second);
             }
         }
         else
         {
-            auto allnodes = rootNode->EnumerateNodes(true); 
+            auto allnodes = rootNode->EnumerateNodes(true);
             for (auto node : allnodes)
-                nodes.push_back(node); 
+                nodes.push_back(node);
         }
 
-        for (auto& node: nodes)
+        for (auto& node : nodes)
         {
             if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
             {
                 auto pNode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
                 if (!pNode)
                 {
-                    auto pNode2= dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
+                    auto pNode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
                     if (!pNode2)
                     {
-                         RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n", node->NodeName().c_str());
+                        RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n", node->NodeName().c_str());
                     }
                 }
                 else
