@@ -18,6 +18,7 @@
 #endif
 
 #include "Matrix.h"
+#include "TensorShape.h" // for ImageLayoutKind
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -252,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual PoolEnginePtr CreatePoolEngine(DEVICEID_TYPE deviceId) = 0;
 
         enum class EngineType { Auto, CuDnn, Legacy };
-        static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId, EngineType engType = EngineType::Auto);
+        static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId, EngineType engType, ImageLayoutKind imageLayoutKind);
 
     public:
         ConvolutionEngineFactory(const ConvolutionEngineFactory&) = delete;

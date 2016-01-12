@@ -489,7 +489,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             std::vector<C> res;
             res.reserve(GetSize(Fail));
             for (const auto & val : values)
-                res.push_back(val);
+                res.push_back(val.ResolveValue());  // resolve upon access
             return res;
         }
     };
@@ -698,6 +698,5 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         return emptyParameters;
     }
     template<class V> /*static*/ const std::vector<typename V::value_type> & IConfigRecord::Array(const V & vec) { return static_cast<const std::vector<typename V::value_type> &>(vec); }  // use this specifically for XXXargvector
-
 
 }}} // end namespaces

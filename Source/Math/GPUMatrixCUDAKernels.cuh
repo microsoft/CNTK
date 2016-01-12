@@ -4,15 +4,22 @@
 // </copyright>
 //
 
+#pragma once
+
 #include "BestGpu.h"
 
 #ifndef CPUONLY
 
-#include <float.h>
-#include <cuda_runtime.h>
+#pragma push_macro("TENSOR_OPS_DECL")
+#define TENSOR_OPS_DECL __device__ __host__
 #include "CommonMatrix.h"
+#include "GPUMatrix.h"
+#include "TensorOps.h"  // for exp_() etc.
 #include "device_functions.h"
+#include <cuda_runtime.h>
 #include <assert.h>
+#include <float.h>
+#pragma pop_macro("TENSOR_OPS_DECL")
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
@@ -35,9 +42,125 @@
 #endif
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
-#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; if (id>=N) return;
 
-#define threadsPerBlock 512
+// CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
+static __inline__ __device__ double atomicAdd(double* address, double val)
+{
+    unsigned long long int* address_as_ull = (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+
+// TODO: replace this with TensorOps.h LogAdd(). It differs in using ElemType throughout, while this one seems to use 'double' versions of exp() and log().
+// The 'k' in the name is to avoid naming conflicts with various versions of logadd() that are defined throughout the codebase.
+template<class ElemType>
+static inline __device__ __host__ ElemType logaddk(ElemType x, ElemType y)
+{
+    ElemType temp, diff, z;
+
+    if (x < y)
+    {
+        temp = x; x = y; y = temp;
+    }
+    diff = y - x;
+    if (diff < MINLOGEXP)
+    {
+        return (x < LSMALL) ? LZERO : x;
+    }
+    else
+    {
+        z = exp(diff);
+        return x + log(1.0 + z);
+    }
+}
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+// ---------------------------------------------------------------------------
+// GridDim -- helper to choose the CUDA grid dimensions
+// ---------------------------------------------------------------------------
+
+template<class INT, class INT2>
+static INT CeilDiv(INT a, INT2 b)   // ceil(a/b)
+{
+    return (INT)(((size_t)a + (size_t)b - 1) / (size_t)b);  // these size_t casts are necessary since b may be INT_MAX (for maxGridSize[])
+}
+
+struct GridDim
+{
+    static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
+    static const CUDA_LONG maxWarpsPerBlock = 16;       // use this many warps per block
+
+    // use these for launching
+    //   GridDim grid(NN);
+    //   kernel<<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, ...>>>(...)
+    int m_blocksPerGrid, m_threadsPerBlock;             // (these may in the future be extended to multi-dimensional ones)
+    CUDA_LONG m_N;
+
+    GridDim(CUDA_LONG N)    // linear grid
+    {
+        m_N = N;
+        if (N == 0)                     // CUDA will fail to launch with 0 blocks
+            N = 1;
+
+        // get device information
+        const auto & props = GetDeviceProps();
+        CUDA_LONG numProcs = props.multiProcessorCount;
+        CUDA_LONG warpSize = props.warpSize;
+
+        // distribute warps evenly over processors
+        CUDA_LONG warpsPerProc = CeilDiv(N, numProcs * warpSize);
+
+        // if too many warps per block then reduce #warps
+        if (warpsPerProc > maxWarpsPerBlock)
+        {
+            CUDA_LONG overBy = CeilDiv(warpsPerProc, maxWarpsPerBlock); // we are over by this factor
+            warpsPerProc = CeilDiv(warpsPerProc, overBy);
+        }
+
+        // put it back together
+        m_threadsPerBlock = warpsPerProc * warpSize;
+        m_blocksPerGrid = CeilDiv(N, m_threadsPerBlock);
+        if (m_blocksPerGrid == 1)
+            m_threadsPerBlock = N;  // don't launch more than necessary  --TODO: Does this make a difference at all?
+        assert(m_blocksPerGrid * m_threadsPerBlock >= N);
+    }
+
+    static std::vector<cudaDeviceProp> CacheDeviceProps()
+    {
+        int numDevices;
+        CUDA_CALL(cudaGetDeviceCount(&numDevices));
+        std::vector<cudaDeviceProp> props(numDevices);
+        for (int i = 0; i < numDevices; i++)
+            CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
+#if 1   // on Linux, maxGridSize[0] gets reported as 0
+        for (int i = 0; i < numDevices; i++)
+            fprintf(stderr, "%d procs  %d warps  %d %d %d max grid  on  %s\n", (int)props[i].multiProcessorCount, (int)props[i].warpSize, (int)props[i].maxGridSize[0], (int)props[i].maxGridSize[1], (int)props[i].maxGridSize[2], props[i].name);
+#endif
+        return props;
+    }
+
+    // get device properties of current device
+    static const cudaDeviceProp & GetDeviceProps()
+    {
+        static std::vector<cudaDeviceProp> props = CacheDeviceProps();   // thread-safe according to C++ standard
+        int deviceId;
+        cudaGetDevice(&deviceId);
+        return props[deviceId];
+    }
+
+    // compute our location on the grid
+    static __device__ CUDA_LONG GetLinearThreadId()
+    {
+        return blockDim.x * blockIdx.x + threadIdx.x;
+    }
+};
+
+#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) CUDA_LONG id = GridDim::GetLinearThreadId(); if (id>=N) return;
 
 #ifdef __GNUC__
 #define UNUSED_FUNCTION_ATTRIBUTE __attribute__ ((unused))
@@ -45,9 +168,17 @@
 #define UNUSED_FUNCTION_ATTRIBUTE
 #endif
 
-// Predefine this for later.
-static __inline__ __device__ double atomicAdd(double* address, double val) UNUSED_FUNCTION_ATTRIBUTE;
-//CUDA Kernels code
+// ===========================================================================
+// CUDA kernels follow, lots of them
+// ===========================================================================
+
+// _elementWise*() kernels
+//
+// Designed to operate on contiguous blocks of memory, where the output is a simple function of the inputs.
+// The first parameters of every function are inputs, and the last two arguments to each function are always
+// (ElemenType *res, CUDA_LONG N), a pointer and length of the output block. Each thread computes a function
+// of the inputs for one value in the output.
+
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(
     const ElemType alpha,     
@@ -55,7 +186,7 @@ __global__ void _elementWisePowerOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     if (alpha==0)
     {
         res[id]=1;
@@ -85,50 +216,30 @@ __global__ void _elementWisePowerOnCuda(
     }    
 };
 
+// Note that this code is inefficient on CUDA due to diverging code paths.
+// Use Sigmoid() in TensorOps.h instead, which solves this problem.
 template<class ElemType>
 __global__ void _elementWiseSigmoidOnCuda(    
     const ElemType *a,
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+#if 0   // this computes the same thing but is twice as fast on CUDA
+    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+#else
+    if (a[id] >= 0)
     {
-        if (a[id]>=0)
-        {
-            double e = exp(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            double e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        ElemType e = exp_(-a[id]);
+        res[id] = 1 / (1 + e);
     }
     else
     {
-        if (res[id]>=0)
-        {
-            float e = expf(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            float e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        ElemType e = exp_(a[id]);
+        res[id] = e / (1 + e);
     }
+#endif
 };
-
-__device__ __forceinline__ float _exp(float f)
-{
-    return expf(f);
-}
-
-__device__ __forceinline__ double _exp(double f)
-{
-    return exp(f);
-}
 
 template<class ElemType>
 __global__ void _assignSigmoidOf(
@@ -136,19 +247,20 @@ __global__ void _assignSigmoidOf(
     ElemType* res,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (id >= N)
-    {
-        return;
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
     // and e^x / (1 + e^x) if x is positive.
+    // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
+    //         There is a second version of this function that does. That should be used.
+#if 0   // this has the same speed now, although not identical accuracy
+    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+#else
     ElemType negElem = -a[id];
-    ElemType e = _exp(negElem);
+    ElemType e = exp_(negElem);
 
     res[id] = 1 / (e + 1);
+#endif
 };
 
 template<class ElemType>
@@ -157,7 +269,7 @@ __global__ void _elementWiseLinRectDerivativeOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = (a[id] <= 0) ? 0 : 1;
 }
 
@@ -167,7 +279,7 @@ __global__ void _elementWiseSigmoidDerivativeOnCuda(
     ElemType *res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     res[id] = a[id] * (1-a[id]);
 }
 
@@ -177,16 +289,8 @@ __global__ void _elementWiseTanhOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=tanh(a[id]);
-    }
-    else
-    {
-        res[id]=tanhf(a[id]);
-    }
-
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = tanh_(a[id]);
 };
 
 //to prevent negative values caused by floating operations, we force inputs to be >=0
@@ -197,15 +301,8 @@ __global__ void _elementWiseSqrtOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=sqrt(max((ElemType)0, a[id]));
-    }
-    else
-    {
-        res[id]=sqrtf(max(ElemType(0), a[id]));
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = sqrt_(max((ElemType)0, a[id]));
 };
 
 template<class ElemType>
@@ -214,15 +311,8 @@ __global__ void _elementWiseExpOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=exp(a[id]);
-    }
-    else
-    {
-        res[id]=expf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = exp_(a[id]);
 };
 
 template<class ElemType>
@@ -231,22 +321,8 @@ __global__ void _elementWiseLogOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (a[id]<EPS_IN_LOG)
-    {
-        res[id]=LOG_OF_EPS_IN_LOG;
-    }
-    else
-    {
-        if (sizeof(ElemType)==sizeof(double))
-        {
-            res[id]=log(a[id]);
-        }
-        else
-        {
-            res[id]=logf(a[id]);
-        }
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log_(a[id]);
 };
 
 template<class ElemType>
@@ -255,15 +331,8 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=fabs(a[id]);
-    }
-    else
-    {
-        res[id]=fabsf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = fabs_(a[id]);
 };
 
 template<class ElemType>
@@ -272,15 +341,8 @@ __global__ void _elementWiseCosineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=cos(a[id]);
-    }
-    else
-    {
-        res[id]=cosf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = cos_(a[id]);
 };
 
 template<class ElemType>
@@ -289,17 +351,9 @@ __global__ void _elementWiseNegativeSineOnCuda(
     ElemType *res,    
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
-    if (sizeof(ElemType)==sizeof(double))
-    {
-        res[id]=-sin(a[id]);
-    }
-    else
-    {
-        res[id]=-sinf(a[id]);
-    }
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    res[id] = -sin_(a[id]);
 };
-
 
 template<class ElemType>
 __global__ void _setValue(    
@@ -713,8 +767,8 @@ __global__ void _logSoftMaxColWise(
     if (col_id >= m_numCols)
         return;
 
-    __shared__ ElemType maxV[threadsPerBlock];
-    __shared__ ElemType Sum[threadsPerBlock];
+    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -749,8 +803,8 @@ __global__ void _logSoftMaxColWise(
 //    if (col_id>=m_numCols)
 //        return;
 //
-//    __shared__ ElemType maxV[threadsPerBlock];
-//    __shared__ ElemType Sum[threadsPerBlock];
+//    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+//    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
 //    maxV[threadIdx.x]=a[IDX2C(0,col_id,m_numRows)];
 //    Sum[threadIdx.x]=0;
 //
@@ -926,8 +980,8 @@ __global__ void _logSoftMaxRowWise(
     if (row_id >= m_numRows)
         return;
 
-    __shared__ ElemType maxV[threadsPerBlock];
-    __shared__ ElemType Sum[threadsPerBlock];
+    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
+    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -1094,6 +1148,7 @@ __global__ void _assignColumnwiseHardmaxOf(
     }
 }
 
+#if 0
 template<class ElemType>
 __global__ void _inplaceTruncateBottom(
     ElemType* a,
@@ -1106,6 +1161,7 @@ __global__ void _inplaceTruncateBottom(
     if (a[id]<threshold)
         a[id]=threshold;
 }
+#endif
 
 template<class ElemType>
 __global__ void _assignTruncateBottom(
@@ -1114,15 +1170,11 @@ __global__ void _assignTruncateBottom(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]<threshold)
-        us[id]=threshold;
-    else
-        us[id]=a[id];
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    us[id] = a[id] < threshold ? threshold : a[id];
 }
 
+#if 0
 template<class ElemType>
 __global__ void _inplaceTruncateTop(
     ElemType* a,
@@ -1135,6 +1187,7 @@ __global__ void _inplaceTruncateTop(
     if (a[id]>threshold)
         a[id]=threshold;
 }
+#endif
 
 template<class ElemType>
 __global__ void _assignTruncateTop(
@@ -1143,13 +1196,8 @@ __global__ void _assignTruncateTop(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (a[id]>threshold)
-        us[id]=threshold;
-    else
-        us[id]=a[id];
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    us[id] = a[id] > threshold ? threshold : a[id];
 }
 
 template<class ElemType>
@@ -1233,42 +1281,60 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     ElemType* cnzValues,  //target nz values
     GPUSPARSE_INDEX_TYPE* cRowIndex,
     GPUSPARSE_INDEX_TYPE* cColCSCIndex,
-    size_t D, size_t S, size_t M, size_t K, size_t T)
+    size_t D, size_t S, size_t M, size_t K, size_t T,
+    size_t nz)
 {
-    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (col >= T)
+    CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (N >= nz || N < aColCSCIndex[0])
         return;
 
-    size_t N = D * S * M * K;
+    size_t col;
+    for (col = 0; col < T; col++)
+    {
+        if (aColCSCIndex[col + 1] > N)
+            break;
+    }
+
+    size_t na = aRowIndex[N];
     int start = aColCSCIndex[col];
     int end = aColCSCIndex[col + 1];
-    int current = start;
 
-    for (size_t nc = 0; nc < N; nc++)
+    // recover the 5 indices from the loop counter
+    size_t d = (na                  ) % D;
+    size_t s = (na / D              ) % S;
+    size_t m = (na / D / S          ) % M;
+    size_t k = (na / D / S / M      ) % K;
+
+    // compute index for the a and b/c tensors
+    size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+
+    int rowIdx = start;
+    for (size_t na_i = start; na_i < end; na_i++)
     {
         // recover the 5 indices from the loop counter
-        size_t d = (nc                  ) % D;
-        size_t s = (nc / D              ) % S;
-        size_t m = (nc / D / S          ) % M;
-        size_t k = (nc / D / S / M      ) % K;
+        size_t d_i = (na_i              ) % D;
+        size_t s_i = (na_i / D          ) % S;
+        size_t m_i = (na_i / D / S      ) % M;
+        size_t k_i = (na_i / D / S / M  ) % K;
 
         // compute index for the a and b/c tensors
-        size_t na = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
-
-        for (size_t j = start; j < end; j++)
+        size_t nc_i = ((s_i * M + m_i) * K + k_i) * D + d_i;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+        if (nc_i < nc)
         {
-            if (aRowIndex[j] == na)
-            {
-                cnzValues[current] = anzValues[j];
-                cRowIndex[current] = nc;
-                current++;
-                break;
-            }
+            rowIdx++;
         }
     }
 
-    cColCSCIndex[col] = start;
-    cColCSCIndex[col + 1] = end;
+    cnzValues[rowIdx] = anzValues[N];
+    cRowIndex[rowIdx] = nc;
+
+    if (N == nz - 1)
+    {
+        for (int i = 0; i <= T; i++)
+        {
+            cColCSCIndex[i] = aColCSCIndex[i];
+        }
+    }
 }
 
 template<class ElemType>
@@ -2017,7 +2083,7 @@ __global__ void _columnElementMultiplyWith(
     if (id>=N)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType mul=a[id];
     for (CUDA_LONG j=0;j<M;++j)
@@ -2037,7 +2103,7 @@ __global__ void _rowElementMultiplyWith(
     if (id>=M)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType mul=a[id];
     for (CUDA_LONG i=0;i<N;++i)
@@ -2057,7 +2123,7 @@ __global__ void _rowElementDivideBy(
     if (id >= M)
         return;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType v = a[id];
     if (v >= 0 && v < EPS_IN_INVERSE)
@@ -2084,7 +2150,7 @@ __global__ void _ColumnElementDivideBy(
 
     ElemType smallValue = EPS_IN_INVERSE;
 
-    //__shared__ ElemType _a[threadsPerBlock];
+    //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
     ElemType v=a[id];
     for (CUDA_LONG j=0;j<M;++j)
@@ -2387,7 +2453,7 @@ __global__ void _matrixMatrixAddOnCuda(
     const CUDA_LONG N
     )
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
     c[id] = alpha * a[id] + b[id];
 }
 
@@ -2400,8 +2466,8 @@ __global__ void _matrixVectorRowWiseAddWithThreadPerElem(
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     CUDA_LONG col = id / m;
 
@@ -2418,8 +2484,8 @@ __global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
     const CUDA_LONG m,  //number of rows
     const CUDA_LONG n)  //number of cols     
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT;
+    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
 
     CUDA_LONG col = id / m;
     CUDA_LONG row = id - col*m;
@@ -2711,25 +2777,82 @@ __global__ void _sparseCSRElemMulDense(
     }
 }
 
+template<class ElemType>
+__global__ void _isValid(
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int rows,
+    const int cols,
+    const int nz,
+    long* d_res
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    int start = colCSCIndex[id];
+    int end = colCSCIndex[id + 1];
+    d_res[0] = 1;
+
+    if (start > end)
+    {
+        d_res[0] = -1;
+        d_res[1] = start;
+        d_res[2] = end;
+    }
+    else if (end > nz)
+    {
+        d_res[0] = -2;
+        d_res[1] = end;
+        d_res[2] = nz;
+    }
+    else
+    {
+        for (int j = start; j < end; j++)  //j points to the value
+        {
+            if (rowIndex[j] > rows)
+            {
+                d_res[0] = -3;
+                d_res[1] = rowIndex[j];
+                d_res[2] = rows;
+                break;
+            }
+        }
+    }
+}
+
+template<class ElemType>
+__global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
+    GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const int cols
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= cols)
+        return;
+
+    colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
+}
 
 //c = alpha * op(a) * op(b) + beta*c
 // TODO: This function can be further improved by loading the kernel in shared memory
 template<class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    int m,                  // rowDense
-    int k,                  // colDense
-    int n,                  // colSparse
-    int numChannels,        // input num channels
-    int numSteps,           // convolution num steps
-    int horizontalSubsample,// convolution step size
-    bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
-    ElemType alpha,
+    const int m,                  // rowDense
+    const int k,                  // colDense
+    const int n,                  // colSparse
+    const int numChannels,        // input num channels
+    const int numSteps,           // convolution num steps
+    const int horizontalSubsample,// convolution step size
+    const bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
+    const ElemType alpha,
     const ElemType* a,      //dense
-    bool transposeA,
+    const bool transposeA,
     const ElemType* bnzValues,  //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType beta,
+    const ElemType beta,
     ElemType* c  //dense target
     )
 {
@@ -2851,15 +2974,15 @@ __global__ void _reshape(
 
     int currentCol = id;
     int oldColLower = (newNumRows * currentCol) / oldNumRows;
-    int oldColUpper = (newNumRows * (currentCol + 1)) / oldNumRows;
 
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
 
-    for (int oldCol = oldColLower; oldCol <= min(oldColUpper, oldNumCols); oldCol++)
+    for (int oldCol = oldColLower; oldCol <= oldNumCols; oldCol++)
     {
         int start = oldColumnIndex[oldCol];
         int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+        bool done = false;
 
         for (int j = start; j < end; j++)  //j points to the value
         {
@@ -2868,11 +2991,21 @@ __global__ void _reshape(
             int newCol = index / newNumRows;
             int newRow = index % newNumRows;
 
-            newRowIndex[j] = newRow;
+            if (newCol == currentCol)
+                newRowIndex[j] = newRow;
 
             if (newCol >= currentCol && currentColStart > j)
                 currentColStart = j;
+
+            if (newCol > currentCol)
+            {
+                done = true;
+                break;
+            }
         }
+
+        if (done)
+            break;
     }
 
     newColumnIndex[currentCol] = currentColStart;
@@ -3446,7 +3579,7 @@ __global__ void _assignNoiseContrastiveEstimation(
         if (positive)
             prob = -prob;
         ElemType score_noise = log_num_noise_samples + prob;
-        ElemType z = logadd(tmp[i], score_noise);
+        ElemType z = logaddk(tmp[i], score_noise);
         ElemType logprob = tmp[i] - z;
         ElemType logprob_noise = score_noise - z;
         tmp[i] = -exp(logprob);
@@ -3669,9 +3802,7 @@ __global__ void _inplaceTruncate(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N)
     ElemType locThresholdPos = abs(threshold);
     ElemType locTHresholdNeg = -locThresholdPos; 
     if (a[id] > locThresholdPos)
@@ -3738,40 +3869,6 @@ __global__ void _normalGradForSparseBlock(
     }
     rhs[IDX2C(row, col, numRows)] = (1 - momentum)*lhsValues[index] + momentum*rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
-}
-
-static __inline__ __device__ double atomicAdd(double* address, double val)
-{
-    unsigned long long int* address_as_ull = (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-
-    do {
-        assumed = old;
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
-template<class ElemType>
-static __inline__ __device__ ElemType logadd(ElemType x, ElemType y)
-{
-    ElemType temp, diff, z; 
-
-    if (x < y) 
-    {
-        temp = x; x = y; y = temp;
-    }
-    diff = y - x; 
-    if (diff < MINLOGEXP)
-    {
-        return (x < LSMALL)?LZERO:x;
-    }
-    else
-    {
-        z = exp(diff);
-        return x + log(1.0 + z);
-    }
 }
 
 //This function should be called with 1024 threads per block and 1 block
@@ -4538,7 +4635,7 @@ __global__ void _rcrfBackwardCompute(
             fSum = LZERO;
             for (int j = 0; j < iNumLab; j++)
             {
-                fSum = logadd(fSum, alpha[IDX2C(j, t, iNumLab)]);
+                fSum = logaddk(fSum, alpha[IDX2C(j, t, iNumLab)]);
             }
 
             fTmp = alpha[IDX2C(id, t, iNumLab)] - fSum;
@@ -4550,10 +4647,10 @@ __global__ void _rcrfBackwardCompute(
                 fSum = LZERO;
                 for (int m = 0; m < iNumLab; m++)
                 {
-                    fSum = logadd(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
+                    fSum = logaddk(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
                 }
 
-                fTmp = logadd(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
+                fTmp = logaddk(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
             }
         }
 
@@ -4614,7 +4711,7 @@ __global__ void _rcrfBackwardCompute(
     {
         for (int j = 0; j < iNumLab; j++)
         {
-            fTmp = logadd(fTmp, beta_t1[j] + alpha[id] + pair_scores[j] - zeta[j]);
+            fTmp = logaddk(fTmp, beta_t1[j] + alpha[id] + pair_scores[j] - zeta[j]);
         }
     }
 
@@ -4655,9 +4752,9 @@ __global__ void _rcrfBackwardComputeZeta(
     for (int m = 0; m < iNumLab; m++)
     {
         if (t == iNumPos - 1)
-            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)]);
+            fSum = logaddk(fSum, alpha[IDX2C(m, 0, iNumLab)]);
         else
-            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)] + pair_scores[m]);
+            fSum = logaddk(fSum, alpha[IDX2C(m, 0, iNumLab)] + pair_scores[m]);
     }
 
     gzeta[id] = fSum;
@@ -4709,7 +4806,7 @@ __global__ void _rcrfTransGrdComputeZeta(
         else
             fTmp = alpha[m];
 
-        fSum = logadd(fSum, pair_scores[m] + fTmp);
+        fSum = logaddk(fSum, pair_scores[m] + fTmp);
     }
 
     gzeta[id] = fSum;
@@ -4794,7 +4891,7 @@ __global__ void _reductionLogAddSum(
     CUDA_LONG N)
 {
 
-    __shared__ ElemType partialLogAddSum[threadsPerBlock];
+    __shared__ ElemType partialLogAddSum[GridDim::maxThreadsPerBlock];
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     int tid = threadIdx.x;
@@ -4812,7 +4909,7 @@ __global__ void _reductionLogAddSum(
     {
         ElemType lSum = LZERO;
         if (tid < s){
-            lSum = logadd(partialLogAddSum[tid], partialLogAddSum[tid + s]);
+            lSum = logaddk(partialLogAddSum[tid], partialLogAddSum[tid + s]);
             partialLogAddSum[tid] = lSum;
         }
     }
@@ -4936,5 +5033,7 @@ __global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LON
         a[IDX2C(rowIdx, colIdx, numRows)] = val;
     }
 }
+
+}}}
 
 #endif // !CPUONLY

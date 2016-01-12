@@ -5538,12 +5538,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // reduction case (non-reduction case is specialized)
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
         {
             array<ptrdiff_t, N - 1> strides;        // N-1 because last one is the result pointer, which is unused in reduction
             for (size_t i = 0; i < N - 1; i++)      // N = a small constant, this will be unrolled
                 strides[i] = reducingStrides[i][(size_t)m];
-            ElemType aggregate = 0;
+            double/*ElemType*/ aggregate = 0;
             for (size_t dim = reducingOpDims[(size_t)m]; dim-- > 0;)
             {
                 // need to descend into one loop deeper
@@ -5552,7 +5552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < N - 1; i++)
                     pointers[i] += strides[i];      // note: last pointer (result) is unused and untouched here
             }
-            return aggregate;
+            return (ElemType)aggregate;
         }
     };
 
@@ -5562,7 +5562,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpReduction<ElemType, OPFN, N, -1>
     {
         static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN & opfn,
-                                    const vector<size_t> &, const array<vector<ptrdiff_t>, N> &)
+                                    const SmallVector<size_t> &, const array<SmallVector<ptrdiff_t>, N> &)
         {
             return opfn(pointers);          // finally we are doing some work!!!
         }
@@ -5577,8 +5577,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
-                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                                const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                                const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
         {
             // non-scalar case: still nested result loops left
             array<ptrdiff_t, N> strides;
@@ -5601,8 +5601,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 3, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 3> pointers, ElemType alpha, const OPFN & opfn,
-                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+                                const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5621,7 +5621,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma omp parallel for
                 for (int k = 0; k < (int)K; k++)
                     TensorOpIteration<ElemType, OPFN, 3, true/*vectorizable*/, -1/*no reduction*/, -1/*scalar*/>::Loop(0, array<ElemType*, 3> { pa + k, pb + k, pc + k }, 1, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-            // TODO: somehow this does not use 4-way parallelism with SSE (VS 2013), and the signedness of k (required for omp) causes an extra sign-extend
+            // TODO: According to Amit, the VS compiler is not able to vectorize into lambdas. Solution: change the lambda to take an N, or to implement the loop inside (with 1 element by default).
+            // TODO: The signedness of k (required for omp) causes an extra sign-extend.
             // TODO: OMP adds LOTS of overhead. Do we need a guard, a min size when to use it?
         }
     };
@@ -5630,8 +5631,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, 2, true/*vectorizable*/, -1/*no reduction*/, 0/*innermost loop*/>
     {
         static inline void Loop(ElemType beta, array<ElemType*, 2> pointers, ElemType alpha, const OPFN & opfn,
-                                const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+                                const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
         {
             ElemType* pa = pointers[0];
             ElemType* pb = pointers[1];
@@ -5656,8 +5657,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct TensorOpIteration<ElemType, OPFN, N, vectorizable, m, -1>
     {
         static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
-                                const vector<size_t> &, const array<vector<ptrdiff_t>, N> &,
-                                const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                                const SmallVector<size_t> &, const array<SmallVector<ptrdiff_t>, N> &,
+                                const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
         {
             // we are at element level for the result: perform the op (there may still be reduction)
             ElemType val = TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
@@ -5680,8 +5681,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // tensor operation with k+1 dimensions (-1 means scalar)
     template<class ElemType, typename OPFN, size_t N, int k>
     static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N> & pointers, ElemType alpha, const OPFN & opfn,
-                                        const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
-                                        const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                                        const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                                        const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         size_t dims = reducingOpDims.size();
         switch (dims)
@@ -5708,8 +5709,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, typename OPFN, size_t N>
     static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN & opfn,
                                const array<size_t, N> & offsets,
-                               const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, N> & regularStrides,
-                               const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, N> & reducingStrides)
+                               const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, N> & regularStrides,
+                               const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, N> & reducingStrides)
     {
         for (size_t i = 0; i < N; i++)  // N = a small constant, this will be unrolled
             pointers[i] += offsets[i];
@@ -5734,9 +5735,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 2> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
     {
+        // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
         #define CaseUnaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
                 return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 2> & pp) { return Op ## oper((*(pp[0]))); }, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
@@ -5754,8 +5756,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 3> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides)
     {
         #define CaseBinaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
@@ -5774,8 +5776,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                                        const array<size_t, 4> & offsets,
-                                       const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
-                                       const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
+                                       const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                       const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides)
     {
         #define CaseTernaryTensorOp(oper) \
             case ElementWiseOperator::op ## oper: \
