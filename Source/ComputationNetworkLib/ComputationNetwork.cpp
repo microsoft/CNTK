@@ -488,7 +488,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (minibatchDifferent)
         {
             for (ComputationNodeBasePtr node : inputs)
-                node->SetDims(node->GetNumRows(), minibatchMax);
+                node->SetNumCols(minibatchMax);
         }
     }
 
@@ -654,8 +654,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (auto nodeIter = convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
             {
-                auto node = dynamic_pointer_cast<ConvolutionNode<float>>(*nodeIter);
-                node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+                auto nodef = dynamic_pointer_cast<ConvolutionNode<float>>(*nodeIter);
+                if (nodef)
+                    nodef->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+                auto noded = dynamic_pointer_cast<ConvolutionNode<double>>(*nodeIter);
+                if (noded)
+                    noded->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
             }
         }
     }

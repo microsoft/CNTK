@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "ComputationNode.h"
+#include "Matrix.h"
+#include "TensorView.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,40 +23,131 @@
 #include <sstream>
 #include <iostream>
 
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifdef ENABLE_TENSORVIEW
+
     // -----------------------------------------------------------------------
-    // NonlinearityNodeBase (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // UnaryElementWiseWithOpCodeNodeBase (input) -- base for elementwise unary op
+    // where forward // and backward are single ElementWiseOperator opcodes and
+    // only inputs (but not // function values) are used.
     // -----------------------------------------------------------------------
 
-    // shared base for all elemen-twise non-linearities
+    template<class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, bool gradientFromOutput>
+    class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        UnaryElementWiseWithOpCodeNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
+        {
+            static int c = 0; if (c++ == 0) { fprintf(stderr, "#NLop%d#\n", (int)opForward); }
+
+            size_t rank = DetermineElementwiseTensorRank();
+            auto result =           ValueTensorFor(rank, fr);
+            auto input  = Input(0)->ValueTensorFor(rank, fr);
+            result.DoUnaryOpOf(0, input, 1, opForward);
+        }
+
+        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
+        {
+            assert(inputIndex == 0); inputIndex;
+
+            // get the args
+            size_t rank = DetermineElementwiseTensorRank();
+            auto sliceOutputGrad =              GradientTensorFor(rank, fr);    // propagate from this one...
+            auto sliceInputGrad  =    Input(0)->GradientTensorFor(rank, fr);    // ...to this one
+            auto sliceValue = gradientFromOutput ? ValueTensorFor(rank, fr) :   // using input or output value
+                                         Input(0)->ValueTensorFor(rank, fr);
+            // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
+            // Not possible for Cos().
+            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward);
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            ValidateUnaryMap(isFinalValidationPass);
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return gradientFromOutput; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return !gradientFromOutput; }
+    };
+
+#define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
+
+    // -----------------------------------------------------------------------
+    // SigmoidNode (input)
+    // TanhNode (input)
+    // RectifiedLinearNode (input)
+    // LogNode (input)
+    // ExpNode (input)
+    // CosineNode (input)
+    // These are all implemented by single-opcode functions and can thus be declared by a macro.
+    // -----------------------------------------------------------------------
+
+#pragma push_macro("DeclareUnaryTensorOp")
+#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, gradientFromOutput) \
+    template<class ElemType>                                                                             \
+    class Name ## Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward, gradientFromOutput> \
+    { \
+        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op ## Forward, op ## Backward, gradientFromOutput> Base; UnaryElementWiseWithOpCodeNodeBaseMembers; \
+        static const std::wstring TypeName() { return L ## #Name; } \
+    public: \
+        DeclareConstructorFromConfigWithNumInputs(Name ## Node); \
+        Name ## Node(DEVICEID_TYPE deviceId, const wstring & Name) : \
+            Base(deviceId, Name) \
+        { } \
+    }
+
+    //                                    Name             Forward and      Backward opcodes
+    DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         true);
+    DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            true);
+    DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, true);
+    DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             true);
+    DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        true);
+    DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       false);
+
+#pragma pop_macro("DeclareUnaryTensorOp")
+#endif
+
+    // -----------------------------------------------------------------------
+    // SoftmaxNodeBase (input) -- shared base of Softmax and LogSoftmax
+    // -----------------------------------------------------------------------
+
+    // shared base for all element-wise non-linearities
     // What this adds over a ComputationNode<ElemType> is a member m_gradientTemp for temp use by derived classes.
-    // TODO: Remove the Evaluate and Partial overrides from here entirely, as they don't really add value after all the code simplifications.
+    // TODO: This was used more broadly, but no longer, so we may be able to simplify the signatures of the virtual functions.
     template<class ElemType>
-    class NonlinearityNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    class SoftmaxNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        DeclareConstructorFromConfigWithNumInputs(NonlinearityNodeBase);
-        NonlinearityNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
+        DeclareConstructorFromConfigWithNumInputs(SoftmaxNodeBase);
+        SoftmaxNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
 
-        // TODO: with FrameRange, this code has now been reduced so much that there is no need to have these overrides here; they can just be implemented in the derived classes directly.
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             assert(inputIndex == 0); inputIndex;
-            auto gradient = Input(0)->GradientFor(fr);
-            BackpropToV(*m_gradientTemp, Input(0)->ValueFor(fr), gradient, GradientFor(fr));
+
+            // get the args
+            // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
+            auto sliceOutputGrad =           GradientFor(fr);   // propagate from this one...
+            auto sliceInputGrad  = Input(0)->GradientFor(fr);   // ...to this one
+            auto sliceInputValue  =  InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueFor(fr) : Matrix<ElemType>();
+            auto sliceOutputValue = OutputUsedInComputingInputNodesGradients()  ?           ValueFor(fr) : Matrix<ElemType>();
+
+            // do the actual operation
+            BackpropToV(*m_gradientTemp, sliceInputValue, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
         // derived class implement the actual non-linear operation
-        virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) = 0;
+        virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) = 0;
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
@@ -72,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<NonlinearityNodeBase<ElemType>>(nodeP);
+                auto node = dynamic_pointer_cast<SoftmaxNodeBase<ElemType>>(nodeP);
                 *node->m_gradientTemp = *m_gradientTemp;
             }
         }
@@ -94,361 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_gradientTemp;
     };
 
-#define UsingNonlinearityNodeBaseMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradientTemp
-
-    // -----------------------------------------------------------------------
-    // RectifiedLinearNode (input) -- ReLU non-linearity
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class RectifiedLinearNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"RectifiedLinear"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(RectifiedLinearNode);
-        RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
-        {
-            gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
-#if DUMPOUTPUT
-            inputGradientValues.Print("RecitifiedLinearNode-Partial-in");
-#endif
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-#if DUMPOUTPUT
-            inputGradientValues.Print("RecitifiedLinearNode-Partial-out");
-#endif
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The ReLU node does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
-        {
-            functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
-#if NANCHECK
-            functionValues.HasNan("RectifiedLinear");
-#endif
-#if DUMPOUTPUT
-            functionValues.Print("RectifiedLinearNode");
-#endif
-        }
-    };
-
-    template class RectifiedLinearNode<float>;
-    template class RectifiedLinearNode<double>;
-
-    // -----------------------------------------------------------------------
-    // SigmoidNode (input) -- sigmoid non-linearity
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class SigmoidNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Sigmoid"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(SigmoidNode);
-        SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        // we should get rid of this code dup, need to unify the -V functions
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Gradient(), Value());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The Sigmoid node does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
-        {
-            gradient.AssignSigmoidDerivativeOf(functionValues);
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
-        {
-            functionValues.AssignSigmoidOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Sigmoid");
-#endif
-        }
-    };
-
-    template class SigmoidNode<float>;
-    template class SigmoidNode<double>;
-
-    // -----------------------------------------------------------------------
-    // TanhNode (input) -- tanh non-linearity
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class TanhNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Tanh"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(TanhNode);
-        TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        // TODO: unify signature & get rid of code dup
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Gradient(), Value());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
-        {
-            // The plus node does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
-        {
-            gradient.AssignElementProductOf(functionValues, functionValues); // v .* v
-            gradient.AssignDifferenceOf(1, gradient); // 1-v^2
-
-            inputGradientValues.AddElementProductOf(gradientValues, gradient); // += d .* ((1-v) .* v))
-        }
-
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
-        {
-            functionValues.AssignTanhOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Tanh");
-#endif
-        }
-    };
-
-    template class TanhNode<float>;
-    template class TanhNode<double>;
-
-    // -----------------------------------------------------------------------
-    // LogNode (input) -- component-wise log() of input
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class LogNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Log"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(LogNode);
-        LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        // TODO: get rid of code dup
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Input(0)->Value(), Gradient());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The plus node does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
-        {
-            gradient.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
-
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
-        {
-            functionValues.AssignLogOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Log");
-#endif
-        }
-    };
-
-    template class LogNode<float>;
-    template class LogNode<double>;
-
-    // -----------------------------------------------------------------------
-    // ExpNode (input) -- component-wise exp() of input
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class ExpNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Exp"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(ExpNode);
-        ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
-            m_gradientTemp->AssignExpOf(sliceInputValue); // Exp(x) is its own partial
-            sliceInputGrad.AddElementProductOf(sliceOutputGrad, *m_gradientTemp);
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The ExpNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { NOT_IMPLEMENTED; }   // not needed
-
-        void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
-        {
-            functionValues.AssignExpOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Exp");
-#endif
-        }
-    };
-
-    template class ExpNode<float>;
-    template class ExpNode<double>;
-
-    // -----------------------------------------------------------------------
-    // CosineNode (input) -- component-wise cos() of input
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class CosineNode : public NonlinearityNodeBase<ElemType>
-    {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
-        static const std::wstring TypeName() { return L"Cosine"; }
-    public:
-        DeclareConstructorFromConfigWithNumInputs(CosineNode);
-        CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
-        { }
-
-        // TODO: code dup
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, Input(0)->Gradient(), Input(0)->Value(), Gradient());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
-        }
-
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The CosineNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
-        {
-            gradient.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
-            inputGradientValues.AddElementProductOf(gradientValues, gradient);
-        }
-
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
-        {
-            functionValues.AssignCosineOf(inputFunctionValues);
-#if NANCHECK
-            functionValues.HasNan("Cosine");
-#endif
-        }
-    };
-
-    template class CosineNode<float>;
-    template class CosineNode<double>;
+#define UsingSoftmaxNodeBaseMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradientTemp
 
     // -----------------------------------------------------------------------
     // SoftmaxNode (input) -- soft-max over input vector(s)
@@ -457,37 +199,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
     template<class ElemType>
-    class SoftmaxNode : public NonlinearityNodeBase<ElemType>
+    class SoftmaxNode : public SoftmaxNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        typedef SoftmaxNodeBase<ElemType> Base; UsingSoftmaxNodeBaseMembers;
         static const std::wstring TypeName() { return L"Softmax"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(SoftmaxNode);
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
-        // TODO: code dup
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, *m_diff, Input(0)->Gradient(), Gradient(), Value());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The plus node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -495,30 +217,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
+            Matrix<ElemType>& diff = *m_diff;
             gradient.AssignInnerProductOf(gradientValues, functionValues, true);
             diff.AssignDifferenceOf(gradientValues, gradient);
 
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
             functionValues.InplaceExp();
-#if NANCHECK
-            functionValues.HasNan("SoftMax");
-#endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateUnaryMap(isFinalValidationPass);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -555,37 +266,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class LogSoftmaxNode : public NonlinearityNodeBase<ElemType>
+    class LogSoftmaxNode : public SoftmaxNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        typedef SoftmaxNodeBase<ElemType> Base; UsingSoftmaxNodeBaseMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
         DeclareConstructorFromConfigWithNumInputs(LogSoftmaxNode);
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNodeBase<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
-        // TODO: code dup
-        void BackpropToMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            BackpropToS(*m_gradientTemp, *m_softmax, Input(0)->Gradient(), Gradient(), Value());
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
-        {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(inputIndex == 0); inputIndex;
-
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            BackpropToS(*m_gradientTemp, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The plus node does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -593,29 +284,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        // should be:
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
-        // but is:
-        /*virtual*/ void BackpropToS(Matrix<ElemType>& gradient, Matrix<ElemType>& softmax, Matrix<ElemType>& inputGradientValues,
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
+            Matrix<ElemType>& softmax = *m_softmax;
             softmax.AssignExpOf(functionValues);
             Matrix<ElemType>::VectorSum(gradientValues, gradient, true);
             softmax.RowElementMultiplyWith(gradient);
             Matrix<ElemType>::AddScaledDifference(1.0, gradientValues, softmax, inputGradientValues);
         }
 
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
-#if NANCHECK
-            functionValues.HasNan("LogSoftMax");
-#endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateUnaryMap(isFinalValidationPass);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -663,34 +343,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name)
         { }
 
-        void BackpropToMap(const size_t inputIndex)
-        {
-            switch (inputIndex)
-            {
-            case 0:
-                BackpropToUnnormedPrior(Input(0)->Gradient(), Gradient(), *m_prior, *m_posterior, *m_temp);
-                break;
-            case 1:
-                BackpropToMean(Input(1)->Gradient(), Gradient(), *m_normedDeviationVectors, *m_posterior, *m_temp);
-                break;
-            case 2:
-                BackpropToLogStddev(Input(2)->Gradient(), Gradient(), *m_normedDeviation, *m_posterior, *m_temp);
-                break;
-            case 3:
-                BackpropToFeature(Input(3)->Gradient(), Gradient(), *m_normedDeviationVectors, *m_posterior, *m_temp);
-                break;
-            default:
-                InvalidArgument("GMMLogLikelihoodNode only takes four inputs.");
-            }
-        }
-
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            //get the right slice 
+            // get the right slice 
             const size_t colsPrior = Input(0)->GetNumCols();
 
-            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradient, fr);   // TODO: GradientFor(fr)?
+            Matrix<ElemType> sliceGradientValue = DataFor(*m_gradient, fr);
             Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
 
             switch (inputIndex)
@@ -698,32 +356,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             case 0:
             {
                 if (colsPrior == 1)
-                        BackpropToUnnormedPrior(Input(0)->Gradient(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
+                    BackpropToUnnormedPrior(Input(0)->Gradient(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
-                        Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
-                        BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
+                    Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
+                    BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
                 }
             }
             break;
             case 1:
             {
-                      Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+                Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
                 if (colsPrior == 1)
-                        BackpropToMean(Input(1)->Gradient(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+                    BackpropToMean(Input(1)->Gradient(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceMeanGradient = Input(1)->GradientFor(fr);
-                        BackpropToMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+                    BackpropToMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 }
             }
             break;
             case 2:
             {
-                    Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
+                Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
                 if (colsPrior == 1)
-                        BackpropToLogStddev(Input(2)->Gradient(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
+                    BackpropToLogStddev(Input(2)->Gradient(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                 else
                 {
                     Matrix<ElemType> sliceLotStddevGradient = Input(2)->GradientFor(fr);
@@ -750,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The GMMLogLikelihoodNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -968,15 +626,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             functionValues.Print("GMMLogLikelihoodNode");
 #endif
-
-#if NANCHECK
-            functionValues.HasNan("GMMLogLikelihood");
-#endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
@@ -1000,16 +655,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
-            SetDims(1, cols[3]);
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(3, false);
-
-            m_sampleLayout = TensorShape();
+            SetDims(TensorShape(1), cols[3]);
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1080,26 +726,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomSeed = (unsigned long)CreateUniqId();
         }
 
-        void BackpropToMap(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                InvalidArgument("Dropout operation only takes one input.");
-            BackpropToS(m_dropoutRate, Input(0)->Gradient(), *m_maskOfDropout, Gradient());
-        }
-
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
-            {
-                sliceMask = DataFor(*m_maskOfDropout, fr);
-            }
-
-            BackpropToS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
+                sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad += sliceOutputGrad;
         }
 
         virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -1109,7 +744,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
         {
             // The DropoutNode does not require any of it's input's values for computing
             // the gradients of its input nodes
@@ -1117,83 +752,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        /*TODO: merge with call site*/void BackpropToS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        virtual void UpdateFunctionMBSize() override
         {
-            if (dropoutRate > 0)
-            {
-                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
-            }
-            else
-            {
-                inputGradientValues += gradientValues;
-            }
+            Base::UpdateFunctionMBSize();
+            // resize temporaries to their proper size
+            if (m_dropoutRate > 0)
+                m_maskOfDropout->Resize(Input(0)->Value());
         }
 
-        void ForwardPropMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            ForwardPropS(m_dropoutRate, m_randomSeed, Value(), *m_maskOfDropout, Input(0)->Value());
-        }
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            //if (fr.IsAllFrames()) { ForwardPropMap(); return; }
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-            Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                SetDims(Input(0));
-                m_maskOfDropout->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
-                sliceMask = DataFor(*m_maskOfDropout, fr);
-            }
-
-            sliceOutputValue = ValueFor(fr);
-
-            ForwardPropS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
-        }
-
-        /*TODO: merge with call site*/void ForwardPropS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
-        {
-            if (dropoutRate > 0)
-            {
-                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
-
-                maskOfDropout.SetUniformRandomMask((ElemType)dropoutRate, (ElemType)(1.0 / (1.0 - dropoutRate)), randomSeed);
-                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
-
-                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
-#if NANCHECK
-                functionValues.HasNan("DropOut");
-#endif
+                // determine drop-out mask for this minibatch
+                auto sliceMask = DataFor(*m_maskOfDropout, fr);
+                sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate))/*pre-scaled*/, m_randomSeed);
+                m_randomSeed += 1073807359;  // 1073807359 is a very large prime number to avoid collision with other dropout nodes
+                // apply dropout mask
+                sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             }
             else
             {
-                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override Value() to return the input; which now breaks stuff.
-                functionValues.SetValue(inputFunctionValues);
+                sliceOutputValue.SetValue(sliceInput0Value);
             }
         }
-
-        //virtual const Matrix<ElemType>& Value() const override
-        //{
-        //    if (m_dropoutRate > 0)
-        //        return *m_value;
-        //    else
-        //        return Input(0)->Value();
-        //}
-        //
-        //virtual Matrix<ElemType>& Value() override
-        //{
-        //    if (m_dropoutRate > 0)
-        //        return *m_value;
-        //    else
-        //        return Input(0)->Value();
-        //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
+        // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
         void SetDropoutRate(const double val)
         {
             if (val < 0 || val >= 1)
@@ -1247,9 +839,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // this node is not differentiable and so cannot be used in the backpropagation
     // TODO: make function value sparse?
     template<class ElemType>
-    class HardmaxNode : public NonlinearityNodeBase/*ComputationNode*/<ElemType>
+    class HardmaxNode : public SoftmaxNodeBase/*ComputationNode*/<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
+        typedef SoftmaxNodeBase<ElemType> Base; UsingSoftmaxNodeBaseMembers;
         static const std::wstring TypeName() { return L"Hardmax"; }
 
     public:
@@ -1258,34 +850,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void BackpropTo(const size_t /*inputIndex*/)  //TODO: this is still needed?
-        {
-            LogicError("Hardmax is not differentiable and is used for evaluation only.");
-        }
-
-        virtual void /*ComputationNode::*/BackpropTo(const size_t /*inputIndex*/, const FrameRange & /*fr*/) override
-        {
-            LogicError("Hardmax is not differentiable and is used for evaluation only.");
-        }
-
-        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) 
+        /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override 
         { 
             gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  
-            LogicError("wrong signature :( need to unify code more"); 
+            LogicError("Hardmax is not differentiable and is used for evaluation only.");
         }
 
-        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             //TODO: temp solution, we need to write a math function specifically for this
             functionValues.AssignHardmaxOf(inputFunctionValues, true);
-#if NANCHECK
-            functionValues.HasNan("Hardmax");
-#endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            ValidateUnaryMap(isFinalValidationPass);
         }
     };
 

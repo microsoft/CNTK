@@ -1,10 +1,10 @@
 ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
 {
-    convW = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
-    conv = Convolution(convW, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
-    convB = Parameter(outMap, 1, init = fixedValue, value = bValue)
-    convPlusB = Plus(conv, convB);
-    act = RectifiedLinear(convPlusB);
+    W = Parameter(outMap, inWCount, init = Gaussian, initValueScale = wScale)
+    b = ImageParameter(1, 1, outMap, init = fixedValue, value = bValue, imageLayout = "cudnn")
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true, imageLayout = "cudnn")
+    z = Plus(c, b);
+    y = RectifiedLinear(z);
 }
 
 DNNReLULayer(inDim, outDim, x, wScale, bValue)

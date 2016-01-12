@@ -69,8 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SequenceWithSoftmax
     };
 
-    extern TrainingCriterion ParseTrainingCriterionString(wstring s);
-    extern EvalCriterion ParseEvalCriterionString(wstring s);
+    TrainingCriterion ParseTrainingCriterionString(wstring s);
+    EvalCriterion ParseEvalCriterionString(wstring s);
 
     template<class ElemType>
     class SimpleNetworkBuilder
@@ -256,41 +256,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetworkPtr BuildSimpleDNN();
 
-        ComputationNetworkPtr BuildSimpleRNN(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSimpleRNN();
 
-        ComputationNetworkPtr BuildClassEntropyNetwork(size_t mbSize = 1);
+        ComputationNetworkPtr BuildClassEntropyNetwork();
 
-        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
         ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
-        ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
+        ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
 
-        ComputationNodePtr BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
+        ComputationNodePtr BuildDirectConnect(unsigned long &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
-        ComputationNetworkPtr BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLogBilinearNetworkFromDescription();
 
-        ComputationNetworkPtr BuildNeuralProbNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNeuralProbNetworkFromDescription();
 
-        ComputationNetworkPtr BuildLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMNetworkFromDescription();
 
-        ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
 
-        ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription();
 
-        ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription();
 
-        ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription();
 
-        ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription();
 
-        ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription();
 
-        ComputationNetworkPtr BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetworkPtr BuildNCELSTMNetworkFromDescription();
 
-        ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
+        ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
 
-        ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet, size_t mbSize = 1);
+        ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
 
         //layer is 0 based
         ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");

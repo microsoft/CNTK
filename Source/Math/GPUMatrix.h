@@ -9,6 +9,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 #include "ConcStack.h"
@@ -46,9 +47,7 @@ typedef struct CUstream_st *cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -411,16 +410,16 @@ namespace Microsoft {
 
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 2> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 3> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
         void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 4> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
 
         static void CreateCurandObject(unsigned long seed, const char *caller);
         static void ResetCurandObject(unsigned long seed, const char *caller);
@@ -505,7 +504,7 @@ namespace Microsoft {
 }}}
 
 // Error handling
-template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> const char * CudaErrString(ERRTYPE x);   // actual error function is defined inside .cu files
 template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
 {
     if (retCode != successCode)
@@ -522,7 +521,9 @@ template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * ex
         }
     }
 }
+
 #define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
 #define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))
+#define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN", CUDNN_STATUS_SUCCESS))

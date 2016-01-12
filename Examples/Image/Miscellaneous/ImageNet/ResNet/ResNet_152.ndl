@@ -1,0 +1,112 @@
+load=ndlMacros
+run=DNN
+
+ndlMacros = [
+    ImageW = 224
+    ImageH = 224
+    ImageC = 3
+    LabelDim = 1000
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
+    featOffs = Const(0, rows = 150528)
+    featScaled = Plus(features, featOffs)
+    labels = Input(LabelDim, tag = label)
+    
+    # Kernels width and height.
+    kW = 3
+    kH = 3
+    # Kernel stride.
+    hs = 1
+    vs = 1
+    
+    # Pooling settings.
+    poolW = 2
+    poolH = 2
+    poolhs = 2
+    poolvs = 2
+    
+    # Initial parameter values.
+    convWScale = 7.07
+    convBValue = 0
+    scValue = 0.03
+    fcWScale = 3.0
+    fcBValue = 1
+]
+
+DNN=[
+    cMap1 = 64
+    cMap2 = 128
+    cMap3 = 256
+    cMap4 = 512
+    cMap5 = 1024
+    cMap6 = 2048
+    
+    conv1 = ConvBNReLULayer(featScaled, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
+    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
+    
+    rn1_1_Wproj = Parameter(cMap3, cMap1, init = fromFile, initFromFilePath = "$Proj64to256Filename$", needGradient = false)
+    rn1_1 = ResNetNode3Inc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, rn1_1_Wproj)
+    rn1_2 = ResNetNode3(rn1_1, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue)
+    rn1_3 = ResNetNode3(rn1_2, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue)
+
+    rn2_1_Wproj = Parameter(cMap4, cMap3, init = fromFile, initFromFilePath = "$Proj256to512Filename$", needGradient = false)
+    rn2_1 = ResNetNode3Inc(rn1_3, cMap3, cMap2, cMap4, 1152, convWScale, convBValue, scValue, rn2_1_Wproj)
+    rn2_2 = ResNetNode3(rn2_1, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_3 = ResNetNode3(rn2_2, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_4 = ResNetNode3(rn2_3, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_5 = ResNetNode3(rn2_4, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_6 = ResNetNode3(rn2_5, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_7 = ResNetNode3(rn2_6, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    rn2_8 = ResNetNode3(rn2_7, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
+    
+    rn3_1_Wproj = Parameter(cMap5, cMap4, init = fromFile, initFromFilePath = "$Proj512to1024Filename$", needGradient = false)
+    rn3_1 = ResNetNode3Inc(rn2_8,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, rn3_1_Wproj)
+    rn3_2 = ResNetNode3(rn3_1,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_3 = ResNetNode3(rn3_2,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_4 = ResNetNode3(rn3_3,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_5 = ResNetNode3(rn3_4,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_6 = ResNetNode3(rn3_5,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_7 = ResNetNode3(rn3_6,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_8 = ResNetNode3(rn3_7,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_9 = ResNetNode3(rn3_8,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_10= ResNetNode3(rn3_9,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_11= ResNetNode3(rn3_10, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_12= ResNetNode3(rn3_11, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_13= ResNetNode3(rn3_12, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_14= ResNetNode3(rn3_13, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_15= ResNetNode3(rn3_14, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_16= ResNetNode3(rn3_15, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_17= ResNetNode3(rn3_16, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_18= ResNetNode3(rn3_17, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_19= ResNetNode3(rn3_18, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_20= ResNetNode3(rn3_19, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_21= ResNetNode3(rn3_20, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_22= ResNetNode3(rn3_21, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_23= ResNetNode3(rn3_22, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_24= ResNetNode3(rn3_23, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_25= ResNetNode3(rn3_24, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_26= ResNetNode3(rn3_25, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_27= ResNetNode3(rn3_26, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_28= ResNetNode3(rn3_27, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_29= ResNetNode3(rn3_28, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_30= ResNetNode3(rn3_29, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_31= ResNetNode3(rn3_30, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_32= ResNetNode3(rn3_31, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_33= ResNetNode3(rn3_32, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_34= ResNetNode3(rn3_33, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_35= ResNetNode3(rn3_34, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+    rn3_36= ResNetNode3(rn3_35, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
+
+    rn4_1_Wproj = Parameter(cMap6, cMap5, init = fromFile, initFromFilePath = "$Proj1024to2048Filename$", needGradient = false)
+    rn4_1 = ResNetNode3Inc(rn3_36, cMap5, cMap4, cMap6, 4608, convWScale, convBValue, scValue, rn4_1_Wproj)
+    rn4_2 = ResNetNode3(rn4_1, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
+    rn4_3 = ResNetNode3(rn4_2, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
+
+    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs, imageLayout = "cudnn")
+
+    ol = DnnLayer(8192, labelDim, pool5, fcWScale, fcBValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]

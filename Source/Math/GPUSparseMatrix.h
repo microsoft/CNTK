@@ -73,18 +73,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Special Note: for the matrix may be a read-only column slice view of another
         // matrix (only supported for CSC format today) and hence the NzValues needs
         // to be offset accordingly.
-        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
-        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(m_sliceViewOffset); }
+        inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0); }
+        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0); }
         inline size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
         { 
             return (GPUSPARSE_INDEX_TYPE*)(m_pArray + m_elemSizeAllocated); 
-        } 
+        }
+        
+        GPUSPARSE_INDEX_TYPE* MajorIndexLocationWithSliceViewOffset() const
+        {
+            return (MajorIndexLocation() + (m_format == matrixFormatSparseCSC ? SecondaryIndexValueAt(0) : 0));
+        }
 
         size_t MajorIndexCount() const
         {
-            return MajorIndexCount(m_numRows, m_numCols, m_nz, m_format);
+            return MajorIndexCount(m_numRows, m_numCols, m_elemSizeAllocated, m_format);
         }
         size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
         { 
@@ -98,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t MajorIndexSize() const // actual number of major index bytes in use
         { 
             return sizeof(GPUSPARSE_INDEX_TYPE)*MajorIndexCount(); 
-        } 
+        }
 
         GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const //compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
         { 
@@ -239,6 +244,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ConvertToSparseFormat(MatrixFormat newFormat);
         void ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const;
 
+        bool IsValid() const;
+
     public:
         GPUSparseMatrix<ElemType>& ElementInverse ();
         GPUSparseMatrix<ElemType>& AssignElementInverseOf (const GPUSparseMatrix<ElemType>& a);
@@ -290,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool transposeB, GPUSparseMatrix<ElemType>& c);
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
         static void ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs,
-            const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+            const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
         static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);

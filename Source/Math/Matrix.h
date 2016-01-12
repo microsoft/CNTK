@@ -13,8 +13,9 @@
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
+#include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include <limits.h>
-#include <memory>   // for shared_ptr
+#include <memory>       // for shared_ptr
 #include <array>
 #include <initializer_list>
 
@@ -177,7 +178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> AsReference() const { return ColumnSlice(0, GetNumCols()); }   // get a reference (e.g. this is not resizable but can be reshaped)
         void Reshape(const size_t numRows, const size_t numCols);                       // note: reshapes in place. To get a reshaped reference, use Reshaped()
-        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)           // get a reshaped reference
+        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols) const     // get a reshaped reference
         {
             Matrix<ElemType> result = AsReference();
             result.Reshape(numRows, numCols);
@@ -347,7 +348,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
-        
+
+        bool IsValid() const;
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
         static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
@@ -436,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
         static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
-        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+        static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);
@@ -464,16 +466,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 2> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 2> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 2> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2> & reducingStrides);
         void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 3> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 3> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 3> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3> & reducingStrides);
         void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                       const std::array<size_t, 4> & offsets,
-                      const std::vector<size_t> & regularOpDims,  const std::array<std::vector<ptrdiff_t>, 4> & regularStrides,
-                      const std::vector<size_t> & reducingOpDims, const std::array<std::vector<ptrdiff_t>, 4> & reducingStrides);
+                      const SmallVector<size_t> & regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                      const SmallVector<size_t> & reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4> & reducingStrides);
     public:
         void Read(File& stream);
         void Write(File& stream) const;

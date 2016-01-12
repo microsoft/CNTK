@@ -3153,6 +3153,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    bool Matrix<ElemType>::IsValid() const
+    {
+        if (m_currentDataLocation == CurrentDataLocation::GPU && GetMatrixType() == MatrixType::SPARSE)
+        {
+            return this->m_GPUSparseMatrix->IsValid();
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return false;
+    }
+
+    template<class ElemType>
     bool Matrix<ElemType>::IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
     {
         return AreEqual(*this, a, threshold);
@@ -4321,7 +4336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
     void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-        ElemType beta, Matrix<ElemType>& c, int numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+        ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
     {
         DecideAndMoveToRightDevice(a, b, c);
         
@@ -5176,8 +5191,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 2> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 2> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 2> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 2> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 2> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a);
 
@@ -5193,8 +5208,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 3> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 3> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 3> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 3> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 3> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a, b);
 
@@ -5210,8 +5225,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op,
                                     const array<size_t, 4> & offsets,
-                                    const vector<size_t> & regularOpDims,  const array<vector<ptrdiff_t>, 4> & regularStrides,
-                                    const vector<size_t> & reducingOpDims, const array<vector<ptrdiff_t>, 4> & reducingStrides)
+                                    const SmallVector<size_t> & regularOpDims,  const array<SmallVector<ptrdiff_t>, 4> & regularStrides,
+                                    const SmallVector<size_t> & reducingOpDims, const array<SmallVector<ptrdiff_t>, 4> & reducingStrides)
     {
         DecideAndMoveToRightDevice(*this, a, b, c);
 
