@@ -726,12 +726,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // REVIEW alexeyk: hack, use m_expAvgFactor <= 0 to compute CMA.
                 double expAvgFactor = (m_expAvgFactor > 0) ? m_expAvgFactor : (1.0 / (1.0 + m_mbCount));
+
+                if (m_saveMean->GetNumElements() != runMean.GetNumElements())
+                    m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+                if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
+                    m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+
                 m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                     sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+
                 m_mbCount++;
             }
 #if NANCHECK
-            sliceOutputValue.HasNan("BatchNormalization");
+            sliceOutputValue.HasNan("BatchNormalization-output");
+            runMean.HasNan("BatchNormalization-runMean");
+            runInvStdDev.HasNan("BatchNormalization-runInvStdDev");
+            m_saveMean->HasNan("BatchNormalization-saveMean");
+            m_saveInvStdDev->HasNan("BatchNormalization-saveInvStdDev");
 #endif
         }
 
