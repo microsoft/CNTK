@@ -1,16 +1,6 @@
 m=LoadModel($CurModel$, format=cntk)
 SetDefaultModel(m)
 
-conv1.bn_e = BatchNormalization(conv1.c, conv1.sc, conv1.b, conv1.m, conv1.isd, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(conv1.y, 0, conv1.bn_e)
-
-conv2.bn_e = BatchNormalization(conv2.c, conv2.sc, conv2.b, conv2.m, conv2.isd, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(conv2.y, 0, conv2.bn_e)
-
-conv3.bn_e = BatchNormalization(conv3.c, conv3.sc, conv3.b, conv3.m, conv3.isd, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(conv3.y, 0, conv3.bn_e)
-
-h1.bn_e = BatchNormalization(h1.t, h1.sc, h1.b, h1.m, h1.isd, eval = true, spatial = false)
-SetNodeInput(h1.y, 0, h1.bn_e)
+SetPropertyForSubTree(CE, batchNormEvalMode, true)
 
 SaveModel(m, $NewModel$, format=cntk)

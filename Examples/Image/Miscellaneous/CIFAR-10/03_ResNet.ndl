@@ -8,8 +8,6 @@ LocalMacros = [
     LabelDim = 10
 
     features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
-    #featOffs = Const(128)
-    #featScaled = Minus(features, featOffs)
     labels = Input(LabelDim, tag = label)
     
     convWScale = 7.07
