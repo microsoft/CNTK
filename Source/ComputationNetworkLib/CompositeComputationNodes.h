@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CreateMatrixIfNull(m_value);
             m_value->SetValue(value);
             m_hasComputed = true; 
-            SetDims(value.GetNumRows(), value.GetNumCols());
+            SetDims(TensorShape(value.GetNumRows()), value.GetNumCols());
         }
     public:
         bool m_hasComputed;
