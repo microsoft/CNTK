@@ -1,52 +1,6 @@
 m=LoadModel($CurModel$, format=cntk)
 SetDefaultModel(m)
 
-conv1.bn_e = BatchNormalization(conv1.c, conv1.sc, conv1.b, conv1.m, conv1.isd, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(conv1.y, 0, conv1.bn_e)
-
-rn1_1.bn1_e = BatchNormalization(rn1_1.c1, rn1_1.sc1, rn1_1.b1, rn1_1.m1, rn1_1.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_1.y1, 0, rn1_1.bn1_e)
-rn1_1.bn2_e = BatchNormalization(rn1_1.c2, rn1_1.sc2, rn1_1.b2, rn1_1.m2, rn1_1.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_1.p, 0, rn1_1.bn2_e)
-
-rn1_2.bn1_e = BatchNormalization(rn1_2.c1, rn1_2.sc1, rn1_2.b1, rn1_2.m1, rn1_2.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_2.y1, 0, rn1_2.bn1_e)
-rn1_2.bn2_e = BatchNormalization(rn1_2.c2, rn1_2.sc2, rn1_2.b2, rn1_2.m2, rn1_2.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_2.p, 0, rn1_2.bn2_e)
-
-rn1_3.bn1_e = BatchNormalization(rn1_3.c1, rn1_3.sc1, rn1_3.b1, rn1_3.m1, rn1_3.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_3.y1, 0, rn1_3.bn1_e)
-rn1_3.bn2_e = BatchNormalization(rn1_3.c2, rn1_3.sc2, rn1_3.b2, rn1_3.m2, rn1_3.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn1_3.p, 0, rn1_3.bn2_e)
-
-rn2_1.bn1_e = BatchNormalization(rn2_1.c1, rn2_1.sc1, rn2_1.b1, rn2_1.m1, rn2_1.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_1.y1, 0, rn2_1.bn1_e)
-rn2_1.bn2_e = BatchNormalization(rn2_1.c2, rn2_1.sc2, rn2_1.b2, rn2_1.m2, rn2_1.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_1.p, 0, rn2_1.bn2_e)
-
-rn2_2.bn1_e = BatchNormalization(rn2_2.c1, rn2_2.sc1, rn2_2.b1, rn2_2.m1, rn2_2.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_2.y1, 0, rn2_2.bn1_e)
-rn2_2.bn2_e = BatchNormalization(rn2_2.c2, rn2_2.sc2, rn2_2.b2, rn2_2.m2, rn2_2.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_2.p, 0, rn2_2.bn2_e)
-
-rn2_3.bn1_e = BatchNormalization(rn2_3.c1, rn2_3.sc1, rn2_3.b1, rn2_3.m1, rn2_3.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_3.y1, 0, rn2_3.bn1_e)
-rn2_3.bn2_e = BatchNormalization(rn2_3.c2, rn2_3.sc2, rn2_3.b2, rn2_3.m2, rn2_3.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn2_3.p, 0, rn2_3.bn2_e)
-
-rn3_1.bn1_e = BatchNormalization(rn3_1.c1, rn3_1.sc1, rn3_1.b1, rn3_1.m1, rn3_1.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_1.y1, 0, rn3_1.bn1_e)
-rn3_1.bn2_e = BatchNormalization(rn3_1.c2, rn3_1.sc2, rn3_1.b2, rn3_1.m2, rn3_1.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_1.p, 0, rn3_1.bn2_e)
-
-rn3_2.bn1_e = BatchNormalization(rn3_2.c1, rn3_2.sc1, rn3_2.b1, rn3_2.m1, rn3_2.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_2.y1, 0, rn3_2.bn1_e)
-rn3_2.bn2_e = BatchNormalization(rn3_2.c2, rn3_2.sc2, rn3_2.b2, rn3_2.m2, rn3_2.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_2.p, 0, rn3_2.bn2_e)
-
-rn3_3.bn1_e = BatchNormalization(rn3_3.c1, rn3_3.sc1, rn3_3.b1, rn3_3.m1, rn3_3.isd1, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_3.y1, 0, rn3_3.bn1_e)
-rn3_3.bn2_e = BatchNormalization(rn3_3.c2, rn3_3.sc2, rn3_3.b2, rn3_3.m2, rn3_3.isd2, eval = true, spatial = true, imageLayout = "cudnn")
-SetNodeInput(rn3_3.p, 0, rn3_3.bn2_e)
+SetPropertyForSubTree(CE, batchNormEvalMode, true)
 
 SaveModel(m, $NewModel$, format=cntk)
