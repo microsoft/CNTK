@@ -1001,7 +1001,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                       GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,
-                                      m_needAveMultiplier);
+                                      m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
                         if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                             LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
@@ -2022,7 +2022,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier)
+                               const bool needAveMultiplier, 
+                               const bool useNesterovMomentum
+                               )
     {
         // we use simple linear (instead of log linear) scaling here
         const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -2063,7 +2065,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (adpType == GradientsUpdateType::None)
         {
             smoothedGradient.NormalGrad(gradientValues, functionValues,
-                                        (ElemType)learnRatePerSample, (ElemType)momentum);
+                                        (ElemType)learnRatePerSample, (ElemType)momentum, useNesterovMomentum);
         }
         else if (adpType == GradientsUpdateType::AdaGrad ||
                 (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
@@ -2113,7 +2115,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const
+                       const bool needAveMultiplier, 
+                       const bool useNesterovMomentum
+                       ) const
     {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
@@ -2124,7 +2128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
-                       needAveMultiplier);
+                       needAveMultiplier, m_useNesterovMomentum);
         node->BumpEvalTimeStamp();
     }
 
@@ -2514,6 +2518,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         floatargvector momentumPerMB          = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumPerSample      = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
+        bool           useNesterovMomentum = configSGD(L"useNAG", false); 
+
 
         m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
 
@@ -2633,6 +2639,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_momentumParam = floatargvector(L"0.9");
             m_momentumSpecifiedForMBSize = m_mbSize;
         }
+        m_useNesterovMomentum = useNesterovMomentum; 
+
         for (int i = 0; i < m_momentumParam.size(); i++)
         {
             if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)

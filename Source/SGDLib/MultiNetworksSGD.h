@@ -930,7 +930,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier, m_useNesterovMomentum);
                         }
                     }
                 }
