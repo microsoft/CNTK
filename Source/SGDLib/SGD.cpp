@@ -512,6 +512,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
+                g_mpi->Bcast(&lrControlCriterion, 1, g_mpi->MainNodeRank());
             }
 
             bool loadedPrevModel = false;
