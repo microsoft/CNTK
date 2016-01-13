@@ -63,6 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_L2RegWeight;
         using SGDBase::m_L1RegWeight;
         using SGDBase::m_needAveMultiplier;
+        using SGDBase::m_useNesterovMomentum;
         using SGDBase::m_traceLevel;
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
