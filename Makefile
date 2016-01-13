@@ -453,6 +453,16 @@ $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 endif
 
 ########################################
+# 1bit SGD setup
+########################################
+
+ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
+  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
+
+  CPPFLAGS += -DQUANTIZED_GRADIENT_AGGREGATION
+endif
+
+########################################
 # cntk
 ########################################
 
