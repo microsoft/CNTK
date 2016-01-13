@@ -250,6 +250,11 @@ protected:
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
+    double m_seqGammarCalcAMF;
+    double m_seqGammarCalcLMF; 
+    double m_seqGammarCalcWP;
+    double m_seqGammarCalcbMMIFactor; 
+    bool m_seqGammarCalcUsesMBR;
 };
 
 template<class ElemType> class IDistGradAggregator;

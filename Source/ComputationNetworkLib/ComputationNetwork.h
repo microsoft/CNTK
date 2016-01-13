@@ -412,8 +412,20 @@ public:
 
     template<class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+
+
+
     template<class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    static void SetSeqParam(ComputationNetworkPtr net, 
+                            const ComputationNodeBasePtr criterionNode, 
+                            const double&  hsmoothingWeight, 
+                            const double& frameDropThresh, 
+                            const bool&   doreferencealign, 
+                            const double& amf=14.0f, 
+                            const double& lmf=14.0f, 
+                            const double& wp=0.0f, 
+                            const double& bMMIfactor=0.0f, 
+                            const bool&  sMBR=false);
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------

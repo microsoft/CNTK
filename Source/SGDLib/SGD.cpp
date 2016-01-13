@@ -303,7 +303,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
         {
-            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
+            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign, 
+                m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR );
         }
 
         // --- MAIN EPOCH LOOP
@@ -2534,6 +2535,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
         m_frameDropThresh =  configSGD(L"frameDropThresh",  1e-10);
         m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
+        m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false); 
+        m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
+        m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
+        m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0); 
+        m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
         m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 
