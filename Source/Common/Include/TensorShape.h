@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void Load(File& fstream, bool acceptLegacyFormat = false)
+        const TensorShape & Load(File& fstream, bool acceptLegacyFormat = false)
         {
             // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
             // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
@@ -232,6 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream >> m_dims[2] >> m_dims[0]; // stored in order C, W, H
             }
             InitAsNoSlice();
+            return *this;
         }
 
         // accessors
@@ -262,7 +263,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t dim = k < size() ? m_dims[k] : 1;        // dimensions are bottomless
                 if (index[k] >= dim)
                     LogicError("Locate: Tensor index[%d]=%d exceeds bound %d.", (int)k, (int)index[k], (int)dim);
-                location += (ptrdiff_t)index[k] * m_strides[k]; // strides may be negative
+                if (k < size())
+                    location += (ptrdiff_t)index[k] * m_strides[k]; // strides may be negative
             }
             if (location < 0 || (size_t)location >= m_allocation)
                 LogicError("Locate: Tensor index out of bounds.");
@@ -351,16 +353,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return *this;
         }
-        //TensorShape Concat(const TensorShape & other) const // concatenate
-        //{
-        //    auto dims = GetDims();
-        //    auto otherDims = other.GetDims();
-        //    dims.append(otherDims.begin(), otherDims.end());
-        //    return TensorShape(std::move(dims));
-        //}
         TensorShape & AppendInPlace(size_t rank, size_t newDim)  // concatenate one new dimension at position 'rank'
         {
             PadInPlace(rank);
+            // TODO: How to do this right in case of arbitrary strides? Compute the new stride based on m_allocation or something? Is it even possible? Or do we need to guard?
             m_strides.push_back(GetRank() > 0 ? m_strides.back() * (ptrdiff_t)m_dims.back() : 1);
             m_dims.push_back(newDim);
             m_allocation *= newDim;
@@ -371,6 +367,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             TensorShape result(*this);
             result.AppendInPlace(rank, newDim);
             return result;
+        }
+        template<class DimensionVector>
+        TensorShape & NarrowTo(const std::pair<DimensionVector, DimensionVector> & bounds/*begin[], end[]*/)
+        {
+            if (size() != bounds.first.size() || size() != bounds.second.size())
+                LogicError("NarrowedTo: Bounds parameter must have same rank as tensor.");
+            for (size_t k = 0; k < size(); k++)
+                if (bounds.second[k] <= bounds.first[k] || bounds.second[k] > m_dims[k])
+                    LogicError("NarrowedTo: Invalid bounds parameter, dimensions must be at least one.");
+            for (size_t k = 0; k < size(); k++)
+            {
+                m_offset += m_strides[k] * bounds.first[k];
+                m_dims[k] = bounds.second[k] - bounds.first[k];
+            }
+            return *this;
         }
 
         // pretty-printing. Returns tensor dims in the form "I x J x K".
@@ -404,7 +415,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_strides.resize(m_dims.size());
             for (size_t k = 0; k < m_dims.size(); k++)
                 m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
-            m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t)m_strides.back();
+            m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t)m_strides.back();   // TODO: Or should an empty shape mean it's a scalar?
         }
 
     private:

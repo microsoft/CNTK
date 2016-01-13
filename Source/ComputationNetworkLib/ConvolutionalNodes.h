@@ -591,15 +591,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"BatchNormalization"; }
     public:
         BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0)
+            Base(deviceId, name), m_eval(false), m_spatial(false), m_expAvgFactor(0), m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
         {
         }
-        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor) :
-            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor)
+        BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name, bool eval, bool spatial, double expAvgFactor, ImageLayoutKind imageLayoutKind) :
+            Base(deviceId, name), m_eval(eval), m_spatial(spatial), m_expAvgFactor(expAvgFactor), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
         {
         }
         BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
-            BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"))
+            BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"eval"), configp->Get(L"spatial"), configp->Get(L"expAvgFactor"),
+                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
         {
             AttachInputs(configp, this->GetExpectedNumInputs());
         }
@@ -612,6 +613,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_eval;
             fstream << m_spatial;
             fstream << m_expAvgFactor;
+            fstream << (int32_t)m_imageLayoutKind;
+            fstream << m_mbCount;
         }
 
         void Load(File& fstream, size_t modelVersion) override
@@ -635,6 +638,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_eval;
             fstream >> m_spatial;
             fstream >> m_expAvgFactor;
+            if (verWritten >= 0x00010002)
+            {
+                fstream >> m_imageLayoutKind;
+                fstream >> m_mbCount;
+            }
         }
 
         void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -716,11 +724,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_convEng->NormalizeBatchInference(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, runMean, runInvStdDev, sliceOutputValue);
             else
             {
-                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, m_expAvgFactor, runMean, runInvStdDev,
+                // REVIEW alexeyk: hack, use m_expAvgFactor <= 0 to compute CMA.
+                double expAvgFactor = (m_expAvgFactor > 0) ? m_expAvgFactor : (1.0 / (1.0 + m_mbCount));
+
+                if (m_saveMean->GetNumElements() != runMean.GetNumElements())
+                    m_saveMean->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+                if (m_saveInvStdDev->GetNumElements() != runMean.GetNumElements())
+                    m_saveInvStdDev->Resize(runMean.GetNumRows(), runMean.GetNumCols());
+
+                m_convEng->NormalizeBatch(*m_inT, sliceInputValue, *m_scaleBiasT, scale, bias, m_spatial, expAvgFactor, runMean, runInvStdDev,
                     sliceOutputValue, *m_saveMean, *m_saveInvStdDev);
+
+                m_mbCount++;
             }
 #if NANCHECK
-            sliceOutputValue.HasNan("BatchNormalization");
+            sliceOutputValue.HasNan("BatchNormalization-output");
+            runMean.HasNan("BatchNormalization-runMean");
+            runInvStdDev.HasNan("BatchNormalization-runInvStdDev");
+            m_saveMean->HasNan("BatchNormalization-saveMean");
+            m_saveInvStdDev->HasNan("BatchNormalization-saveInvStdDev");
 #endif
         }
 
@@ -733,21 +755,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (isFinalValidationPass)
             {
-const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish this. Must be serialized.
-                auto dims = ImageDimensions(GetSampleLayout(), m_imageLayoutKind);
+                auto shape = GetSampleLayout();
 
                 if (m_factory == nullptr)
                     m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
                 if (m_convEng == nullptr)
                     m_convEng = m_factory->CreateConvEngine(m_deviceId, 0);
-                if (m_inT == nullptr)
-                    m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
-                if (m_scaleBiasT == nullptr)
+                if (m_spatial)
                 {
-                    if (m_spatial)
+                    auto dims = ImageDimensions(shape, m_imageLayoutKind);
+                    if (m_inT == nullptr)
+                        m_inT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                    if (m_scaleBiasT == nullptr)
                         m_scaleBiasT = m_factory->CreateTensor(1, 1, dims.m_numChannels, 1);
-                    else
-                        m_scaleBiasT = m_factory->CreateTensor(dims.m_width, dims.m_height, dims.m_numChannels, 1);
+                }
+                else
+                {
+                    if (m_inT == nullptr)
+                        m_inT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
+                    if (m_scaleBiasT == nullptr)
+                        m_scaleBiasT = m_factory->CreateTensor(shape.GetNumElements(), 1, 1, 1);
                 }
             }
         }
@@ -784,11 +811,17 @@ const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish th
             }
         }
 
+        void SetEvalMode(bool bnEvalMode)
+        {
+            m_eval = bnEvalMode;
+        }
+
     private:
         struct VersionInfo
         {
-            int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
-            int32_t VerReadableCur() const    { return 0x00010001; }
+            //int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
+            int32_t VerWrittenCur() const     { return 0x00010002; }   // Added m_imageLayoutKind and m_mbCount
+            int32_t VerReadableCur() const    { return 0x00010002; }
             int32_t VerWeCanReadBack() const  { return 0x00010001; }
         };
         VersionInfo m_version;
@@ -801,6 +834,11 @@ const auto m_imageLayoutKind = ImageLayoutKind::CHW;        // BUGBUG: Finish th
         bool m_spatial;
         // Smoothing factor.
         double m_expAvgFactor;
+        // Layout (e.g. CHW).
+        ImageLayoutKind m_imageLayoutKind;
+        // Minibatch count, used to compute cumulative moving average.
+        size_t m_mbCount;
+
         // Stores pre-computed on forward pass mean values that are used in gradient computation.
         shared_ptr<Matrix<ElemType>> m_saveMean;
         // Stores pre-computed on forward pass InvStdDev values that are used in gradient computation.

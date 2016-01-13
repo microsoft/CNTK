@@ -7,9 +7,7 @@ ndlMacros = [
     ImageC = 3
     LabelDim = 1000
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
-    featOffs = Const(0, rows = 150528)
-    featScaled = Plus(features, featOffs)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     labels = Input(LabelDim, tag = label)
     
     # Kernels width and height.
@@ -19,24 +17,23 @@ ndlMacros = [
     hs = 1
     vs = 1
     
-    # Pooling settings.
-    poolW = 2
-    poolH = 2
-    poolhs = 2
-    poolvs = 2
-    
     # Initial parameter values.
     convWScale = 7.07
     convBValue = 0
-    scValue = 0.03
+    scValue = 1
     fcWScale = 3.0
     fcBValue = 1
 ]
 
 DNN=[
     cMap1 = 64
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
-    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs)
+    conv1 = ConvBNReLULayer(features, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
+    # Max pooling
+    pool1W = 2
+    pool1H = 2
+    pool1hs = 2
+    pool1vs = 2
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hs, pool1vs, imageLayout = "cudnn")
     
     rn1_1 = ResNetNode2(pool1, cMap1, 576, kW, kH, convWScale, convBValue, scValue)
     rn1_2 = ResNetNode2(rn1_1, cMap1, 576, kW, kH, convWScale, convBValue, scValue)
@@ -64,9 +61,14 @@ DNN=[
     rn4_2 = ResNetNode2(rn4_1, cMap4, 4608, kW, kH, convWScale, convBValue, scValue)
     rn4_3 = ResNetNode2(rn4_2, cMap4, 4608, kW, kH, convWScale, convBValue, scValue)
 
-    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs)
+    # Global average pooling
+    pool2W = 7
+    pool2H = 7
+    pool2hs = 1
+    pool2vs = 1
+    pool5 = AveragePooling(rn4_3, pool2W, pool2H, pool2hs, pool2vs, imageLayout = "cudnn")
 
-    ol = DnnLayer(4608, labelDim, pool5, fcWScale, fcBValue)
+    ol = DnnLayer(cMap4, labelDim, pool5, fcWScale, fcBValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)

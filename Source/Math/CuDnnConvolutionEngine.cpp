@@ -312,28 +312,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void NormalizeBatch(const Tensor4D& inT, const Mat& in, const Tensor4D& scaleBiasT, const Mat& scale, const Mat& bias, 
             bool spatial, double expAvgFactor, Mat& runMean, Mat& runInvStdDev, Mat& out, Mat& saveMean, Mat& saveInvStdDev) override
         {
+            const size_t crowIn = inT.w() * inT.h() * inT.c();
+            UNUSED(crowIn); // crowIn used only in asserts.
             if (spatial)
             {
                 assert(scaleBiasT.c() == inT.c());
                 assert(scaleBiasT.w() == 1);
                 assert(scaleBiasT.h() == 1);
+                assert(runMean.GetNumRows() == inT.c());
+                assert(runMean.GetNumCols() == 1);
+                assert(runInvStdDev.GetNumRows() == inT.c());
+                assert(runInvStdDev.GetNumCols() == 1);
             }
             else
             {
                 assert(scaleBiasT.c() == inT.c());
                 assert(scaleBiasT.w() == inT.w());
                 assert(scaleBiasT.h() == inT.h());
+                assert(runMean.GetNumRows() == crowIn);
+                assert(runMean.GetNumCols() == 1);
+                assert(runInvStdDev.GetNumRows() == crowIn);
+                assert(runInvStdDev.GetNumCols() == 1);
             }
             assert(scaleBiasT.n() == 1);
-            const size_t crowIn = inT.w() * inT.h() * inT.c();
             assert(crowIn == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
+            assert(saveMean.GetNumElements() >= runMean.GetNumElements());
+            assert(saveInvStdDev.GetNumElements() >= runInvStdDev.GetNumElements());
 
             cudnnBatchNormMode_t mode = spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-            runMean.Resize(spatial ? inT.c() : crowIn, 1);
-            runInvStdDev.Resize(runMean.GetNumRows(), 1);
-            saveMean.Resize(runMean.GetNumRows(), 1);
-            saveInvStdDev.Resize(runMean.GetNumRows(), 1);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(m_cudnn, mode, &C::One, &C::Zero, t(inT), ptr(in), t(inT), ptr(out),
                 t(scaleBiasT), ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
         }
