@@ -635,6 +635,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             )
     {
         fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
+            amf, lmf, wp, bMMIfactor, sMBR ? "true" : "false");
         list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
         if (seqNodes.size() == 0)
         {
