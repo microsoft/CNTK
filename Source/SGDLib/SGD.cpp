@@ -350,11 +350,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             learnRateInitialized = true;
-            if (g_mpi != nullptr)
-            {
-                g_mpi->WaitAll();
-                g_mpi->Bcast(&learnRatePerSample, 1, g_mpi->MainNodeRank());
-            }
 
             if (learnRatePerSample < m_minLearnRate)
             {
@@ -517,6 +512,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
+                g_mpi->Bcast(&lrControlCriterion, 1, g_mpi->MainNodeRank());
             }
 
             bool loadedPrevModel = false;
@@ -530,11 +526,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
                                 avgCriterion + lrControlCriterion) /
                                 (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
-            }
-            if (g_mpi != nullptr)
-            {
-                g_mpi->WaitAll();
-                g_mpi->Bcast(&avgCriterion, 1, g_mpi->MainNodeRank());
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
