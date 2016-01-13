@@ -97,9 +97,6 @@
     <ClInclude Include="QuantizedMatrix.h">
       <Filter>1bitSGD</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixQuantizer.h">
-      <Filter>1bitSGD</Filter>
-    </ClInclude>
     <ClInclude Include="MatrixQuantizerImpl.h">
       <Filter>1bitSGD</Filter>
     </ClInclude>

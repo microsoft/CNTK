@@ -93,9 +93,6 @@
     <ClInclude Include="..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="AllReduceDistGradAggregator.h">
-      <Filter>Parallelization</Filter>
-    </ClInclude>
     <ClInclude Include="DistGradHeader.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
@@ -118,9 +115,6 @@
       <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h">
-      <Filter>from Math</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Math\MatrixQuantizer.h">
       <Filter>from Math</Filter>
     </ClInclude>
     <ClInclude Include="..\Math\QuantizedMatrix.h">
