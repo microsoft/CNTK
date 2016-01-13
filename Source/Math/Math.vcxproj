@@ -177,7 +177,6 @@
     <ClInclude Include="CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
-    <ClInclude Include="MatrixQuantizer.h" />
     <ClInclude Include="MatrixQuantizerCPU.h" />
     <ClInclude Include="MatrixQuantizerGPU.h" />
     <ClInclude Include="MemAllocator.h" />

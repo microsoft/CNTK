@@ -171,10 +171,8 @@
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="..\Math\Matrix.h" />
-    <ClInclude Include="..\Math\MatrixQuantizer.h" />
     <ClInclude Include="..\Math\QuantizedMatrix.h" />
     <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
-    <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
