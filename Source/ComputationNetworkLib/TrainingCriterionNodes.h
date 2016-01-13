@@ -1418,6 +1418,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_doReferenceAlignment = doreferencealign;
         }
 
+        void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+        {
+            msra::lattices::SeqGammarCalParam param; 
+            param.amf = amf; 
+            param.lmf = lmf; 
+            param.wp = wp; 
+            param.bMMIfactor = bMMIfactor; 
+            param.sMBRmode = sMBR;
+            m_gammaCalculator.SetGammarCalculationParams(param);
+        }
+
         void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
         {
             gammatime = m_gammatime;
@@ -1430,6 +1441,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
         double m_frameDropThreshold;
         double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+        double m_seqGammarAMF; 
+        double m_seqGammarLMF; 
+        double m_seqGammarWP; 
+        double m_seqGammarbMMIFactor;
+        double m_seqGammarUsesMBR; 
         bool m_doReferenceAlignment;
         std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
         msra::asr::simplesenonehmm m_hmm;
