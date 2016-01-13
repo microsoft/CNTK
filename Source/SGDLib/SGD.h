@@ -111,6 +111,7 @@ protected:
     intargvector m_learningRatesSpecifiedForMBSize;       // 1 for per sample, m_mbSize[] for per MB
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
+    bool         m_useNesterovMomentum; 
 
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
@@ -440,7 +441,9 @@ public:
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier);
+                               const bool needAveMultiplier, 
+                               const bool useNesterovMomentum
+                               );
 
 protected:
     // UpdateWeights - update the weights in
@@ -450,7 +453,8 @@ protected:
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const;
+                       const bool needAveMultiplier, 
+                       const bool useNesterovMomentum) const;
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
