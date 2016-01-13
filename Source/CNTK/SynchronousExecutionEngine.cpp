@@ -452,8 +452,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 bool eval = node->GetOptionalParameter("eval", "false");
                 bool spatial = node->GetOptionalParameter("spatial", "false");
                 double expAvgFactor = node->GetOptionalParameter("expAvgFactor", "1.0");
+                ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-                nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, name);
+                nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, eval, spatial, expAvgFactor, imageLayoutKind, name);
             }
         }
         else

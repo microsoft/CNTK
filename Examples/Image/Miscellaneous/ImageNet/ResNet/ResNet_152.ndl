@@ -7,9 +7,7 @@ ndlMacros = [
     ImageC = 3
     LabelDim = 1000
 
-    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
-    featOffs = Const(0, rows = 150528)
-    featScaled = Plus(features, featOffs)
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     labels = Input(LabelDim, tag = label)
     
     # Kernels width and height.
@@ -28,7 +26,7 @@ ndlMacros = [
     # Initial parameter values.
     convWScale = 7.07
     convBValue = 0
-    scValue = 0.03
+    scValue = 1
     fcWScale = 3.0
     fcBValue = 1
 ]
@@ -41,16 +39,21 @@ DNN=[
     cMap5 = 1024
     cMap6 = 2048
     
-    conv1 = ConvBNReLULayer(featScaled, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
-    pool1 = MaxPooling(conv1, poolW, poolH, poolhs, poolvs)
+    conv1 = ConvBNReLULayer(features, cMap1, 147, 7, 7, 2, 2, convWScale, convBValue, scValue)
+    # Max pooling
+    pool1W = 2
+    pool1H = 2
+    pool1hs = 2
+    pool1vs = 2
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hs, pool1vs, imageLayout = "cudnn")
     
     rn1_1_Wproj = Parameter(cMap3, cMap1, init = fromFile, initFromFilePath = "$Proj64to256Filename$", needGradient = false)
-    rn1_1 = ResNetNode3Inc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, rn1_1_Wproj)
+    rn1_1 = ResNetNode3Inc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, rn1_1_Wproj, 1)
     rn1_2 = ResNetNode3(rn1_1, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue)
     rn1_3 = ResNetNode3(rn1_2, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue)
 
     rn2_1_Wproj = Parameter(cMap4, cMap3, init = fromFile, initFromFilePath = "$Proj256to512Filename$", needGradient = false)
-    rn2_1 = ResNetNode3Inc(rn1_3, cMap3, cMap2, cMap4, 1152, convWScale, convBValue, scValue, rn2_1_Wproj)
+    rn2_1 = ResNetNode3Inc(rn1_3, cMap3, cMap2, cMap4, 1152, convWScale, convBValue, scValue, rn2_1_Wproj, 2)
     rn2_2 = ResNetNode3(rn2_1, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
     rn2_3 = ResNetNode3(rn2_2, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
     rn2_4 = ResNetNode3(rn2_3, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
@@ -60,7 +63,7 @@ DNN=[
     rn2_8 = ResNetNode3(rn2_7, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue)
     
     rn3_1_Wproj = Parameter(cMap5, cMap4, init = fromFile, initFromFilePath = "$Proj512to1024Filename$", needGradient = false)
-    rn3_1 = ResNetNode3Inc(rn2_8,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, rn3_1_Wproj)
+    rn3_1 = ResNetNode3Inc(rn2_8,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, rn3_1_Wproj, 2)
     rn3_2 = ResNetNode3(rn3_1,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
     rn3_3 = ResNetNode3(rn3_2,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
     rn3_4 = ResNetNode3(rn3_3,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
@@ -98,13 +101,18 @@ DNN=[
     rn3_36= ResNetNode3(rn3_35, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue)
 
     rn4_1_Wproj = Parameter(cMap6, cMap5, init = fromFile, initFromFilePath = "$Proj1024to2048Filename$", needGradient = false)
-    rn4_1 = ResNetNode3Inc(rn3_36, cMap5, cMap4, cMap6, 4608, convWScale, convBValue, scValue, rn4_1_Wproj)
+    rn4_1 = ResNetNode3Inc(rn3_36, cMap5, cMap4, cMap6, 4608, convWScale, convBValue, scValue, rn4_1_Wproj, 2)
     rn4_2 = ResNetNode3(rn4_1, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
     rn4_3 = ResNetNode3(rn4_2, cMap6, cMap4, cMap6, 4608, convWScale, convBValue, scValue)
 
-    pool5 = AveragePooling(rn4_3, poolW, poolH, poolhs, poolvs)
+    # Global average pooling
+    pool2W = 7
+    pool2H = 7
+    pool2hs = 1
+    pool2vs = 1
+    pool2 = AveragePooling(rn4_3, pool2W, pool2H, pool2hs, pool2vs, imageLayout = "cudnn")
 
-    ol = DnnLayer(8192, labelDim, pool5, fcWScale, fcBValue)
+    ol = DnnLayer(cMap6, labelDim, pool2, fcWScale, fcBValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
     Err = ErrorPrediction(labels, ol, tag = Eval)

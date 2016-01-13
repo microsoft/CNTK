@@ -132,12 +132,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~INodeState() {} 
     };
 
-    struct /*interface*/ IStateFulNode
+    struct /*interface*/ IStatefulNode
     {
         typedef std::shared_ptr<INodeState> NodeStatePtr;
         virtual NodeStatePtr ExportState() = 0;
-        virtual void ImportState(const NodeStatePtr& pImportedState) = 0;
+        virtual void ImportState(NodeStatePtr && state) = 0;
     };
+    typedef IStatefulNode::NodeStatePtr NodeStatePtr;
 
     // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
@@ -346,14 +347,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void VerifyDimsMatch() const = 0;       // verify that m_value dimensions match ours
 
         const TensorShape & GetSampleLayout() const { return m_sampleLayout; }
-        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }  // meaning does it have a layout that is not just a vector
+        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }      // meaning does it have a layout that is not just a vector
     protected:
-        // TODO: There are temporarily a second version of GetSampleLayout() that verifies that m_sampleLayout is consistent with matrix dims
-        const TensorShape & GetAndValidateSampleLayout() const;             // TODO: Once numRows is consistent with m_sampleLayout, this will go away
-        size_t DetermineElementwiseTensorRank() const;
+        size_t DetermineElementwiseTensorRank() const;                              // determine tensor rank when considering all inputs with padding
+        TensorShape GetTensorShape(size_t rank) const;                              // form the actual tensor that describes the full object
+        TensorShape GetTensorSliceFor(size_t rank, const FrameRange & fr) const;    // form tensor shape of the slice referenced by FrameRange
     public:
-        TensorShape GetTensorShape(size_t dims, const FrameRange & fr) const;
-
         // access to element(0,0) without having to type-cast
         virtual double Get00Element() const = 0;
 
@@ -444,7 +443,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
-        //MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         const MBLayoutPtr & GetMBLayout() const { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
@@ -1141,18 +1139,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MaskMissingGradientColumnsToZero(fr);
             return GradientFor(fr);
         }
-        // tensor variants
+        // tensor version of the above functions
         TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(DataFor(data, fr), GetTensorShape(rank, fr));
+            try
+            {
+                return TensorView<ElemType>(data, GetTensorSliceFor(rank, fr));
+            }
+            catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
+            {
+                LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            }
         }
         TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(ValueFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Value(), rank, fr);
         }
         TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange & fr)
         {
-            return TensorView<ElemType>(GradientFor(fr), GetTensorShape(rank, fr));
+            return DataTensorFor(Gradient(), rank, fr);
         }
 
         // update the actual matrix allocation for m_value based on the node dimension
@@ -1504,6 +1509,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+
+    // =======================================================================
+    // IRecurrentNode -- helper wrapper class for ComputationNodes that can be recurrent
+    // =======================================================================
+
+    struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
 
 
     // =======================================================================

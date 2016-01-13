@@ -9,6 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "ModelEditLanguage.h"
+#include "ConvolutionalNodes.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -56,7 +57,8 @@ enum MELProperty
     melPropFinalCriterion,
     melPropEvaluation,
     melPropOutput,
-    melPropRecurrent
+    melPropRecurrent,
+    melPropBatchNormMode
 };
 
 // SetProperty - Set the Property on the passed node
@@ -420,6 +422,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropEvaluation;
         }
+        else if (EqualInsensitive(propName, "batchNormEvalMode"))
+        {
+            prop = melPropBatchNormMode;
+        }
         else if (EqualInsensitive(propName, "output"))
         {
             prop = melPropOutput;
@@ -485,6 +491,32 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                     // what to do here?
                     break;
                 }
+                case melPropBatchNormMode:
+                {
+                    if (node->OperationName() != OperationNameOf(BatchNormalizationNode))
+                    {
+                        RuntimeError("Invalid node type: node %ls (type:%ls) is not a %ls node; therefore cannot apply batchNormEvalMode on it.",
+                            node->NodeName().c_str(),
+                            node->OperationName().c_str(),
+                            OperationNameOf(BatchNormalizationNode).c_str());
+                    }
+                    bool property = params[2];
+                    auto pnode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
+                    if (pnode)
+                        pnode->SetEvalMode(property);
+                    else
+                    {
+                        auto pnode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
+                        if (pnode2)
+                            pnode2->SetEvalMode(property);
+                        else
+                        {
+                            RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n",
+                                node->NodeName().c_str());
+                        }
+                    }
+                    break;
+                }
                 default:
                 {
                     RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -505,6 +537,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropComputeGradient;
         }
+	    else if (EqualInsensitive(propName, "batchNormEvalMode"))
+	    {
+	        prop = melPropBatchNormMode; 
+	    }
         else
         {
             RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -525,6 +561,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 {
                     bool needGradient = params[2];
                     netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
+                    break;
+                }
+                case melPropBatchNormMode:
+                {
+                    bool evalMode = params[2];
+                    netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
                     break;
                 }
                 default:

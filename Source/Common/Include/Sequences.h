@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // construction
         // -------------------------------------------------------------------
 
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps) : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE) { Init(numParallelSequences, numTimeSteps); }
         MBLayout() : MBLayout(1, 0) { }
 
         // copy the content of another MBLayoutPtr over
@@ -427,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public: // TODO: make private (currently used from masking and DataFor) ; TODO: rename all members with m_ prefix
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
         ptrdiff_t m_timeOffset;             // this is added to timeIdxInSeq wherever it is used
-        size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
+        size_t seqIndex;                    // parallel-sequence index; SIZE_MAX = all sequences in MB (most common case)  --TODO: Bad name, 'sequence' and 'parallel sequence' are two different things
         MBLayoutPtr m_pMBLayout;            // layout associated with this
         bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range)
         const FrameRange *parent;           // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
@@ -657,14 +657,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_columnsValidityMask;
     }
 
-    // class for defining an iteration over a sequence
-    // Currently supports time sequences, forward and backward.
-    // TODO: It is meant to some day generalize to multi-dimensional iterations, e.g. across an image:
-    //  - abstract delay direction to be multi-dimensional (let's call it FrameStep)
-    //  - DelayedValueNode::direction gets replaced with a FrameStep
-    //  - recInfo->m_steppingDirection will be replaced by a FrameStep
-    //  - FrameRangeIterator derives from FrameStep, and operator++ adds tat to FrameRange
-    // Longer-term, we will also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
+    // class for defining an iteration over a sequence, forward and backward
+    // One day, we may also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
     class FrameRangeIteration
     {
         MBLayoutPtr m_pMBLayout;
@@ -675,7 +669,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - for left-to-right models -> pass step = +1
         //  - for right-to-left models -> pass step = -1
         FrameRangeIteration(MBLayoutPtr pMBLayout, int step) : m_pMBLayout(pMBLayout), m_step(step) { }
-        // in the future we may consier multi-dimensional iterators such as iterators over images
         // This class is returned by begin() and end().
         // It is a FrameRange with additions ++ and != operators needed in the for loop.
         class FrameRangeIterator : public FrameRange
@@ -748,17 +741,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!pMBLayout)
                     LogicError("DataFor: Attempting to retrieve a parallel sequence from data without layout.");
-#if 1
                 else
-                    LogicError("DataFor: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
-#else
-                // get a reshaped view that stacks all sequences into T long vectors
-                auto mat = data.ColumnSlice(0, data.GetNumCols());
-                mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
-                return mat;   // .RowSlice(fr.seqIndex * data.GetNumRows());
-                // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
-                // TODO: The tensor version of this will support it.
-#endif
+                    LogicError("DataFor: Individual parallel sequences cannot be retrieved in Matrix representation. Use TensorView instead.");
             }
         }
         // FrameRange refers to a time slice -> return that
@@ -788,6 +772,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
         return data.ColumnSlice(columnRange.first, columnRange.second);
+    }
+
+    // -----------------------------------------------------------------------
+    // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange with specified number of columns with a given MBLayout
+    // This implements the logic of interpreting the FrameRange object.
+    // Unlike the matrix version above, this supports iteration indices other than time.
+    // TODO: This ^^. Still missing is a field to identify the index.
+    // -----------------------------------------------------------------------
+
+    template<class DimensionVector> // e.g. std::vector<size_t> or SmallVector<size_t>
+    static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayoutFor(const DimensionVector & shape/*actual tensor shape of 'data'*/,
+                                                                                         const FrameRange & fr/*select frame or entire batch from 'data'*/,
+                                                                                         const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
+    {
+        std::pair<DimensionVector, DimensionVector> result;
+
+        // this creates a slice for the entire matrix, which we will then narrow down
+        result.first.resize(shape.size(), 0);
+        result.second = shape;
+
+        // get position of time and sequence index
+        // These are only valid if we have a layout.
+        // In the future, the 'timeDim' will be identified by the FrameRange.
+        size_t sequenceDim = shape.size() - 2;  // TODO: In case of multiple time dims, this must be adjusted.
+        size_t timeDim = sequenceDim + 1;       // TODO: Get this from the FrameRange object.
+
+        // MBLayout of data and of FrameRange must be identical pointers,
+        // or in case of broadcasting, respective parent pointers.
+        // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
+        // For those cases, use a ReconcileMBLayout node.
+        if (fr.m_pMBLayout != pMBLayout)
+        {
+            // if broadcast allowed then it is allowed to broadcast from an outer-loop value
+            // Currently, the only 'outer' loop we have is to have no layout.
+            if (fr.m_pMBLayout/*get data for a loop*/ && !pMBLayout/*'data' is not samples*/ && fr.m_broadcastAllowed/*we're OK with that*/)
+                ;               // the time dimension is broadcasting--leave it as is
+            else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix. They are compatible though--are you missing a ReconcileMBLayout operation?");
+            else
+                LogicError("DataFor: fr's MBLayout inconsistent with matrix");
+        }
+        // if FrameRange refers to whole minibatch (map mode)
+        // or if we don't even have a layout
+        // then return the whole matrix
+        // but as a reference (e.g. it cannot be resized)
+        else if (!pMBLayout || fr.IsAllFrames())
+        {
+            if (fr.m_timeOffset != 0)   // entire minibatch with non-zero offset exceeds bounds on at least one side
+                LogicError("DataFor: Iteration offset must not be specified for FrameRanges that reference the entire minibatch.");
+            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
+        }
+        // FrameRange refers to a time slice -> return that
+        else  if (result.second[timeDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
+        {
+            size_t t = fr.timeIdxInSeq + fr.m_timeOffset;
+            if (t >= result.second[timeDim])
+                LogicError("DataFor: FrameRange specifies an iteration index that is out of range.");
+            result.first[timeDim]  = t;
+            result.second[timeDim] = t + 1;
+        }
+        
+        // sequence index
+        if (fr.seqIndex != SIZE_MAX/*sequence requested*/ && pMBLayout/*have sequences*/ && result.second[sequenceDim] > 1/*>1 sequence (not broadcasting)*/)
+        {
+            size_t s = fr.seqIndex;
+            if (s >= result.second[sequenceDim])
+                LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
+            result.first[sequenceDim]  = s;
+            result.second[sequenceDim] = s + 1;
+        }
+
+        return result;
     }
 
     // -----------------------------------------------------------------------

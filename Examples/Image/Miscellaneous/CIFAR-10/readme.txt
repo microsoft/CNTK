@@ -15,9 +15,14 @@ Short description of the network:
 01_Convolution.ndl is a convolutional network which has 3 convolutional and 3 max pooling layers and resembles the network described here:
 https://code.google.com/p/cuda-convnet/source/browse/trunk/example-layers/layers-80sec.cfg 
 (main differences are usage of max pooling layers everywhere rather than mix of max and average pooling, as well as dropout in fully-connected layer).
-The network produces 22% of error after training for about 4 minutes on GPU.
+The network produces 21% of error after training for about 3 minutes on GPU.
 To run the sample, navigate to this folder and run the following command:
 <path to CNTK executable> configFile=01_Conv.config configName=01_Conv
+
+02_BatchNormConv.ndl is a convolutional network which uses batch normalization technique (http://arxiv.org/abs/1502.03167).
+
+03_ResNet.ndl and 04_ResNet_56.ndl are very deep convolutional networks that use ResNet architecture and have 20 and 56 layers respectively (http://arxiv.org/abs/1512.03385).
+With 03_ResNet.config you should get around 10% of error.
 
 For more details, refer to .ndl and corresponding .config files.
 

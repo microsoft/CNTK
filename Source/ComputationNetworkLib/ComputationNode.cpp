@@ -175,36 +175,15 @@ namespace Microsoft {
     // tensor helpers
     // -----------------------------------------------------------------------
 
-    const TensorShape & ComputationNodeBase::GetAndValidateSampleLayout() const
-    {
-        // validate that m_sampleLayout is plausibly configured
-        bool layoutPlausible = true;
-        // some code initializes it to 0 or SIZE_MAX
-        for (size_t k = 0; k < m_sampleLayout.GetRank() && layoutPlausible; k++)
-        {
-            if (m_sampleLayout.GetDim(k) == 0 || m_sampleLayout.GetDim(k) == SIZE_MAX)
-                layoutPlausible = false;
-        }
-        // check dimension
-        if (GetNumRows() != m_sampleLayout.GetNumElements())
-            layoutPlausible = false;
-        if (!layoutPlausible)                        // layout looks like it's OK: return it  --TODO: always just rely on m_sampleLayout
-            LogicError("GetAndValidateSampleLayout: %ls %ls operation has sample layout [%s] that is inconsistent with number of rows %d.",
-                       NodeName().c_str(), OperationName().c_str(), string(m_sampleLayout).c_str(), (int)GetNumRows());
-
-        // all good: return it
-        return GetSampleLayout();
-    }
-
     // determine the sample tensor dimension to use for operations based on output and all inputs
     // 'Sample tensor' means we only consider single samples. If we have an MBLayout, that is the sample layout of a single matrix column.
     size_t ComputationNodeBase::DetermineElementwiseTensorRank() const
     {
         // determine largest tensor dimension amongst the sample shapes of output and the selected inputs
-        size_t maxRank = GetAndValidateSampleLayout().GetRank();
+        size_t maxRank = GetSampleLayout().GetRank();
         for (size_t i = 0; i < GetNumInputs(); i++)
         {
-            size_t rank = Input(i)->GetAndValidateSampleLayout().GetRank();
+            size_t rank = Input(i)->GetSampleLayout().GetRank();
             if (!HasMBLayout())                         // no MBLayout: last dim is column dimension
                 rank++;
             if (maxRank < rank)
@@ -213,28 +192,34 @@ namespace Microsoft {
         return maxRank;
     }
 
-    // determine the full tensor dimension including padding and multiple samples (MBLayout)
-    // but without trailing ones (assuming they will be auto-padded by the tensor op)
-    TensorShape ComputationNodeBase::GetTensorShape(size_t rank, const FrameRange & fr) const
+    // form the actual tensor that describes the full object
+    TensorShape ComputationNodeBase::GetTensorShape(size_t rank) const
     {
-        //GetAndValidateSampleLayout();     // no need to validate because rank comes from DetermineElementwiseTensorRank() which validates all
+        // If we have an MB layout then add the necessary dimensions. If we have none, then absorb the column dimension.
+        TensorShape tensorShape = GetSampleLayout();    // TODO: Can this tensor arbitrary strides? In case it came out of a Slice, Reshape, or Transpose op in-place
         if (!HasMBLayout())
-            return GetSampleLayout().Append(GetSampleLayout().GetRank(), GetNumCols());    //  last dim is column dimension
-            // TODO: This is not nice! Instead, of no MBLayout then have sample layout explain whole matrix.
-        else if (fr.IsAllFrames())
-        {
-            // we have an MBLayout, and for refers to the entire MB
-            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumCols());
-        }
-        //else if (fr.Sequence != SIZE_MAX)     // needs a slice and a two-dim tensor
-        //{
-        //    return GetAndValidateSampleLayout();  // .Append(rank, 1);  // no need to append ones
-        //}
+            tensorShape.AppendInPlace(tensorShape.GetRank(), GetNumCols());    //  last dim is column dimension
+        // TODO: This is not nice! Instead, if no MBLayout then have sample layout explain whole matrix.
         else
-        {
-            // we have an MBLayout, and fr refers to one frame (across all parallel sequences)
-            return GetSampleLayout().Append(rank, GetMBLayout()->GetNumParallelSequences());
-        }
+            tensorShape.AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences()).AppendInPlace(rank + 1, GetMBLayout()->GetNumTimeSteps());
+        return tensorShape;
+    }
+
+    // get tensor shape of the slice referenced by a given FrameRange
+    TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange & fr) const
+    {
+        // form the actual tensor that describes the full object
+        // Note: This may have strides.
+        auto tensorShape = GetTensorShape(rank);
+
+        // determine the slice dimensions described by the FrameRange
+        // Note: These are dimensions without strides.
+        auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+
+        // narrow the tensor
+        // Note: Strides are honored correctly.
+        tensorShape.NarrowTo(slice);
+        return tensorShape;
     }
 
     // -----------------------------------------------------------------------
@@ -305,8 +290,9 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         static TensorShape TensorShapeFromConfig(const IConfigRecord & config)
         {
             const auto & valp = config[L"dims"];
-            // TODO: Add code that if input is already a tensor shape it is also OK.
-            if (valp.Is<ConfigArray>())
+            if (valp.Is<TensorShape>())
+                return valp.AsRef<TensorShape>();   // UNTESTED
+            else if (valp.Is<ConfigArray>())
                 return TensorShape(valp.AsRef<ConfigArray>().AsVector<size_t>([&](const wstring & msg){ valp.Fail(msg); }));
             else
                 return TensorShape(std::vector<size_t>(1, (size_t)valp));       // single element
@@ -315,6 +301,26 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         BoxedTensorShape(const IConfigRecordPtr configp) : BoxOf<TensorShape>(TensorShapeFromConfig(*configp)) { }
     };
 
-    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape> registerTensoShape(L"TensorShape");
+    template<typename E>
+    class BoxedVector : public BoxOf<vector<E>>
+    {
+        // create a vector from config
+        static vector<E> VectorFromConfig(const IConfigRecord & config)
+        {
+            const auto & valp = config[L"items"];
+            if (valp.Is<vector<E>>())
+                return valp.AsRef<vector<E>>(); // UNTESTED
+            else if (valp.Is<ConfigArray>())
+                return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring & msg){ valp.Fail(msg); });
+            else
+                return std::vector<E>(1, (E)valp);       // single element
+        }
+    public:
+        BoxedVector(const IConfigRecordPtr configp) : BoxOf<vector<E>>(VectorFromConfig(*configp)) { }
+    };
+
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedTensorShape>    registerTensorShape(L"TensorShape");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<int>>    registerIntVector(L"IntVector");
+    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<BoxedVector<size_t>> registerSizeVector(L"SizeVector");
 
 }}}
