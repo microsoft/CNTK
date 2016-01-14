@@ -78,6 +78,7 @@ public:
     // -----------------------------------------------------------------------
 
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
+    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
@@ -171,6 +172,7 @@ private:
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
+    bool IsCompiled() const { return m_isCompiled; }
     void VerifyIsCompiled(const char * where) const;
     //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
