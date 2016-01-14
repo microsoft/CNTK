@@ -63,6 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_L2RegWeight;
         using SGDBase::m_L1RegWeight;
         using SGDBase::m_needAveMultiplier;
+        using SGDBase::m_useNesterovMomentum;
         using SGDBase::m_traceLevel;
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
@@ -930,7 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier, m_useNesterovMomentum);
                         }
                     }
                 }

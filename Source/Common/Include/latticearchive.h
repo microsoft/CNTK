@@ -51,6 +51,7 @@ enum mbrclassdefinition     // used to identify definition of class in minimum b
 // ===========================================================================
 class lattice
 {
+    mutable int verbosity; 
     struct header_v1_v2
     {
         size_t numnodes : 32;
@@ -567,11 +568,13 @@ private:
         std::vector<size_t> backptroffsets;         // TODO: we could change this to 'unsigned int' to save some transfer time
         std::vector<unsigned short> backptrstorage; // CPU-side versions use this as the traceback buffer; CUDA code has its CUDA-side buffer
         size_t numofstates;                         // per sil hmm
+        int verbosity;  
     public:
-        backpointers (const lattice & L, const msra::asr::simplesenonehmm & hset) : numofstates(0)
+        backpointers (const lattice & L, const msra::asr::simplesenonehmm & hset, int verbosity=0) : numofstates(0)
         {
             size_t edgeswithsilence = 0;    // (diagnostics only: number of edges with at least one /sil/)
             size_t backptrbufsize = 0;      // number of entries in buffer for silence backpointer array, used as cursor as we build it
+            
             backptroffsets.resize (L.edges.size() + 1);  // +1, so that the final entry determines the overall size of the allocated buffer
             const size_t silUnitId = hset.gethmmid ("sil");
             numofstates = hset.gethmm (silUnitId).getnumstates();
@@ -595,15 +598,18 @@ private:
 #if 1           // multiple /sil/ -> log this (as we are not sure whether this is actually proper--probably it is)
                 if (numsilunits > 1)
                 {
-                    fprintf (stderr, "backpointers: lattice '%S', edge %d has %d /sil/ phonemes\n", L.getkey(), j, (int)numsilunits);
-                    fprintf (stderr, "alignments: :");
-                    foreach_index (a, aligntokens)
+                    if (verbosity)
                     {
-                        const auto & unit = aligntokens[a];
-                        const auto & hmm = hset.gethmm (unit.unit);
-                        fprintf (stderr, "%s,%.2f:", hmm.getname(), unit.frames / 100.0f);
+                        fprintf(stderr, "backpointers: lattice '%S', edge %d has %d /sil/ phonemes\n", L.getkey(), j, (int)numsilunits);
+                        fprintf(stderr, "alignments: :");
+                        foreach_index(a, aligntokens)
+                        {
+                            const auto & unit = aligntokens[a];
+                            const auto & hmm = hset.gethmm(unit.unit);
+                            fprintf(stderr, "%s,%.2f:", hmm.getname(), unit.frames / 100.0f);
+                        }
+                        fprintf(stderr, "\n");
                     }
-                    fprintf (stderr, "\n");
                 }
 #endif
                 if (numsilunits > 0)
@@ -611,7 +617,8 @@ private:
                 backptrbufsize += maxsilframes * numofstates;
             }
             backptroffsets[L.edges.size()] = backptrbufsize;        // (TODO: remove if not actually needed)
-            fprintf (stderr, "backpointers: %.1f%% edges have at least one /sil/ unit inside\n", 100.0f * ((float) edgeswithsilence / L.edges.size()));
+            if (verbosity)
+                fprintf (stderr, "backpointers: %.1f%% edges have at least one /sil/ unit inside\n", 100.0f * ((float) edgeswithsilence / L.edges.size()));
         }
         // CUDA support
         const std::vector<size_t> & getbackptroffsets() const { return backptroffsets; }
@@ -1002,6 +1009,10 @@ public:
 
     std::wstring key;        // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t * getkey() const { return key.c_str(); }
+
+    void setverbosity(int veb) const{
+        verbosity = veb;
+    }
 };
 
 // ===========================================================================
@@ -1016,6 +1027,8 @@ class archive
     // set of lattice archive files referenced
     // Note that .toc files can be concatenated, i.e. one .toc file can reference multiple archive files.
     std::vector<std::wstring> archivepaths;         // [archiveindex] -> archive path
+    std::wstring              prefixPathInToc;      // prefix path in a toc; using this to avoid pushd some path before start training 
+    mutable int               verbosity;            
     size_t getarchiveindex (const std::wstring & path)  // get index of a path in archivepaths[]; create new entry if needed
     {
         auto iter = std::find (archivepaths.begin(), archivepaths.end(), path);
@@ -1042,7 +1055,8 @@ class archive
         {   // need to read the map and establish the mapping
             // get the symlist file
             const std::wstring symlistpath = archivepaths[archiveindex] + L".symlist";
-            fprintf (stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
+            if (verbosity>0)
+                fprintf (stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
             std::vector<char> textbuffer;
             auto lines = msra::files::fgetfilelines (symlistpath, textbuffer);
             // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
@@ -1092,19 +1106,25 @@ class archive
 public:
     // construct = open the archive
     //archive() : currentarchiveindex (SIZE_MAX) {}
-
+    void setverbosity(int veb) const 
+    {
+        verbosity = veb;
+    }
     // test if this object is loaded with anything (if not, an empty set of TOC paths was passed--meaning disable lattice mode)
     bool empty() const { return archivepaths.empty(); }
 
     // construct from a list of TOC files
-    archive (const std::vector<std::wstring> & tocpaths, const std::unordered_map<std::string,size_t> & modelsymmap) : currentarchiveindex (SIZE_MAX), modelsymmap (modelsymmap)
+    archive (const std::vector<std::wstring> & tocpaths, const std::unordered_map<std::string,size_t> & modelsymmap, const std::wstring prefixPath=L"") 
+        : currentarchiveindex(SIZE_MAX), modelsymmap(modelsymmap), prefixPathInToc(prefixPath), verbosity(0)
     {
         if (tocpaths.empty())   // nothing to read--keep silent
             return;
         fprintf (stderr, "archive: opening %d lattice-archive TOC files ('%S' etc.)..", (int)tocpaths.size(), tocpaths[0].c_str());
+        size_t onepercentage = tocpaths.size() / 100 ? tocpaths.size()/100 : 1; 
         foreach_index (i, tocpaths)
         {
-            fprintf (stderr, ".");
+            if ( (i % onepercentage) ==  0)
+                fprintf (stderr, ".");
             open (tocpaths[i]);
         }
         fprintf (stderr, " %d total lattices referenced in %d archive files\n", (int)toc.size(), (int)archivepaths.size());
@@ -1135,7 +1155,11 @@ public:
                 RuntimeError("open: invalid TOC line (no [): %s", line);
             if (q != p)
             {
-                const std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
+                std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
+                if (!prefixPathInToc.empty())
+                {
+                    archivepath = prefixPathInToc + L"/" + archivepath;
+                }
                 // TODO: should we allow paths relative to TOC file?
                 archiveindex = getarchiveindex (archivepath);
             }
@@ -1207,6 +1231,7 @@ public:
             fsetpos (f, offset);
             // get it
             L.fread (f, idmap, spunit);
+            L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE       // hack to simulate DEL in the lattice
             const size_t silunit = getid (modelsymmap, "sil");
             const bool addsp = true;

@@ -1234,8 +1234,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 1)
             {
-                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                                         Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+				FrameRange fr(Input(0)->GetMBLayout());
+				BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+					Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+				MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+                
 #ifdef _DEBUG
                 Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
@@ -1368,14 +1371,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         }
 
-        // Release gradient and temp matrices that are no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-        {
-            Base::ReleaseMatricesAfterBackprop(matrixPool);
-            ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
-            ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
-            ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
-        }
+		//request matrices needed to do node function value evaluation
+		virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+		{
+			Base::ReleaseMatricesAfterBackprop(matrixPool);
+			ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+			ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+		}
 
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticepair>> * getLatticePtr()
@@ -1415,6 +1418,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_doReferenceAlignment = doreferencealign;
         }
 
+        void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+        {
+            msra::lattices::SeqGammarCalParam param; 
+            param.amf = amf; 
+            param.lmf = lmf; 
+            param.wp = wp; 
+            param.bMMIfactor = bMMIfactor; 
+            param.sMBRmode = sMBR;
+            m_gammaCalculator.SetGammarCalculationParams(param);
+        }
+
         void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
         {
             gammatime = m_gammatime;
@@ -1427,6 +1441,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
         double m_frameDropThreshold;
         double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+        double m_seqGammarAMF; 
+        double m_seqGammarLMF; 
+        double m_seqGammarWP; 
+        double m_seqGammarbMMIFactor;
+        double m_seqGammarUsesMBR; 
         bool m_doReferenceAlignment;
         std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
         msra::asr::simplesenonehmm m_hmm;

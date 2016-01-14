@@ -167,6 +167,7 @@ public:
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
+    void MarkValueNonSharableNodes();
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
@@ -352,6 +353,7 @@ public:
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // node access
@@ -418,8 +420,20 @@ public:
 
     template<class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+
+
+
     template<class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    static void SetSeqParam(ComputationNetworkPtr net, 
+                            const ComputationNodeBasePtr criterionNode, 
+                            const double&  hsmoothingWeight, 
+                            const double& frameDropThresh, 
+                            const bool&   doreferencealign, 
+                            const double& amf=14.0f, 
+                            const double& lmf=14.0f, 
+                            const double& wp=0.0f, 
+                            const double& bMMIfactor=0.0f, 
+                            const bool&  sMBR=false);
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------

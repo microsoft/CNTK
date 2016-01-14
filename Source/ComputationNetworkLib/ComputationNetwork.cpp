@@ -550,9 +550,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
     template<class ElemType>
-    void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
+    void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net, 
+                                            const ComputationNodeBasePtr criterionNode, 
+                                            const double& hsmoothingWeight, 
+                                            const double& frameDropThresh, 
+                                            const bool& doreferencealign, 
+                                            const double& amf /*= 14.0f*/,
+                                            const double& lmf /*= 14.0f*/,
+                                            const double& wp  /*= 0.0f*/,
+                                            const double& bMMIfactor /*= 0.0f*/,
+                                            const bool&  sMBR /*= false*/
+                                            )
     {
         fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
+            amf, lmf, wp, bMMIfactor, sMBR ? "true" : "false");
         list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
         if (seqNodes.size() == 0)
         {
@@ -566,6 +578,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->SetSmoothWeight(hsmoothingWeight);
                 node->SetFrameDropThresh(frameDropThresh);
                 node->SetReferenceAlign(doreferencealign);
+                node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
             }
         }
     }
@@ -1046,14 +1059,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::ReadPersistableParameters<float>(File & fstream, bool create);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, 
+                                const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::Read<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::ReadPersistableParameters<double>(File & fstream, bool create);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, 
+                            const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 
     // register ComputationNetwork with the ScriptableObject system
     ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetwork> registerComputationNetwork(L"ComputationNetwork");
