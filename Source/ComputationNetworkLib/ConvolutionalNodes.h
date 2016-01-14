@@ -813,9 +813,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetEvalMode(bool bnEvalMode)
         {
-            m_eval = bnEvalMode;
+            m_eval = bnEvalMode; 
         }
-
     private:
         struct VersionInfo
         {
