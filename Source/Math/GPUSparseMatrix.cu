@@ -773,6 +773,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 CUDA_CALL(cudaFree(m_pArray));
             }
+
             m_pArray = pArray;
 
             //following are generated dynamically and no need to save
@@ -1051,33 +1052,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeB)
             {
-            int blocksPerGrid = (int)ceil(1.0*cRows*cCols / GridDim::maxThreadsPerBlock);
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                int blocksPerGrid = (int)ceil(1.0*cRows*cCols / GridDim::maxThreadsPerBlock);
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
                 _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
-                m,          // rowDense
-                k,          // colDense
-                n,          // colSparse
+                    m,          // rowDense
+                    k,          // colDense
+                    n,          // colSparse
                     numChannels,// number of input channels
-                numSteps,   // convolution num steps
+                    numSteps,   // convolution num steps
                     horizontalSubsample,   // convolution step size
                     channelwise,// channelwise or pixelwise multiplication
-                alpha,
-                reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                    alpha,
+                    reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                     transposeA,
                     reinterpret_cast<const ElemType*>(rhs.BufferPointer()),  //sparse nz values
-                rhs.RowLocation(),
-                rhs.ColLocation(),
-                beta,
-                reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                );
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    beta,
+                    reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                    );
 
-            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        }
-        else
-        {
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else
+            {
                 if (beta != 1.0)
                 {
                     RuntimeError("Only support c += alpha * a operation");
@@ -1958,13 +1959,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         PrepareDevice();
-        long *res = new long[3];
+        long *res = new long[4];
         res[0] = 1;
         res[1] = 0;
         res[2] = 0;
+        res[3] = 0;
         long *d_res = nullptr;
-        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 3));
-        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 3, cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 4));
+        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 4, cudaMemcpyHostToDevice));
 
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
@@ -1974,7 +1976,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
-        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 4, cudaMemcpyDeviceToHost));
         
         if (res[0] == 1)
         {
@@ -1982,7 +1984,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            fprintf(stderr, "GPUSparseMatrix::IsValid %ld %ld %ld", res[0], res[1], res[2]);
+            fprintf(stderr, "GPUSparseMatrix::IsValid returned false (additional info: %ld %ld %ld)\n", res[1], res[2], res[3]);
             return false;
         }
     }
@@ -2181,28 +2183,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         if (m_format == MatrixFormat::matrixFormatSparseCSR)
         {
-            if (sizeof(ElemType) == sizeof(float))
+            if (nnz > 0)
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<float*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                if (sizeof(ElemType) == sizeof(float))
+                {
+                    CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                        reinterpret_cast<float*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                }
+                else
+                {
+                    CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                        reinterpret_cast<double*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                }
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<double*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
             }
         }
         else if (m_format == matrixFormatSparseCSC)
         {
-            if (sizeof(ElemType) == sizeof(float))
+            if (nnz > 0)
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                if (sizeof(ElemType) == sizeof(float))
+                {
+                    CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                        reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                }
+                else
+                {
+                    CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                        reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                }
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
             }
         }
         else

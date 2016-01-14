@@ -2799,8 +2799,9 @@ __global__ void _isValid(
         if (d_res[0] > 0)
         {
             d_res[0] = -1;
-            d_res[1] = start;
-            d_res[2] = end;
+            d_res[1] = id;
+            d_res[2] = start;
+            d_res[3] = end;
         }
     }
     else if (end > nz)
@@ -2810,6 +2811,7 @@ __global__ void _isValid(
             d_res[0] = -2;
             d_res[1] = id + 1;
             d_res[2] = end;
+            d_res[3] = nz;
         }
     }
     else
@@ -2823,6 +2825,7 @@ __global__ void _isValid(
                     d_res[0] = -3;
                     d_res[1] = j;
                     d_res[2] = rowIndex[j];
+                    d_res[3] = rows;
                     break;
                 }
             }
@@ -2831,8 +2834,9 @@ __global__ void _isValid(
                 if (d_res[0] > 0)
                 {
                     d_res[0] = -4;
-                    d_res[1] = j;
-                    d_res[2] = id;
+                    d_res[1] = id;
+                    d_res[2] = j;
+                    d_res[3] = rowIndex[j];
                     break;
                 }
             }
