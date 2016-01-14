@@ -392,8 +392,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (m_loadBestModel)
                         {
-                            encoderNet->ReloadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
-                            decoderNet->ReloadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
+                            encoderNet->RereadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
+                            decoderNet->RereadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
 
                             size_t dummyMinibatchSize = 0;
                             this->LoadCheckPointInfo(i - 1,
@@ -721,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             //persist model and check-point info
                             for (size_t k = 0; k < iNumNetworks; k++)
                             {
-                                nets[k]->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                                nets[k]->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
                                 nets[k]->ResetEvalTimeStamps();
                             }
 

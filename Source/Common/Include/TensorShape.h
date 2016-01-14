@@ -180,8 +180,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // boilerplate
         bool operator==(const TensorShape & other) const { return m_dims == other.m_dims; }
 
-        void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
-
         // verify that this refers to a dense matrix (no strides)
         void VerifyIsDense() const
         {

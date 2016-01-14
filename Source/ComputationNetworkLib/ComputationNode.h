@@ -136,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef std::shared_ptr<INodeState> NodeStatePtr;
         virtual NodeStatePtr ExportState() = 0;
-        virtual void ImportState(NodeStatePtr && state) = 0;
+        virtual void ImportState(const NodeStatePtr & state) = 0;
     };
     typedef IStatefulNode::NodeStatePtr NodeStatePtr;
 
@@ -1532,7 +1532,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr; \
-    using Base::m_deviceId; using Base::GetDeviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; using Base::GetNumRows; using Base::GetNumCols; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
+    using Base::m_deviceId; using Base::shared_from_this; using Base::GetDeviceId; using Base::SetDims; using Base::SetDims1; using Base::SetNumCols; \
+    using Base::GetNumRows; using Base::GetNumCols; using Base::GetTensorShape; using Base::UpdateFunctionValuesSize; using Base::LoadValue; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValueColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValueColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataFor; using Base::ValueFor; using Base::Gradient; using Base::GradientFor; \

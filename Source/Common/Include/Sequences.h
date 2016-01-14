@@ -84,6 +84,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
             size_t    tEnd;         // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
             bool operator==(const SequenceInfo & other) const { return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd; }
+            size_t GetNumTimeSteps() const { return (size_t)(tEnd - tBegin); }
         };
 
         // -------------------------------------------------------------------
@@ -270,6 +271,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // I'd love to start with all-gaps, but that would require to set flags upfront, and then clearing them.
         void AddGap(size_t s, ptrdiff_t beginTime, size_t endTime) { if ((ptrdiff_t)endTime > beginTime) AddSequence(GAP_SEQUENCE_ID, s, beginTime, endTime); }
 
+        // find a sequence by its id
+        const SequenceInfo & FindSequence(UniqueSequenceId seqId) const
+        {
+            for (const auto & seqInfo : m_sequences)
+                if (seqInfo.seqId == seqId)
+                    return seqInfo;
+            LogicError("FindSequence: Requested sequence (id %u) not found.", (unsigned int) seqId);
+        }
+
         // -------------------------------------------------------------------
         // inquire about gaps or boundaries
         // -------------------------------------------------------------------
@@ -427,6 +437,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public: // TODO: make private (currently used from masking and DataFor) ; TODO: rename all members with m_ prefix
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
         ptrdiff_t m_timeOffset;             // this is added to timeIdxInSeq wherever it is used
+        size_t m_timeRange;                 // use this to describe a custom range > 1 frame
         size_t seqIndex;                    // parallel-sequence index; SIZE_MAX = all sequences in MB (most common case)  --TODO: Bad name, 'sequence' and 'parallel sequence' are two different things
         MBLayoutPtr m_pMBLayout;            // layout associated with this
         bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range)
@@ -434,7 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         // can construct from a single size_t -> a single-frame range
-        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), m_timeOffset(0), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), m_timeOffset(0), m_timeRange(1), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
         FrameRange(MBLayoutPtr pMBLayout) : FrameRange(pMBLayout, SIZE_MAX) {}
@@ -471,11 +482,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // create a FrameRange with a time offset
-        // Note: This currently does not work in conjunction with IsAllFrames(). This would be a nice-to have, but tricky w.r.t. out-of-bounds accesses.
+        // If IsAllFrames() then this will cause out-of-bounds slices.
         FrameRange WithTimeOffset(ptrdiff_t offset) const
         {
             FrameRange ret = *this;
             ret.m_timeOffset += offset;
+            return ret;
+        }
+
+        // create a FrameRange with a time range > 1
+        FrameRange WithTimeRange(size_t range) const
+        {
+            FrameRange ret = *this;
+            if (!IsAllFrames())
+                ret.m_timeRange = range;
             return ret;
         }
 
@@ -762,7 +782,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (startColumn >= numCols)
                 LogicError("DataFor: FrameRange specifies a time index that is out of range.");
             if (fr.seqIndex == SIZE_MAX)
-                return std::pair<size_t, size_t>(startColumn, numParallelSequences);
+                return std::pair<size_t, size_t>(startColumn, numParallelSequences * fr.m_timeRange);
+            else if (fr.m_timeRange != 1)
+                LogicError("DataFor: FrameRange only support per-sequence time ranges with tensor slices, not matrix slices.");
             else
                 return std::pair<size_t, size_t>(startColumn + fr.seqIndex, 1);
         }
@@ -787,7 +809,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange with specified number of columns with a given MBLayout
     // This implements the logic of interpreting the FrameRange object.
     // Unlike the matrix version above, this supports iteration indices other than time.
-    // TODO: This ^^. Still missing is a field to identify the index.
+    // TODO: This ^^. FrameRange still missing is a field to identify the index.
+    // This function happily returns tensor bounds that are out of bounds, assuming caller will do the right thing.
     // -----------------------------------------------------------------------
 
     template<class DimensionVector> // e.g. std::vector<size_t> or SmallVector<size_t>
@@ -796,6 +819,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
     {
         std::pair<DimensionVector, DimensionVector> result;
+        typedef decltype(result.first[0]) ElemType;
 
         // this creates a slice for the entire matrix, which we will then narrow down
         result.first.resize(shape.size(), 0);
@@ -829,28 +853,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // but as a reference (e.g. it cannot be resized)
         else if (!pMBLayout || fr.IsAllFrames())
         {
-            if (fr.m_timeOffset != 0)   // entire minibatch with non-zero offset exceeds bounds on at least one side
-                LogicError("DataFor: Iteration offset must not be specified for FrameRanges that reference the entire minibatch.");
-            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
+            result.first[iterDim]  += (ElemType) fr.m_timeOffset;  // Note: If we have an offset, this is guaranteed to yield a slice that is out of bounds.
+            result.second[iterDim] += (ElemType) fr.m_timeOffset;
+            if (result.first[iterDim] > result.second[iterDim])
+                LogicError("DataFor: Numeric wraparound. You used a size_t vector where an int vector would be needed.");
         }
         // FrameRange refers to a time slice -> return that
         else  if (result.second[iterDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
         {
-            size_t t = fr.timeIdxInSeq + fr.m_timeOffset;
-            if (t >= result.second[iterDim])
-                LogicError("DataFor: FrameRange specifies an iteration index that is out of range.");
-            result.first[iterDim]  = t;
-            result.second[iterDim] = t + 1;
+            size_t ts = fr.timeIdxInSeq + fr.m_timeOffset;
+            size_t te = ts + fr.m_timeRange;
+            result.first[iterDim]  = (ElemType) ts;
+            result.second[iterDim] = (ElemType) te;
         }
-        
+
         // sequence index
         if (fr.seqIndex != SIZE_MAX/*sequence requested*/ && pMBLayout/*have sequences*/ && result.second[sequenceDim] > 1/*>1 sequence (not broadcasting)*/)
         {
             size_t s = fr.seqIndex;
             if (s >= result.second[sequenceDim])
                 LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
-            result.first[sequenceDim]  = s;
-            result.second[sequenceDim] = s + 1;
+            result.first[sequenceDim]  = (ElemType) s;
+            result.second[sequenceDim] = (ElemType) s + 1;
         }
 
         return result;
