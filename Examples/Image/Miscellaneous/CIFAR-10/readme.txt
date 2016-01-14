@@ -22,7 +22,7 @@ To run the sample, navigate to this folder and run the following command:
 02_BatchNormConv.ndl is a convolutional network which uses batch normalization technique (http://arxiv.org/abs/1502.03167).
 
 03_ResNet.ndl and 04_ResNet_56.ndl are very deep convolutional networks that use ResNet architecture and have 20 and 56 layers respectively (http://arxiv.org/abs/1512.03385).
-With 03_ResNet.config you should get around 10% of error.
+With 03_ResNet.config you should get around 8.2% of error after training for about 50 minutes (see log files in the Output directory).
 
 For more details, refer to .ndl and corresponding .config files.
 
