@@ -199,8 +199,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // validate the network before we save it out
         ProcessNDLScript(m_netNdlDefault, ndlPassAll, true);
-
-        cn->Save(fileName);
+        cn->SaveEdited(fileName);
     }
     else if (EqualInsensitive(name, "SaveModel"))
     {
@@ -219,7 +218,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
-        netNdl->cn->Save(fileName);
+        netNdl->cn->SaveEdited(fileName);
     }
     else if (EqualInsensitive(name, "SetDefaultModel"))
     {

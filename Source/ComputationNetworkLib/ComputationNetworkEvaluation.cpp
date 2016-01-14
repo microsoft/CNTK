@@ -367,7 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // verify that network has undergone CompileNetwork()
     void ComputationNetwork::VerifyIsCompiled(const char * where) const
     {
-        if (!m_isCompiled)
+        if (!IsCompiled())
             LogicError("%s: A compiled network was expected.", where);
     }
 

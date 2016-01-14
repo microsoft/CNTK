@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // break cycles
         // BUGBUG: This only works if nodes are not shared across networks.
         //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
+        //         Or just use weak ptrs.
         for (auto & iter : m_nameToNodeMap)
             iter.second->DetachInputs();
 
@@ -74,8 +75,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
+    // after after editing--network is possibly not validated/compiled
+    void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
+    {
+        if (!IsCompiled())
+            CompileNetwork();
+        Save(fileName, fileFormat);
+    }
+
     void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
     {
+        VerifyIsCompiled("Save");
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         // TODO: This does not belong here.
