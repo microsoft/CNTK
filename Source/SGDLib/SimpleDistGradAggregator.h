@@ -4,6 +4,7 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include <future>
 #include "GPUDataTransferer.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
