@@ -137,7 +137,7 @@ struct GridDim
         std::vector<cudaDeviceProp> props(numDevices);
         for (int i = 0; i < numDevices; i++)
             CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
-#if 1   // on Linux, maxGridSize[0] gets reported as 0
+#if 0   // on Linux, maxGridSize[0] gets reported as 0
         for (int i = 0; i < numDevices; i++)
             fprintf(stderr, "%d procs  %d warps  %d %d %d max grid  on  %s\n", (int)props[i].multiProcessorCount, (int)props[i].warpSize, (int)props[i].maxGridSize[0], (int)props[i].maxGridSize[1], (int)props[i].maxGridSize[2], props[i].name);
 #endif

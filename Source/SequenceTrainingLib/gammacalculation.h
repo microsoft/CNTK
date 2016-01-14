@@ -11,6 +11,23 @@
 #pragma warning (disable: 4127) // conditional expression is constant
 
 namespace msra { namespace lattices {
+
+    struct  SeqGammarCalParam{
+        double amf; 
+        double lmf; 
+        double wp; 
+        double bMMIfactor; 
+        bool  sMBRmode; 
+        SeqGammarCalParam()
+        {
+            amf = 14.0; 
+            lmf = 14.0; 
+            wp = 0.0; 
+            bMMIfactor = 0.0;
+            sMBRmode = false;
+        }
+    };
+
     template<class ElemType>
     class GammaCalculation
     {
@@ -19,9 +36,9 @@ namespace msra { namespace lattices {
         GammaCalculation() : cpumode(false)
         {
             initialmark = false;
-            lmf = 14.0f; // Note that 9 was best for Fisher  --these should best be configurable
+            lmf = 7.0f; // Note that 9 was best for Fisher  --these should best be configurable
             wp = 0.0f;
-            amf = 14.0f;
+            amf = 7.0f;
             boostmmifactor = 0.0f;
             seqsMBRmode = false;
         }
@@ -30,6 +47,9 @@ namespace msra { namespace lattices {
 
         }
 
+        //========================================
+        // Sec. 1 init functions
+        //========================================
         void init(msra::asr::simplesenonehmm hset, int DeviceId)
         {
             m_deviceid = DeviceId;
@@ -47,7 +67,21 @@ namespace msra { namespace lattices {
             }
         }
             
-            
+        //========================================
+        // Sec. 2 set functions 
+        //========================================
+        void SetGammarCalculationParams(const SeqGammarCalParam& gammarParam)
+        {
+            lmf = (float)gammarParam.lmf;
+            amf = (float)gammarParam.amf;
+            wp =  (float)gammarParam.wp; 
+            seqsMBRmode = gammarParam.sMBRmode; 
+            boostmmifactor = (float)gammarParam.bMMIfactor;
+        }
+
+        //========================================
+        // Sec. 3 calculation functions 
+        //========================================
         void calgammaformb( Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, 
                             std::vector<shared_ptr<const msra::dbn::latticepair>> &lattices, 
                             const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,

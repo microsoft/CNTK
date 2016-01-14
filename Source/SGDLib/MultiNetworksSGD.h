@@ -63,6 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_L2RegWeight;
         using SGDBase::m_L1RegWeight;
         using SGDBase::m_needAveMultiplier;
+        using SGDBase::m_useNesterovMomentum;
         using SGDBase::m_traceLevel;
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
@@ -392,8 +393,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (m_loadBestModel)
                         {
-                            encoderNet->ReloadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
-                            decoderNet->ReloadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
+                            encoderNet->RereadPersistableParameters<ElemType>(GetEncoderModelNameForEpoch(i - 1));
+                            decoderNet->RereadPersistableParameters<ElemType>(GetDecoderModelNameForEpoch(i - 1));
 
                             size_t dummyMinibatchSize = 0;
                             this->LoadCheckPointInfo(i - 1,
@@ -721,7 +722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             //persist model and check-point info
                             for (size_t k = 0; k < iNumNetworks; k++)
                             {
-                                nets[k]->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
+                                nets[k]->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(i, false, msra::strfun::wstrprintf(L".%d", k)));
                                 nets[k]->ResetEvalTimeStamps();
                             }
 
@@ -930,7 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier, m_useNesterovMomentum);
                         }
                     }
                 }

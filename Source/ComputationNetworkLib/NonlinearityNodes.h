@@ -44,7 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
-            static int c = 0; if (c++ == 0) { fprintf(stderr, "#NLop%d#\n", (int)opForward); }
+            //static int c = 0; if (c++ == 0) { fprintf(stderr, "#NLop%d#\n", (int)opForward); }
 
             size_t rank = DetermineElementwiseTensorRank();
             auto result =           ValueTensorFor(rank, fr);

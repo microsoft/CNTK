@@ -56,6 +56,9 @@ makebuildinfo()
 	if [ ! -z "$CUB_PATH" ]; then 
 		printf "#define _CUB_PATH_ \"%s\"\n"  $CUB_PATH  >> $target
 	fi
+    if [ ! -z "$CUDNN_PATH" ]; then 
+        printf "#define _CUDNN_PATH_ \"%s\"\n"  $CUDNN_PATH  >> $target
+    fi
 	printf "#define _BUILDTYPE_ \"%s\"\n" $BUILDTYPE    	>> 	$target
 	printf "#endif\n" 					>>	$target
 }

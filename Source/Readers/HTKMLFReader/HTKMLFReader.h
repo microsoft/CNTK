@@ -32,6 +32,9 @@ private:
     intargvector m_numSeqsPerMBForAllEpochs;
     size_t m_numSeqsPerMB;                  // requested number of parallel sequences
     size_t m_mbNumTimeSteps;                // number of time steps  to fill/filled (note: for frame randomization, this the #frames, and not 1 as later reported)
+    size_t m_mbMaxNumTimeSteps;             // max time steps we take in a MB layout; any setence longer than this max will be discarded (and a warning will be issued )
+                                            // this is used to prevent CUDA out-of memory errors
+
     vector<size_t> m_numFramesToProcess;    // [seq index] number of frames available (left to return) in each parallel sequence
     vector<size_t> m_switchFrame;           /// TODO: something like the position where a new sequence starts; still supported?
     vector<size_t> m_numValidFrames;        // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.

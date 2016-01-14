@@ -87,9 +87,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return (MajorIndexLocation() + (m_format == matrixFormatSparseCSC ? SecondaryIndexValueAt(0) : 0));
         }
 
+		// TODO: Comment these methods more thoroughly, e.g., why it uses numNZ instead of m_elemSizeAllocated.
         size_t MajorIndexCount() const
         {
-            return MajorIndexCount(m_numRows, m_numCols, m_elemSizeAllocated, m_format);
+            return MajorIndexCount(m_numRows, m_numCols, m_nz, m_format);
         }
         size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
         { 
@@ -113,6 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return MajorIndexLocation() + m_numRows;
             else
                 return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
+                //return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
         } 
         size_t SecondaryIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
         {
