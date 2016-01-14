@@ -2423,9 +2423,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> priorVals = ReadMatrixFromDbnFile(fstream, std::string("Pu"));
             assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
-            w = builder.Mean(label, L"Prior");
-            static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(priorVals);
-            w->SetParameterUpdateRequired(false);
+            prior = builder.Mean(label, L"Prior");
+            static_pointer_cast<PreComputedNode<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
+            prior->SetParameterUpdateRequired(false);
         }
         else // pretrained network - need to add output layer, initalize
         {
@@ -2465,7 +2465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (layerType == "perceptron" || m_needPrior)
         {
-            input = builder.Log(pcNodePtr, L"LogOfPrior");
+            input = builder.Log(prior, L"LogOfPrior");
 
             //following two lines is needed only if true probability is needed
             //output = builder.Softmax(output);

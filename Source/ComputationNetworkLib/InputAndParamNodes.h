@@ -41,6 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_parameterUpdateRequired = true;
+            this->m_valueSharable = false; 
             SetDims(TensorShape(), 0);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & shape) :
@@ -48,6 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_parameterUpdateRequired = true;
             CreateMatrixIfNull(m_value);
+            this->m_valueSharable = false; 
             // for now we split off the trailing dimension into the matrix column dimension
             // TODO: This is for compat, but is is inconsistent. Decide what a sample layout means for a node without MBLayout w.r.t. non-tensor ops.
             auto dims = shape.GetDims();
@@ -197,6 +199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
+
     };
 
 #if 0
@@ -261,6 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(sampleLayout, 0);
             UpdateFunctionValuesSize();     // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
             m_parameterUpdateRequired = false;
+            this->m_valueSharable = false; 
         }
     protected:
         InputValueBase(DEVICEID_TYPE deviceId, const wstring & name, const TensorShape & sampleLayout, bool isSparse) :

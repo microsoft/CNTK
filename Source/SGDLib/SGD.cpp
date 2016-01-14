@@ -303,7 +303,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
         {
-            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign);
+            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign, 
+                m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR );
         }
 
         // --- MAIN EPOCH LOOP
@@ -512,6 +513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
+                g_mpi->Bcast(&lrControlCriterion, 1, g_mpi->MainNodeRank());
             }
 
             bool loadedPrevModel = false;
@@ -764,13 +766,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
         size_t numSubminibatchesNeeded = 0; 
-        if (m_maxSamplesInRAM < SIZE_MAX)   // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
+        if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1)   // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
         {
-            // into how many pieces would we need to break the minibatch?
-            // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
-            size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
-            size_t estimatedMBSize = tunedMBSize * numParallelSequences; 
-            numSubminibatchesNeeded = (size_t)std::ceil((float)estimatedMBSize / m_maxSamplesInRAM);             
+            if (m_maxSamplesInRAM < SIZE_MAX)
+            {
+                // into how many pieces would we need to break the minibatch?
+                // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
+                size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
+                size_t estimatedMBSize = tunedMBSize * numParallelSequences;
+                numSubminibatchesNeeded = (size_t)std::ceil((float)estimatedMBSize / m_maxSamplesInRAM);
+            }
+            if (m_numSubminiBatches > 1)
+            {
+                numSubminibatchesNeeded = m_numSubminiBatches;
+            }
         }
         // this is non-trivial, we need a manager object to handle this
         if (numSubminibatchesNeeded > 1)
@@ -800,7 +809,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (numSubminibatchesNeeded > 1)
         {
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            if (m_maxSamplesInRAM < SIZE_MAX)
+                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            else
+                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
         }
         fprintf(stderr, ".\n");
 
@@ -991,7 +1003,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                       GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net->GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,
-                                      m_needAveMultiplier);
+                                      m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
                         if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                             LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
@@ -2012,7 +2024,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier)
+                               const bool needAveMultiplier, 
+                               const bool useNesterovMomentum
+                               )
     {
         // we use simple linear (instead of log linear) scaling here
         const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -2053,7 +2067,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (adpType == GradientsUpdateType::None)
         {
             smoothedGradient.NormalGrad(gradientValues, functionValues,
-                                        (ElemType)learnRatePerSample, (ElemType)momentum);
+                                        (ElemType)learnRatePerSample, (ElemType)momentum, useNesterovMomentum);
         }
         else if (adpType == GradientsUpdateType::AdaGrad ||
                 (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
@@ -2103,7 +2117,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const
+                       const bool needAveMultiplier, 
+                       const bool useNesterovMomentum
+                       ) const
     {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
@@ -2114,7 +2130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
-                       needAveMultiplier);
+                       needAveMultiplier, m_useNesterovMomentum);
         node->BumpEvalTimeStamp();
     }
 
@@ -2484,6 +2500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mbSize = configSGD(L"minibatchSize", ConfigRecordType::Array(intargvector(vector<int>{ 256 })));
         m_truncated = configSGD(L"truncated", false);
         m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+        m_numSubminiBatches = configSGD(L"numSubminibatches", (size_t)1);
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = configSGD(L"epochSize", (size_t)0);
@@ -2503,6 +2520,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         floatargvector momentumPerMB          = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumPerSample      = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
         floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
+        bool           useNesterovMomentum = configSGD(L"useNAG", false); 
+
 
         m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t)0);
 
@@ -2517,6 +2536,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
         m_frameDropThresh =  configSGD(L"frameDropThresh",  1e-10);
         m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
+        m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false); 
+        m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
+        m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
+        m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0); 
+        m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
         m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(floatargvector(vector<float>{ 0.0f })));
 
@@ -2622,6 +2646,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_momentumParam = floatargvector(L"0.9");
             m_momentumSpecifiedForMBSize = m_mbSize;
         }
+        m_useNesterovMomentum = useNesterovMomentum; 
+
         for (int i = 0; i < m_momentumParam.size(); i++)
         {
             if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)

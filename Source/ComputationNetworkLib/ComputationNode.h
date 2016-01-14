@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
-            m_needsGradient(false)
+            m_needsGradient(false), m_valueSharable(true)
         {
             PurgeStateForFormingRecurrentLoops();
             m_isPartOfLoop = false;
@@ -166,10 +166,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
+        virtual void MarkValueNonSharable(){ m_valueSharable = false; }
+        virtual void MarkValueSharable() { m_valueSharable = true;    }
+        bool isValueSharable() const { return m_valueSharable;  }
+        
     protected:  // TODO: should be fully encapsulated here
 
         bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
+        bool m_valueSharable;   // a flag is needed for memory share. 
+                                // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters), 
+                                // it will never be released to memory pool 
     private:
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
@@ -250,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId(deviceId), m_outputNeededDuringBackprop(true),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name),
-            m_numRows(0), m_numCols(0)
+            m_numRows(0), m_numCols(0) 
         { }
         virtual ~ComputationNodeBase(){}
 
@@ -455,6 +462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
+
     protected:
     public:     // ...the following should be protected, but nodes inquire about their children, requiring public access
 
@@ -537,7 +545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
         bool IsOutputNeededDuringBackprop() const 
         {
-            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
+            return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop ;
         }
 
         const size_t GetNumInputs() const { return m_inputs.size(); }
@@ -769,6 +777,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
         bool m_gradientInitialized;         // indicates whether the gradient matrix has been resized and initialized to 0
         bool m_outputNeededDuringBackprop;  // indicates whether the output value of the node is needed during backprop
+
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -902,7 +911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //don't release matrices that need to be used in the gradient computation
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
         {
-            if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE))
+            if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && isValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
 
@@ -931,7 +940,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // Release the Value matrix only if the output value is needed during backprop
                 // since in the case it isn't used, we release it during forward prop itself
-                if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE)
+                if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && isValueSharable())
                     ReleaseMatrixToPool(m_value, matrixPool);
             }
         }
@@ -1316,6 +1325,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             CreateMatrixIfNull(m_gradient);
         }
+
+        void MarkValueNonSharable() override
+        {
+            m_valueSharable = false; 
+            CreateMatrixIfNull(m_value);
+        }
+
 
     protected:
 

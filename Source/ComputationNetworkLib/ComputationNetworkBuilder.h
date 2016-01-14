@@ -132,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"");
         ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"");
         ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
-            const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev, bool eval = false, bool spatial = false, double expAvgFactor = 1, const std::wstring nodeName = L"");
+            const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev, bool eval = false, bool spatial = false, double expAvgFactor = 1, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
     };
 
     // create a new from config

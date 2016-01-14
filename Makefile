@@ -162,7 +162,7 @@ ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
   CPPFLAGS += -D_DEBUG
-  CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
+  CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
