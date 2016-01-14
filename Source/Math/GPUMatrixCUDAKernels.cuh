@@ -1285,7 +1285,7 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     size_t nz)
 {
     CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (N >= nz || N < aColCSCIndex[0])
+    if (N >= nz || N < aColCSCIndex[0] || N > aColCSCIndex[T])
         return;
 
     size_t col;

@@ -1140,26 +1140,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetNumRows() != D*S*M*K)
             LogicError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: tensor dimensions and underlying matrix dimensions don't match");
 
-        c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumNZElements(), true, false);
+        c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumElemAllocated(), true, false);
         c.SetNzCount(a.GetNumNZElements());
 
-        c.PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        CUDA_LONG N = (CUDA_LONG)c.GetNumNZElements();
-        int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
-        _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
-            reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
-            a.RowLocation(),
-            a.ColLocation(),
-            reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
-            c.RowLocation(),
-            c.ColLocation(),
-            D, S, M, K, T,
-            c.GetNumNZElements());
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        if (c.m_nz > 0)
+        {
+            c.PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            CUDA_LONG N = (CUDA_LONG)c.GetNumElemAllocated();
+            int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+            _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
+                a.RowLocation(),
+                a.ColLocation(),
+                reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
+                c.RowLocation(),
+                c.ColLocation(),
+                D, S, M, K, T,
+                c.GetNumElemAllocated());
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
+        }
     }
 
     // backward pass from hidden layer to feature weight
@@ -1984,7 +1991,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            fprintf(stderr, "GPUSparseMatrix::IsValid returned false (additional info: %ld %ld %ld)\n", res[1], res[2], res[3]);
+            fprintf(stderr, "GPUSparseMatrix::IsValid returned false (additional info: %ld %ld %ld %ld)\n", res[0], res[1], res[2], res[3]);
             return false;
         }
     }
