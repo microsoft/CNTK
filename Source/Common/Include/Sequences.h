@@ -853,18 +853,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // but as a reference (e.g. it cannot be resized)
         else if (!pMBLayout || fr.IsAllFrames())
         {
-            result.first[iterDim]  += (ElemType) fr.m_timeOffset;  // Note: If we have an offset, this is guaranteed to yield a slice that is out of bounds.
-            result.second[iterDim] += (ElemType) fr.m_timeOffset;
-            if (result.first[iterDim] > result.second[iterDim])
-                LogicError("DataFor: Numeric wraparound. You used a size_t vector where an int vector would be needed.");
+            if (fr.m_timeOffset)
+            {
+                if (iterDim >= result.first.size())
+                    LogicError("DataFor: Time offset cannot be applied to tensors that have no time dimension.");
+                result.first[iterDim]  += (ElemType)fr.m_timeOffset;  // Note: If we have an offset, this is guaranteed to yield a slice that is out of bounds.
+                result.second[iterDim] += (ElemType)fr.m_timeOffset;
+                if (result.first[iterDim] > result.second[iterDim])
+                    LogicError("DataFor: Numeric wraparound. You used a size_t vector where an int vector would be needed.");
+            }
         }
         // FrameRange refers to a time slice -> return that
         else  if (result.second[iterDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
         {
             size_t ts = fr.timeIdxInSeq + fr.m_timeOffset;
             size_t te = ts + fr.m_timeRange;
-            result.first[iterDim]  = (ElemType) ts;
-            result.second[iterDim] = (ElemType) te;
+            result.first[iterDim]  = (ElemType)ts;
+            result.second[iterDim] = (ElemType)te;
         }
 
         // sequence index
@@ -873,8 +878,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t s = fr.seqIndex;
             if (s >= result.second[sequenceDim])
                 LogicError("DataFor: FrameRange specifies a paralllel-sequence index that is out of range.");
-            result.first[sequenceDim]  = (ElemType) s;
-            result.second[sequenceDim] = (ElemType) s + 1;
+            result.first[sequenceDim]  = (ElemType)s;
+            result.second[sequenceDim] = (ElemType)s + 1;
         }
 
         return result;
