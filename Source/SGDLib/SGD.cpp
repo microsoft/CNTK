@@ -536,7 +536,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
                         fprintf(stderr, "Loading previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
-                        net->ReloadPersistableParameters<ElemType>(bestModelPath);
+                        net->RereadPersistableParameters<ElemType>(bestModelPath);
                         LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                            /*out*/ totalSamplesSeen,
                                            /*out*/ learnRatePerSample,
@@ -1431,7 +1431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+        net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double learnRate = learnRatePerSample;
         size_t dummyMinibatchSize = 0;
@@ -1591,7 +1591,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         int baseModelEpoch = epochNumber - 1;
-        net->ReloadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+        net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
 
         double dummyLearnRate;
         double dummtPrevCriterion;

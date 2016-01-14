@@ -83,19 +83,27 @@ private:
 public:
 
     template<class ElemType>
-    void LoadPersistableParameters(File & fstream, bool create);
+    void ReadPersistableParameters(File & fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template<class ElemType>
-    void ReloadPersistableParameters(const std::wstring& fileName)
+    void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        LoadPersistableParameters<ElemType>(fstream, false);
+        ReadPersistableParameters<ElemType>(fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<class ElemType>
+    void Read(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
+    template<class ElemType>
     void Load(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                      const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
+              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    {
+        Read<ElemType>(fileName, fileFormat, bAllowNoCriterionNode, anotherNetwork);
+        // perform all further post-processing, caching, etc.
+        CompileNetwork();
+    }
 
     // static helper to instantiate a network from a file
     template<class ElemType>
