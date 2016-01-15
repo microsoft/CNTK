@@ -631,9 +631,9 @@ runSubparser.add_argument("test", nargs="*",
                     help="optional test name(s) to run, specified as Suite/TestName. "
                          "Use list command to list available tests. "
                          "If not specified then all tests will be run.")
-defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build"))
 
 defaultBuildSKU = "gpu"
+defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"+defaultBuildSKU))
 
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
 runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
@@ -687,6 +687,9 @@ if (args.build_sku):
   if not args.build_sku in args.buildSKUs:
     print >>sys.stderr, "--build-sku must be one of", args.buildSKUs
     sys.exit(1)
+  if args.func == runCommand:
+    if (args.build_location == defaultBuildLocation):
+      args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"+args.build_sku))
   args.buildSKUs = [args.build_sku]
 
 if args.func == listCommand:
