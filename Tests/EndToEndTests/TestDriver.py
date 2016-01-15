@@ -633,13 +633,13 @@ runSubparser.add_argument("test", nargs="*",
                          "If not specified then all tests will be run.")
 defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build"))
 
-defaultBuildSKU = "default"
+defaultBuildSKU = "gpu"
 
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
 runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
-runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpuonly|default|1bitsgd - run tests only for a specified build SKU")
+runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
 tmpDir = os.getenv("TEMP") if windows else "/tmp"
 defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
@@ -653,7 +653,7 @@ listSubparser = subparsers.add_parser("list", help="list available tests")
 listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the spacified tag")
 listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
 listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
-listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpuonly|default|1bitsgd - list tests only for a specified build SKU")
+listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
 listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
 
 listSubparser.set_defaults(func=listCommand)
@@ -681,7 +681,7 @@ if (args.flavor):
     sys.exit(1)
   args.flavors = [args.flavor]
 
-args.buildSKUs = ["cpuonly", "default", "1bitsgd"]
+args.buildSKUs = ["cpu", "gpu", "1bitsgd"]
 if (args.build_sku):
   args.build_sku = args.build_sku.lower()
   if not args.build_sku in args.buildSKUs:
