@@ -70,7 +70,7 @@ Linux users should clone from this URL: https://git.codeplex.com/cntk
 
     git clone https://git.codeplex.com/cntk
 
-More detail you can follow this thread:
+For more details you can follow this thread:
 http://codeplex.codeplex.com/workitem/26133
 
 
@@ -138,7 +138,7 @@ Make sure the following CUDA environment variables are set to the correct path
     CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
     CUDA_PATH_V7_0=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
 
-Open the CNTKSolution and build the CNTK project.
+Open the CNTK solution and build the CNTK project.
 
 Note: If you make modifications to the code, please first disable the
 insertion of TAB characters. If you use Visual Studio as your editor,
