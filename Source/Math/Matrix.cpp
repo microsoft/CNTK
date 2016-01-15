@@ -1071,7 +1071,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             LogicError("Transpose: Matrix is empty.");
 
-        Matrix<ElemType> c(GetNumCols(), GetNumRows(), (DEVICEID_TYPE)GetDeviceId());
+        Matrix<ElemType> c(GetNumCols(), GetNumRows(), (DEVICEID_TYPE)GetDeviceId(), this->GetMatrixType(), this->GetFormat());
         c.AssignTransposeOf(*this);
         return c;
     }

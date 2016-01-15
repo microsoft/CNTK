@@ -360,7 +360,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixColumnSlice, RandomSeedFixture)
     BOOST_CHECK(!sliceColumn2.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixCopyColumnSliceToDense, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixCopyColumnSliceToDense, RandomSeedFixture)
 {
     float values[6] = { 1, 4, 2, 5, 3, 6 };
     GPUMatrix<float> denseA(2, 3, c_deviceIdZero, values, MatrixFlags::matrixFlagNormal);
@@ -379,7 +379,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixCopyColumnSliceToDense, RandomSeedFixtur
     BOOST_CHECK(!sliceColumn2.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrix1DConvolutionFixedInit, RandomSeedFixture)
 {
     const bool zeroPadding = false;
     const int horizontalSubsample = 1;
@@ -424,7 +424,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionFixedInit, RandomSeedFixtur
     BOOST_CHECK(resultMatrixExp.IsEqualTo(resultMatrixBase, c_epsilonFloatE5));
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrix1DConvolutionRandomInit, RandomSeedFixture)
 {
     for (auto transposeA : { false, true })
     {
@@ -493,7 +493,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionRandomInit, RandomSeedFixtu
     }
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrix1DConvolutionBackprop, RandomSeedFixture)
 {
     const int inChannels = 50;
     const int inWidth = 10;
@@ -541,7 +541,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrix1DConvolutionBackprop, RandomSeedFixture
     BOOST_CHECK(inputGradientValues2.IsEqualTo(inputGradientValues1, c_epsilonFloatE2));
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixReshape, RandomSeedFixture)
 {
     const int oldRowCount = 10;
     const int oldColCount = 3;
@@ -560,9 +560,10 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseMatrixReshape, RandomSeedFixture)
 
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
     BOOST_CHECK(!denseMatrixC.IsEqualTo(denseMatrixA, c_epsilonFloatE5));
+    BOOST_CHECK(sparseMatrix.IsValid());
 }
 
-BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 {
     size_t D = 13, S = 11, M = 7, K = 15, T = 8;
     GPUMatrix<float> denseMatrixA = GPUMatrix<float>::RandomUniform(D * S * M * K, T, c_deviceIdZero, -1, 1, IncrementCounter());
@@ -577,6 +578,7 @@ BOOST_FIXTURE_TEST_CASE(GPUSSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
     sparseMatrixB.CopyToDenseMatrix(denseMatrixC);
 
     BOOST_CHECK(denseMatrixC.IsEqualTo(denseMatrixB, c_epsilonFloatE5));
+    BOOST_CHECK(sparseMatrixB.IsValid());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
