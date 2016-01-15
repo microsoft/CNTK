@@ -440,7 +440,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_timeRange;                 // use this to describe a custom range > 1 frame
         size_t seqIndex;                    // parallel-sequence index; SIZE_MAX = all sequences in MB (most common case)  --TODO: Bad name, 'sequence' and 'parallel sequence' are two different things
         MBLayoutPtr m_pMBLayout;            // layout associated with this
-        bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range)
+        bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range). Only applies when iterating over time; otherwise broadcasting is always OK.
         const FrameRange *parent;           // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
 
     public:
@@ -454,8 +454,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is used, e.g., by PlusNode which can combine minibatch data and single-column vectors.
         FrameRange AllowBroadcast() const
         {
-            if (seqIndex != SIZE_MAX)
-                LogicError("FrameRange::AllowBroadcast() is incompatible with frame ranges that select a single sequence.");
             FrameRange ret = *this;
             ret.m_broadcastAllowed = true;
             return ret;
@@ -465,8 +463,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameRange(t).Sequence(seq)
         FrameRange Sequence(size_t s) const
         {
-            if (m_broadcastAllowed)
-                LogicError("FrameRange::Sequence() is incompatible with frame ranges with m_broadcastAllowed.");
             FrameRange ret = *this;
             ret.seqIndex = s;
             return ret;
@@ -496,6 +492,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FrameRange ret = *this;
             if (!IsAllFrames())
                 ret.m_timeRange = range;
+            return ret;
+        }
+
+        // create a FrameRange from another with an updated time index
+        FrameRange WithTimeStep(size_t begin) const
+        {
+            FrameRange ret = *this;
+            ret.timeIdxInSeq = begin;
             return ret;
         }
 
@@ -762,8 +766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!pMBLayout || fr.IsAllFrames())
         {
             if (fr.m_timeOffset != 0)
-                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");
-            // TODO: Can we allow this? Semantics would be different, it would crop frames outside.
+                LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch.");  // (note: the tensor version allows this)
             if (fr.seqIndex == SIZE_MAX)
                 return std::pair<size_t, size_t>(0, numCols);
             else
@@ -806,9 +809,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // -----------------------------------------------------------------------
-    // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange with specified number of columns with a given MBLayout
+    // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange with a given MBLayout.
     // This implements the logic of interpreting the FrameRange object.
     // Unlike the matrix version above, this supports iteration indices other than time.
+    // If the iteration index is time, then it refers to the minibatch's time, not time of
+    // individual sequences (the difference is where multiple sequences get concatenated).
     // TODO: This ^^. FrameRange still missing is a field to identify the index.
     // This function happily returns tensor bounds that are out of bounds, assuming caller will do the right thing.
     // -----------------------------------------------------------------------
@@ -831,12 +836,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int iterDimParam = fr.GetIterationDimension();
         size_t iterDim = iterDimParam > 0 ? iterDimParam - 1/*regular dimensions are specified as 1-based*/ : shape.size() + iterDimParam/*-1 for time dimension*/;
         size_t sequenceDim = shape.size() - 2;  // TODO: In case of multiple time dims, this must be adjusted.
+        bool isTimeIteration = iterDim >= sequenceDim;
 
         // MBLayout of data and of FrameRange must be identical pointers,
         // or in case of broadcasting, respective parent pointers.
         // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
         // For those cases, use a ReconcileMBLayout node.
-        if (fr.m_pMBLayout != pMBLayout)
+        if (isTimeIteration && fr.m_pMBLayout != pMBLayout)
         {
             // if broadcast allowed then it is allowed to broadcast from an outer-loop value
             // Currently, the only 'outer' loop we have is to have no layout.
@@ -851,9 +857,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // or if we don't even have a layout
         // then return the whole matrix
         // but as a reference (e.g. it cannot be resized)
-        else if (!pMBLayout || fr.IsAllFrames())
+        else if ((isTimeIteration && !pMBLayout) || fr.IsAllFrames())
         {
-            if (fr.m_timeOffset)
+            if (fr.m_timeOffset != 0)
             {
                 if (iterDim >= result.first.size())
                     LogicError("DataFor: Time offset cannot be applied to tensors that have no time dimension.");
@@ -864,7 +870,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // FrameRange refers to a time slice -> return that
-        else  if (result.second[iterDim] > 1)    // (if time dim is broadcasting then always return that one independent of requested index)
+        else if (result.second[iterDim] > 1)    // (if iter dim is broadcasting then always return that one independent of requested index)
         {
             size_t ts = fr.timeIdxInSeq + fr.m_timeOffset;
             size_t te = ts + fr.m_timeRange;
