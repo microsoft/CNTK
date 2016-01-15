@@ -743,8 +743,8 @@ namespace msra { namespace lattices {
         double totalfwscore = 0.0f;
         if (!parallelstate->emulation)
         {
-
-            fprintf(stderr, "parallelforwardbackwardlattice: %d launches for forward, %d launches for backward\n", (int)batchsizeforward.size(), (int)batchsizebackward.size());
+            if (verbosity>=2)
+                fprintf(stderr, "parallelforwardbackwardlattice: %d launches for forward, %d launches for backward\n", (int)batchsizeforward.size(), (int)batchsizebackward.size());
 
             const bool allocateframescorrect = (returnEframescorrect || boostingfactor != 0.0f);
             const bool copyuids = (returnEframescorrect || boostingfactor != 0.0f);

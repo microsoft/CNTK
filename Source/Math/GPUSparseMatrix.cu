@@ -2277,7 +2277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.m_computeDevice = m_computeDevice;
         slice.m_numRows = m_numRows;
         slice.m_numCols = numCols;
-        slice.m_nz = SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
+        slice.m_nz = ( numCols == m_numCols ) ? m_nz : SecondaryIndexValueAt(startColumn + numCols) - SecondaryIndexValueAt(startColumn);
         slice.m_elemSizeAllocated = m_elemSizeAllocated;
         slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
         slice.m_pArray = m_pArray;

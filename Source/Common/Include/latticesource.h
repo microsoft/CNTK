@@ -23,10 +23,11 @@ public:
 class latticesource
 {
     const msra::lattices::archive numlattices, denlattices;
+    int verbosity; 
 public:
     typedef msra::dbn::latticepair latticepair;
-    latticesource (std::pair<std::vector<std::wstring>,std::vector<std::wstring>> latticetocs, const std::unordered_map<std::string,size_t> & modelsymmap)
-        : numlattices (latticetocs.first, modelsymmap), denlattices (latticetocs.second, modelsymmap) {}
+    latticesource (std::pair<std::vector<std::wstring>,std::vector<std::wstring>> latticetocs, const std::unordered_map<std::string,size_t> & modelsymmap, std::wstring RootPathInToc)
+        : numlattices (latticetocs.first, modelsymmap, RootPathInToc), denlattices (latticetocs.second, modelsymmap, RootPathInToc), verbosity(0) {}
 
     bool empty() const
     {
@@ -51,6 +52,12 @@ public:
         std::shared_ptr<latticepair> LP (new latticepair);
         denlattices.getlattice (key, LP->second, expectedframes);     // this loads the lattice from disk, using the existing L.second object
         L = LP;
+    }
+
+    void setverbosity(int veb)
+    {
+        verbosity = veb; 
+        numlattices.setverbosity(veb); denlattices.setverbosity(veb);
     }
 };
 

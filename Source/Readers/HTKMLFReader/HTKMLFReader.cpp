@@ -100,6 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             vector<wstring> scriptpaths;
             vector<wstring> RootPathInScripts; 
+            wstring         RootPathInLatticeTocs;
             vector<wstring> mlfpaths;
             vector<vector<wstring>>mlfpathsmulti;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
@@ -263,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     expand_wildcards(thisLattice(L"numLatTocFile"), paths);
                     latticetocs.first.insert(latticetocs.first.end(), paths.begin(), paths.end());
                 }
-
+                RootPathInLatticeTocs =(wstring) thisLattice(L"prefixPathInToc",L"");
             }
 
             //get HMM related file names
@@ -448,7 +449,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!_wcsicmp(readMethod.c_str(), L"blockRandomize"))
             {
                 // construct all the parameters we don't need, but need to be passed to the constructor...
-                m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap()));
+                
+                m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap(), RootPathInLatticeTocs));
+                m_lattices->setverbosity(m_verbosity);
 
                 // now get the frame source. This has better randomization and doesn't create temp files
                 m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));
@@ -941,6 +944,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (!skip)
                         {
+                            // a stopgap 
+                            if (m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i])
+                            {
+                                // BUGBUG: we just found that (due to some bugs yet to be tracked down), 
+                                // the filled number of frames is inconsistent with the number frames in lattices (though it rarely occurs)
+                                // This is just a stopgap, to be removed after the bugs are found and fixed
+                                bool needRenew = true; 
+                                while (needRenew)
+                                {
+                                    size_t framenum = m_numFramesToProcess[i];
+                                    fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
+                                        (int)framenum, (int)m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
+                                    ReNewBufferForMultiIO(i);
+                                    needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i]; 
+                                }
+
+                            }
                             m_numValidFrames[i] = m_numFramesToProcess[i];
                             if (m_numValidFrames[i] > 0)
                             {
@@ -972,49 +992,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_extraNumSeqs = 0;
                         if (!m_frameMode)
                         {
-                            // insert extra utterances to parallel sequences that have enough space left
-                            // As long as there is a gap at the end of any parallel sequence that is large enough for another utterance, fill it in.
-                            size_t nextMinibatchUttnum = 0;
-                            bool inserted;
-                            // The next utterances have already been prepared under parallel-sequence indices [i], in prep for the next MB.
-                            // For each, we will go through all parallel sequences [j] to see whether the entry currently held for the next [i] fits into [j].
-                            for (size_t i = 0; i < m_numSeqsPerMB; i++)
+                            for (size_t src = 0; src < m_numSeqsPerMB; )
                             {
-                                while (nextMinibatchUttnum <= i)
+                                size_t framenum = m_numFramesToProcess[src];
+                                if (framenum == 0)
                                 {
-                                    size_t framenum = m_numFramesToProcess[i];
-                                    inserted = false;
-                                    if (framenum > 0)       // non-empty entry: see were it fits
-                                    {
-                                        // greedily search for a parallel sequence with enough space at the end to insert this utterance
-                                        for (size_t j = 0; j < m_numSeqsPerMB; j++)
-                                        {
-                                            if (framenum + m_numValidFrames[j] < m_mbNumTimeSteps)
-                                            {
-                                                // enough space: insert it as parallel sequence [j] (instead of [i] in the next MB)
-                                                m_extraSeqsPerMB.push_back(j);
-                                                if (m_latticeBufferMultiUtt[i] != nullptr)
-                                                {
-                                                    m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
-                                                    m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
-                                                }
-                                                fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
-                                                m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
+                                    src++;
+                                    continue;
+                                }
+                                if (m_latticeBufferMultiUtt[src]!=nullptr && m_latticeBufferMultiUtt[src]->getnumframes()!=framenum)
+                                {
+                                    // BUGBUG: we just found that (due to some bugs yet to be tracked down), 
+                                    // the filled number of frames is inconsistent with the number frames in lattices (though it rarely occurs)
+                                    // This is just a stopgap, to be removed after the bugs are found and fixed
+                                    fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
+                                        (int)framenum, (int)m_latticeBufferMultiUtt[src]->getnumframes(), m_latticeBufferMultiUtt[src]->getkey().c_str());
+                                    src++;
+                                    continue;
+                                }
 
-                                                // consume it
-                                                ReNewBufferForMultiIO(i);       // replace current [i] with a new one; then try again with this new one at [i]
-                                                m_numValidFrames[j] += framenum;
-                                                m_extraNumSeqs++;
-                                                inserted = true;
-                                                break;
-                                            }
+                                bool slotFound = false;
+                                for (size_t des = 0; des < m_numSeqsPerMB; des++) // try to found a slot
+                                {
+                                    if (framenum + m_numValidFrames[des] < m_mbNumTimeSteps)
+                                    { // found !
+                                        m_extraSeqsPerMB.push_back(des);
+                                        if (m_latticeBufferMultiUtt[src] != nullptr)
+                                        {
+                                            m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[src]);
+                                            m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[src]);
+                                            m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
                                         }
+                                        fillOneUttDataforParallelmode(matrices, m_numValidFrames[des], framenum, des, src);
+                                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, des, m_numValidFrames[des], m_numValidFrames[des] + framenum);
+
+                                        ReNewBufferForMultiIO(src);
+                                        m_numValidFrames[des] += framenum;
+                                        m_extraNumSeqs++;
+                                        slotFound = true;
+                                        break;
                                     }
-                                    if (!inserted)
-                                    {
-                                        nextMinibatchUttnum++;  // didn't fit anywhere: done with entry [i]
-                                    }
+                                }
+                                if (!slotFound)
+                                {
+                                    src++; // done with this source;  try next source;
                                 }
                             }
 

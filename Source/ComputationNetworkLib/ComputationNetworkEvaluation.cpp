@@ -10,11 +10,13 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
+#include "InputAndParamNodes.h"
 #include <string>
 #include <vector>
 #include <list>
 #include <set>
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -365,7 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // verify that network has undergone CompileNetwork()
     void ComputationNetwork::VerifyIsCompiled(const char * where) const
     {
-        if (!m_isCompiled)
+        if (!IsCompiled())
             LogicError("%s: A compiled network was expected.", where);
     }
 
@@ -712,6 +714,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // memory allocation
     // -----------------------------------------------------------------------
+    // mark nodes that are purely induced by parameters as non-sharable and create space for value if null 
+    void ComputationNetwork::MarkValueNonSharableNodes()
+    {
+        const auto & nodes = GetEvalOrder(nullptr);
+        std::map<wstring, bool>    allLeafDescendentsAreParameters; 
+        std::list<ComputationNodeBasePtr>    allLearnableParameters = GetNodesWithType(OperationNameOf(LearnableParameter)); 
+        // note that: we cannot use m_learnableParameters because we need all parameters node, regardless whether it requires update or not 
+
+        for (auto& node : nodes)
+        {
+            auto children = node->GetInputs(); 
+            wstring myname = node->NodeName();
+            bool allParameters = true; 
+                        
+            if (children.size()) // we don't do the check for leaf node, cause all the possible leaf nodes (input/parameters/precompute node) are marked as non-sharable already 
+            {
+                for (auto child : children)
+                {
+                    wstring ChildName = child->NodeName();
+                    if (allLeafDescendentsAreParameters.find(ChildName) == allLeafDescendentsAreParameters.end())
+                    {
+                        // not found, means it is a leaf node (we are at eval order )
+                        assert(child->IsLeaf() || child->IsPartOfLoop());
+                        if (std::find(allLearnableParameters.begin(), allLearnableParameters.end(), child)!= allLearnableParameters.end())
+                        {
+                            allLeafDescendentsAreParameters[ChildName] = true; 
+                        }
+                        else
+                        {
+                            allParameters = false; 
+                            allLeafDescendentsAreParameters[ChildName] = false;
+                            break;
+                        }                      
+                    }
+                    else
+                    {
+                        if (allLeafDescendentsAreParameters[ChildName] == false)
+                        {
+                            allParameters = false;
+                            break;
+                        }
+                    }
+                }
+                allLeafDescendentsAreParameters[myname] = allParameters;
+                if (allParameters)
+                {
+                    node->MarkValueNonSharable();
+                }
+                else
+                {
+                    node->MarkValueSharable();
+                }
+            }
+        }
+        
+    }
+
 
     // this function will need to be called before actual validation and execution to 
     // predetermine how to share matrices to reduce memory usage.
@@ -726,9 +785,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         VerifyIsCompiled("AllocateAllMatrices");
 
+        // Due to special topology, if a node is solely induced by parameters, its function value should not be shared  
+        MarkValueNonSharableNodes();
+
         bool performingBackPropagation = (trainRootNode != nullptr);
 
-        // Create a composite Eval order with the specfied nodes as roots
+        // Create a composite Eval order with the specified nodes as roots
         std::vector<ComputationNodeBasePtr> forwardPropRoots;
         forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
         forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());

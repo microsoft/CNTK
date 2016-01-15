@@ -9,6 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "ModelEditLanguage.h"
+#include "ConvolutionalNodes.h"
 #include <map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -56,7 +57,8 @@ enum MELProperty
     melPropFinalCriterion,
     melPropEvaluation,
     melPropOutput,
-    melPropRecurrent
+    melPropRecurrent,
+    melPropBatchNormMode
 };
 
 // SetProperty - Set the Property on the passed node
@@ -98,7 +100,7 @@ template <typename ElemType>
 void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigParamList& params)
 {
     std::string name = p_name;
-    if (EqualInsensitive(name, "CreateModel"))  //create a blank model
+    if (EqualInsensitive(name, "CreateModel"))  // create a blank model
     {
         size_t numFixedParams = 0, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -107,7 +109,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
     }
-    if (EqualInsensitive(name, "CreateModelWithName"))  //create a blank model
+    if (EqualInsensitive(name, "CreateModelWithName"))  // create a blank model
     {
         size_t numFixedParams = 1, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -137,6 +139,16 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
+#if 1   // support for a specific kind of legacy format, for the sole purpose of allowing users to convert (=load & save) them
+        if (modelFormat == L"cntk_legacy_no_tensorlib")
+        {
+            cn->Read<ElemType>(params[1]);
+            for (auto node : cn->FeatureNodes())
+                node->SetDims(TensorShape(node->GetNumRows()), 0);  // pre-tensorlib InputValues had incorrect tensor dimensions
+            cn->CompileNetwork();
+        }
+        else
+#endif
         cn->Load<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
@@ -187,8 +199,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // validate the network before we save it out
         ProcessNDLScript(m_netNdlDefault, ndlPassAll, true);
-
-        cn->Save(fileName);
+        cn->SaveEdited(fileName);
     }
     else if (EqualInsensitive(name, "SaveModel"))
     {
@@ -207,7 +218,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
-        netNdl->cn->Save(fileName);
+        netNdl->cn->SaveEdited(fileName);
     }
     else if (EqualInsensitive(name, "SetDefaultModel"))
     {
@@ -420,6 +431,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropEvaluation;
         }
+        else if (EqualInsensitive(propName, "batchNormEvalMode"))
+        {
+            prop = melPropBatchNormMode;
+        }
         else if (EqualInsensitive(propName, "output"))
         {
             prop = melPropOutput;
@@ -485,6 +500,32 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                     // what to do here?
                     break;
                 }
+                case melPropBatchNormMode:
+                {
+                    if (node->OperationName() != OperationNameOf(BatchNormalizationNode))
+                    {
+                        RuntimeError("Invalid node type: node %ls (type:%ls) is not a %ls node; therefore cannot apply batchNormEvalMode on it.",
+                            node->NodeName().c_str(),
+                            node->OperationName().c_str(),
+                            OperationNameOf(BatchNormalizationNode).c_str());
+                    }
+                    bool property = params[2];
+                    auto pnode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
+                    if (pnode)
+                        pnode->SetEvalMode(property);
+                    else
+                    {
+                        auto pnode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
+                        if (pnode2)
+                            pnode2->SetEvalMode(property);
+                        else
+                        {
+                            RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n",
+                                node->NodeName().c_str());
+                        }
+                    }
+                    break;
+                }
                 default:
                 {
                     RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -505,6 +546,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropComputeGradient;
         }
+	    else if (EqualInsensitive(propName, "batchNormEvalMode"))
+	    {
+	        prop = melPropBatchNormMode; 
+	    }
         else
         {
             RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -525,6 +570,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 {
                     bool needGradient = params[2];
                     netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
+                    break;
+                }
+                case melPropBatchNormMode:
+                {
+                    bool evalMode = params[2];
+                    netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
                     break;
                 }
                 default:

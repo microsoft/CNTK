@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // break cycles
         // BUGBUG: This only works if nodes are not shared across networks.
         //         Once we allow that (BrainScript editing), we need proper cycle detectors. Luckily, we know our cycles, so it won't be too hard.
+        //         Or just use weak ptrs.
         for (auto & iter : m_nameToNodeMap)
             iter.second->DetachInputs();
 
@@ -74,8 +75,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
+    // after after editing--network is possibly not validated/compiled
+    void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
+    {
+        if (!IsCompiled())
+            CompileNetwork();
+        Save(fileName, fileFormat);
+    }
+
     void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
     {
+        VerifyIsCompiled("Save");
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         // TODO: This does not belong here.
@@ -182,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // load the section of nodes that contain persistable parameters
     // This is used for reloading a model without recreating it, e.g. during training.
     // TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
-    template<class ElemType> void ComputationNetwork::LoadPersistableParameters(File & fstream, bool create)
+    template<class ElemType> void ComputationNetwork::ReadPersistableParameters(File & fstream, bool create)
     {
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -221,47 +231,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
     }
 
-    template<class ElemType> void ComputationNetwork::Load(const wstring& fileName, const FileOptions fileFormat, const bool /*bAllowNoCriterionNode --unused*/, ComputationNetwork* anotherNetwork)
+    // deserialize the model
+    // This does not post-process the model (CompileNetwork()). Use Load() instead.
+    template<class ElemType> void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFormat, const bool /*bAllowNoCriterionNode --unused*/, ComputationNetwork* anotherNetwork)
     {
         ClearNetwork();
 
         File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
 
-#if 1
-        LoadPersistableParameters<ElemType>(fstream, true);
-#else
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
-
-        // model version
-        size_t modelVersion = CNTK_MODEL_VERSION_1; //if version info is not there it is version 1
-        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
-        {
-            fstream >> modelVersion;
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
-        }
-
-        size_t numNodes;
-        fstream >> numNodes;
-
-        // get all node info first
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
-        for (size_t i = 0; i < numNodes; i++)
-        {
-            wstring opName, nodeName;
-            fstream >> opName >> nodeName;
-
-            auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
-
-            if (!newNode)
-            {
-                fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
-                InvalidArgument("Invalid node type.");
-            }
-            newNode->Load(fstream, modelVersion);
-            AddNodeToNet(newNode);
-        }
-        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
-#endif
+        ReadPersistableParameters<ElemType>(fstream, true);
 
         size_t numNodes = m_nameToNodeMap.size();
 
@@ -277,9 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 vector<wstring> childrenNames;
                 childrenNames.resize(numChildren);
                 for (size_t j = 0; j < numChildren; j++)
-                {
                     fstream >> childrenNames[j];
-                }
 
                 // TODO: how does the file distinguish float from double?
                 ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
@@ -288,42 +264,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int j = 0; j < numChildren; j++)
                     childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
 
-                //if (nodePtr->OperationName() == OperationNameOf(RowStackNode))
-                //{
-                    // allow for variable input nodes
-                    nodePtr->AttachInputs(childrenNodes);
-                //}
-                //else
-                //{
-                //    // fixed input nodes
-                //    // TODO: Use the variable-length AttachInputs() as well. This is a refactoring left-over.
-                //    switch (numChildren)
-                //    {
-                //        case 1:
-                //            nodePtr->AttachInputs(childrenNodes[0]);
-                //            break;
-                //        case 2:
-                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
-                //            break;
-                //        case 3:
-                //            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1], childrenNodes[2]);
-                //            break;
-                //        case 4:
-                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
-                //            break;
-                //        case 5:
-                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
-                //            break;
-                //        case 6:
-                //            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
-                //            break;
-                //        default:
-                //            LogicError("Invalid number of children.");
-                //    }
-                //}
+                nodePtr->AttachInputs(childrenNodes);
             }
         }
-
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERelation");
 
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
@@ -340,7 +283,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fstream >> nodeName;
                     m_features.push_back(GetNodeFromName(nodeName));
                 }
-
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
             }
 
@@ -353,7 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_labels.push_back(GetNodeFromName(nodeName));
                 }
             }
-
+            // BUGBUG: Should this be inside the block?
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriterionNodes") ||
@@ -372,13 +314,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            // TODO: this section is defunct
+            // TODO: this section is defunct, skip over
             if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
             {
                 fprintf(stderr, "WARNING: Ignoring defunct 'BNodesReqMultiSeqHandling' section in input file.\n");
                 fstream >> num;
                 for (size_t i = 0; i < num; i++)
-                    fstream >> nodeName;
+                    fstream >> nodeName;    // dummy
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
 
@@ -415,13 +357,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
             }
         }
-
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
-
-        // perform all further post-processing, caching, etc.
-        CompileNetwork();
     }
 
     // -----------------------------------------------------------------------
@@ -622,9 +560,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
     template<class ElemType>
-    void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign)
+    void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net, 
+                                            const ComputationNodeBasePtr criterionNode, 
+                                            const double& hsmoothingWeight, 
+                                            const double& frameDropThresh, 
+                                            const bool& doreferencealign, 
+                                            const double& amf /*= 14.0f*/,
+                                            const double& lmf /*= 14.0f*/,
+                                            const double& wp  /*= 0.0f*/,
+                                            const double& bMMIfactor /*= 0.0f*/,
+                                            const bool&  sMBR /*= false*/
+                                            )
     {
         fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
+            amf, lmf, wp, bMMIfactor, sMBR ? "true" : "false");
         list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
         if (seqNodes.size() == 0)
         {
@@ -638,6 +588,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->SetSmoothWeight(hsmoothingWeight);
                 node->SetFrameDropThresh(frameDropThresh);
                 node->SetReferenceAlign(doreferencealign);
+                node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
             }
         }
     }
@@ -1114,18 +1065,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::Load<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::LoadPersistableParameters<float>(File & fstream, bool create);
+    template void ComputationNetwork::Read<float>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::ReadPersistableParameters<float>(File & fstream, bool create);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, 
+                                const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
-    template void ComputationNetwork::Load<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::LoadPersistableParameters<double>(File & fstream, bool create);
+    template void ComputationNetwork::Read<double>(const wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
+    template void ComputationNetwork::ReadPersistableParameters<double>(File & fstream, bool create);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, 
+                            const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 
     // register ComputationNetwork with the ScriptableObject system
     ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetwork> registerComputationNetwork(L"ComputationNetwork");
