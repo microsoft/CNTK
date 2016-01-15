@@ -155,7 +155,7 @@ class Test:
         # converting python expression into lambda and doing a smoke test by calling it with dummy parameters
         predicate = lambda pythonExpr=pythonExpr, **kwargs: eval(pythonExpr, kwargs)
         try:
-          assert(type(predicate(flavor='foo', device='var', os='foobar')) == bool)
+          assert(type(predicate(flavor='foo', device='bar', os='foobar', build_sku='qux')) == bool)
         except Exception as e:
           print "Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e)
           raise e
@@ -331,7 +331,7 @@ class Test:
 
   # Checks whether the test matches the specified tag,
   # returns matched tag name on succes, or None if there is no match(boolean, string) tuple
-  def matchesTag(self, tag, flavor, device, os):
+  def matchesTag(self, tag, flavor, device, os, build_sku):
     tagL = tag.lower() # normalizing the tag for comparison
     # enumerating all the tags
     for tag in self.tags.keys():
@@ -339,7 +339,7 @@ class Test:
       # e.g: 'bvt' matches 'bvt' 'bvt-a', 'bvt-b' but not 'bvtx'
       if tag==tagL or tag.startswith(tagL + "-"):
         # evaluating tag's predicate
-        if self.tags[tag](flavor=flavor, device=device, os=os):
+        if self.tags[tag](flavor=flavor, device=device, os=os, build_sku=build_sku):
           return tag
     return None
 
@@ -526,12 +526,13 @@ def listCommand(args):
      for flavor in args.flavors:
         for device in args.devices:
            for os in args.oses:
-             tag = test.matchesTag(args.tag, flavor, device, os) if args.tag else '*'
-             if tag:
-               if tag in testsByTag.keys():
-                 testsByTag[tag].add(test.fullName)
-               else:
-                 testsByTag[tag] = sets.Set([test.fullName])
+             for build_sku in args.buildSKUs:
+               tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
+               if tag:
+                 if tag in testsByTag.keys():
+                   testsByTag[tag].add(test.fullName)
+                 else:
+                   testsByTag[tag] = sets.Set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
       print ' '.join(sorted(testsByTag[tag]))
@@ -631,10 +632,13 @@ runSubparser.add_argument("test", nargs="*",
                          "If not specified then all tests will be run.")
 defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build"))
 
+defaultBuildSKU = "default"
+
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
 runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
+runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpuonly|default|1bitsgd - run tests only for a specified build SKU")
 tmpDir = os.getenv("TEMP") if windows else "/tmp"
 defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
@@ -648,6 +652,7 @@ listSubparser = subparsers.add_parser("list", help="list available tests")
 listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the spacified tag")
 listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
 listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
+listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpuonly|default|1bitsgd - list tests only for a specified build SKU")
 listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
 
 listSubparser.set_defaults(func=listCommand)
@@ -674,6 +679,14 @@ if (args.flavor):
     print >>sys.stderr, "--flavor must be one of", args.flavors
     sys.exit(1)
   args.flavors = [args.flavor]
+
+args.buildSKUs = ["cpuonly", "default", "1bitsgd"]
+if (args.build_sku):
+  args.build_sku = args.build_sku.lower()
+  if not args.build_sku in args.buildSKUs:
+    print >>sys.stderr, "--build-sku must be one of", args.buildSKUs
+    sys.exit(1)
+  args.buildSKUs = [args.build_sku]
 
 if args.func == listCommand:
   args.oses = ["windows", "linux"]
