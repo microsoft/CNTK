@@ -443,6 +443,10 @@ public:
                     {
                         modelFormat = L"cntk";
                     }
+                    else if (EqualInsensitive(value, "cntk_legacy_no_tensorlib"))    // model of late 2015 which had a bug in setting InputValue's tensor dimensions
+                    {
+                        modelFormat = L"cntk_legacy_no_tensorlib";
+                    }
                     else
                     {
                         RuntimeError("Invalid optional parameter value %s, valid values are: format=(cntk)", value.c_str());

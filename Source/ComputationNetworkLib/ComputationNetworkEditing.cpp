@@ -10,6 +10,7 @@
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
 #include "InputAndParamNodes.h"
+#include "ConvolutionalNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -29,6 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                         std::wstring toName,
                                                         const CopyNodeFlags flags)
     {
+        InvalidateCompiledNetwork();
+
         if (toName == L"")
             toName = fromName;
 
@@ -49,11 +52,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            //node already exists
-
+            // node already exists
             pToNode = GetNodeFromName(toName);
 
-            //same node. no copy needed
+            // same node. no copy needed
             if (pFromNode == pToNode)
                 LogicError("CopyNode: You are copying the node to the same network with same node name.");
             else
@@ -68,6 +70,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                          const std::wstring fromName, std::wstring toNamePrefix,
                                          const CopyNodeFlags flags)
     {
+        InvalidateCompiledNetwork();
+
         if (!(flags & CopyNodeFlags::copyNodeValue))
             LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
@@ -102,7 +106,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // nodeNameNew - new node name
     void ComputationNetwork::RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew)
     {
-        // so that renamed node will not be referenced
         InvalidateCompiledNetwork();
 
         ComputationNodeBasePtr nodeToRename = GetNodeFromName(nodeNameOrig);
@@ -127,7 +130,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::DeleteNode(const std::wstring & nodeName)
     {
-        // so that deleted node will not be referenced
         InvalidateCompiledNetwork();
 
         ComputationNodeBasePtr nodeToDelete = GetNodeFromName(nodeName);
@@ -171,6 +173,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // need to update all the mappings as well childrens
     void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode)
     {
+        InvalidateCompiledNetwork();
+
         ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
         if (oldNode->OperationName() != newNode->OperationName())
             InvalidArgument("newNode must have the same type as the old node.");
@@ -203,6 +207,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // need to update those nodes who use oldNode as their child
     void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
     {
+        InvalidateCompiledNetwork();
+
         ComputationNodeBasePtr oldNode = GetNodeFromName(oldNodeName);
 
         // change the input of those nodes whose child is oldNode
@@ -222,6 +228,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
     {
+        InvalidateCompiledNetwork();
+
         // Checks if the node is a criterion node.
         int index = -1;
         for (int i = 0; i < m_finalCriteria.size(); ++i)
@@ -250,6 +258,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::AddFeatureNode(ComputationNodeBasePtr featureNode)
     {
+        InvalidateCompiledNetwork();
+
         wstring nodeName = featureNode->NodeName();
         if (NodeNameExists(nodeName))
             RuntimeError("AddFeatureNode: feature node already exists.");
@@ -260,11 +270,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // We only remove the node, not delete it.
     void ComputationNetwork::RemoveFeatureNode(ComputationNodeBasePtr featureNode)
     {
+        InvalidateCompiledNetwork();
+
         wstring nodeName = featureNode->NodeName();
         if (!NodeNameExists(nodeName))
             RuntimeError("RemoveFeatureNode: feature node does not exist.");
-
-        InvalidateCompiledNetwork();
 
         // Removes links.
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
@@ -314,4 +324,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode /* = nullptr */)
+    {
+        vector<ComputationNodeBasePtr>  nodes;
+        if (rootNode == nullptr)
+        {
+            for (auto pair : m_nameToNodeMap)
+            {
+                nodes.push_back(pair.second);
+            }
+        }
+        else
+        {
+            auto allnodes = rootNode->EnumerateNodes(true);
+            for (auto node : allnodes)
+                nodes.push_back(node);
+        }
+
+        for (auto& node : nodes)
+        {
+            if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
+            {
+                auto pNode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
+                if (!pNode)
+                {
+                    auto pNode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
+                    if (!pNode2)
+                    {
+                        RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n", node->NodeName().c_str());
+                    }
+                }
+                else
+                {
+                    pNode->SetEvalMode(evalMode);
+                }
+            }
+        }
+    }
 }}}

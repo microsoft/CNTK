@@ -111,6 +111,7 @@ protected:
     intargvector m_learningRatesSpecifiedForMBSize;       // 1 for per sample, m_mbSize[] for per MB
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
+    bool         m_useNesterovMomentum; 
 
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
@@ -157,7 +158,11 @@ protected:
     // To mitigate this issue, we adopt the sub-minibatch implementation, where 
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
     // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch 
-
+    size_t m_numSubminiBatches; 
+    // alternative method to specify how to split minibatches into subminibatches 
+    // default is 1, which means no subminibatch is used 
+    // if m_maxTempMemSizeInSamples = SIZE_MAX (which means users do not specify the option) and m_numSubminiBatches > 1 
+    // we divide one minibatch to m_numSubminiBatches subMinibatches 
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -245,6 +250,11 @@ protected:
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
+    double m_seqGammarCalcAMF;
+    double m_seqGammarCalcLMF; 
+    double m_seqGammarCalcWP;
+    double m_seqGammarCalcbMMIFactor; 
+    bool m_seqGammarCalcUsesMBR;
 };
 
 template<class ElemType> class IDistGradAggregator;
@@ -436,7 +446,9 @@ public:
                                size_t actualMBSize,
                                const double L2RegWeight,
                                const double L1RegWeight,
-                               const bool needAveMultiplier);
+                               const bool needAveMultiplier, 
+                               const bool useNesterovMomentum
+                               );
 
 protected:
     // UpdateWeights - update the weights in
@@ -446,7 +458,8 @@ protected:
                        const double momentumPerSample,
                        const size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier) const;
+                       const bool needAveMultiplier, 
+                       const bool useNesterovMomentum) const;
 
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 

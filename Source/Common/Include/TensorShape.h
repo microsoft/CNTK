@@ -104,7 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void resize(size_t sz, const T & val) { if (sz < m_size) m_size = sz; else while (m_size < sz) push_back(val); }
         void assign(size_t sz, const T & val) { clear(); resize(sz, val); }
         template<class ITER>
-        void append(ITER beg, const ITER & end) { while (beg != end) push_back(*beg++); }
+        void append(ITER beg, const ITER & end) { while (beg != end) push_back((T)*beg++); }    // typecast allows signed/unsigned conversions
         template<class ITER>
         void assign(ITER beg, const ITER & end) { clear(); append(beg,end); }
         void operator=(const SmallVector & other) { m_size = other.m_size; memcpy(m_data, other.m_data, other.m_size * sizeof(T)); }
@@ -179,8 +179,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // boilerplate
         bool operator==(const TensorShape & other) const { return m_dims == other.m_dims; }
-
-        void Invalidate() { m_dims.assign(3, SIZE_MAX); } // TODO: clean up the valid/invalid situation (this is currently done inconsistently). Also this object is immutable.
 
         // verify that this refers to a dense matrix (no strides)
         void VerifyIsDense() const
@@ -374,7 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (size() != bounds.first.size() || size() != bounds.second.size())
                 LogicError("NarrowedTo: Bounds parameter must have same rank as tensor.");
             for (size_t k = 0; k < size(); k++)
-                if (bounds.second[k] <= bounds.first[k] || bounds.second[k] > m_dims[k])
+                if (bounds.second[k] <= bounds.first[k] || (size_t)bounds.second[k] > m_dims[k])
                     LogicError("NarrowedTo: Invalid bounds parameter, dimensions must be at least one.");
             for (size_t k = 0; k < size(); k++)
             {

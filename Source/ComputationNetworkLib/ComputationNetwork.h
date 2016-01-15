@@ -78,24 +78,33 @@ public:
     // -----------------------------------------------------------------------
 
     void Save(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
+    void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
 
     template<class ElemType>
-    void LoadPersistableParameters(File & fstream, bool create);
+    void ReadPersistableParameters(File & fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template<class ElemType>
-    void ReloadPersistableParameters(const std::wstring& fileName)
+    void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        LoadPersistableParameters<ElemType>(fstream, false);
+        ReadPersistableParameters<ElemType>(fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<class ElemType>
+    void Read(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
+    template<class ElemType>
     void Load(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                      const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
+              const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
+    {
+        Read<ElemType>(fileName, fileFormat, bAllowNoCriterionNode, anotherNetwork);
+        // perform all further post-processing, caching, etc.
+        CompileNetwork();
+    }
 
     // static helper to instantiate a network from a file
     template<class ElemType>
@@ -159,9 +168,11 @@ public:
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
+    void MarkValueNonSharableNodes();
 private:
     void DetermineSetOfAllRoots();
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
+    bool IsCompiled() const { return m_isCompiled; }
     void VerifyIsCompiled(const char * where) const;
     //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
@@ -203,7 +214,12 @@ public:
     void FormEvalOrder(const ComputationNodeBasePtr & rootNode)
     {
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
-            fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        {
+            if (rootNode)
+                fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation.\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+            else
+                fprintf(stderr, "FormEvalOrder: WARNING: Was called twice.\n");
+        }
 
         if (rootNode)
             m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
@@ -344,6 +360,7 @@ public:
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
     void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
     void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
+    void SetBatchNormlizationNodesBelowEvalMode(const bool evalMode, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // node access
@@ -410,8 +427,20 @@ public:
 
     template<class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+
+
+
     template<class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
+    static void SetSeqParam(ComputationNetworkPtr net, 
+                            const ComputationNodeBasePtr criterionNode, 
+                            const double&  hsmoothingWeight, 
+                            const double& frameDropThresh, 
+                            const bool&   doreferencealign, 
+                            const double& amf=14.0f, 
+                            const double& lmf=14.0f, 
+                            const double& wp=0.0f, 
+                            const double& bMMIfactor=0.0f, 
+                            const bool&  sMBR=false);
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
