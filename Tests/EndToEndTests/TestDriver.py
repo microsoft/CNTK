@@ -572,48 +572,49 @@ def runCommand(args):
   for test in testsToRun:
     for flavor in flavors:
       for device in devices:
-        if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux'):
-          continue
-        totalCount = totalCount + 1
-        if len(test.testCases)==0:
-          # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
-          args.verbose = True
-        # Printing the test which is about to run (without terminating the line)
-        sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
-        if args.dry_run:
-           print "[SKIPPED] (dry-run)"
-        # in verbose mode, terminate the line, since there will be a lot of output
-        if args.verbose:
-          sys.stdout.write("\n");
-        sys.stdout.flush()
-        # Running the test and collecting a run results
-        result = test.run(flavor, device, args)
+        for build_sku in args.buildSKUs:
+          if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
+            continue
+          totalCount = totalCount + 1
+          if len(test.testCases)==0:
+            # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
+            args.verbose = True
+          # Printing the test which is about to run (without terminating the line)
+          sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
+          if args.dry_run:
+            print "[SKIPPED] (dry-run)"
+          # in verbose mode, terminate the line, since there will be a lot of output
+          if args.verbose:
+            sys.stdout.write("\n");
+          sys.stdout.flush()
+          # Running the test and collecting a run results
+          result = test.run(flavor, device, args)
 
-        if args.verbose:
-          # writing the test name one more time (after possibly long verbose output)
-          sys.stdout.write("Test finished {0} ({1} {2}) - ".format(test.fullName, flavor, device));
-        if result.succeeded:
-          succeededCount = succeededCount + 1
-          # in no-verbose mode this will be printed in the same line as 'Running test...'
-          print "[OK] {0:.2f} sec".format(result.duration)
-        else:
-          print "[FAILED] {0:.2f} sec".format(result.duration)
-        # Showing per-test-case results:
-        for testCaseRunResult in result.testCaseRunResults:
-           if testCaseRunResult.succeeded:
-             # Printing 'OK' test cases only in verbose mode
-             if (args.verbose):
-               print(" [OK] " + testCaseRunResult.testCaseName);
-           else:
-             # 'FAILED' + detailed diagnostics with proper indendtation
-             print(" [FAILED] " + testCaseRunResult.testCaseName);
-             if testCaseRunResult.diagnostics:
-               for line in testCaseRunResult.diagnostics.split('\n'):
-                 print "    " + line;
-             # In non-verbose mode log wasn't piped to the stdout, showing log file path for conveniencce
+          if args.verbose:
+            # writing the test name one more time (after possibly long verbose output)
+            sys.stdout.write("Test finished {0} ({1} {2}) - ".format(test.fullName, flavor, device));
+          if result.succeeded:
+            succeededCount = succeededCount + 1
+            # in no-verbose mode this will be printed in the same line as 'Running test...'
+            print "[OK] {0:.2f} sec".format(result.duration)
+          else:
+            print "[FAILED] {0:.2f} sec".format(result.duration)
+          # Showing per-test-case results:
+          for testCaseRunResult in result.testCaseRunResults:
+            if testCaseRunResult.succeeded:
+              # Printing 'OK' test cases only in verbose mode
+              if (args.verbose):
+                print(" [OK] " + testCaseRunResult.testCaseName);
+            else:
+              # 'FAILED' + detailed diagnostics with proper indendtation
+              print(" [FAILED] " + testCaseRunResult.testCaseName);
+              if testCaseRunResult.diagnostics:
+                for line in testCaseRunResult.diagnostics.split('\n'):
+                  print "    " + line;
+              # In non-verbose mode log wasn't piped to the stdout, showing log file path for conveniencce
                
-        if not result.succeeded and not args.verbose and result.logFile:
-          print "  See log file for details:", result.logFile
+          if not result.succeeded and not args.verbose and result.logFile:
+            print "  See log file for details:", result.logFile
         
   if args.update_baseline:
     print "{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount)
