@@ -214,7 +214,12 @@ public:
     void FormEvalOrder(const ComputationNodeBasePtr & rootNode)
     {
         if (m_evalOrders.find(rootNode) != m_evalOrders.end())
-            fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        {
+            if (rootNode)
+                fprintf(stderr, "FormEvalOrder: WARNING: Was called twice for %ls %ls operation.\n", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+            else
+                fprintf(stderr, "FormEvalOrder: WARNING: Was called twice.\n");
+        }
 
         if (rootNode)
             m_evalOrders[rootNode] = rootNode->EnumerateNodes(true/*skipPairNetwork, deprecated*/);
