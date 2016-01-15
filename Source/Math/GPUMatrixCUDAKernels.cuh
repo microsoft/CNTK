@@ -1285,7 +1285,7 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     size_t nz)
 {
     CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
-    if (N >= nz || N < aColCSCIndex[0])
+    if (N < aColCSCIndex[0] || N >= aColCSCIndex[T])
         return;
 
     size_t col;
@@ -1309,9 +1309,10 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
 
     int rowIdx = start;
-    for (size_t na_i = start; na_i < end; na_i++)
+    for (size_t j = start; j < end; j++)
     {
         // recover the 5 indices from the loop counter
+        size_t na_i = aRowIndex[j];
         size_t d_i = (na_i              ) % D;
         size_t s_i = (na_i / D          ) % S;
         size_t m_i = (na_i / D / S      ) % M;
@@ -1328,7 +1329,7 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     cnzValues[rowIdx] = anzValues[N];
     cRowIndex[rowIdx] = nc;
 
-    if (N == nz - 1)
+    if (N == 0)
     {
         for (int i = 0; i <= T; i++)
         {
@@ -2788,35 +2789,57 @@ __global__ void _isValid(
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= cols)
+    if (id >= cols || d_res[0] <= 0)
         return;
 
     int start = colCSCIndex[id];
     int end = colCSCIndex[id + 1];
-    d_res[0] = 1;
 
     if (start > end)
     {
-        d_res[0] = -1;
-        d_res[1] = start;
-        d_res[2] = end;
+        if (d_res[0] > 0)
+        {
+            d_res[0] = -1;
+            d_res[1] = id;
+            d_res[2] = start;
+            d_res[3] = end;
+        }
     }
     else if (end > nz)
     {
-        d_res[0] = -2;
-        d_res[1] = end;
-        d_res[2] = nz;
+        if (d_res[0] > 0)
+        {
+            d_res[0] = -2;
+            d_res[1] = id + 1;
+            d_res[2] = end;
+            d_res[3] = nz;
+        }
     }
     else
     {
         for (int j = start; j < end; j++)  //j points to the value
         {
-            if (rowIndex[j] > rows)
+            if (rowIndex[j] >= rows)
             {
-                d_res[0] = -3;
-                d_res[1] = rowIndex[j];
-                d_res[2] = rows;
-                break;
+                if (d_res[0] > 0)
+                {
+                    d_res[0] = -3;
+                    d_res[1] = j;
+                    d_res[2] = rowIndex[j];
+                    d_res[3] = rows;
+                    break;
+                }
+            }
+            if (j > start && rowIndex[j] < rowIndex[j - 1])
+            {
+                if (d_res[0] > 0)
+                {
+                    d_res[0] = -4;
+                    d_res[1] = id;
+                    d_res[2] = j;
+                    d_res[3] = rowIndex[j];
+                    break;
+                }
             }
         }
     }
@@ -2825,7 +2848,8 @@ __global__ void _isValid(
 template<class ElemType>
 __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
     GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    const int cols
+    const int cols,
+    const int nz
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -2833,6 +2857,9 @@ __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
         return;
 
     colCSCIndex[id] = colCSCIndex[id] - colCSCIndex[0];
+
+    if (id == cols - 1)
+        colCSCIndex[cols] = nz;
 }
 
 //c = alpha * op(a) * op(b) + beta*c
@@ -2958,10 +2985,10 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
 
 template<class ElemType>
 __global__ void _reshape(
-    int oldNumRows,                             // old row count
-    int oldNumCols,                             // old col count
-    int newNumRows,                             // new row count
-    int newNumCols,                             // new col count
+    const int oldNumRows,                       // old row count
+    const int oldNumCols,                       // old col count
+    const int newNumRows,                       // new row count
+    const int newNumCols,                       // new col count
     const GPUSPARSE_INDEX_TYPE* oldRowIndex,    // old row index array
     const GPUSPARSE_INDEX_TYPE* oldColumnIndex, // old column index array
     GPUSPARSE_INDEX_TYPE* newRowIndex,          // new row index array
@@ -2978,10 +3005,10 @@ __global__ void _reshape(
     // initialize to the end and then scan in the right direction in the for-loop
     int currentColStart = oldColumnIndex[oldNumCols];
 
-    for (int oldCol = oldColLower; oldCol <= oldNumCols; oldCol++)
+    for (int oldCol = oldColLower; oldCol < oldNumCols; oldCol++)
     {
         int start = oldColumnIndex[oldCol];
-        int end = (oldCol < oldNumCols) ? oldColumnIndex[oldCol + 1] : oldColumnIndex[oldNumCols] + 1;
+        int end = oldColumnIndex[oldCol + 1];
         bool done = false;
 
         for (int j = start; j < end; j++)  //j points to the value

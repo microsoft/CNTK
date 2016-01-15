@@ -148,7 +148,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _shiftColCSCIndexFromSliceViewToAbsolute<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
                 SecondaryIndexLocation(),
-                SecondaryIndexCount()
+                SecondaryIndexCount(),
+                GetNumNZElements()
                 );
 
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));
@@ -772,6 +773,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 CUDA_CALL(cudaFree(m_pArray));
             }
+
             m_pArray = pArray;
 
             //following are generated dynamically and no need to save
@@ -1050,33 +1052,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!transposeB)
             {
-            int blocksPerGrid = (int)ceil(1.0*cRows*cCols / GridDim::maxThreadsPerBlock);
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+                int blocksPerGrid = (int)ceil(1.0*cRows*cCols / GridDim::maxThreadsPerBlock);
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
                 _dense1DConvMultSparseCSCAndWeightedAddToDense<ElemType> << < blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
-                m,          // rowDense
-                k,          // colDense
-                n,          // colSparse
+                    m,          // rowDense
+                    k,          // colDense
+                    n,          // colSparse
                     numChannels,// number of input channels
-                numSteps,   // convolution num steps
+                    numSteps,   // convolution num steps
                     horizontalSubsample,   // convolution step size
                     channelwise,// channelwise or pixelwise multiplication
-                alpha,
-                reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                    alpha,
+                    reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
                     transposeA,
                     reinterpret_cast<const ElemType*>(rhs.BufferPointer()),  //sparse nz values
-                rhs.RowLocation(),
-                rhs.ColLocation(),
-                beta,
-                reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
-                );
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    beta,
+                    reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                    );
 
-            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-        }
-        else
-        {
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+                if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+            }
+            else
+            {
                 if (beta != 1.0)
                 {
                     RuntimeError("Only support c += alpha * a operation");
@@ -1138,26 +1140,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetNumRows() != D*S*M*K)
             LogicError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: tensor dimensions and underlying matrix dimensions don't match");
 
-        c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumNZElements(), true, false);
+        c.Resize(a.GetNumRows(), a.GetNumCols(), a.GetNumElemAllocated(), true, false);
         c.SetNzCount(a.GetNumNZElements());
 
-        c.PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        CUDA_LONG N = (CUDA_LONG)c.GetNumNZElements();
-        int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
-        _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
-            reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
-            a.RowLocation(),
-            a.ColLocation(),
-            reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
-            c.RowLocation(),
-            c.ColLocation(),
-            D, S, M, K, T,
-            c.GetNumNZElements());
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        if (c.m_nz > 0)
+        {
+            c.PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            CUDA_LONG N = (CUDA_LONG)c.GetNumElemAllocated();
+            int blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+            _tensorShuffleScaleAndAddRowSparse<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                reinterpret_cast<const ElemType*>(a.BufferPointer()),  // source nz values
+                a.RowLocation(),
+                a.ColLocation(),
+                reinterpret_cast<ElemType*>(c.BufferPointer()),  // target nz values
+                c.RowLocation(),
+                c.ColLocation(),
+                D, S, M, K, T,
+                c.GetNumElemAllocated());
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
+        }
     }
 
     // backward pass from hidden layer to feature weight
@@ -1948,6 +1957,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(b,a);
     }
 
+    // This is an utility function useful for debugging issues with sparse matrices.
+    // It just checks that the CSC format indices are not corrupted / pointing to invalid memory.
     template<class ElemType>
     bool GPUSparseMatrix<ElemType>::IsValid() const
     {
@@ -1955,28 +1966,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         PrepareDevice();
-        long *res = new long[3];
+        long *res = new long[4];
         res[0] = 1;
         res[1] = 0;
         res[2] = 0;
+        res[3] = 0;
         long *d_res = nullptr;
-        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 3));
-        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 3, cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(long) * 4));
+        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 4, cudaMemcpyHostToDevice));
 
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexSize()) / GridDim::maxThreadsPerBlock);
-        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumElemAllocated(), d_res);
+        int blocksPerGrid = (int)ceil((1.0*SecondaryIndexCount()) / GridDim::maxThreadsPerBlock);
+        _isValid<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(MajorIndexLocation(), SecondaryIndexLocation(), GetNumRows(), GetNumCols(), GetNumNZElements(), d_res);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
-        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 4, cudaMemcpyDeviceToHost));
         
         if (res[0] == 1)
+        {
             return true;
+        }
         else
+        {
+            fprintf(stderr, "GPUSparseMatrix::IsValid returned false (additional info: %ld %ld %ld %ld)\n", res[0], res[1], res[2], res[3]);
             return false;
+        }
     }
 
     template<class ElemType>
@@ -2173,28 +2190,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         if (m_format == MatrixFormat::matrixFormatSparseCSR)
         {
-            if (sizeof(ElemType) == sizeof(float))
+            if (nnz > 0)
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<float*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                if (sizeof(ElemType) == sizeof(float))
+                {
+                    CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                        reinterpret_cast<float*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                }
+                else
+                {
+                    CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
+                        reinterpret_cast<double*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                }
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->RowLocation(), this->ColLocation(),
-                    reinterpret_cast<double*>(c.BufferPointer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
             }
         }
         else if (m_format == matrixFormatSparseCSC)
         {
-            if (sizeof(ElemType) == sizeof(float))
+            if (nnz > 0)
             {
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                if (sizeof(ElemType) == sizeof(float))
+                {
+                    CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                        reinterpret_cast<float*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                }
+                else
+                {
+                    CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
+                        reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                }
             }
             else
             {
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->BufferPointer()), this->ColLocation(), this->RowLocation(),
-                    reinterpret_cast<double*>(c.BufferPointer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUDA_CALL(cudaMemset(c.BufferPointer(), 0, c.BufferSizeAllocated()));
             }
         }
         else
