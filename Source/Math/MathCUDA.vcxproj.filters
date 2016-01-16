@@ -42,6 +42,9 @@
     <ClCompile Include="CuDnnConvolutionEngine.cpp">
       <Filter>GPU\Convolution</Filter>
     </ClCompile>
+    <ClCompile Include="GPUDataTransferer.cpp">
+      <Filter>GPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h">
@@ -103,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="TensorOps.h">
       <Filter>from Math</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUDataTransferer.h">
+      <Filter>GPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

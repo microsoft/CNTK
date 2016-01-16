@@ -74,8 +74,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // matrix (only supported for CSC format today) and hence the NzValues needs
         // to be offset accordingly.
         inline const ElemType* NzValues() const { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0); }
-        inline ElemType* NzValues() { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0); }
+        inline       ElemType* NzValues()       { return m_format != matrixFormatSparseCSC ? m_pArray : m_pArray + SecondaryIndexValueAt(0); }
         inline size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
+        inline size_t GetNumNZElements() const { return m_nz; }
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const //row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
         { 
@@ -230,7 +231,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
     public:
         virtual DEVICEID_TYPE GetComputeDeviceId(void) const;
-        inline size_t GetNumNZElements() const {return m_nz;}
 
         //Sets sparse matrix in CSR format. this acts as deep copy
         void SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE *h_CSRRow, const CPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val, 

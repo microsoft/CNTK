@@ -8,7 +8,7 @@
 #include <memory>
 #include <io.h>
 
-#include "../../../Source/Math/MatrixQuantizer.h"
+#include "../../../Source/Math/MatrixQuantizerImpl.h"
 #include "../../../Source/Math/CUDAPageLockedMemAllocator.h"
 #include "../../../Source/Math/ValueQuantizer.h"
 
@@ -256,10 +256,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::unique_ptr<MemAllocator> allocator(deviceId == CPUDEVICE ? nullptr : new CUDAPageLockedMemAllocator(deviceId));
     
         Matrix<ElemType> inMatrix(numRows, numCols, deviceId);
-        std::unique_ptr<MatrixQuantizer<ElemType>> quantizer(MatrixQuantizer<ElemType>::CreateMatrixQuantizer(numRows, numCols, deviceId, false /*useAsync*/));
+        std::unique_ptr<MatrixQuantizerImpl<ElemType>> quantizer(MatrixQuantizerImpl<ElemType>::Create(deviceId, false /*useAsync*/));
+        Matrix<ElemType> residueMatrix(numRows, numCols, deviceId);
 
         // Verify that the initial residue is comprised of all zeros
-        verifyAllZerosFunc(quantizer->GetResidualMatrix());
+        verifyAllZerosFunc(residueMatrix);
         Matrix<ElemType> outMatrix(numRows, numCols, deviceId);
         // Verify that the outMatrix is initialized with all zeros
         verifyAllZerosFunc(outMatrix);
@@ -269,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             inMatrix = Matrix<ElemType>::RandomUniform(numRows, numCols, rangeLow, rangeHigh, seed + iterNum, deviceId);
 
             std::unique_ptr<ElemType[]> gpuInMatrix(inMatrix.CopyToArray());
-            std::unique_ptr<ElemType[]> gpuPrevResidualMatrix(quantizer->GetResidualMatrix().CopyToArray());
+            std::unique_ptr<ElemType[]> gpuPrevResidualMatrix(residueMatrix.CopyToArray());
             std::unique_ptr<ElemType[]> gpuPrevOutMatrix(outMatrix.CopyToArray());
 
             size_t numRowsToPrint(0);
@@ -291,18 +292,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
                 }
 
                 inMatrix.Print("Input Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
-                quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
+                residueMatrix.Print("Old Residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
                 outMatrix.Print("Old Output Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
             }
 
             QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, numBits, CPUDEVICE, allocator.get());
-            quantizer->QuantizeAsync(inMatrix, tempCPUQuantizationBuffer, zeroThresholdFor1Bit);
+            quantizer->QuantizeAsync(inMatrix, residueMatrix, tempCPUQuantizationBuffer, residueMatrix, zeroThresholdFor1Bit);
             quantizer->WaitQuantizeAsyncDone();
 
             if (createDebugOut)
             {
                 tempCPUQuantizationBuffer.Print("Quantized Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
-                quantizer->GetResidualMatrix().Print("New residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
+                residueMatrix.Print("New residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
             }
 
             quantizer->UnquantizeAsync(tempCPUQuantizationBuffer, outMatrix, (iterNum > 0));
@@ -314,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             }
 
             // Now verify the quantization results
-            std::unique_ptr<ElemType[]> gpuNewResidualMatrix(quantizer->GetResidualMatrix().CopyToArray());
+            std::unique_ptr<ElemType[]> gpuNewResidualMatrix(residueMatrix.CopyToArray());
             std::unique_ptr<ElemType[]> gpuNewOutMatrix(outMatrix.CopyToArray());
 
             ElemType precisionTolerance = (std::is_same<ElemType, double>::value) ? static_cast<ElemType>(c_DoublePrecisionTolerance) : c_SinglePrecisionTolerance;

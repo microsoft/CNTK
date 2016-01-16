@@ -1,9 +1,9 @@
 dataDir: ../../Data
 tags:
-     # running on every BVT job in 'P' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor=='debug') ^ (device=='cpu'))
-     # running unconditionally on every Nightly job in 'P' leg
-     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
+     # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-s  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor=='debug') ^ (device=='cpu'))
+     # running unconditionally on every Nightly job in 'S' leg
+     - nightly-s ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:
@@ -17,17 +17,17 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0.01%}}
-      - EvalErrPerSample = {{float,tolerance=0.01%}}
-      - AvgLearningRatePerSample = {{float,tolerance=0.001%}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErrPerSample = {{float,tolerance=0%}}
+      - AvgLearningRatePerSample = {{float,tolerance=0%}}
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0.01%}}
-      - EvalErr[0]PerSample = {{float,tolerance=0.01%}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErr[0]PerSample = {{float,tolerance=0%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:
@@ -36,5 +36,6 @@ testCases:
       - DataParallelSGD training
       - MyRank = {{integer}}
       - NumNodes = 3
-      - NumGradientBits = 32
+      - NumGradientBits = 64
       - distributed reading is ENABLED
+      - BufferedAsyncGradientAggregation is ENABLED

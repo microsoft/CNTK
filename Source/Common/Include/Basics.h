@@ -25,6 +25,12 @@
 
 #pragma warning (disable: 4702)     // disable some incorrect unreachable-code warnings
 
+#define DISABLE_COPY_AND_MOVE(TypeName) \
+        TypeName(const TypeName&) = delete; \
+        TypeName& operator=(const TypeName&) = delete; \
+        TypeName(TypeName&&) = delete; \
+        TypeName& operator=(TypeName&&) = delete
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;

@@ -5,7 +5,14 @@
 #include "Basics.h"
 #include "SGD.h"
 #include "DataReaderHelpers.h"
+
+#include "MatrixQuantizerImpl.h"
+
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
 #include "AllReduceDistGradAggregator.h"
+#endif
+
+#include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
 #include <map>
@@ -208,6 +215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 refFeatureNodes[i] = refNet->GetNodeFromName(featureNodes[i]->NodeName());
                 refNet->ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
+            refNet->InvalidateCompiledNetwork(); // prepare to re-compile
             refNet->CompileNetwork();
 
             // allocate memory for forward computation
@@ -976,7 +984,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, epochNumber);
                 noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamples = m_gradHeader->numSamples;
@@ -1899,7 +1907,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_distGradAgg == nullptr)
             {
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#ifdef QUANTIZED_GRADIENT_AGGREGATION
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#else
+                if (m_numGradientBits != (8 * sizeof(ElemType)))
+                {
+                    RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
+                }
+
+                m_distGradAgg = new SimpleDistGradAggregator<ElemType>(g_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+#endif // !QUANTIZED_GRADIENT_AGGREGATION
+
             }
 
             if (m_gradHeader == nullptr)

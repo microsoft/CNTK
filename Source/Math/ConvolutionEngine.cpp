@@ -49,16 +49,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c()); UNUSED(packedInputRows);
 
             // GPU and 1-dimensional image
-            bool gpuSparse1D = (inT.h() == 1 &&
+            m_gpuSparseOpt = (filterT.h() == 1 &&
                 in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
                 convDesc.wStride() == 1 &&
                 !convDesc.padding() &&
                 in.GetMatrixType() == MatrixType::SPARSE);
+            m_gpuSparse1D = (m_gpuSparseOpt && inT.h() == 1);
 
             out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
             // Reshaping is only necessary if we are going to use the unpacking trick
-            if (!gpuSparse1D)
+            if (m_gpuSparseOpt)
+                out.Reshape(outT.c() * outT.w(), outT.h() * batchSize);
+            else
                 out.Reshape(outT.c(), outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
@@ -75,17 +78,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
                 // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                if (in.GetMatrixType() == MatrixType::DENSE)
+                if (in.GetMatrixType() == MatrixType::DENSE || m_gpuSparse1D)
                     inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
                 else
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleId, smallBatchSize), in.GetFormat());
 
-                if (gpuSparse1D)
+                if (m_gpuSparseOpt)
                 {
                     if (filterT.w() * inT.c() != filter.GetNumCols())
                         LogicError("Kernel width and weight matrix dimensions don't match.");
 
-                    Mat outputSubBatch = out.ColumnSlice(startSampleId, smallBatchSize);
+                    inputSubBatch.Reshape(inT.c() * inT.w(), inT.h() * smallBatchSize);
+                    Mat outputSubBatch = out.ColumnSlice(startSampleId, outT.h() * smallBatchSize);
                     Mat::ConvolveAndWeightedAdd(1, filter, false, inputSubBatch, false, 0, outputSubBatch,
                         static_cast<int>(inT.c()), convDesc.wStride(), convDesc.padding(), true);
                 }
@@ -195,14 +199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
-            // GPU and 1-dimensional image
-            bool gpuSparse1D = (inT.h() == 1 &&
-                in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
-                convDesc.wStride() == 1 &&
-                !convDesc.padding() &&
-                in.GetMatrixType() == MatrixType::SPARSE);
-
-            if (numSubBatches == 1 && allowReuse && !gpuSparse1D)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+            if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
                 // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
                 Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, filter);
             else
@@ -218,19 +215,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
                     // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
                     // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                    if (gpuSparse1D)
+                    if (m_gpuSparseOpt)
                     {
                         Matrix<ElemType> inputSubBatch;
                         inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
-                        inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w());
+                        inputSubBatch.Reshape(inT.c(), smallBatchSize * inT.w() * inT.h());
                         Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, inT.w(), 1, smallBatchSize, inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
+                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, inT.w(), 1, smallBatchSize * inT.h(), inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
 
-                        Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * srcGradT.w(), srcGradT.c(), outputGradientSubBatch.GetDeviceId());
-                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, srcGradT.w(), 1, smallBatchSize, srcGradT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
+                        Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * srcGradT.h() * srcGradT.w(), srcGradT.c(), outputGradientSubBatch.GetDeviceId());
+                        Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, srcGradT.w(), 1, smallBatchSize * srcGradT.h(), srcGradT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
 
                         filter.Reshape(srcGradT.c() * filterT.w(), inT.c());
-                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize, convDesc.wStride(), convDesc.padding(), false);
+                        Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, filter, smallBatchSize * inT.h(), convDesc.wStride(), convDesc.padding(), false);
                         filter.Reshape(srcGradT.c(), inT.c() * filterT.w());
                     }
                     else
@@ -314,6 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         size_t m_maxTempMemSizeInSamples;
         Mat m_ones;
+        bool m_gpuSparseOpt;
+        bool m_gpuSparse1D;
     };
 
     template class ConvolutionEngine<float>;

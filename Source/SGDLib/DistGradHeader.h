@@ -88,9 +88,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~DistGradHeader() = delete;
 
         // Disallow copy and move construction/assignment
-        DistGradHeader(const DistGradHeader&) = delete;
-        DistGradHeader& operator=(const DistGradHeader&) = delete;
-        DistGradHeader(DistGradHeader&&) = delete;
-        DistGradHeader& operator=(DistGradHeader&&) = delete;
+        DISABLE_COPY_AND_MOVE(DistGradHeader);
     };
 }}}
