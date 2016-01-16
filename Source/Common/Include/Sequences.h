@@ -450,6 +450,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // or without arguments -> entire minibatch / no frame-range
         FrameRange(MBLayoutPtr pMBLayout) : FrameRange(pMBLayout, SIZE_MAX) {}
 
+        // no arguments--used if passed as an out parameter
+        FrameRange() : FrameRange(MBLayoutPtr(), SIZE_MAX) {}
+
         // return a frame range with broadcast allowed
         // This is used, e.g., by PlusNode which can combine minibatch data and single-column vectors.
         FrameRange AllowBroadcast() const

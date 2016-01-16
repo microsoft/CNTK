@@ -3265,6 +3265,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
     }
+    static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const float *alpha, const float *x, int incx, float *y, int incy)
+    {
+        return cublasSaxpy(handle, n, alpha, x, incx, y, incy);
+    }
+    static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double *alpha, const double *x, int incx, double *y, int incy)
+    {
+        return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
+    }
 
     template<class ElemType>
     void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, 
@@ -4467,9 +4475,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
         // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
         if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
-            return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
+        {
+            // special case: for copy, use cudaMemcpy() instead, or cublas_axpy()
+            // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
+            if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
+                return CUDA_CALL(cudaMemcpy(m_pArray + offsets[1], a.m_pArray + offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
+            else if (op == ElementWiseOperator::opCopy && beta == 1)
+                return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int)regularOpDims[0], &alpha, a.m_pArray + offsets[0], 1, m_pArray + offsets[1], 1));
+            else
+                return LaunchUnaryTensorOp<ElemType>(beta, a.m_pArray + offsets[0], m_pArray + offsets[1], alpha, op, regularOpDims[0]);
+        }
 
-        // special case: recuding a matrix onto a column vector; can be done with SGEMM
+        // special case: reducing a matrix onto a column vector; can be done with SGEMM
         // Note: A minor risk is that with this, our own reduction function will rarely be used.
         // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
         else if (op == ElementWiseOperator::opCopy &&                                                       // we are just adding to target without any further operation

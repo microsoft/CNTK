@@ -47,6 +47,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // sample tensor dimension instead using 'dim' (-1 stands for time). This will only work, however,
     // when all involved nodes are implemented using the tensor library. Nodes implemented using
     // Matrix slices can only support iterating over time.
+    //
+    // TODO (this is still unfinished):
+    //  - backprop into boundary node
+    //  - backprop with packed sequences
+    //  - import/export for sub-minibatching
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -130,17 +135,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 m_state.clear();
         }
+
     private:
+
         typedef std::pair<SmallVector<int>, SmallVector<int>> SliceBounds;  // slice bounds for dimension k are [first[k], second[k]) (think STL begin/end)
 
-        TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, TensorShape shape/*original shape of 'data'*/, SliceBounds slice)
-        {
-            shape.NarrowTo(slice);
-            return TensorView<ElemType>(data, shape);
-        }
-
         // helper to shift dimension 'm_shiftDim' of SliceBounds by an offset (a common operation below)
-        SliceBounds ShiftDim(const SliceBounds & in, int shiftBy)
+        SliceBounds ShiftDim(const SliceBounds & in, int shiftBy) const
         {
             SliceBounds result = in;
             result.first [m_shiftDim] += shiftBy;
@@ -148,6 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
+        // helper to typecast dimensions from a TensorShape into a signed-int array
         static SmallVector<int> ToIntDims(const TensorShape & shape)
         {
             SmallVector<int> dimsSigned;
@@ -159,8 +161,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is used for both forward and backprop.
         // 'In' below refers to Input(0) where 'Out' refers to the output of *this.
         void DetermineSlices(size_t rank, const FrameRange & fr,
-                             TensorShape & inShape, TensorShape & outShape,                 // our MB's shape
-                             SliceBounds & inSliceLogical, SliceBounds & outSliceLogical)   // the logical ranges to shift
+                             TensorShape & inShape, TensorShape & outShape,                     // our MB's shape
+                             SliceBounds & inSliceLogical, SliceBounds & outSliceLogical) const // the logical ranges to shift
         {
             // get the slice bounds for the given FrameRange
             outShape =           GetTensorShape(rank);     // describes the full tensor including sequence and time dimensions
@@ -179,7 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void PartitionSlices(const SliceBounds & inSliceLogical, const SliceBounds & outSliceLogical,  // the move we want to make
                              int T,                                                                    // our actual size
                              SliceBounds & inSliceMain,  SliceBounds & outSliceMain,                   // the part that goes main-to-main
-                             SliceBounds & inSliceState, SliceBounds & outSliceState)                  // the part that goes from/to state
+                             SliceBounds & inSliceState, SliceBounds & outSliceState) const            // the part that goes from/to state
         {
             inSliceMain  =  inSliceLogical;
             outSliceMain = outSliceLogical;
@@ -234,10 +236,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // get a sliced TensorView on a Matrix given a shape and a slice
+        TensorView<ElemType> DataTensorFor(Matrix<ElemType> & data, TensorShape shape/*original shape of 'data'*/, SliceBounds slice)
+        {
+            shape.NarrowTo(slice);
+            return TensorView<ElemType>(data, shape);
+        }
+
+        // determine FrameRange objects that describe the boundary frames of the sequence
+        // This version is for the case of iterating over time.
+        void DetermineBoundaryFrameRanges(const FrameRange & fr, const MBLayout::SequenceInfo & toSeqInfo,  // range we operate on and current sequence under consideration
+                                          const ComputationNodeBasePtr & fromNode, FrameRange & frFrom,     // boundary node
+                                          size_t T, FrameRange & frTo) const                                // ourselves (output)
+        {
+            // get FrameRange to write to in our output
+            frTo = fr.Sequence(toSeqInfo.s);        // clip to this one sequence only
+            if (frTo.IsAllFrames())                 // whole batch: narrow to the boundary range
+            {
+                auto steps = std::min((size_t)abs(m_fromOffset), toSeqInfo.GetNumTimeSteps());
+                frTo = frTo.WithTimeStep(m_fromOffset < 0 ? toSeqInfo.tBegin : toSeqInfo.tEnd - steps).WithTimeRange(steps);    // all frames to be filled in this sequence
+                LogicError("This code path has never been tested.");        // remove this once we have
+            }
+            // frTo now describes the frame range that needs to be filled from the boundary node
+
+            // create a FrameRange for the boundary node to read from
+            // Boundary data is always a single frame.
+            frFrom = frTo.WithLayout(fromNode->GetMBLayout()).WithTimeRange(1).AllowBroadcast();   // start with this, next update time step and possibly toSeqInfo index
+            bool clamp = m_boundaryMode == BoundaryMode::duplicate;
+            if (clamp)                              // get frames from our own input
+                frFrom = frFrom.WithTimeStep(m_fromOffset < 0 ? toSeqInfo.tBegin : toSeqInfo.tEnd - 1);
+            else if (!fromNode->HasMBLayout())      // get frames from separate node that is not data
+                frFrom = frFrom.WithTimeStep(0);    // Validate() has ensured that input is one column
+            else                                    // get frames from separate node that is data
+            {
+                if (fromNode->GetMBLayout() != GetMBLayout())
+                    frFrom = frFrom.Sequence(fromNode->GetMBLayout()->FindSequence(toSeqInfo.seqId).seqId);   // get matching sequence entry in boundary node
+                const auto & fromSeqInfo = fromNode->GetMBLayout()->GetAllSequences()[frFrom.seqIndex];
+                frFrom = frFrom.WithTimeStep(m_fromOffset > 0 ? fromSeqInfo.tBegin : fromSeqInfo.tEnd - 1);
+            }
+        }
+
+        // determine FrameRange objects that describe the boundary frames of the sequence
+        // This version is for the case of iterating over a non-time dimension (which is non-ragged).
+        void DetermineBoundaryFrameRanges(const FrameRange & fr,        // range we operate on (parameter to ForwardProp() and BackpropTo())
+                                          const ComputationNodePtr & fromNode, size_t fromT, FrameRange & frFrom,   // boundary node
+                                          size_t T, FrameRange & frTo) const                                        // ourselves (output)
+        {
+            // get FrameRange to fill in our output
+            frTo = fr;
+            if (frTo.IsAllFrames())
+            {
+                auto steps = std::min((size_t)abs(m_fromOffset), T);
+                frTo = frTo.WithTimeStep(m_fromOffset < 0 ? 0 : T - steps);
+            }
+
+            // get tensor to fill from
+            frFrom = frTo.WithTimeRange(1).AllowBroadcast(); // start with this, next will in time step and possibly update the layout
+            bool clamp = m_boundaryMode == BoundaryMode::duplicate;
+            if (clamp)
+                frFrom = frFrom.WithTimeStep(m_fromOffset < 0 ? 0 : fromT - 1);     // (no need to update layout as it is the same)
+            else
+                frFrom = frFrom.WithTimeStep(m_fromOffset > 0 ? 0 : fromT - 1).WithLayout(fromNode->GetMBLayout());
+        }
+
         // perform the copy (forward) or add (backprop) operation
-        // Note that several args to this function could be easily reconstructed from class state. We pass them in anyway because it is easy but not zero cost, and these are used outside already.
-        template<class OpFn>
-        void Propagate(const ComputationNodePtr & fromNode, TensorShape fromShape, const FrameRange & frFrom, TensorShape toShape, const FrameRange & frTo, const OpFn & opFn)
+        void Propagate(const ComputationNodePtr & fromNode, TensorShape fromShape, const FrameRange & frFrom, TensorShape toShape, const FrameRange & frTo, bool isForward)
         {
             auto fromSlice = TensorSliceWithMBLayoutFor(ToIntDims(fromShape), frFrom, fromNode->GetMBLayout());
             auto toSlice   = TensorSliceWithMBLayoutFor(ToIntDims(toShape),   frTo,             GetMBLayout());
@@ -245,9 +308,79 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fromShape.NarrowTo(fromSlice);
             toShape.NarrowTo(toSlice);
 
-            opFn(fromNode, fromShape, toShape);
+            if (isForward)
+            {
+                auto from = TensorView<ElemType>(fromNode->Value(), fromShape);
+                auto to   = TensorView<ElemType>(          Value(),   toShape);
+                to.AssignCopyOf(from);
+            }
+            else
+            {
+                auto from = TensorView<ElemType>(fromNode->Gradient(), fromShape);
+                auto to   = TensorView<ElemType>(          Gradient(),   toShape);
+                from.AddCopyOf(to);
+            }
         }
+
+        // perform propagation of bounary frames (either copy from or backprop to)
+        void PropagateBoundaryFrames(const FrameRange & fr, size_t rank, const SliceBounds & inSliceLogical, const TensorShape & outShape, const SliceBounds & outSliceLogical, bool isForward)
+        {
+            // get node to fill from and its dimensions
+            // We fill either from the provided boundary node or from ourselves (BoundaryMode::duplicate = clamp).
+            bool clamp = m_boundaryMode == BoundaryMode::duplicate;
+            ComputationNodePtr fromNode = clamp ?
+                                              Input(0) :        // duplicating our own boundary frame
+                                              Input(1);         // pulling in a frame from another node or a constant
+            auto fromShape = fromNode->GetTensorShape(rank);
+
+            auto T = outShape[m_shiftDim];                      // upper bound of iteration dimension
+            assert(fr.seqIndex == SIZE_MAX);                    // (can't run loops over individual sequences)
+            assert(fr.IsAllFrames() || fr.m_timeRange == 1);    // (we only support full range or single frames; otherwise we'd have to narrow it to the intersection with this sequence)
+            bool isTimeIteration = m_shiftDim >= rank;
+
+            // if iterating in time, we must pay attention to sequence boundaries inside the batch
+            if (isTimeIteration)
+            {
+                if (fr.IsAllFrames() || GetMBLayout()->IsBeyondStartOrEnd(fr.WithTimeOffset(m_fromOffset)))     // short-cut test whether there is anything to do
+                {
+                    auto ts = outSliceLogical.first[m_shiftDim];
+                    auto te = outSliceLogical.second[m_shiftDim];
+                    // iterate over all sequences in this batch and handle all that overlap with the target region
+                    for (auto toSeqInfo : GetMBLayout()->GetAllSequences())
+                    {
+                        // clip sequence to [ts,te)
+                        if (toSeqInfo.tEnd <= ts || toSeqInfo.tBegin >= te)     // no overlap--skip
+                            continue;
+
+                        // get bounds
+                        if (toSeqInfo.tBegin < ts)
+                            toSeqInfo.tBegin = ts;
+                        if (toSeqInfo.tEnd   > te)
+                            toSeqInfo.tEnd   = te;
+                        FrameRange frFrom, frTo;
+                        DetermineBoundaryFrameRanges(fr, toSeqInfo, fromNode, frFrom, T, frTo);
+
+                        // copy/backprop
+                        Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward);
+                    }
+                }
+            }
+            // iterating over fixed sample-shape dimensions
+            else if (!isTimeIteration && (inSliceLogical.first[m_shiftDim] < 0 || inSliceLogical.second[m_shiftDim] >= T))
+            {
+                // get bounds
+                auto fromT = fromShape[m_shiftDim];                         // upper bound of iteration dimension in boundary node (may match or broadcast)
+                FrameRange frFrom, frTo;
+                DetermineBoundaryFrameRanges(fr, fromNode, fromT, frFrom, T, frTo);
+
+                // copy/backprop
+                Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward);
+                LogicError("This code path has never been tested.");        // remove this once we have
+            }
+        }
+
     public:
+
         virtual void ForwardProp(const FrameRange & fr) override
         {
             if (fr.GetIterationDimension() != m_shiftDimParam)
@@ -274,8 +407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             SliceBounds inSliceMain, outSliceMain;          // main-to-main
             SliceBounds inSliceState, outSliceState;        // from state
-            auto T = outShape[m_shiftDim];                  // upper bound of iteration dimension
-            PartitionSlices(inSliceLogical, outSliceLogical, T, inSliceMain, outSliceMain, inSliceState, outSliceState);
+            PartitionSlices(inSliceLogical, outSliceLogical, outShape[m_shiftDim], inSliceMain, outSliceMain, inSliceState, outSliceState);
 
             if (!inSliceState.first.empty() && inSliceState.second[m_shiftDim] > inSliceState.first[m_shiftDim])
             {
@@ -298,107 +430,77 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - fill in all frames that are too close to boundary and must be filled from context (recurrent) or by replication (non-recurrent only)
             //    The above may already have written (wrong) values in there, or not written anything at all yet.
 
-            // get node to fill from and its dimensions
-            // We fill either from the provided boundary node or from ourselves (BoundaryMode::duplicate = clamp).
-            bool clamp = m_boundaryMode == BoundaryMode::duplicate;
-            ComputationNodePtr fromNode = clamp ?
-                                              Input(0) :    // duplicating our own boundary frame
-                                              Input(1);     // pulling in a frame from another node or a constant
-            auto fromShape = fromNode->GetTensorShape(rank);
-
-            // the function we execute
-            auto AssignFn = [this](const ComputationNodePtr & fromNode, const TensorShape & fromShape, const TensorShape & toShape)
-            {
-                auto from = TensorView<ElemType>(fromNode->Value(), fromShape);
-                auto to   = TensorView<ElemType>(          Value(),   toShape);
-                to.AssignCopyOf(from);
-            };
-
-            assert(fr.seqIndex == SIZE_MAX);                    // (can't run loops over individual sequences)
-            assert(fr.IsAllFrames() || fr.m_timeRange == 1);    // (we only support full range or single frames; otherwise we'd have to narrow it to the intersection with this sequence)
-            bool isTimeIteration = m_shiftDim >= rank;
-
-            // if iterating in time, we must pay attention to sequence boundaries inside the batch
-            if (isTimeIteration)
-            {
-                if (fr.IsAllFrames() || GetMBLayout()->IsBeyondStartOrEnd(fr.WithTimeOffset(m_fromOffset)))     // short-cut test whether there is anything to do
-                {
-                    auto ts = outSliceLogical.first[m_shiftDim];
-                    auto te = outSliceLogical.second[m_shiftDim];
-                    // iterate over all sequences in this batch and handle all that overlap with the target region
-                    for (auto toSeqInfo : GetMBLayout()->GetAllSequences())
-                    {
-                        // clip sequence to [ts,te)
-                        if (toSeqInfo.tEnd <= ts || toSeqInfo.tBegin >= te)     // no overlap--skip
-                            continue;
-                        if (toSeqInfo.tBegin < ts)
-                            toSeqInfo.tBegin = ts;
-                        if (toSeqInfo.tEnd   > te)
-                            toSeqInfo.tEnd = te;
-
-                        // get FrameRange to write to in our output
-                        FrameRange frTo = fr.Sequence(toSeqInfo.s);     // clip to this one sequence only
-                        if (frTo.IsAllFrames())                         // whole batch: narrow to the boundary range
-                        {
-                            auto steps = std::min((size_t)abs(m_fromOffset), toSeqInfo.GetNumTimeSteps());
-                            frTo = frTo.WithTimeStep(m_fromOffset < 0 ? toSeqInfo.tBegin : toSeqInfo.tEnd - steps).WithTimeRange(steps);    // all frames to be filled in this sequence
-                            LogicError("This code path has never been tested.");        // remove this once we have
-                        }
-                        // frTo now describes the frame range that needs to be filled from the boundary node
-
-                        // create a FrameRange for the boundary node to read from
-                        // Boundary data is always a single frame.
-                        auto frFrom = frTo.WithLayout(fromNode->GetMBLayout()).WithTimeRange(1).AllowBroadcast();   // start with this, next update time step and possibly toSeqInfo index
-                        if (clamp)                                      // get frames from our own input
-                            frFrom = frFrom.WithTimeStep(m_fromOffset < 0 ? toSeqInfo.tBegin : toSeqInfo.tEnd - 1);
-                        else if (!fromNode->HasMBLayout())              // get frames from separate node that is not data
-                            frFrom = frFrom.WithTimeStep(0);            // Validate() has ensured that input is one column
-                        else                                            // get frames from separate node that is data
-                        {
-                            if (fromNode->GetMBLayout() != GetMBLayout())
-                                frFrom = frFrom.Sequence(fromNode->GetMBLayout()->FindSequence(toSeqInfo.seqId).seqId);   // get matching sequence entry in boundary node
-                            const auto & fromSeqInfo = fromNode->GetMBLayout()->GetAllSequences()[frFrom.seqIndex];
-                            frFrom = frFrom.WithTimeStep(m_fromOffset > 0 ? fromSeqInfo.tBegin : fromSeqInfo.tEnd - 1);
-                        }
-
-                        // copy
-                        Propagate(fromNode, fromShape, frFrom, outShape, frTo, AssignFn);
-                    }
-                }
-
-            }
-            // iterating over fixed sample-shape dimensions
-            else if (!isTimeIteration && (inSliceLogical.first[m_shiftDim] < 0 || inSliceLogical.second[m_shiftDim] >= T))
-            {
-                // get FrameRange to fill in our output
-                FrameRange frTo = fr;
-                if (frTo.IsAllFrames())
-                {
-                    auto steps = std::min((size_t)abs(m_fromOffset), T);
-                    frTo = frTo.WithTimeStep(m_fromOffset < 0 ? 0 : T - steps);
-                }
-
-                // get tensor to fill from
-                auto fromT = fromShape[m_shiftDim];                         // upper bound of iteration dimension in boundary node (may match or broadcast)
-                FrameRange frFrom = frTo.WithTimeRange(1).AllowBroadcast(); // start with this, next will in time step and possibly update the layout
-                if (clamp)
-                    frFrom = frFrom.WithTimeStep(m_fromOffset < 0 ? 0 : fromT - 1);     // (no need to update layout as it is the same)
-                else
-                    frFrom = frFrom.WithTimeStep(m_fromOffset > 0 ? 0 : fromT - 1).WithLayout(fromNode->GetMBLayout());
-
-                // copy (with clipping)
-                Propagate(fromNode, fromShape, frFrom, outShape, frTo, AssignFn);
-                LogicError("This code path has never been tested.");        // remove this once we have
-            }
+            PropagateBoundaryFrames(fr, rank, inSliceLogical, outShape, outSliceLogical, /*isForward=*/true);
         }
 
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
-            // To allow for bulk gradient computation, we will clear out any gradient that should not be propagated.
-            // We do that directly to our incoming output gradient. This is OK because we own this, and it is no longer used after this operation
-            // (it is invalid to call BackpropTo() multiple times since it adds to the outgoing Input() gradient).
-            assert(inputIndex == 0); inputIndex;
-            fr;
+            // Note: To allow for bulk gradient computation, this function will clear out any gradient that should not be propagated.
+            // We do that directly to our incoming output gradient, similar to gap masking but in the non-gap areas.
+            // This is OK because we own this, and it is never read except by ourselves after we get in here.
+            // NAW, NOT WORKING! We need to propagate those gaps into the boundary node:
+            //  - Backprop will be called as a bulk op (since outside the recurrent loop), but only few frames must be propagated, affecting one column only.
+            //  - Backprop into input is still called frame by frame.
+            //  - If outside recurrent loop, backprop into input is done in bulk, and it is unlikely that we also have a boundary node to propagate into.
+            //  - This will be fixed later; for now, we simply don't support boundary nodes.
+            //  - Or we first bulk-add, and then subtract it out again...
+
+            TensorShape inShape, outShape;                  // expanded tensor shapes of input and output
+            SliceBounds inSliceLogical, outSliceLogical;    // the logical ranges to shift
+            size_t rank = DetermineElementwiseTensorRank();
+            DetermineSlices(rank, fr, inShape, outShape, inSliceLogical, outSliceLogical);
+
+            // propagate into boundary
+            // If the boundary is a scalar constant, then this will not be called.
+            // Note: This will typically be called outside the loop, so in case of delay > 1, we get a minor benefit from doing it in bulk.
+            if (inputIndex == 1)
+            {
+                PropagateBoundaryFrames(fr, rank, inSliceLogical, outShape, outSliceLogical, /*isForward=*/false);
+            }
+
+            // propagate into input
+            else if (inputIndex == 0)
+            {
+                // STEP 1a: backprop all we got, including invalid ones. We later subtract them again. Not so nice actually, but saves memory.
+                // get the logical ranges we want to shift
+                // now copy the two stripes--one that is main-to-main, and one that pulls in data from previous state (truncated BPTT only)
+                // This correctly handles if input is a tensor with strides. This is currently not the case, but may be if we support in-place.
+
+                SliceBounds inSliceMain,  outSliceMain;         // main-to-main
+                SliceBounds inSliceState, outSliceState;        // from state
+                auto T = outShape[m_shiftDim];                  // upper bound of iteration dimension
+                PartitionSlices(inSliceLogical, outSliceLogical, T, inSliceMain, outSliceMain, inSliceState, outSliceState);
+
+                if (inSliceMain.second[m_shiftDim] > inSliceMain.first[m_shiftDim])
+                {
+                    Input(0)->MaskMissingGradientColumnsToZero(fr); // zero out gaps, which will leak (note: we really only need to zero out gaps close enough to boundaries)
+                    auto from = DataTensorFor(Input(0)->Gradient(), inShape,  inSliceMain);
+                    auto to   = DataTensorFor(          Gradient(), outShape, outSliceMain);
+                    from.AddCopyOf(to);
+                }
+                // We have now propagated anything from within the logical bounds.
+                // In the case of packing we will have propagated incorrectly propagated across boundaries.
+                // Maybe a better way would be to copy around the frames that we should not copy.
+
+                // STEP 1b: fix up the frames that we incorrectly propagated
+                // Only happens for time iterations, only at inner boundaries.
+                bool isTimeIteration = m_shiftDim >= rank;
+                if (isTimeIteration)
+                {
+                    if (fr.IsAllFrames() || GetMBLayout()->IsBeyondStartOrEnd(fr.WithTimeOffset(m_fromOffset)))     // short-cut test whether there is anything to do
+                    {
+                        auto ts = outSliceLogical.first[m_shiftDim];
+                        auto te = outSliceLogical.second[m_shiftDim];
+                        // iterate over all sequences in this batch and handle all that overlap with the target region
+                        for (auto toSeqInfo : GetMBLayout()->GetAllSequences())
+                        {
+                            if (toSeqInfo.tEnd <= ts || toSeqInfo.tBegin >= te)     // no overlap--skip
+                                continue;
+                            sin(1);
+                        }
+                    }
+                }
+            }
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
