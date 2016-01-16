@@ -2,6 +2,7 @@
 #include "MatrixQuantizerGPU.h"
 #include "MatrixQuantizer_kernel.cu"
 #include "GPUMatrix.h"
+#include "GPUDataTransferer.h"
 
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
@@ -155,12 +156,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    QuantizedMatrix<ElemType>& MatrixQuantizerGPU<ElemType>::GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated)
+    QuantizedMatrix<ElemType>& MatrixQuantizerGPU<ElemType>::GetTempGPUQuantizedMatrix(size_t numRows, size_t numCols, size_t nBits, bool& newlyAllocated)
     {
         newlyAllocated = false;
 
         // Check if the existing one is good for our needs
-        if ((m_tempGPUQuantizedMatrix != nullptr) && (m_tempGPUQuantizedMatrix->GetNumBits() == nBits))
+        if ((m_tempGPUQuantizedMatrix != nullptr) && (m_tempGPUQuantizedMatrix->GetNumBits() == nBits) && (m_tempGPUQuantizedMatrix->GetNumRows() >= numRows) && (m_tempGPUQuantizedMatrix->GetNumCols() >= numCols))
         {
             return *m_tempGPUQuantizedMatrix;
         }
@@ -171,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempGPUQuantizedMatrix = nullptr;
         }
         
-        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_residual->GetNumRows(), this->m_residual->GetNumCols(), nBits, (short)this->GetDeviceId());
+        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(numRows, numCols, nBits, (short)this->GetDeviceId());
         newlyAllocated = true;
 
         return *m_tempGPUQuantizedMatrix;
@@ -180,8 +181,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///cpubuffer should be page-locked memory allocated, otherwise CUDA will not be efficient (hence we don't use STL)
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool useDedicatedComputeStream, bool forceSync /*= false*/)
-    : MatrixQuantizer<ElemType>(numRows, numCols, deviceId), m_quantizeCompleteEvent(NULL), m_fetchCompleteEvent(NULL),
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(int deviceId, bool useDedicatedComputeStream, bool forceSync /*= false*/)
+    : MatrixQuantizerImpl<ElemType>(deviceId), m_quantizeCompleteEvent(NULL), m_fetchCompleteEvent(NULL),
     m_tempMatrixZeroingCompleteEvent(NULL), m_assignCompleteEvent(NULL), m_forceSync(forceSync), m_tempGPUQuantizedMatrix(nullptr),
     m_quantizeOpIncludedFetch(false)
     {
@@ -224,11 +225,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit)
     {
         // Verify various input matrix parameter's dimensions
         assert((inMatrix.GetNumRows() == outQMatrix.GetNumRows()) && (inMatrix.GetNumCols() == outQMatrix.GetNumCols()));
-        assert((inMatrix.GetNumRows() == this->m_residual->GetNumRows()) && (inMatrix.GetNumCols() == this->m_residual->GetNumCols()));
+        assert((inMatrix.GetNumRows() == inResidual.GetNumRows()) && (inMatrix.GetNumCols() == inResidual.GetNumCols()));
+        assert((inMatrix.GetNumRows() == outResidual.GetNumRows()) && (inMatrix.GetNumCols() == outResidual.GetNumCols()));
 
         size_t nBits = outQMatrix.GetNumBits();
 
@@ -239,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         bool GPUMatrixNewlyAllocated = false;
-        QuantizedMatrix<ElemType>& outQMatrixGPU = (outQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits, GPUMatrixNewlyAllocated) : outQMatrix;
+        QuantizedMatrix<ElemType>& outQMatrixGPU = (outQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(outQMatrix.GetNumRows(), outQMatrix.GetNumCols(), nBits, GPUMatrixNewlyAllocated) : outQMatrix;
 
         // If we newly allocated the target GPU matrix then the aysnc zeroing of the matrix is still in procgress on
         // the main compute stream. We must synchroniz with the mail compute stream in case the quantization
@@ -251,10 +253,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Do the quantization on compute sstream and insert event into stream
-        _QuantizeMatrix<ElemType>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(),
+        _QuantizeMatrix<ElemType>(inMatrix.BufferPointer(), inResidual.BufferPointer(),
                                   inMatrix.GetNumRows(), inMatrix.GetNumCols(),
                                   outQMatrixGPU.GetArray(), nBits, GetComputeStream(),
-                                  this->m_residual->BufferPointer(), zeroThresholdFor1Bit);
+                                  outResidual.BufferPointer(), zeroThresholdFor1Bit);
         
         RecordQuantizeCompleteEvent(GetComputeStream());
 
@@ -296,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert((inQMatrix.GetNumRows() == outMatrix.GetNumRows()) && (inQMatrix.GetNumCols() == outMatrix.GetNumCols()));                
         
         bool GPUMatrixNewlyAllocated = false;
-        QuantizedMatrix<ElemType>& inQMatrixGPU = (inQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits, GPUMatrixNewlyAllocated) : inQMatrix;
+        QuantizedMatrix<ElemType>& inQMatrixGPU = (inQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(inQMatrix.GetNumRows(), inQMatrix.GetNumCols(), nBits, GPUMatrixNewlyAllocated) : inQMatrix;
         
         if (inQMatrix.GetDeviceId() == CPUDEVICE)
         {
@@ -369,8 +371,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaStreamWaitEvent(MatrixQuantizerGPU<ElemType>::GetComputeStream(), m_mainGPUComputeStreamCUDAEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
     }
 
+    template <typename ElemType>
+    void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent()
+    {
+        cudaStreamWaitEvent(GPUDataTransferer<ElemType>::GetFetchStream(), m_mainGPUComputeStreamCUDAEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    }
+
     // Explicit template instantiations
     template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<float>();
     template void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent<double>();
+    template void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<float>();
+    template void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<double>();
 
 }}}

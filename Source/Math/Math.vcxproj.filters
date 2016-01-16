@@ -41,7 +41,7 @@
     <ClCompile Include="QuantizedMatrix.cpp">
       <Filter>1bitSGD</Filter>
     </ClCompile>
-    <ClCompile Include="MatrixQuantizer.cpp">
+    <ClCompile Include="MatrixQuantizerImpl.cpp">
       <Filter>1bitSGD</Filter>
     </ClCompile>
   </ItemGroup>
@@ -97,7 +97,7 @@
     <ClInclude Include="QuantizedMatrix.h">
       <Filter>1bitSGD</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixQuantizer.h">
+    <ClInclude Include="MatrixQuantizerImpl.h">
       <Filter>1bitSGD</Filter>
     </ClInclude>
   </ItemGroup>

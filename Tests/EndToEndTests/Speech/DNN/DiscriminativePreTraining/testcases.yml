@@ -7,14 +7,14 @@ tags:
      # is being disabled on the CPU until the retirement of those machines
 
      # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     # - bvt-s  (flavor=='debug') ^ (device=='cpu')
+     # - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
      # running unconditionally on every Nightly job in 'S' leg
-     # - nightly-s
+     # - nightly-s (build_sku == 'gpu')
 
      # running on every BVT job in 'S' (Speech) leg in Debug-GPU configuration:
-     - bvt-s  (flavor=='debug') and (device=='gpu')
+     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') and (device=='gpu'))
      # running unconditionally on every Nightly job in 'S' leg
-     - nightly-s (device=='gpu')
+     - nightly-s (build_sku == 'gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:

@@ -163,6 +163,7 @@
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
     <None Include="GPUWatcher.cu" />
@@ -176,7 +177,6 @@
     <ClInclude Include="CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
-    <ClInclude Include="MatrixQuantizer.h" />
     <ClInclude Include="MatrixQuantizerCPU.h" />
     <ClInclude Include="MatrixQuantizerGPU.h" />
     <ClInclude Include="MemAllocator.h" />
@@ -200,8 +200,8 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp" />
-    <ClCompile Include="MatrixQuantizer.cpp" />
     <ClCompile Include="MatrixQuantizerCPU.cpp" />
+    <ClCompile Include="MatrixQuantizerImpl.cpp" />
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />
