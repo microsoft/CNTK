@@ -321,9 +321,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // reduce to boundary frames
                     if (m_fromOffset < 0)
-                        toSeqInfo.tEnd   = min(toSeqInfo.tEnd, (size_t)max(toSeqInfo.tBegin - m_fromOffset, 0));
+                        toSeqInfo.tEnd   = min(toSeqInfo.tEnd,  (size_t)max(toSeqInfo.tBegin - m_fromOffset, (ptrdiff_t)0));
                     else
-                        toSeqInfo.tBegin = max(toSeqInfo.tBegin, (int)    (toSeqInfo.tEnd   - m_fromOffset));
+                        toSeqInfo.tBegin = max(toSeqInfo.tBegin, (ptrdiff_t)toSeqInfo.tEnd   - m_fromOffset);
 
                     // if no overlap then skip
                     if (toSeqInfo.tEnd <= ts || toSeqInfo.tBegin >= te)
