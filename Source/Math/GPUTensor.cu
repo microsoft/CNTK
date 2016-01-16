@@ -592,7 +592,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void LaunchUnaryTensorOp(ElemType beta, const ElemType * pa, ElemType * pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
     {
-//////if (op == 1)fprintf(stderr, "LaunchUnaryTensorOp: %d", (int)__LINE__);
         CUDA_LONG NN = (CUDA_LONG)regularOpDim;
 
         #define CaseLaunchUnaryTensorOp(oper) case ElementWiseOperator::op ## oper: \
