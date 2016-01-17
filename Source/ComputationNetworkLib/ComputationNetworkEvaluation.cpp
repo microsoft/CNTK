@@ -771,7 +771,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
     }
 
-
     // this function will need to be called before actual validation and execution to 
     // predetermine how to share matrices to reduce memory usage.
     // TODO: find a simple topological order and allocateEvalMatrices on that order directly

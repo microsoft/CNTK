@@ -968,6 +968,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             Value().VerifySize(1, 1);
@@ -1064,6 +1066,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             LogicError("SequenceDecoder is used for evaluation only.");
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
         /// compute posterior probability of label y at position t
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
@@ -1389,6 +1394,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             size_t rows0 = Input(0)->GetNumRows(), cols1 = Input(1)->GetNumCols();
@@ -1573,12 +1580,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/BackpropTo(const size_t inputIndex, const FrameRange & fr) override
         {
             if (fr.IsAllFrames()) { BackpropToMap(inputIndex); return; } // TODO: remove these one by one
-            assert(m_value->GetNumRows() == Gradient().GetNumRows()); // original used m_value->GetNumRows() for loop dimension
+            assert(GetNumRows() == Gradient().GetNumRows()); // original used m_value->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
             Matrix<ElemType> mTmp = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientFor(fr), mTmp);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {

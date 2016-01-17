@@ -618,6 +618,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
         virtual void /*ComputationNode::*/ForwardProp(const FrameRange & fr) override
         {
             // enforce compatibility of 'dataInput' with 'layoutInput'

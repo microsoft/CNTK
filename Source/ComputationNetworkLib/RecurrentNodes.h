@@ -108,9 +108,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_fromOffset >> m_boundaryMode >> m_shiftDimParam;
         }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {return false; }
-
         virtual void BeginForwardProp() override        // called after last iteration step of ForwardProp()
         {
             Base::BeginForwardProp();
@@ -529,6 +526,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {

@@ -554,21 +554,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
-        virtual bool OutputUsedInComputingInputNodesGradients() const override
-        {
-            // The AveragePoolingNode does not require its output value for computing
-            // the gradients of its input nodes
-            return false;
-        }
-
-        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-        {
-            // The AveragePoolingNode does not require any of it's input's values for computing
-            // the gradients of its input nodes
-            UNREFERENCED_PARAMETER(childIndex);
-            return false;
-        }
-
         void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
@@ -695,6 +680,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->BufferPointer());
             }
             // No derivatives with respect to running mean and InvStdDev.
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The BatchNormalizationNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
         }
 
         void ForwardProp(const FrameRange & fr) override
