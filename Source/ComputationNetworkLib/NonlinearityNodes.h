@@ -856,6 +856,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Hardmax is not differentiable and is used for evaluation only.");
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
         /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
         {
             //TODO: temp solution, we need to write a math function specifically for this

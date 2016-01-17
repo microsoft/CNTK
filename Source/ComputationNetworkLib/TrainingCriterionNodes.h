@@ -41,6 +41,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, Gradient()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
         virtual void UpdateFunctionMBSize() override
         {
             m_leftMinusRight->Resize(Input(0)->GetNumRows(), Input(0)->GetNumCols());
@@ -151,6 +154,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
         virtual void UpdateFunctionMBSize() override
         {
             m_logSoftmaxOfRight->Resize(Input(1)->GetNumRows(), Input(1)->GetNumCols());
@@ -242,7 +247,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+        /*TODO: merge with call site*/void BackpropToLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues,
             const Matrix<ElemType>& gradientValues)  
         {
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logOfRight, 1.0f, inputGradientValues);
@@ -351,7 +358,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BackpropToS(*m_gradientOfL1Norm, Input(0)->GradientFor(fr), Gradient(), Input(0)->ValueFor(fr));
         }
 
-        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientOfL1Norm, 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientOfL1Norm,
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
@@ -529,6 +538,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			else
 			    Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
 #if 0   // TODO: delete this. Seems copy-paste leftover?
         /*TODO: merge with call site*/void BackpropToRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
@@ -727,6 +738,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 sz += nbr_wrd;
             }
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
     private:
         void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
         {
@@ -1024,12 +1038,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     DataWithMBLayoutFor(mBeta,  sequenceRange, Input(0)->GetMBLayout()),
                                     Input(2)->ValueFor(fr),
                                     gradient,
-                        mStartLbl, 1);
+                                    mStartLbl, 1);
                 }
             }
             else
                 return;
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
         // compute forward backward algorithm
         /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
@@ -1288,6 +1304,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
         // -sum(left_i * log(softmax_i(right)))
         virtual void ForwardPropNonLooping()
         {
@@ -1498,6 +1516,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto gradient = Input(inputIndex)->GradientFor(fr);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient()/*1x1*/, *m_temp, 1.0f, gradient);
         }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
         virtual void UpdateFunctionMBSize() override
         {

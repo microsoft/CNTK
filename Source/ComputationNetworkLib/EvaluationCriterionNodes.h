@@ -36,6 +36,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
         }
 
+        virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+        virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
         virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
         {
             FrameRange fr(Input(0)->GetMBLayout());
