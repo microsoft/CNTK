@@ -278,6 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     reductionBuffer = m_intermediateCPUBuffers[i].get();
                 }
 
+                // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
                 MPI_Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(), MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
             }
 
