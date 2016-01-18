@@ -2,7 +2,7 @@
 
 // This uses mpi.h which requires the Microsoft MPI SDK to be installed on Windows
 // [cf. https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx]
-// download msmpisdk.msi at https://www.microsoft.com/en-us/download/details.aspx?id=47259 and run it
+// download msmpisdk.msi at https://www.microsoft.com/en-us/download/details.aspx?id=49926 and run it
 // and the MPI dev package on Linux (sudo apt-get install libopenmpi-dev openmpi-bin openmpi-doc)
 #include "mpi.h"
 #pragma comment(lib, "msmpi.lib")
