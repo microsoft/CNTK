@@ -1,8 +1,8 @@
-// EsotericActions.cpp -- CNTK actions that are deprecated
 //
-// <copyright file="EsotericActions.cpp" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// EsotericActions.cpp -- CNTK actions that are deprecated
 //
 
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _

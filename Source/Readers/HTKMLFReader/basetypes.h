@@ -1,9 +1,8 @@
 //
-// basetypes.h - basic types that C++ lacks
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// <copyright file="basetypes.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// basetypes.h - basic types that C++ lacks
 //
 #pragma once
 #ifndef _BASETYPES_

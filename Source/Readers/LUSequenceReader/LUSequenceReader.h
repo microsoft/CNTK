@@ -1,9 +1,9 @@
 //
-// <copyright file="LUSequenceReader.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // LUSequenceReader.h - Include file for the MTK and MLF format of features and samples
+//
 #pragma once
 //#define LEAKDETECT
 

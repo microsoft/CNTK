@@ -1,9 +1,7 @@
 //
-// <copyright file="BestGPU.cpp" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 // This file requires the NVML library. Unfortunately, this library does not install an environment variable for locating it.
 // On Windows, the SDK gets installed to "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml" (/include, /lib).
 // On Linux, you need to install the deployment kit from https://developer.nvidia.com/gpu-deployment-kit and
@@ -12,6 +10,7 @@
 // From the SDK documentation:
 // "The NVML library can be found at: %ProgramW6432%\"NVIDIA Corporation"\NVSMI\ on Windows, but will not be added to the path. To dynamically link to NVML, add this path to the PATH environmental variable. To dynamically load NVML, call LoadLibrary with this path."
 // "On Linux the NVML library will be found on the standard library path. For 64-bit Linux, both the 32-bit and 64-bit NVML libraries will be installed."
+//
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #include "Platform.h"

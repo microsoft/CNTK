@@ -1,9 +1,8 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 // LUSequenceParser.h : Parses the UCI format using a custom state machine (for speed)
-//
-// <copyright file="LUSequenceParser.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-//
 //
 
 #include <string>
