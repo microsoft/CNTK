@@ -7,7 +7,7 @@
 #include <vector>
 #include "File.h"
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 class FileTest
 {
@@ -22,10 +22,10 @@ private:
     float m_single;
     double m_double;
     size_t m_size_t;
-    char* m_str;  // character string, zero terminated
-    wchar_t* m_wstr; // wide character string, zero terminated
-    std::string m_string; // std string
-    std::wstring m_wstring; // std wide string
+    char* m_str;                    // character string, zero terminated
+    wchar_t* m_wstr;                // wide character string, zero terminated
+    std::string m_string;           // std string
+    std::wstring m_wstring;         // std wide string
     std::vector<long> m_vectorLong; // vector of supported type
 public:
     FileTest();
@@ -40,5 +40,6 @@ public:
 // operator overloading
 File& operator>>(File& stream, FileTest& test);
 File& operator<<(File& stream, FileTest& test);
-
-}}}
+}
+}
+}

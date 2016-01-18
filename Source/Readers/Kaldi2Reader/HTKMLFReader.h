@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
+// HTKMLFReader.h - Include file for the MTK and MLF format of features and samples
 #pragma once
 #include "DataReader.h"
 #include "KaldiSequenceTrainingDerivative.h"
@@ -12,18 +12,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class ElemType>
+template <class ElemType>
 class HTKMLFReader : public IDataReader<ElemType>
 {
 private:
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
-    vector<msra::asr::FeatureSection *> m_trainingOrTestingFeatureSections;
+    vector<msra::asr::FeatureSection*> m_trainingOrTestingFeatureSections;
     //msra::dbn::minibatchreadaheadsource* m_readAheadSource;
-    msra::dbn::FileEvalSource* m_fileEvalSource; 
-    vector<msra::asr::FeatureSection *> m_writingFeatureSections;
+    msra::dbn::FileEvalSource* m_fileEvalSource;
+    vector<msra::asr::FeatureSection*> m_writingFeatureSections;
     msra::dbn::latticesource* m_lattices;
-    map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
+    map<wstring, msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
 
     // Sequence training realted members.
     bool m_doSeqTrain;
@@ -38,7 +38,10 @@ private:
         MBLayoutPtr pMBLayout;
         std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
         size_t currentMBSize;
-        MinibatchBufferUnit() : pMBLayout(make_shared<MBLayout>()), currentMBSize(0) {}
+        MinibatchBufferUnit()
+            : pMBLayout(make_shared<MBLayout>()), currentMBSize(0)
+        {
+        }
     };
     bool m_doMinibatchBuffering;
     bool m_getMinibatchCopy;
@@ -51,7 +54,7 @@ private:
     // Utterance information.
     std::vector<std::vector<std::pair<wstring, size_t>>> m_uttInfo;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_minibatchUttInfo;
-    
+
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
     bool m_truncated;
@@ -70,9 +73,9 @@ private:
     bool m_trainOrTest; // if false, in file writing mode
     using LabelType = typename IDataReader<ElemType>::LabelType;
     using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
- 
+
     std::map<LabelIdType, LabelType> m_idToLabelMap;
-    
+
     bool m_partialMinibatch; // allow partial minibatches?
 
     std::vector<ElemType*> m_featuresBufferMultiUtt;
@@ -87,28 +90,31 @@ private:
     std::vector<ElemType*> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
-    std::map<std::wstring,size_t> m_featureNameToIdMap;
-    std::map<std::wstring,size_t> m_labelNameToIdMap;
-    std::map<std::wstring,size_t> m_nameToTypeMap;
-    std::map<std::wstring,size_t> m_featureNameToDimMap;
-    std::map<std::wstring,size_t> m_labelNameToDimMap;
+    std::map<std::wstring, size_t> m_featureNameToIdMap;
+    std::map<std::wstring, size_t> m_labelNameToIdMap;
+    std::map<std::wstring, size_t> m_nameToTypeMap;
+    std::map<std::wstring, size_t> m_featureNameToDimMap;
+    std::map<std::wstring, size_t> m_labelNameToDimMap;
     std::vector<std::wstring> m_featureIdToNameMap;
     std::vector<std::wstring> m_labelIdToNameMap;
     // for writing outputs to files (standard single input/output network) - deprecate eventually
     bool m_checkDictionaryKeys;
     bool m_convertLabelsToTargets;
-    std::vector <bool> m_convertLabelsToTargetsMultiIO;
+    std::vector<bool> m_convertLabelsToTargetsMultiIO;
     std::vector<std::vector<std::wstring>> m_inputFilesMultiIO;
- 
+
     size_t m_inputFileIndex;
     std::vector<size_t> m_featDims;
     std::vector<size_t> m_labelDims;
 
-    std::vector<std::vector<std::vector<ElemType>>>m_labelToTargetMapMultiIO;
-     
-    template<class ConfigRecordType> void PrepareForTrainingOrTesting(const ConfigRecordType & config);
-    template<class ConfigRecordType> void PrepareForWriting(const ConfigRecordType & config);
-    template<class ConfigRecordType> void PrepareForSequenceTraining(const ConfigRecordType & config);
+    std::vector<std::vector<std::vector<ElemType>>> m_labelToTargetMapMultiIO;
+
+    template <class ConfigRecordType>
+    void PrepareForTrainingOrTesting(const ConfigRecordType& config);
+    template <class ConfigRecordType>
+    void PrepareForWriting(const ConfigRecordType& config);
+    template <class ConfigRecordType>
+    void PrepareForSequenceTraining(const ConfigRecordType& config);
 
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetOneMinibatchToTrainOrTestDataBuffer(const std::map<std::wstring, Matrix<ElemType>*>& matrices);
@@ -125,21 +131,24 @@ private:
     // Copys one minibatch from buffer to matrix.
     void CopyMinibatchFromBufferToMatrix(size_t index, std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    // Copys one minibatch from <m_featuresBufferMultiIO> to matrix. 
+    // Copys one minibatch from <m_featuresBufferMultiIO> to matrix.
     void CopyMinibatchToMatrix(size_t size, const std::vector<ElemType*>& featureBuffer, const std::vector<ElemType*>& labelBuffer, std::map<std::wstring, Matrix<ElemType>*>& matrices) const;
 
-    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
-    void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
+    void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
+    size_t NumberSlicesInEachRecurrentIter()
+    {
+        return m_numberOfuttsPerMinibatch;
+    }
+    void SetNbrSlicesEachRecurrentIter(const size_t){};
 
-    template<class ConfigRecordType> void GetDataNamesFromConfig(const ConfigRecordType & readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
+    template <class ConfigRecordType>
+    void GetDataNamesFromConfig(const ConfigRecordType& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
 
-    
-    size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
+    size_t ReadLabelToTargetMappingFile(const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     enum InputOutputTypes
     {
         real,
@@ -148,30 +157,43 @@ private:
         readerObj,   /*objective computed in the reader*/
     };
 
-
-
 public:
     MBLayoutPtr m_pMBLayout;
-   
+
     /// by default it is false
     /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
-    /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
+    /// set to true so that a current minibatch can uses state activities from the previous minibatch.
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
-    HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>()){
+    HTKMLFReader()
+        : m_pMBLayout(make_shared<MBLayout>())
+    {
     }
 
-    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
-    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
-    virtual void Destroy() {delete this;}
+    template <class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType&);
+    virtual void Init(const ConfigParameters& config) override
+    {
+        InitFromConfig(config);
+    }
+    virtual void Init(const ScriptableObjects::IConfigRecord& config) override
+    {
+        InitFromConfig(config);
+    }
+    virtual void Destroy()
+    {
+        delete this;
+    }
     virtual ~HTKMLFReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
-    virtual size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; }
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    virtual size_t GetNumParallelSequences()
+    {
+        return m_numberOfuttsPerMinibatch;
+    }
 
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
@@ -183,11 +205,16 @@ public:
         const MBLayoutPtr pMBLayout);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
+    void SetSentenceEndInBatch(vector<size_t>& /*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); }
-    bool RequireSentenceSeg() const override { return !m_framemode; };
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    {
+        pMBLayout->CopyFrom(m_pMBLayout);
+    }
+    bool RequireSentenceSeg() const override
+    {
+        return !m_framemode;
+    };
 };
-
-}}}
+} } }

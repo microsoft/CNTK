@@ -12,88 +12,73 @@
 
 namespace Microsoft { namespace MSR { namespace BS {
 
-    using namespace std;
-    using namespace msra::strfun;
+using namespace std;
+using namespace msra::strfun;
 
-    // Note: currently this seems to be the master copy; got to check whether the other one was also changed
+// Note: currently this seems to be the master copy; got to check whether the other one was also changed
 
-    //extern wstring standardFunctions, computationNodes, commonMacros;
+//extern wstring standardFunctions, computationNodes, commonMacros;
 
-#if 1   // TODO: these may be newer, merge into Experimentalthingy
+#if 1 // TODO: these may be newer, merge into Experimentalthingy
 
-    static wstring standardFunctions =
-        L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
-        L"Fail(msg) = new FailAction [ what = msg ] \n"
-        L"RequiredParameter(message) = Fail('RequiredParameter: ' + message) \n"
-        L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
-        L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
-        L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
-        L"Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] \n"
-        L"Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] \n"
-        L"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] \n"
-        L"Ceil(x) = -Floor(-x) \n"
-        L"Round(x) = Floor(x+0.5) \n"
-        L"Abs(x) = if x >= 0 then x else -x \n"
-        L"Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 \n"
-        L"Min(a,b) = if a < b then a else b \n"
-        L"Max(a,b) = if a > b then a else b \n"
-        L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n"
-        ;
+static wstring standardFunctions =
+    L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
+    L"Fail(msg) = new FailAction [ what = msg ] \n"
+    L"RequiredParameter(message) = Fail('RequiredParameter: ' + message) \n"
+    L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
+    L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
+    L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
+    L"Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] \n"
+    L"Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] \n"
+    L"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] \n"
+    L"Ceil(x) = -Floor(-x) \n"
+    L"Round(x) = Floor(x+0.5) \n"
+    L"Abs(x) = if x >= 0 then x else -x \n"
+    L"Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 \n"
+    L"Min(a,b) = if a < b then a else b \n"
+    L"Max(a,b) = if a > b then a else b \n"
+    L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n";
 
-    static wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
-        L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Parameter(outD, inD, tag='parameter') = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; tag = tag*/ ]\n"
-        L"Input(dim,tag='features') = Parameter(dim,1,tag=tag)   // TODO: for now \n"
-        L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
-        L"Delay(in, delay, tag='') = new RecurrentComputationNode [ class = 'DelayNode' ; inputs = in ; deltaT = -delay /* ; tag = tag */ ]\n"
-        L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
-        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
-        ;
+static wstring computationNodes = // BUGBUG: optional args not working yet, some scope problem causing a circular reference
+    L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z /* ; tag = tag */ ]\n"
+    L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z /* ; tag = tag */ ]\n"
+    L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
+    L"Parameter(outD, inD, tag='parameter') = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; tag = tag*/ ]\n"
+    L"Input(dim,tag='features') = Parameter(dim,1,tag=tag)   // TODO: for now \n"
+    L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
+    L"Delay(in, delay, tag='') = new RecurrentComputationNode [ class = 'DelayNode' ; inputs = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+    L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z /* ; tag = tag */ ]\n"
+    L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z /* ; tag = tag */ ]\n"
+    L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+    L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n";
 
-    static wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
-        L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
-        L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
-        L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
-        L"LogPrior(labels) = Log(Mean(labels)) \n"
-        ;
+static wstring commonMacros = // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
+    L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
+    L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
+    L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
+    L"LogPrior(labels) = Log(Mean(labels)) \n";
 
 #endif
 
-    void SomeTests()
+void SomeTests()
+{
+    try
     {
-        try
-        {
-            // collecting all sorts of test cases here
-            const wchar_t * parserTests[] =
+        // collecting all sorts of test cases here
+        const wchar_t* parserTests[] =
             {
-                L"do = Parameter(13,42) * Input(42) + Parameter(13,1)"
-                ,
-                L"do = Print(array [1..10] (i=>i*i))"
-                ,
-                L"do = new PrintAction [ what = 'abc' ]"
-                ,
-                L"do = Print(new StringFunction [ x = 13 ; y = 42 ; what = 'Format' ; how = '.2' ; arg = x*y ])"
-                ,
-                L"do = Print(\"new StringFunction [ what = 'Format' ; how = '.2' ; arg = '13 > 42' ]\")"
-                ,
-                L"do = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']"
-                ,
-                L"i2s(i) = new StringFunction [ what = 'Format' ; arg = i ; how = '.2' ] ; do = Print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 "
-                ,
-                L"do = Print(1+2*3) : Print('hello'+' world')"
-                ,
-                L"do = Print(Format( (13:(fortytwo:1):100), '')) ; fortytwo=42 "
-                ,
-                L"do = Print(val) ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i)"
-                ,
-                L"do = Print(arg) ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr "
-                ,
-                L"do = Print(val) ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 "
-                ,
+                L"do = Parameter(13,42) * Input(42) + Parameter(13,1)",
+                L"do = Print(array [1..10] (i=>i*i))",
+                L"do = new PrintAction [ what = 'abc' ]",
+                L"do = Print(new StringFunction [ x = 13 ; y = 42 ; what = 'Format' ; how = '.2' ; arg = x*y ])",
+                L"do = Print(\"new StringFunction [ what = 'Format' ; how = '.2' ; arg = '13 > 42' ]\")",
+                L"do = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']",
+                L"i2s(i) = new StringFunction [ what = 'Format' ; arg = i ; how = '.2' ] ; do = Print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 ",
+                L"do = Print(1+2*3) : Print('hello'+' world')",
+                L"do = Print(Format( (13:(fortytwo:1):100), '')) ; fortytwo=42 ",
+                L"do = Print(val) ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i)",
+                L"do = Print(arg) ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ",
+                L"do = Print(val) ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ",
                 // #12: DNN with recursion
                 L"do = Print(val) \n"
                 L"val = new NDLComputationNetwork [\n"
@@ -107,14 +92,11 @@ namespace Microsoft { namespace MSR { namespace BS {
                 L"  Err = ErrorPrediction(myLabels, outZ) \n"
                 L"  logPrior = LogPrior(myLabels) \n"
                 L"  ScaledLogLikelihood = outZ - logPrior \n"
-                L"]\n"
-                ,
+                L"]\n",
                 // #13: factorial
-                L"do = Print(fac(5)) ; fac(i) = if i > 1 then fac(i-1)*i else 1 "
-                ,
+                L"do = Print(fac(5)) ; fac(i) = if i > 1 then fac(i-1)*i else 1 ",
                 // #14: Fibonacci sequence with memoization
-                L"do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals[n] "
-                ,
+                L"do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals[n] ",
                 // #15: DNN with array
                 L"do = Print(val) \n"
                 L"val = new NDLComputationNetwork [\n"
@@ -128,8 +110,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 L"  Err = ErrorPrediction(myLabels, outZ) \n"
                 L"  logPrior = LogPrior(myLabels) \n"
                 L"  ScaledLogLikelihood = outZ - logPrior \n"
-                L"]\n"
-                ,
+                L"]\n",
                 // #16: windowed RNN
                 L"do = Print(val)                                                                                                           \n"
                 L"val = new NDLComputationNetwork [                                                                                         \n"
@@ -184,34 +165,29 @@ namespace Microsoft { namespace MSR { namespace BS {
                 L"   // define output node for decoding                                                                                     \n"
                 L"   logPrior = LogPrior(myLabels)                                                                                          \n"
                 L"   ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)                              \n"
-                L"]\n"
-                ,
-                L" \n"   // this fails because dict is outside val; expression name is not local to it
+                L"]\n",
+                L" \n" // this fails because dict is outside val; expression name is not local to it
                 L"do = Print(val) \n"
                 L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
-                L"]\n"
-                ,
-                L"f(x,option='default') = Print(option); do = f(42,option='value')"
-                ,
-                NULL
-            };
-            let first = 0;     // 0 for all
-            bool oneOnly = first > 0;
-            for (size_t i = first; parserTests[i]; i++)
-            {
-                fprintf(stderr, "\n### Test %d ###\n\n", (int)i), fflush(stderr);
-                let parserTest = parserTests[i];
-                let expr = ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + parserTest, vector<wstring>());
-                //expr->Dump();
-                Do(expr);
-                if (oneOnly)
-                    break;
-            }
-        }
-        catch (const ConfigException & err)
+                L"]\n",
+                L"f(x,option='default') = Print(option); do = f(42,option='value')",
+                NULL};
+        let first = 0; // 0 for all
+        bool oneOnly = first > 0;
+        for (size_t i = first; parserTests[i]; i++)
         {
-            err.PrintError();
+            fprintf(stderr, "\n### Test %d ###\n\n", (int) i), fflush(stderr);
+            let parserTest = parserTests[i];
+            let expr = ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + parserTest, vector<wstring>());
+            //expr->Dump();
+            Do(expr);
+            if (oneOnly)
+                break;
         }
     }
-
-}}}     // namespaces
+    catch (const ConfigException& err)
+    {
+        err.PrintError();
+    }
+}
+} } } // namespaces

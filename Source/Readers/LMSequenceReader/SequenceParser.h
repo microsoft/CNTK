@@ -47,16 +47,17 @@ enum SequenceFlags
 struct SequencePosition
 {
     size_t numberPos; // max position in the number array for this sequence
-    size_t labelPos; // max position in the label array for this sequence
-    unsigned flags; // flags that apply to this sequence
-    SequencePosition(size_t numPos, size_t labelPos, unsigned flags):
-        numberPos(numPos), labelPos(labelPos), flags(flags)
-    {}
+    size_t labelPos;  // max position in the label array for this sequence
+    unsigned flags;   // flags that apply to this sequence
+    SequencePosition(size_t numPos, size_t labelPos, unsigned flags)
+        : numberPos(numPos), labelPos(labelPos), flags(flags)
+    {
+    }
 };
 
 // SequenceParser - the parser for the UCI format files
 // for ultimate speed, this class implements a state machine to read these format files
-template <typename NumType, typename LabelType=int>
+template <typename NumType, typename LabelType = int>
 class SequenceParser
 {
 protected:
@@ -70,8 +71,8 @@ protected:
         ExponentSign = 5,
         Period = 6,
         TheLetterE = 7,
-        EndOfLine = 8, 
-        Label = 9, // any non-number things we run into
+        EndOfLine = 8,
+        Label = 9,          // any non-number things we run into
         ParseStateMax = 10, // number of parse states
         LineCountEOL = 10,
         LineCountOther = 11,
@@ -86,11 +87,11 @@ protected:
 
     size_t m_dimLabelsIn;
     std::string m_beginSequenceIn; // starting sequence string (i.e. <s>)
-    std::string m_endSequenceIn; // ending sequence string (i.e. </s>)
+    std::string m_endSequenceIn;   // ending sequence string (i.e. </s>)
 
     size_t m_dimLabelsOut;
     std::string m_beginSequenceOut; // starting sequence string (i.e. 'O')
-    std::string m_endSequenceOut; // ending sequence string (i.e. 'O')
+    std::string m_endSequenceOut;   // ending sequence string (i.e. 'O')
 
     // level of screen output
     int m_traceLevel;
@@ -126,11 +127,11 @@ protected:
     int m_totalLabelsConverted;
 
     // file positions/buffer
-    FILE * m_pFile;
+    FILE *m_pFile;
     int64_t m_byteCounter;
     int64_t m_fileSize;
 
-    BYTE * m_fileBuffer;
+    BYTE *m_fileBuffer;
     size_t m_bufferStart;
     size_t m_bufferSize;
 
@@ -138,8 +139,8 @@ protected:
     bool m_lastLabelIsString;
 
     // vectors to append to
-    std::vector<NumType>* m_numbers; // pointer to vectors to append with numbers
-    std::vector<LabelType>* m_labels; // pointer to vector to append with labels (may be numeric)
+    std::vector<NumType> *m_numbers;  // pointer to vectors to append with numbers
+    std::vector<LabelType> *m_labels; // pointer to vector to append with labels (may be numeric)
     // FUTURE: do we want a vector to collect string labels in the non string label case? (signifies an error)
 
     // SetState for a particular value
@@ -166,7 +167,6 @@ protected:
     size_t UpdateBuffer();
 
 public:
-
     // SequenceParser constructor
     SequenceParser();
     // setup all the state variables and state tables for state machine
@@ -198,7 +198,6 @@ public:
     // traceLevel - traceLevel, zero means no output, 1 epoch related output, > 1 all output
     void SetTraceLevel(int traceLevel);
 
-
     // ParseInit - Initialize a parse of a file
     // fileName - path to the file to open
     // dimFeatures - number of features for precomputed features
@@ -210,7 +209,7 @@ public:
     // endSequenceOut - endSequence output label
     // bufferSize - size of temporary buffer to store reads
     // startPosition - file position on which we should start
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O", size_t bufferSize=1024*256, size_t startPosition=0)
+    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O", size_t bufferSize = 1024 * 256, size_t startPosition = 0)
     {
         assert(fileName != NULL);
         m_dimFeatures = dimFeatures;
@@ -233,7 +232,7 @@ public:
         if (m_pFile != NULL)
             SequenceParser<NumType, LabelType>::~SequenceParser();
 
-        errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
+        errno_t err = _wfopen_s(&m_pFile, fileName, L"rb");
         if (err)
             Microsoft::MSR::CNTK::RuntimeError("SequenceParser::ParseInit - error opening file");
         int rc = _fseeki64(m_pFile, 0, SEEK_END);
@@ -247,38 +246,38 @@ public:
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels 
-    // numbers - pointer to vector to return the numbers 
+    // labels - pointer to vector to return the labels
+    // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos)
     {
         assert(numbers != NULL || m_dimFeatures == 0 || m_parseMode == ParseLineCount);
-        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0|| m_parseMode == ParseLineCount);
+        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0 || m_parseMode == ParseLineCount);
 
         // transfer to member variables
         m_numbers = numbers;
         m_labels = labels;
 
-        long TickStart = GetTickCount( );
+        long TickStart = GetTickCount();
         long recordCount = 0;
         long lineCount = 0;
-        size_t bufferIndex = m_byteCounter-m_bufferStart;
-        SequencePosition sequencePositionLast(0,0,seqFlagNull);
+        size_t bufferIndex = m_byteCounter - m_bufferStart;
+        SequencePosition sequencePositionLast(0, 0, seqFlagNull);
         while (m_byteCounter < m_fileSize && recordCount < recordsRequested)
         {
             // check to see if we need to update the buffer
             if (bufferIndex >= m_bufferSize)
             {
                 UpdateBuffer();
-                bufferIndex = m_byteCounter-m_bufferStart;
+                bufferIndex = m_byteCounter - m_bufferStart;
             }
 
             char ch = m_fileBuffer[bufferIndex];
 
-            ParseState nextState = (ParseState)m_stateTable[(m_current_state<<8)+ch];
+            ParseState nextState = (ParseState) m_stateTable[(m_current_state << 8) + ch];
 
-            if( nextState <= Exponent )
+            if (nextState <= Exponent)
             {
                 m_builtUpNumber = m_builtUpNumber * 10 + (ch - '0');
                 // if we are in the decimal portion of a number increase the divider
@@ -307,7 +306,7 @@ public:
                     case WholeNumber:
                         // could be followed by a remainder, or an exponent
                         if (nextState != TheLetterE)
-                            if( nextState != Period)
+                            if (nextState != Period)
                                 DoneWithValue();
                         if (nextState == Period)
                         {
@@ -336,16 +335,16 @@ public:
                 case EndOfLine:
                     if (seqPos)
                     {
-                        SequencePosition sequencePos(numbers->size(), labels->size(), 
-                            m_beginSequence?seqFlagStartLabel:0 | m_endSequence?seqFlagStopLabel:0 | seqFlagLineBreak);
+                        SequencePosition sequencePos(numbers->size(), labels->size(),
+                                                     m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
                         // add a sequence element to the list
                         seqPos->push_back(sequencePos);
                         sequencePositionLast = sequencePos;
                     }
-                
+
                     // end of sequence determines record separation
                     if (m_endSequence)
-                        recordCount = (long)labels->size();
+                        recordCount = (long) labels->size();
 
                     PrepareStartLine();
                     break;
@@ -383,14 +382,14 @@ public:
                         //if (m_elementsConvertedThisLine == elementsProcessed)
                         //    DoneWithLabel();
                     }
-                    // process the label at the end of a line
-                    //if (m_labelMode == LabelLast && m_labels != NULL)
-                    //{
-                    //    StoreLastLabel();
-                    //}
-                    // intentional fall-through
+                // process the label at the end of a line
+                //if (m_labelMode == LabelLast && m_labels != NULL)
+                //{
+                //    StoreLastLabel();
+                //}
+                // intentional fall-through
                 case LineCountEOL:
-                    lineCount++;  // done with another record
+                    lineCount++; // done with another record
                     if (m_traceLevel > 1)
                     {
                         // print progress dots
@@ -431,8 +430,8 @@ public:
         // this could probably be fixed by taking another pass through the loop above, but this is easier
         if (seqPos)
         {
-            SequencePosition sequencePos(numbers->size(), labels->size(), 
-                m_beginSequence?seqFlagStartLabel:0 | m_endSequence?seqFlagStopLabel:0 | seqFlagLineBreak);
+            SequencePosition sequencePos(numbers->size(), labels->size(),
+                                         m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
             // add the final sequence element if needed
             if (!(sequencePos.labelPos == sequencePositionLast.labelPos && sequencePos.numberPos == sequencePositionLast.numberPos))
             {
@@ -440,15 +439,14 @@ public:
             }
         }
 
-        long TickStop = GetTickCount( );
+        long TickStop = GetTickCount();
 
         long TickDelta = TickStop - TickStart;
 
         if (m_traceLevel > 2)
-            fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+            fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
         return lineCount;
     }
-
 
     int64_t GetFilePosition();
     void SetFilePosition(int64_t position);
@@ -489,38 +487,41 @@ template <typename NumType, typename LabelType>
 class LMSequenceParser : public SequenceParser<NumType, LabelType>
 {
 protected:
-    FILE * mFile; 
-    std::wstring mFileName; 
+    FILE *mFile;
+    std::wstring mFileName;
 
 public:
-	using SequenceParser<NumType, LabelType>::m_dimFeatures;
-	using SequenceParser<NumType, LabelType>::m_dimLabelsIn;
-	using SequenceParser<NumType, LabelType>::m_beginSequenceIn;
-	using SequenceParser<NumType, LabelType>::m_endSequenceIn;
-	using SequenceParser<NumType, LabelType>::m_beginSequenceOut;
-	using SequenceParser<NumType, LabelType>::m_endSequenceOut;
-	using SequenceParser<NumType, LabelType>::m_parseMode;
-	using SequenceParser<NumType, LabelType>::m_traceLevel;
-	using SequenceParser<NumType, LabelType>::m_bufferSize;
-	using SequenceParser<NumType, LabelType>::m_beginTag;
-	using SequenceParser<NumType, LabelType>::m_endTag;
-	using SequenceParser<NumType, LabelType>::m_fileSize;
-	using SequenceParser<NumType, LabelType>::m_fileBuffer;
-	using SequenceParser<NumType, LabelType>::m_numbers;
-	using SequenceParser<NumType, LabelType>::m_labels;
-	using SequenceParser<NumType, LabelType>::m_beginSequence;
-	using SequenceParser<NumType, LabelType>::m_endSequence;
-	using SequenceParser<NumType, LabelType>::m_totalNumbersConverted;
-	using SequenceParser<NumType, LabelType>::m_dimLabelsOut;
-	using SequenceParser<NumType, LabelType>::m_bufferStart;
-    LMSequenceParser() { 
-        mFile = nullptr; 
+    using SequenceParser<NumType, LabelType>::m_dimFeatures;
+    using SequenceParser<NumType, LabelType>::m_dimLabelsIn;
+    using SequenceParser<NumType, LabelType>::m_beginSequenceIn;
+    using SequenceParser<NumType, LabelType>::m_endSequenceIn;
+    using SequenceParser<NumType, LabelType>::m_beginSequenceOut;
+    using SequenceParser<NumType, LabelType>::m_endSequenceOut;
+    using SequenceParser<NumType, LabelType>::m_parseMode;
+    using SequenceParser<NumType, LabelType>::m_traceLevel;
+    using SequenceParser<NumType, LabelType>::m_bufferSize;
+    using SequenceParser<NumType, LabelType>::m_beginTag;
+    using SequenceParser<NumType, LabelType>::m_endTag;
+    using SequenceParser<NumType, LabelType>::m_fileSize;
+    using SequenceParser<NumType, LabelType>::m_fileBuffer;
+    using SequenceParser<NumType, LabelType>::m_numbers;
+    using SequenceParser<NumType, LabelType>::m_labels;
+    using SequenceParser<NumType, LabelType>::m_beginSequence;
+    using SequenceParser<NumType, LabelType>::m_endSequence;
+    using SequenceParser<NumType, LabelType>::m_totalNumbersConverted;
+    using SequenceParser<NumType, LabelType>::m_dimLabelsOut;
+    using SequenceParser<NumType, LabelType>::m_bufferStart;
+    LMSequenceParser()
+    {
+        mFile = nullptr;
     };
-    ~LMSequenceParser() { 
-        if (mFile) fclose(mFile); 
+    ~LMSequenceParser()
+    {
+        if (mFile)
+            fclose(mFile);
     }
 
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O")
+    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O")
     {
         assert(fileName != NULL);
         mFileName = fileName;
@@ -543,7 +544,8 @@ public:
         m_fileSize = -1;
         m_fileBuffer = NULL;
 
-        if (mFile) fclose(mFile);
+        if (mFile)
+            fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
             Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
@@ -551,93 +553,95 @@ public:
 
     void ParseReset()
     {
-        if (mFile) fseek(mFile, 0, SEEK_SET);
+        if (mFile)
+            fseek(mFile, 0, SEEK_SET);
     }
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels 
-    // numbers - pointer to vector to return the numbers 
+    // labels - pointer to vector to return the labels
+    // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos)
     {
         assert(numbers != NULL || m_dimFeatures == 0 || m_parseMode == ParseLineCount);
-        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0|| m_parseMode == ParseLineCount);
+        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0 || m_parseMode == ParseLineCount);
 
         // transfer to member variables
         m_numbers = numbers;
         m_labels = labels;
 
-        long TickStart = GetTickCount( );
+        long TickStart = GetTickCount();
         long recordCount = 0;
-        long orgRecordCount = (long)labels->size();
+        long orgRecordCount = (long) labels->size();
         long lineCount = 0;
-        SequencePosition sequencePositionLast(0,0,seqFlagNull);
+        SequencePosition sequencePositionLast(0, 0, seqFlagNull);
         /// get line
-        char ch2[MAXSTRING]; 
+        char ch2[MAXSTRING];
         if (mFile == nullptr)
             Microsoft::MSR::CNTK::RuntimeError("File %ls can not be loaded\n", mFileName.c_str());
 
         while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
-            
-            string ch = ch2; 
-            std::vector<string> vstr; 
+
+            string ch = ch2;
+            std::vector<string> vstr;
             vstr = sep_string(ch, " ");
-            if (vstr.size() < 3) 
+            if (vstr.size() < 3)
                 continue;
 
             for (size_t i = 0; i < vstr.size(); i++)
             {
                 labels->push_back(vstr[i]);
             }
-            SequencePosition sequencePos(numbers->size(), labels->size(), 
-                m_beginSequence?seqFlagStartLabel:0 | m_endSequence?seqFlagStopLabel:0 | seqFlagLineBreak);
+            SequencePosition sequencePos(numbers->size(), labels->size(),
+                                         m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
             // add a sequence element to the list
             seqPos->push_back(sequencePos);
             sequencePositionLast = sequencePos;
 
-            recordCount = (long)labels->size() - orgRecordCount;
+            recordCount = (long) labels->size() - orgRecordCount;
 
-            lineCount ++;
+            lineCount++;
         } // while
 
-        long TickStop = GetTickCount( );
+        long TickStop = GetTickCount();
 
         long TickDelta = TickStop - TickStart;
 
         if (m_traceLevel > 2)
-            fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+            fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
         return lineCount;
     }
-
 };
 
-typedef struct{
+typedef struct
+{
     size_t sLen;
     size_t sBegin;
     size_t sEnd;
-} stSentenceInfo; 
+} stSentenceInfo;
 /// language model sequence parser
 template <typename NumType, typename LabelType>
-class LMBatchSequenceParser: public LMSequenceParser<NumType, LabelType>
+class LMBatchSequenceParser : public LMSequenceParser<NumType, LabelType>
 {
 public:
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
-    LMBatchSequenceParser() { };
-    ~LMBatchSequenceParser() { }
+    LMBatchSequenceParser(){};
+    ~LMBatchSequenceParser()
+    {
+    }
 
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O");
+    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O");
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels 
-    // numbers - pointer to vector to return the numbers 
+    // labels - pointer to vector to return the labels
+    // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos);
-
 };

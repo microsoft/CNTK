@@ -5,7 +5,7 @@
 // </copyright>
 //
 
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
 #include "Basics.h"
@@ -50,42 +50,46 @@ using namespace Microsoft::MSR::CNTK;
 // DoTrain() - implements CNTK "train" command
 // ===========================================================================
 
-template<class ElemType>
+template <class ElemType>
 class BrainScriptNetworkBuilder : public IComputationNetBuilder<ElemType>
 {
     typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
     ComputationNetworkPtr m_net;
     ScriptableObjects::ConfigLambdaPtr m_createNetworkFn;
     DEVICEID_TYPE m_deviceId;
+
 public:
     // the constructor remembers the config lambda
     // TODO: Really this should just take the lambda itself, or rather, this class should just be replaced by a lambda. But we need the IConfigRecord for templates to be compile-compatible with old CNTK config.
-    BrainScriptNetworkBuilder(const ScriptableObjects::IConfigRecord & config)
+    BrainScriptNetworkBuilder(const ScriptableObjects::IConfigRecord& config)
     {
-        m_deviceId = config[L"deviceId"];   // TODO: only needed for LoadNetworkFromFile() which should go away anyway
+        m_deviceId = config[L"deviceId"]; // TODO: only needed for LoadNetworkFromFile() which should go away anyway
         m_createNetworkFn = config[L"createNetwork"].AsPtr<ScriptableObjects::ConfigLambda>();
     }
     // not supported for old CNTK
-    BrainScriptNetworkBuilder(const ConfigParameters & config) { NOT_IMPLEMENTED; }
+    BrainScriptNetworkBuilder(const ConfigParameters& config)
+    {
+        NOT_IMPLEMENTED;
+    }
 
     // build a ComputationNetwork from description language
-    virtual /*IComputationNetBuilder::*/ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
+    virtual /*IComputationNetBuilder::*/ ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr) override
     {
-        vector<ScriptableObjects::ConfigValuePtr> args;    // this lambda has no arguments
+        vector<ScriptableObjects::ConfigValuePtr> args; // this lambda has no arguments
         ScriptableObjects::ConfigLambda::NamedParams namedArgs;
         let netValue = m_createNetworkFn->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
         m_net = netValue.AsPtr<ComputationNetwork>();
         if (m_net->GetDeviceId() < 0)
             fprintf(stderr, "BrainScriptNetworkBuilder using CPU\n");
         else
-            fprintf(stderr, "BrainScriptNetworkBuilder using GPU %d\n", (int)m_net->GetDeviceId());
+            fprintf(stderr, "BrainScriptNetworkBuilder using GPU %d\n", (int) m_net->GetDeviceId());
         return m_net;
     }
 
     // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
     // TODO: This does not belong into NetworkBuilder, since the code is the same for all. Just create the network and load the darn thing.
-    virtual /*IComputationNetBuilder::*/ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
+    virtual /*IComputationNetBuilder::*/ ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+                                                                                 bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr) override
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load   --TODO: why all these options?
         {
@@ -104,11 +108,20 @@ extern wstring commonMacros;
 extern wstring computationNodes;
 
 // helper that returns 'float' or 'double' depending on ElemType
-template<class ElemType> static const wchar_t * ElemTypeName();
-template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
-template<> /*static*/ const wchar_t * ElemTypeName<double>() { return L"double"; }
+template <class ElemType>
+static const wchar_t* ElemTypeName();
+template <>
+/*static*/ const wchar_t* ElemTypeName<float>()
+{
+    return L"float";
+}
+template <>
+/*static*/ const wchar_t* ElemTypeName<double>()
+{
+    return L"double";
+}
 
-function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord & config)
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ScriptableObjects::IConfigRecord& config)
 {
     // createNetwork() is a BrainScript lambda that creates the model
     // We create a C++ wrapper around it, which we then pass to Train().
@@ -116,32 +129,35 @@ function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const Scriptab
     return [createNetworkConfigLambda](DEVICEID_TYPE /*deviceId*/)
     {
         // execute the lambda
-        vector<ScriptableObjects::ConfigValuePtr> args;    // this lambda has no arguments
+        vector<ScriptableObjects::ConfigValuePtr> args; // this lambda has no arguments
         ScriptableObjects::ConfigLambda::NamedParams namedArgs;
         let netValue = createNetworkConfigLambda->Apply(move(args), move(namedArgs), L"BuildNetworkFromDescription");
         // typecast the result to the desired type
         return netValue.AsPtr<ComputationNetwork>();
     };
 }
-function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ConfigParameters &) { NOT_IMPLEMENTED; }  // old CNTK config does not support lambdas
+function<ComputationNetworkPtr(DEVICEID_TYPE)> GetCreateNetworkFn(const ConfigParameters&)
+{
+    NOT_IMPLEMENTED;
+} // old CNTK config does not support lambdas
 
 // function to create an object of a certain type, using both old CNTK config and BrainScript
-template<class C>
-shared_ptr<C> CreateObject(const ScriptableObjects::IConfigRecord & config, const wchar_t * id)
+template <class C>
+shared_ptr<C> CreateObject(const ScriptableObjects::IConfigRecord& config, const wchar_t* id)
 {
     // TODO: CNTK config added "traceLevel = 0" to 'config'. In BS, we cannot do that (IConfigRecord is immutable). Solution: Just say "traceLevel = 0" in the BS macros for readers.
-    return config[id].AsPtr<C>();       // BS instantiates this object through this call
+    return config[id].AsPtr<C>(); // BS instantiates this object through this call
 }
-template<class C>
-shared_ptr<C> CreateObject(const ConfigParameters & config, const wchar_t * id)
+template <class C>
+shared_ptr<C> CreateObject(const ConfigParameters& config, const wchar_t* id)
 {
     ConfigParameters readerConfig(config(id));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));        // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
-    return make_shared<C>(readerConfig); // old CNTK config specifies a dictionary which then must be explicitly instantiated
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    return make_shared<C>(readerConfig);                           // old CNTK config specifies a dictionary which then must be explicitly instantiated
 }
 
 template <class ConfigRecordType, typename ElemType>
-void DoTrain(const ConfigRecordType & config)
+void DoTrain(const ConfigRecordType& config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
@@ -156,17 +172,17 @@ void DoTrain(const ConfigRecordType & config)
     }
     else if (config.Exists(L"SimpleNetworkBuilder"))
     {
-        const ConfigRecordType & simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
-        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig);  // parses the configuration and stores it in the SimpleNetworkBuilder object
+        const ConfigRecordType& simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
+        auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig); // parses the configuration and stores it in the SimpleNetworkBuilder object
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());       // this operates based on the configuration saved above
+            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
         };
     }
     // legacy NDL
     else if (config.Exists(L"NDLNetworkBuilder"))
     {
-        const ConfigRecordType & ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
+        const ConfigRecordType& ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
         shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
@@ -174,20 +190,20 @@ void DoTrain(const ConfigRecordType & config)
         };
     }
     // legacy test mode for BrainScript. Will go away once we fully integrate with BS.
-    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder"/*legacy*/))
+    else if (config.Exists(L"BrainScriptNetworkBuilder") || config.Exists(L"ExperimentalNetworkBuilder" /*legacy*/))
     {
         // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
         wstring sourceCode = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros
-            + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
-            + sourceCode, vector<wstring>());    // source code has the form [ ... ]
+        let expr = BS::ParseConfigDictFromString(standardFunctions + computationNodes + commonMacros + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int) deviceId, ElemTypeName<ElemType>()) // TODO: check if typeid needs postprocessing
+                                                     + sourceCode,
+                                                 vector<wstring>()); // source code has the form [ ... ]
         createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
-            let object = EvaluateField(expr, L"network");                                // this comes back as a BS::Object
-            let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
+            let object = EvaluateField(expr, L"network");                   // this comes back as a BS::Object
+            let network = dynamic_pointer_cast<ComputationNetwork>(object); // cast it
             // This should not really fail since we constructed the source code above such that this is the right type.
             // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
             // In that case, the network might come back with a different element type. We need a runtime check for that.
@@ -215,7 +231,7 @@ void DoTrain(const ConfigRecordType & config)
     }
     else // legacy CNTK config syntax: needs a record called 'SGD'
     {
-        const ConfigRecordType & configSGD(config(L"SGD"));
+        const ConfigRecordType& configSGD(config(L"SGD"));
         optimizer = make_shared<SGD<ElemType>>(configSGD);
     }
 
@@ -224,35 +240,40 @@ void DoTrain(const ConfigRecordType & config)
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
-    using namespace Microsoft::MSR::CNTK;
+using namespace Microsoft::MSR::CNTK;
 
-    // -----------------------------------------------------------------------
-    // register ComputationNode with the ScriptableObject system
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// register ComputationNode with the ScriptableObject system
+// -----------------------------------------------------------------------
 
-    class TrainAction { };
-    template<> shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp)
-    {
-        const IConfigRecord & config = *configp;
-        wstring precision = config[L"precision"];            // dispatch on ElemType
-        if (precision == L"float")
-            DoTrain<IConfigRecord, float>(config);
-        else if (precision == L"double")
-            DoTrain<IConfigRecord, double>(config);
-        else
-            RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+class TrainAction
+{
+};
+template <>
+shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp)
+{
+    const IConfigRecord& config = *configp;
+    wstring precision = config[L"precision"]; // dispatch on ElemType
+    if (precision == L"float")
+        DoTrain<IConfigRecord, float>(config);
+    else if (precision == L"double")
+        DoTrain<IConfigRecord, double>(config);
+    else
+        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
 
-        return make_shared<Object>();   // return a dummy object
-    }
+    return make_shared<Object>(); // return a dummy object
+}
 
-    // register ComputationNode with the ScriptableObject system
-    ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<TrainAction> registerTrainAction(L"TrainAction");
-}}}
+// register ComputationNode with the ScriptableObject system
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<TrainAction> registerTrainAction(L"TrainAction");
+}
+}
+}
 
-template void DoTrain<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord & config);
-template void DoTrain<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord & config);
-template void DoTrain<ConfigParameters, float>(const ConfigParameters & config);
-template void DoTrain<ConfigParameters, double>(const ConfigParameters & config);
+template void DoTrain<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config);
+template void DoTrain<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
+template void DoTrain<ConfigParameters, float>(const ConfigParameters& config);
+template void DoTrain<ConfigParameters, double>(const ConfigParameters& config);
 
 // ===========================================================================
 // DoAdapt() - implements CNTK "adapt" command

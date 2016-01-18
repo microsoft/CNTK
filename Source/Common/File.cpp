@@ -7,7 +7,7 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
@@ -51,7 +51,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
     if (m_filename.empty())
         RuntimeError("File: filename is empty");
     const auto outputPipe = (m_filename.front() == '|');
-    const auto inputPipe  = (m_filename.back()  == '|');
+    const auto inputPipe = (m_filename.back() == '|');
     // translate the options string into a string for fopen()
     const auto reading = !!(fileOptions & fileOptionsRead);
     const auto writing = !!(fileOptions & fileOptionsWrite);
@@ -67,17 +67,17 @@ void File::Init(const wchar_t* filename, int fileOptions)
         if (!outputPipe && m_filename != L"-")
         {
             options.append(L"+");
-            msra::files::make_intermediate_dirs(m_filename.c_str());    // writing to regular file -> also create the intermediate directories as a convenience
+            msra::files::make_intermediate_dirs(m_filename.c_str()); // writing to regular file -> also create the intermediate directories as a convenience
         }
     }
-    if (fileOptions&fileOptionsBinary)
+    if (fileOptions & fileOptionsBinary)
     {
         options += L"b";
     }
     else
     {
         if (fileOptions & fileOptionsUnicode)
-            options += L"b";    
+            options += L"b";
         else
             options += L"t";
         // I attempted to use the translated characterset modes, but encountered strange errors
@@ -94,13 +94,13 @@ void File::Init(const wchar_t* filename, int fileOptions)
     //  - "cmd|" reads from a pipe
     m_pcloseNeeded = false;
     m_seekable = false;
-    if (m_filename == L"-")                                 // stdin/stdout
+    if (m_filename == L"-") // stdin/stdout
     {
         if (writing && reading)
             RuntimeError("File: cannot specify fileOptionsRead and fileOptionsWrite at once with path '-'");
         m_file = writing ? stdout : stdin;
     }
-    else if (outputPipe || inputPipe)                       // pipe syntax
+    else if (outputPipe || inputPipe) // pipe syntax
     {
         if (inputPipe && outputPipe)
             RuntimeError("File: pipes cannot specify fileOptionsRead and fileOptionsWrite at once");
@@ -112,21 +112,24 @@ void File::Init(const wchar_t* filename, int fileOptions)
             RuntimeError("File: error exexuting pipe command '%S': %s", command.c_str(), strerror(errno));
         m_pcloseNeeded = true;
     }
-    else attempt([=]()                                      // regular file: use a retry loop
-    {
-        m_file = fopenOrDie(filename, options.c_str());
-        m_seekable = true;
-    });
+    else
+        attempt([=]() // regular file: use a retry loop
+                {
+                    m_file = fopenOrDie(filename, options.c_str());
+                    m_seekable = true;
+                });
 }
 
 // skip to given delimiter character
 void File::SkipToDelimiter(int delim)
 {
-    int ch=0;
+    int ch = 0;
 
-    while (ch!=delim) {
-        ch=fgetc(m_file);
-        if (feof(m_file)) {
+    while (ch != delim)
+    {
+        ch = fgetc(m_file);
+        if (feof(m_file))
+        {
             printf("Unexpected end of file\n");
             LogicError("Unexpected end of file\n");
         }
@@ -135,7 +138,7 @@ void File::SkipToDelimiter(int delim)
 
 bool File::IsTextBased()
 {
-    return !!(m_options & (fileOptionsText|fileOptionsUnicode));
+    return !!(m_options & (fileOptionsText | fileOptionsUnicode));
 }
 
 // File Destructor
@@ -162,14 +165,15 @@ void File::GetLine(wstring& str)
 }
 
 // GetLine - get a line from the file
-// str - string 
+// str - string
 void File::GetLine(string& str)
 {
     str = fgetline(m_file);
 }
 
 // GetLines - get all lines from a file
-template<typename STRING> static void FileGetLines(File & file, std::vector<STRING>& lines)
+template <typename STRING>
+static void FileGetLines(File& file, std::vector<STRING>& lines)
 {
     STRING line;
     while (!file.IsEOF())
@@ -178,9 +182,14 @@ template<typename STRING> static void FileGetLines(File & file, std::vector<STRI
         lines.push_back(line);
     }
 }
-void File::GetLines(std::vector<std::wstring>& lines) { FileGetLines(*this, lines); };
-void File::GetLines(std::vector<std::string>&  lines) { FileGetLines(*this, lines); }
-
+void File::GetLines(std::vector<std::wstring>& lines)
+{
+    FileGetLines(*this, lines);
+};
+void File::GetLines(std::vector<std::string>& lines)
+{
+    FileGetLines(*this, lines);
+}
 
 // Put a zero/space terminated wstring into a file
 // val - value to write to the file
@@ -189,7 +198,6 @@ File& File::operator<<(const std::wstring& val)
     WriteString(val.c_str());
     return *this;
 }
-
 
 // Put a zero/space terminated string into a file
 // val - value to write to the file
@@ -204,12 +212,12 @@ File& File::operator<<(const std::string& val)
 File& File::operator<<(FileMarker marker)
 {
     File& file = *this;
-    switch(marker)
+    switch (marker)
     {
     case fileMarkerBeginFile: // beginning of file marker
         // only exists for UNICODE files
         if (m_options & fileOptionsUnicode)
-            file << (unsigned int)0xfeff; // byte order mark
+            file << (unsigned int) 0xfeff; // byte order mark
         break;
     case fileMarkerEndFile: // end of file marker
         // use ^Z for end of file for text files
@@ -219,7 +227,7 @@ File& File::operator<<(FileMarker marker)
             file << char(26);
         break;
     case fileMarkerBeginList: // Beginning of list marker
-        // no marker written for either 
+        // no marker written for either
         break;
     case fileMarkerListSeparator: // separate elements of a list
         // do nothing for now, built in space deliminter for all types (before type)
@@ -232,8 +240,8 @@ File& File::operator<<(FileMarker marker)
             file.WriteString("\r\n");
         break;
     case fileMarkerBeginSection: // beginning of section
-    case fileMarkerEndSection: // end of section
-        assert(false);  // sections should use a string modifier 
+    case fileMarkerEndSection:   // end of section
+        assert(false);           // sections should use a string modifier
         break;
     }
     return file;
@@ -243,7 +251,8 @@ File& File::operator<<(FileMarker marker)
 // count - [in] the number of elements in the list
 File& File::PutMarker(FileMarker marker, size_t count)
 {
-    assert(marker == fileMarkerBeginList); marker; // only beginning of list supported for count  markers
+    assert(marker == fileMarkerBeginList);
+    marker; // only beginning of list supported for count  markers
     *this << count;
     return *this;
 }
@@ -254,7 +263,8 @@ File& File::PutMarker(FileMarker marker, const std::string& section)
 {
     File& file = *this;
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     file << section;
     return file;
 }
@@ -265,7 +275,8 @@ File& File::PutMarker(FileMarker marker, const std::wstring& section)
 {
     File& file = *this;
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     file << section;
     return file;
 }
@@ -275,12 +286,12 @@ File& File::PutMarker(FileMarker marker, const std::wstring& section)
 File& File::operator>>(std::wstring& val)
 {
     attempt([&]
-    {
-        if (IsTextBased())
-            val = fgetwtoken(m_file);
-        else
-            val = fgetwstring(m_file);
-    });
+            {
+                if (IsTextBased())
+                    val = fgetwtoken(m_file);
+                else
+                    val = fgetwstring(m_file);
+            });
     return *this;
 }
 
@@ -289,12 +300,12 @@ File& File::operator>>(std::wstring& val)
 File& File::operator>>(std::string& val)
 {
     attempt([&]
-    {
-        if (IsTextBased())
-            val = fgettoken(m_file);
-        else
-            val = fgetstring(m_file);
-    });
+            {
+                if (IsTextBased())
+                    val = fgettoken(m_file);
+                else
+                    val = fgetstring(m_file);
+            });
     return *this;
 }
 
@@ -308,8 +319,8 @@ void File::ReadChars(std::string& val, size_t cnt, bool reset)
     if (reset)
         pos = GetPosition();
     val.resize(cnt);
-    char *str = const_cast<char *>(val.c_str());
-    for (int i=0;i < cnt;++i)
+    char* str = const_cast<char*>(val.c_str());
+    for (int i = 0; i < cnt; ++i)
         *this >> str[i];
     if (reset)
         SetPosition(pos);
@@ -325,8 +336,8 @@ void File::ReadChars(std::wstring& val, size_t cnt, bool reset)
     if (reset)
         pos = GetPosition();
     val.resize(cnt);
-    wchar_t *str = const_cast<wchar_t *>(val.c_str());
-    for (int i=0;i < cnt;++i)
+    wchar_t* str = const_cast<wchar_t*>(val.c_str());
+    for (int i = 0; i < cnt; ++i)
         *this >> str[i];
     if (reset)
         SetPosition(pos);
@@ -337,19 +348,20 @@ void File::ReadChars(std::wstring& val, size_t cnt, bool reset)
 // size - size of the string to output, if zero null terminated
 void File::WriteString(const char* str, int size)
 {
-    attempt([&]{
-        if (size > 0)
-        {
-            fwprintf(m_file, L" %.*hs", size, str);
-        }
-        else
-        {
-            if (IsTextBased())
-                fwprintf(m_file, L" %hs", str);
-            else
-                fputstring (m_file, str);
-        }
-    });
+    attempt([&]
+            {
+                if (size > 0)
+                {
+                    fwprintf(m_file, L" %.*hs", size, str);
+                }
+                else
+                {
+                    if (IsTextBased())
+                        fwprintf(m_file, L" %hs", str);
+                    else
+                        fputstring(m_file, str);
+                }
+            });
 }
 
 // ReadString - reads a string into the file
@@ -357,12 +369,13 @@ void File::WriteString(const char* str, int size)
 // size - size of the string string buffer
 void File::ReadString(char* str, int size)
 {
-    attempt([&]{
-        if (IsTextBased())
-            fgettoken(m_file, str, size);
-        else
-            fgetstring (m_file, str, size);
-    });
+    attempt([&]
+            {
+                if (IsTextBased())
+                    fgettoken(m_file, str, size);
+                else
+                    fgetstring(m_file, str, size);
+            });
 }
 
 // WriteString - outputs a string into the file
@@ -371,37 +384,38 @@ void File::ReadString(char* str, int size)
 // size - size of the string to output, if zero null terminated
 void File::WriteString(const wchar_t* str, int size)
 {
-    attempt([&]{
-#ifdef EMBEDDED_SPACES
-        // start of implementation of embedded space support with quoting
-        // not complete, not sure if we need it
-        bool spacefound = false;
-        wchar_t quote = 0;
-        if (IsTextBased())
-        {
-            // search for embedded spaces and quotes
-            wstring searchString = L" \"'~";
-            const wchar_t* result = NULL;
-            while (result = wcspbrk(str, searchString.c_str()))
+    attempt([&]
             {
-                if (IsWhiteSpace(*result))
-                    spacefound = true;
-                searchString.find(*result, 0);
-            }
-        }
+#ifdef EMBEDDED_SPACES
+                // start of implementation of embedded space support with quoting
+                // not complete, not sure if we need it
+                bool spacefound = false;
+                wchar_t quote = 0;
+                if (IsTextBased())
+                {
+                    // search for embedded spaces and quotes
+                    wstring searchString = L" \"'~";
+                    const wchar_t* result = NULL;
+                    while (result = wcspbrk(str, searchString.c_str()))
+                    {
+                        if (IsWhiteSpace(*result))
+                            spacefound = true;
+                        searchString.find(*result, 0);
+                    }
+                }
 #endif
-        if (size > 0)
-        {
-            fwprintf(m_file, L" %.*ls", size, str);
-        }
-        else
-        {
-            if (IsTextBased())
-                fwprintf(m_file, L" %ls", str);
-            else
-                fputstring (m_file, str);
-        }
-    });
+                if (size > 0)
+                {
+                    fwprintf(m_file, L" %.*ls", size, str);
+                }
+                else
+                {
+                    if (IsTextBased())
+                        fwprintf(m_file, L" %ls", str);
+                    else
+                        fputstring(m_file, str);
+                }
+            });
 }
 
 // ReadString - reads a string into the file
@@ -410,12 +424,12 @@ void File::WriteString(const wchar_t* str, int size)
 void File::ReadString(wchar_t* str, int size)
 {
     attempt([&]
-    {
-        if (IsTextBased())
-            fgettoken(m_file, str, size);
-        else
-            fgetstring (m_file, str, size);
-    });
+            {
+                if (IsTextBased())
+                    fgettoken(m_file, str, size);
+                else
+                    fgetstring(m_file, str, size);
+            });
 }
 
 // IsUnicodeBOM - is the next characters the Unicode Byte Order Mark?
@@ -433,7 +447,7 @@ bool File::IsUnicodeBOM(bool skip)
     bool found = false;
     if (m_options & fileOptionsUnicode)
     {
-        unsigned int bom=0;
+        unsigned int bom = 0;
         if (IsTextBased())
             ftrygetText(m_file, bom);
         else
@@ -483,8 +497,8 @@ bool File::IsWhiteSpace(bool skip)
         wint_t c;
         do
         {
-            c = fgetwc (m_file);
-            if (c == WEOF)       // hit the end
+            c = fgetwc(m_file);
+            if (c == WEOF) // hit the end
                 return spaceFound;
             spaceCur = !!iswspace(c);
             spaceFound = spaceFound || spaceCur;
@@ -497,8 +511,8 @@ bool File::IsWhiteSpace(bool skip)
         int c;
         do
         {
-            c = fgetc (m_file);
-            if (c == EOF)       // hit the end
+            c = fgetc(m_file);
+            if (c == EOF) // hit the end
                 return spaceFound;
             spaceCur = !!isspace(c);
             spaceFound = spaceFound || spaceCur;
@@ -517,12 +531,11 @@ int File::EndOfLineOrEOF(bool skip)
 {
     int found = false;
     if (m_options & fileOptionsUnicode)
-        found = fskipwNewline(m_file,skip);
+        found = fskipwNewline(m_file, skip);
     else if (m_options & fileOptionsText)
         found = fskipNewline(m_file, skip);
     return found;
 }
-
 
 // Get a marker from the file
 // some are ignored others are expecting characters
@@ -531,7 +544,7 @@ File& File::operator>>(FileMarker marker)
 {
     File& file = *this;
 
-    switch(marker)
+    switch (marker)
     {
     case fileMarkerBeginFile: // beginning of file marker
         // check for Unicode BOM marker
@@ -553,13 +566,13 @@ File& File::operator>>(FileMarker marker)
         if (IsTextBased())
         {
             int found = EndOfLineOrEOF(true);
-            if (found != (int)true) // EOF can also be returned
+            if (found != (int) true) // EOF can also be returned
                 RuntimeError("Newline not found");
         }
         break;
     case fileMarkerBeginSection: // beginning of section
-    case fileMarkerEndSection: // end of section
-        assert(false);  // sections should use a string modifier 
+    case fileMarkerEndSection:   // end of section
+        assert(false);           // sections should use a string modifier
         break;
     }
     return file;
@@ -571,7 +584,7 @@ File& File::operator>>(FileMarker marker)
 bool File::IsMarker(FileMarker marker, bool skip)
 {
     bool retval = false;
-    switch(marker)
+    switch (marker)
     {
     case fileMarkerBeginFile: // beginning of file marker
         // check for Unicode BOM marker
@@ -593,23 +606,23 @@ bool File::IsMarker(FileMarker marker, bool skip)
         {
             int eolSeen = false;
             eolSeen = EndOfLineOrEOF(skip);
-            retval = (eolSeen == (int)true);
+            retval = (eolSeen == (int) true);
         }
         break;
     case fileMarkerBeginSection: // beginning of section
-    case fileMarkerEndSection: // end of section
+    case fileMarkerEndSection:   // end of section
         // can't destinquish from a string currently
         break;
     }
     return retval;
 }
 
-
 // GetMarker for beginning of list support (lists with a count)
 // count - [out] returns the number of elements in the list
 File& File::GetMarker(FileMarker marker, size_t& count)
 {
-    assert(marker == fileMarkerBeginList); marker; // only beginning of list supported for count file markers
+    assert(marker == fileMarkerBeginList);
+    marker; // only beginning of list supported for count file markers
     // use text based try, so it can fail without an exception
     if (IsTextBased())
         ftrygetText(m_file, count);
@@ -623,7 +636,8 @@ File& File::GetMarker(FileMarker marker, size_t& count)
 File& File::GetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     string str;
     *this >> str;
     if (str != section)
@@ -636,7 +650,8 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
 File& File::GetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     wstring str;
     *this >> str;
     if (str != section)
@@ -649,7 +664,8 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
 bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     size_t pos = GetPosition();
     std::wstring str;
     try
@@ -658,7 +674,7 @@ bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
         if (str == section)
             return true;
     }
-    catch(...)
+    catch (...)
     {
         //eat
     }
@@ -671,7 +687,8 @@ bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
 bool File::TryGetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    marker;
     size_t pos = GetPosition();
     std::string str;
     try
@@ -680,7 +697,7 @@ bool File::TryGetMarker(FileMarker marker, const std::string& section)
         if (str == section)
             return true;
     }
-    catch(...)
+    catch (...)
     {
         return false;
     }
@@ -704,5 +721,4 @@ void File::SetPosition(uint64_t pos)
         RuntimeError("File: attempted to SetPosition() on non-seekable stream");
     fsetpos(m_file, pos);
 }
-
-}}}
+} } }

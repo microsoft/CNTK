@@ -21,18 +21,18 @@ namespace msra { namespace parallel {
 static inline size_t determine_num_cores()
 {
     SYSTEM_INFO sysInfo;
-    GetSystemInfo (&sysInfo);
+    GetSystemInfo(&sysInfo);
     return sysInfo.dwNumberOfProcessors;
 }
 
-extern size_t ppl_cores;    // number of cores to run on as requested by user
+extern size_t ppl_cores; // number of cores to run on as requested by user
 
-static inline void set_cores (size_t cores)
+static inline void set_cores(size_t cores)
 {
     ppl_cores = cores;
 }
 
-static inline size_t get_cores()    // if returns 1 then no parallelization will be done
+static inline size_t get_cores() // if returns 1 then no parallelization will be done
 {
     return ppl_cores;
 }
@@ -50,18 +50,20 @@ template <typename FUNCTION> void for_all_numa_nodes_approximately (const FUNCTI
 #endif
 
 // wrapper around Concurrency::parallel_for() to allow disabling parallelization altogether
-template <typename FUNCTION> void parallel_for (size_t begin, size_t end, size_t step, const FUNCTION & f)
+template <typename FUNCTION>
+void parallel_for(size_t begin, size_t end, size_t step, const FUNCTION& f)
 {
     const size_t cores = ppl_cores;
-    if (cores > 1)  // parallel computation (regular)
+    if (cores > 1) // parallel computation (regular)
     {
         //fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on %d cores\n", nblocks, nfwd, determine_num_cores());
-        Concurrency::parallel_for (begin, end, step, f);
+        Concurrency::parallel_for(begin, end, step, f);
     }
-    else            // for comparison: single-threaded (this also documents what the above means)
+    else // for comparison: single-threaded (this also documents what the above means)
     {
         //fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on a single thread\n", nblocks, nfwd);
-        for (size_t j0 = begin; j0 < end; j0 += step) f (j0);
+        for (size_t j0 = begin; j0 < end; j0 += step)
+            f(j0);
     }
 }
 
@@ -69,31 +71,34 @@ template <typename FUNCTION> void parallel_for (size_t begin, size_t end, size_t
 // Very similar to parallel_for() except that body function also takes end index,
 // and the 'targetsteps' gets rounded a little to better map to 'cores.'
 // ... TODO: Currently, 'cores' does not limit the number of threads in parallel_for() (not so critical, fix later or never)
-template <typename FUNCTION> void foreach_index_block (size_t n, size_t targetstep, size_t targetalignment, const FUNCTION & body)
+template <typename FUNCTION>
+void foreach_index_block(size_t n, size_t targetstep, size_t targetalignment, const FUNCTION& body)
 {
     const size_t cores = ppl_cores;
     const size_t maxnfwd = 2 * targetstep;
     size_t nblocks = (n + targetstep / 2) / targetstep;
-    if (nblocks == 0) nblocks = 1;
+    if (nblocks == 0)
+        nblocks = 1;
     // round to a multiple of the number of cores
-    if (nblocks < cores)    // less than # cores -> round up
-        nblocks = (1+(nblocks-1)/cores) * cores;
-    else                    // more: round down (reduce overhead)
+    if (nblocks < cores) // less than # cores -> round up
+        nblocks = (1 + (nblocks - 1) / cores) * cores;
+    else // more: round down (reduce overhead)
         nblocks = nblocks / cores * cores;
     size_t nfwd = 1 + (n - 1) / nblocks;
-    assert (nfwd * nblocks >= n);
-    if (nfwd > maxnfwd) nfwd = maxnfwd; // limit to allocated memory just in case
+    assert(nfwd * nblocks >= n);
+    if (nfwd > maxnfwd)
+        nfwd = maxnfwd; // limit to allocated memory just in case
     // ... TODO: does the above actually do anything/significant? nfwd != targetstep?
 
     // enforce alignment
-    nfwd = (1 + (nfwd -1) / targetalignment) * targetalignment;
+    nfwd = (1 + (nfwd - 1) / targetalignment) * targetalignment;
 
     // execute it!
-    parallel_for (0, n, nfwd, [&](size_t j0)
-    {
-        size_t j1 = min (j0 + nfwd, n);
-        body (j0, j1);
-    });
+    parallel_for(0, n, nfwd, [&](size_t j0)
+                 {
+                     size_t j1 = min(j0 + nfwd, n);
+                     body(j0, j1);
+                 });
 }
-
-};};
+};
+};

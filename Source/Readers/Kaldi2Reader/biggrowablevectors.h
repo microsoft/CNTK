@@ -18,73 +18,89 @@ namespace msra { namespace dbn {
 //  - fully move in-mem range here, test again
 //  - then we can move towards paging from archive directly (biggrowablevectorarray gets tossed)
 // ---------------------------------------------------------------------------
-template<class BLOCKTYPE> class growablevectorbase
+template <class BLOCKTYPE>
+class growablevectorbase
 {
-protected:  // fix this later
+protected: // fix this later
     const size_t elementsperblock;
-    size_t n;                                           // number of elements
-    std::vector<std::unique_ptr<BLOCKTYPE>> blocks;     // the data blocks
-    void operator= (const growablevectorbase &);        // (non-assignable)
-    void check (size_t t) const { if (t >= n) throw std::logic_error ("growablevectorbase: out of bounds"); }   // bounds check helper
+    size_t n;                                       // number of elements
+    std::vector<std::unique_ptr<BLOCKTYPE>> blocks; // the data blocks
+    void operator=(const growablevectorbase &);     // (non-assignable)
+    void check(size_t t) const
+    {
+        if (t >= n)
+            throw std::logic_error("growablevectorbase: out of bounds");
+    } // bounds check helper
 
     // resize intermediate level, but do not allocate blocks
     // (may deallocate if shrinking)
-    void resize_without_commit (size_t T)
+    void resize_without_commit(size_t T)
     {
-        blocks.resize ((T + elementsperblock-1) / elementsperblock);
+        blocks.resize((T + elementsperblock - 1) / elementsperblock);
         n = T;
         // TODO: update allocated range
     }
 
     // commit memory
     // begin/end must be block boundaries
-    void commit (size_t begin, size_t end, BLOCKTYPE * blockdata)
+    void commit(size_t begin, size_t end, BLOCKTYPE *blockdata)
     {
-        auto blockptr = getblock (begin, end);  // memory leak: if this fails (logic error; should never happen)
-        blockptr.set (blockdata);               // take ownership of the block
+        auto blockptr = getblock(begin, end); // memory leak: if this fails (logic error; should never happen)
+        blockptr.set(blockdata);              // take ownership of the block
         // TODO: update allocated range  --also enforce consecutiveness
     }
 
     // flush a block
     // begin/end must be block boundaries
-    void flush (size_t begin, size_t end)
+    void flush(size_t begin, size_t end)
     {
-        auto blockptr = getblock (begin, end);  // memory leak: if this fails (logic error; should never happen)
-        blockptr.reset();                       // release it
+        auto blockptr = getblock(begin, end); // memory leak: if this fails (logic error; should never happen)
+        blockptr.reset();                     // release it
         // TODO: update allocated range  --also enforce consecutiveness
     }
 
     // helper to get a block pointer, with block referenced as its entire range
-    std::unique_ptr<BLOCKTYPE> & getblockptr (size_t t) // const
+    std::unique_ptr<BLOCKTYPE> &getblockptr(size_t t) // const
     {
-        check (t);
+        check(t);
         return blocks[t / elementsperblock];
     }
 
     // helper to get a block pointer, with block referenced as its entire range
-    std::unique_ptr<BLOCKTYPE> & getblockptr (size_t begin, size_t end) const
+    std::unique_ptr<BLOCKTYPE> &getblockptr(size_t begin, size_t end) const
     {
         // BUGBUG: last block may be shorter than elementsperblock
-        if (end - begin != elementsperblock || getblockt (begin) != 0)
-            throw std::logic_error ("growablevectorbase: non-block boundaries passed to block-level function");
-        return getblockptr (begin);
+        if (end - begin != elementsperblock || getblockt(begin) != 0)
+            throw std::logic_error("growablevectorbase: non-block boundaries passed to block-level function");
+        return getblockptr(begin);
     }
+
 public:
-    growablevectorbase (size_t elementsperblock) : elementsperblock (elementsperblock), n (0) { blocks.reserve (1000); }
-    size_t size() const { return n; }       // number of frames
-    bool empty() const { return size() == 0; }
+    growablevectorbase(size_t elementsperblock)
+        : elementsperblock(elementsperblock), n(0)
+    {
+        blocks.reserve(1000);
+    }
+    size_t size() const
+    {
+        return n;
+    } // number of frames
+    bool empty() const
+    {
+        return size() == 0;
+    }
 
     // to access an element t -> getblock(t)[getblockt(t)]
-    BLOCKTYPE & getblock (size_t t) const
+    BLOCKTYPE &getblock(size_t t) const
     {
-        check (t);
+        check(t);
         const size_t blockid = t / elementsperblock;
         return *blocks[blockid].get();
     }
 
-    size_t getblockt (size_t t) const
+    size_t getblockt(size_t t) const
     {
-        check (t);
+        check(t);
         return t % elementsperblock;
     }
 };
@@ -92,31 +108,42 @@ public:
 // ---------------------------------------------------------------------------
 // biggrowablevector -- big vector we can push_back to
 // ---------------------------------------------------------------------------
-template<typename ELEMTYPE> class biggrowablevector : public growablevectorbase<std::vector<ELEMTYPE>>
+template <typename ELEMTYPE>
+class biggrowablevector : public growablevectorbase<std::vector<ELEMTYPE>>
 {
 public:
-    biggrowablevector() : growablevectorbase<std::vector<ELEMTYPE>>::growablevectorbase (65536) { }
+    biggrowablevector()
+        : growablevectorbase<std::vector<ELEMTYPE>>::growablevectorbase(65536)
+    {
+    }
 
-    template<typename VALTYPE> void push_back (VALTYPE e)   // VALTYPE could be an rvalue reference
+    template <typename VALTYPE>
+    void push_back(VALTYPE e) // VALTYPE could be an rvalue reference
     {
         size_t i = this->size();
-        this->resize_without_commit (i + 1);
-        auto & block = this->getblockptr (i);
+        this->resize_without_commit(i + 1);
+        auto &block = this->getblockptr(i);
         if (block.get() == NULL)
-            block.reset (new std::vector<ELEMTYPE> (this->elementsperblock));
-        (*block)[this->getblockt (i)] = e;
+            block.reset(new std::vector<ELEMTYPE>(this->elementsperblock));
+        (*block)[this->getblockt(i)] = e;
     }
 
-          ELEMTYPE & operator[] (size_t t)       { return this->getblock(t)[this->getblockt (t)]; }    // get an element
-    const ELEMTYPE & operator[] (size_t t) const { return this->getblock(t)[this->getblockt (t)]; }    // get an element
-
-    void resize (const size_t n)
+    ELEMTYPE &operator[](size_t t)
     {
-        this->resize_without_commit (n);
+        return this->getblock(t)[this->getblockt(t)];
+    } // get an element
+    const ELEMTYPE &operator[](size_t t) const
+    {
+        return this->getblock(t)[this->getblockt(t)];
+    } // get an element
+
+    void resize(const size_t n)
+    {
+        this->resize_without_commit(n);
         foreach_index (i, this->blocks)
             if (this->blocks[i].get() == NULL)
-                this->blocks[i].reset (new std::vector<ELEMTYPE> (this->elementsperblock));
+                this->blocks[i].reset(new std::vector<ELEMTYPE>(this->elementsperblock));
     }
 };
-
-};};
+};
+};

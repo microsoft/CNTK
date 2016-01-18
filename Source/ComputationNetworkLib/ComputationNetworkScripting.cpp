@@ -33,103 +33,109 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    using namespace Microsoft::MSR::ScriptableObjects;
+using namespace Microsoft::MSR::ScriptableObjects;
 
-    // ===================================================================
-    // construction from config
-    // ===================================================================
+// ===================================================================
+// construction from config
+// ===================================================================
 
-    // construct a ComputationNetwork from a ConfigRecord
-    ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
-        ComputationNetwork()
+// construct a ComputationNetwork from a ConfigRecord
+ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp)
+    : ComputationNetwork()
+{
+    let& config = *configp;
+
+    DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int) config[L"deviceId"];
+    SetDeviceId(deviceId);
+
+    deque<ComputationNodeBasePtr> workList;
+    // flatten the set of all nodes
+    // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
+    // TODO: This currently only supports nodes of the same ElemType. We could allow conversion operators.
+    for (let& id : config.GetMemberIds())
     {
-        let & config = *configp;
+        let& value = config[id];
+        if (value.Is<ComputationNodeBase>())
+            workList.push_back((const ComputationNodeBasePtr&) value);
+    }
+    // process work list
+    // Also call FinalizeInit where we must.
+    while (!workList.empty())
+    {
+        let node = workList.front();
+        workList.pop_front();
 
-        DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-        SetDeviceId(deviceId);
+        // add to set
+        let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
+        if (!res.second) // not inserted: we already got this one
+            if (res.first->second == node)
+                continue; // the same
+            else          // oops, a different node with the same name
+                LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
 
-        deque<ComputationNodeBasePtr> workList;
-        // flatten the set of all nodes
-        // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
-        // TODO: This currently only supports nodes of the same ElemType. We could allow conversion operators.
-        for (let & id : config.GetMemberIds())
+        // If node derives from ILateAttachingNode() then it has unresolved inputs. Resolve them now.
+        // This may generate a whole new load of nodes, including nodes which in turn have late init.
+        let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
+        if (lateAttachingNode)
+            lateAttachingNode->LateAttachInputs();
+
+        // add it to the respective node group based on the tag
+        let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+        if (nodeWithTag)
         {
-            let & value = config[id];
-            if (value.Is<ComputationNodeBase>())
-                workList.push_back((const ComputationNodeBasePtr&)value);
-        }
-        // process work list
-        // Also call FinalizeInit where we must.
-        while (!workList.empty())
-        {
-            let node = workList.front();
-            workList.pop_front();
-
-            // add to set
-            let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-            if (!res.second)        // not inserted: we already got this one
-                if (res.first->second == node)
-                    continue;       // the same
-                else                // oops, a different node with the same name
-                    LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
-
-            // If node derives from ILateAttachingNode() then it has unresolved inputs. Resolve them now.
-            // This may generate a whole new load of nodes, including nodes which in turn have late init.
-            let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
-            if (lateAttachingNode)
-                lateAttachingNode->LateAttachInputs();
-
-            // add it to the respective node group based on the tag
-            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-            if (nodeWithTag)
-            {
-                wstring tag = nodeWithTag->GetTag();
-                if (tag == L"feature")                              FeatureNodes().push_back(node);
-                else if (tag == L"label")                           LabelNodes().push_back(node);
-                else if (tag == L"criterion" || tag == L"criteria") FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-                else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       EvaluationNodes().push_back(node);     // eval*
-                else if (tag == L"output")                          OutputNodes().push_back(node);
-#if 0           // deprecated
+            wstring tag = nodeWithTag->GetTag();
+            if (tag == L"feature")
+                FeatureNodes().push_back(node);
+            else if (tag == L"label")
+                LabelNodes().push_back(node);
+            else if (tag == L"criterion" || tag == L"criteria")
+                FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
+            else if (!_wcsnicmp(tag.c_str(), L"eval", 4))
+                EvaluationNodes().push_back(node); // eval*
+            else if (tag == L"output")
+                OutputNodes().push_back(node);
+#if 0 // deprecated
                 else if (tag == L"pair")                            PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
 #endif
-                else if (!tag.empty())
-                    RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-                // TODO: are there nodes without tag? Where do they go?
-            }
-
-            // traverse children: append them to the end of the work list
-            let & children = node->GetInputs();
-            for (auto & child : children)
-                workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
+            else if (!tag.empty())
+                RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
+            // TODO: are there nodes without tag? Where do they go?
         }
-        // TODO: process "outputNodes" etc. arrays
 
-        // perform all necessary post-processing
-        CompileNetwork();
+        // traverse children: append them to the end of the work list
+        let& children = node->GetInputs();
+        for (auto& child : children)
+            workList.push_back(child); // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
+    }
+    // TODO: process "outputNodes" etc. arrays
+
+    // perform all necessary post-processing
+    CompileNetwork();
 #if 1
-        wstring args = ToString();
-        fprintf(stderr, "%ls\n", args.c_str());
+    wstring args = ToString();
+    fprintf(stderr, "%ls\n", args.c_str());
 #endif
-    }
+}
 
-    // ===================================================================
-    // behave like a config
-    // This allows to access nodes inside a network as if it was an IConfigRecord.
-    // This is meant to be used by whatever we will replace MEL.
-    // TODO: implement this
-    // ===================================================================
+// ===================================================================
+// behave like a config
+// This allows to access nodes inside a network as if it was an IConfigRecord.
+// This is meant to be used by whatever we will replace MEL.
+// TODO: implement this
+// ===================================================================
 
-    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/ComputationNetwork::operator[](const wstring & id) const   // e.g. confRec[L"message"]
-    {
-        id; RuntimeError("unknown class parameter");    // (for now)
-    }
-    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/ComputationNetwork::Find(const wstring & id) const         // returns nullptr if not found
-    {
-        id; return nullptr;     // (for now)
-    }
-    vector<wstring> /*IConfigRecord::*/ComputationNetwork::GetMemberIds() const
-    {
-        return vector<wstring>();
-    }
-
-}}}
+const ScriptableObjects::ConfigValuePtr& /*IConfigRecord::*/ ComputationNetwork::operator[](const wstring& id) const // e.g. confRec[L"message"]
+{
+    id;
+    RuntimeError("unknown class parameter"); // (for now)
+}
+const ScriptableObjects::ConfigValuePtr* /*IConfigRecord::*/ ComputationNetwork::Find(const wstring& id) const // returns nullptr if not found
+{
+    id;
+    return nullptr; // (for now)
+}
+vector<wstring> /*IConfigRecord::*/ ComputationNetwork::GetMemberIds() const
+{
+    return vector<wstring>();
+}
+} } }

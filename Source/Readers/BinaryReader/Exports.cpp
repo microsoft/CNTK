@@ -15,7 +15,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class ElemType>
+template <class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
 {
     *preader = new BinaryReader<ElemType>();
@@ -30,7 +30,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
     GetReader(preader);
 }
 
-template<class ElemType>
+template <class ElemType>
 void DATAWRITER_API GetWriter(IDataWriter<ElemType>** pwriter)
 {
     *pwriter = new BinaryWriter<ElemType>();
@@ -44,5 +44,6 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 {
     GetWriter(pwriter);
 }
-
-}}}
+}
+}
+}

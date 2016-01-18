@@ -7,9 +7,9 @@
 #include <cassert>
 #include <string>
 
-#ifdef WIN32        // --- Windows version
+#ifdef WIN32 // --- Windows version
 
-#include <Windows.h>    // for HANDLE
+#include <Windows.h> // for HANDLE
 
 class CrossProcessMutex
 {
@@ -19,10 +19,11 @@ class CrossProcessMutex
 
     std::string m_name; // lock name
     HANDLE m_handle;
+
 public:
     CrossProcessMutex(const std::string& name)
-        :m_handle(NULL),
-        m_name("Global\\" + name)
+        : m_handle(NULL),
+          m_name("Global\\" + name)
     {
     }
 
@@ -32,7 +33,7 @@ public:
     bool Acquire(bool wait)
     {
         assert(m_handle == NULL);
-        m_handle = ::CreateMutexA(NULL/*security attr*/, FALSE/*bInitialOwner*/, m_name.c_str());
+        m_handle = ::CreateMutexA(NULL /*security attr*/, FALSE /*bInitialOwner*/, m_name.c_str());
         if (m_handle == NULL)
         {
             return false;
@@ -66,7 +67,7 @@ public:
     }
 };
 
-#else        // --- Linux version
+#else // --- Linux version
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -83,9 +84,9 @@ class CrossProcessMutex
     CrossProcessMutex(const CrossProcessMutex&);
     void operator=(const CrossProcessMutex&);
 
-    int m_fd; // file descriptor
+    int m_fd;               // file descriptor
     std::string m_fileName; // lock file name
-    struct flock m_lock; // fnctl lock structure
+    struct flock m_lock;    // fnctl lock structure
 
     static void noOpAlarmHandler(int /*signum*/)
     {
@@ -104,8 +105,8 @@ class CrossProcessMutex
 
 public:
     CrossProcessMutex(const std::string& name)
-        :m_fd(-1),
-        m_fileName("/var/lock/" + name)
+        : m_fd(-1),
+          m_fileName("/var/lock/" + name)
     {
     }
 
@@ -115,10 +116,12 @@ public:
     bool Acquire(bool wait)
     {
         assert(m_fd == -1);
-        for (;;) {
+        for (;;)
+        {
             // opening a lock file
             int fd = open(m_fileName.c_str(), O_WRONLY | O_CREAT, 0666);
-            if (fd < 0) {
+            if (fd < 0)
+            {
                 return false;
             }
             // locking it with the fcntl API
@@ -128,13 +131,15 @@ public:
             // As a workaround, using alarm() for interupting fcntl if it waits more than 1 second
             setupTimeout(1);
             int r = fcntl(fd, wait ? F_SETLKW : F_SETLK, &m_lock);
-            if (errno == EINTR) {
+            if (errno == EINTR)
+            {
                 sleep(1);
                 // retrying in the case of signal or timeout
                 close(fd);
                 continue;
             }
-            if (r != 0) {
+            if (r != 0)
+            {
                 // acquire failed
                 close(fd);
                 return false;
@@ -146,13 +151,14 @@ public:
             fstat(fd, &before);
             if (stat(m_fileName.c_str(), &after) != 0 || before.st_ino != after.st_ino)
             {
-                // we have a race with 'unlink' call in Release() 
+                // we have a race with 'unlink' call in Release()
                 // our lock is held to the previous instance of the file;
                 // this is not a problem, we just need to retry locking the new file
                 close(fd);
                 continue;
             }
-            else {
+            else
+            {
                 // lock acquired successfully
                 m_fd = fd;
                 return true;
@@ -167,7 +173,7 @@ public:
         // removing file
         unlink(m_fileName.c_str());
         // Note: file is intentionally removed *before* releasing the lock
-        // to ensure that locked file isn't deleted by the non-owner of the lock  
+        // to ensure that locked file isn't deleted by the non-owner of the lock
         m_lock.l_type = F_UNLCK;
         // Now removing the lock and closing the file descriptor
         // waiting processes will be notified

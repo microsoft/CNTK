@@ -84,7 +84,7 @@ public:
 protected:
     // Constructor with a parent pointer. NOTE: this MUST be used with care.
     // Parent lifetime must be longer than ConfigValue lifetime
-    ConfigValue(const std::string & val, const std::string & name, const ConfigParameters* parent)
+    ConfigValue(const std::string& val, const std::string& name, const ConfigParameters* parent)
         : std::string(val)
     {
         m_configName = name;
@@ -113,8 +113,8 @@ public:
     {
     }
 
-    // it auto-casts to the common types
-    // Note: This is meant to read out a parameter once to assign it, instead of over again.
+// it auto-casts to the common types
+// Note: This is meant to read out a parameter once to assign it, instead of over again.
 #if 0
     operator std::string() const
     {
@@ -122,7 +122,7 @@ public:
     } // TODO: does not seem to work
 #endif
 
-    operator const char *() const
+    operator const char*() const
     {
         return c_str();
     }
@@ -257,7 +257,8 @@ public:
         char* ep;
 
         uint64_t value = _strtoui64(c_str(), &ep, 10);
-        if (empty() || *ep != 0) {
+        if (empty() || *ep != 0)
+        {
             RuntimeError("ConfigValue (uint64_t): invalid input string '%s'", c_str());
         }
 
@@ -366,7 +367,8 @@ public:
     {
         const auto len = str.length();
         // start is outside (or rather, at end of string): no brace here
-        if (tokenStart >= len) {
+        if (tokenStart >= len)
+        {
             return npos;
         }
 
@@ -375,7 +377,7 @@ public:
         // close braces and quote
         static const std::string closingBraces = CLOSINGBRACES;
 
-        const auto charsToLookFor = closingBraces + openBraces;       // all chars we match for
+        const auto charsToLookFor = closingBraces + openBraces; // all chars we match for
 
         // get brace index for first character of input string
         const auto braceFound = openBraces.find(str[tokenStart]);
@@ -383,22 +385,22 @@ public:
         if (braceFound == npos)
             return npos;
         // string begins with a brace--find the closing brace, while correctly handling nested braces
-        std::string braceStack;                                 // nesting stack; .back() is closing symbol for inner-most brace
-        braceStack.push_back(closingBraces[braceFound]);        // closing symbol for current
+        std::string braceStack;                          // nesting stack; .back() is closing symbol for inner-most brace
+        braceStack.push_back(closingBraces[braceFound]); // closing symbol for current
         // search for end brace or other nested layers of this brace type
         for (auto current = tokenStart; current + 1 < len;)
         {
             // look for closing brace and also for another opening brace
             // Inside strings we only accept the closing quote, and ignore any braces inside.
             current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1); //
-            if (current == string::npos)                        // none found: done or error
+            if (current == string::npos)                                                                // none found: done or error
                 break;
             char brace = str[current];
             // found the expected closing brace?
             if (brace == braceStack.back())
             {
-                braceStack.pop_back();                          // yes: pop up and continue (or stop if stack is empty)
-                if (braceStack.empty())                         // fully closed: done
+                braceStack.pop_back();  // yes: pop up and continue (or stop if stack is empty)
+                if (braceStack.empty()) // fully closed: done
                     return current;
             }
             // or any other closing brace? That's an error.
@@ -407,8 +409,8 @@ public:
             // found another opening brace, push it on the stack
             else
             {
-                const auto braceFound = openBraces.find(brace);     // index of brace
-                braceStack.push_back(closingBraces[braceFound]);    // closing symbol for current
+                const auto braceFound = openBraces.find(brace);  // index of brace
+                braceStack.push_back(closingBraces[braceFound]); // closing symbol for current
             }
         }
         // hit end before everything was closed: error
@@ -448,7 +450,7 @@ public:
     void Parse(const std::string& stringParse, std::string::size_type pos = 0)
     {
         // set of record separator characters
-        std::string seps = ",\r\n";     // default separators
+        std::string seps = ",\r\n"; // default separators
 
         // and one extra caller-specified one (typically ';'). Note that this gets temporarily changed
         // inside content level, see below.
@@ -495,7 +497,7 @@ public:
             if (braceEndFound != npos)
             {
                 // consume one level of braces right here, enter "content level" mode
-                if (!contentLevel && tokenStart + 1 < totalLength/*[fseide] why is this test necessary?*/)
+                if (!contentLevel && tokenStart + 1 < totalLength /*[fseide] why is this test necessary?*/)
                 {
                     // consume the opening brace
                     tokenStart++;
@@ -507,15 +509,13 @@ public:
                     // (12:45:23:46)
                     // However if you are using strings, and one of those strings contains a ‘:’, you might want to change the separator to something else:
                     // (;this;is;a;path:;c:\mydir\stuff)
-                    // 
+                    //
                     // This will fail for
                     // (..\dirname,something else)
                     // Hence there is an ugly fix for it below. This will go away when we replace all configuration parsing by BrainScript.
                     const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
 
-                    if (customSeperators.find(stringParse[tokenStart]) != npos
-                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0
-                        && stringParse.substr(tokenStart).find("./") != 0 && stringParse.substr(tokenStart).find("\\\\") != 0         // [fseide] otherwise this will nuke leading . or .. or \\ in a pathname... Aargh!
+                    if (customSeperators.find(stringParse[tokenStart]) != npos && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0 && stringParse.substr(tokenStart).find("\\\\") != 0 // [fseide] otherwise this will nuke leading . or .. or \\ in a pathname... Aargh!
                         )
                     {
                         char separator = stringParse[tokenStart];
@@ -581,7 +581,8 @@ public:
                     // use the length of the string as the boundary
                     tokenEnd = braceEnd;
 
-                    if (tokenStart >= totalLength) {
+                    if (tokenStart >= totalLength)
+                    {
                         // if nothing left, we are done
                         break;
                     }
@@ -628,7 +629,7 @@ public:
     //      If there is no comment, simply return the original 'configString'
     //      If there is a comment, remove the part of 'configString' corresponding to the comment
     //      Note that midline comments need to be preceded by whitespace, otherwise they are not treated as comments.
-    static std::string StripComments(const std::string &configLine)
+    static std::string StripComments(const std::string& configLine)
     {
         std::string::size_type pos = configLine.find_first_not_of(" \t");
 
@@ -693,7 +694,7 @@ public:
 // }
 // void A(const ConfigParameters& config) {ConfigParameters subkey1 = config("a"); /* use the config params */ B(subkey);}
 // void B(const ConfigParameters& config) {ConfigParameters subkey2 = config("b"); /* use the config params */}
-class ConfigParameters: public ConfigParser, public ConfigDictionary
+class ConfigParameters : public ConfigParser, public ConfigDictionary
 {
     // WARNING: the parent pointer use requires parent lifetimes be longer than or equal to children.
     const ConfigParameters* m_parent;
@@ -746,13 +747,21 @@ public:
 
 private:
     // hide new so only stack allocated   --TODO: Why do we care?
-    void * operator new(size_t /*size*/);
-public:
+    void* operator new(size_t /*size*/);
 
+public:
     // used as default argument to operator(id, default) to retrieve ConfigParameters
-    static const ConfigParameters & Record() { static ConfigParameters emptyParameters; return emptyParameters; }
+    static const ConfigParameters& Record()
+    {
+        static ConfigParameters emptyParameters;
+        return emptyParameters;
+    }
     // to retrieve an array, pass e.g. Array(floatargvector()) as the default value
-    template<class V> static const V & Array(const V & vec) { return vec; }
+    template <class V>
+    static const V& Array(const V& vec)
+    {
+        return vec;
+    }
 
     // get the names of all members in this record (but not including parent scopes)
     vector<wstring> GetMemberIds() const
@@ -766,8 +775,14 @@ public:
         return ids;
     }
 
-    bool CanBeConfigRecord(const wstring & /*id*/) const { return true; }
-    bool CanBeString(const wstring & /*id*/) const { return true; }
+    bool CanBeConfigRecord(const wstring& /*id*/) const
+    {
+        return true;
+    }
+    bool CanBeString(const wstring& /*id*/) const
+    {
+        return true;
+    }
 
 public:
     // explicit copy function. Only to be used when a copy must be made.
@@ -840,7 +855,7 @@ public:
             if (stringParse[tokenStart] == '"')
             {
                 tokenStart++;
-                substrSize -= 2;    // take out the quotes
+                substrSize -= 2; // take out the quotes
             }
         }
 
@@ -921,7 +936,10 @@ public:
     {
         return (find(name) != end());
     }
-    bool ExistsCurrent(const wchar_t * name) const { return ExistsCurrent(string(name, name + wcslen(name))); }
+    bool ExistsCurrent(const wchar_t* name) const
+    {
+        return ExistsCurrent(string(name, name + wcslen(name)));
+    }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
@@ -953,20 +971,20 @@ public:
     }
 
     // version for defaults with types
-    template<typename Type>
-    Type operator()(const wchar_t * name,
-                    const Type & defaultValue) const
+    template <typename Type>
+    Type operator()(const wchar_t* name,
+                    const Type& defaultValue) const
     {
         // find the value
         // TODO: unify with the Find() function below
-        for (auto * dict = this; dict; dict = dict->m_parent)
+        for (auto* dict = this; dict; dict = dict->m_parent)
         {
             auto iter = dict->find(string(name, name + wcslen(name)));
             if (iter != dict->end())
             {
                 if (iter->second == "default")
-                    break;  // use the default value
-                return (Type)iter->second;
+                    break; // use the default value
+                return (Type) iter->second;
             }
         }
         // we get here if no dict in the chain contains the entry, or if the entry's string value says "default"
@@ -1166,7 +1184,7 @@ public:
         {
             return m_configName.substr(lastColon + 1);
         }
-        return std::string();   // empty string
+        return std::string(); // empty string
     }
 
     static std::string ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config);
@@ -1183,7 +1201,8 @@ public:
 
     void dumpWithResolvedVariables() const
     {
-        for (auto iter = begin(); iter != end(); iter++) {
+        for (auto iter = begin(); iter != end(); iter++)
+        {
             fprintf(stderr, "configparameters: %s:%s=%s\n",
                     m_configName.c_str(), iter->first.c_str(), ResolveVariables(((std::string) iter->second)).c_str());
         }
@@ -1203,7 +1222,6 @@ public:
         unparse += "]";
         return ConfigValue(unparse, m_configName, m_parent);
     }
-
 };
 
 class ConfigArray : public ConfigParser, public std::vector<ConfigValue>
@@ -1343,7 +1361,7 @@ private:
 };
 
 // ConfigParamList - used for parameter lists, disables * handling and set default separator to ','
-class ConfigParamList: public ConfigArray
+class ConfigParamList : public ConfigArray
 {
 public:
     // construct an array from a ConfigValue, propogate the configName
@@ -1364,17 +1382,17 @@ public:
 };
 
 // get config sections that define files (used for readers)
-template<class ConfigRecordType>
+template <class ConfigRecordType>
 void GetFileConfigNames(const ConfigRecordType& readerConfig,
                         std::vector<std::wstring>& features,
                         std::vector<std::wstring>& labels);
-template<class ConfigRecordType>
+template <class ConfigRecordType>
 void FindConfigNames(const ConfigRecordType& config, std::string key,
                      std::vector<std::wstring>& names);
 
 // Version of argument vectors that preparse everything instead of parse on demand
-template<typename T>
-class argvector: public std::vector<T>
+template <typename T>
+class argvector : public std::vector<T>
 {
     typedef std::vector<T> B;
     using B::clear;
@@ -1386,16 +1404,22 @@ class argvector: public std::vector<T>
     }
 
     // convert wstring toks2[0] to T val and check type
-    template<typename INT>
+    template <typename INT>
     static void parseint(const std::wstring& in, INT& val)
     {
         double dval = msra::strfun::todouble(in);
-        val = (INT)dval;
+        val = (INT) dval;
         if (val != dval)
             RuntimeError("argvector: invalid arg value");
     }
-    static void parse(const std::wstring& in, size_t& val) { parseint(in, val); }
-    static void parse(const std::wstring& in, int& val) { parseint(in, val); }
+    static void parse(const std::wstring& in, size_t& val)
+    {
+        parseint(in, val);
+    }
+    static void parse(const std::wstring& in, int& val)
+    {
+        parseint(in, val);
+    }
     static void parse(const std::wstring& in, std::wstring& val)
     {
         val = in;
@@ -1411,7 +1435,7 @@ public:
 
         // comment the following argument for current stringargvector need to be empty.[v-xieche]
         // if (toks.empty()) RuntimeError ("argvector: arg must not be empty");
-        foreach_index(i, toks)
+        foreach_index (i, toks)
         {
             // split off repeat factor
             std::vector<std::wstring> toks2 = msra::strfun::split(toks[i], L"*");
@@ -1424,7 +1448,8 @@ public:
             // repeat factor
             int rep = (toks2.size() > 1) ? msra::strfun::toint(toks2[1]) : 1;
 
-            if (rep < 1) {
+            if (rep < 1)
+            {
                 RuntimeError("argvector: invalid repeat factor");
             }
 
@@ -1449,7 +1474,7 @@ public:
     argvector(const ConfigArray& configArray)
     {
         reserve(configArray.size());
-        foreach_index(i, configArray)
+        foreach_index (i, configArray)
         {
             T val = configArray[i];
             push_back(val);
@@ -1457,12 +1482,16 @@ public:
     }
 
     // constructor from ConfigValue to convert from config array to constant array
-    argvector(const ConfigValue& configValue) : argvector((ConfigArray)configValue)
-    { }
+    argvector(const ConfigValue& configValue)
+        : argvector((ConfigArray) configValue)
+    {
+    }
 
     // constructor from std::vector
-    argvector(const std::vector<T> configVector) : std::vector<T>(configVector)
-    { }
+    argvector(const std::vector<T> configVector)
+        : std::vector<T>(configVector)
+    {
+    }
 
     // operator[] repeats last value infinitely
     T operator[](size_t i) const
@@ -1509,5 +1538,4 @@ public:
 typedef argvector<int> intargvector;
 typedef argvector<float> floatargvector;
 typedef argvector<std::wstring> stringargvector;
-
-}}}
+} } }

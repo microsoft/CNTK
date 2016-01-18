@@ -15,7 +15,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class ElemType>
+template <class ElemType>
 class SparsePCReader : public IDataReader<ElemType>
 {
 private:
@@ -49,21 +49,38 @@ private:
     std::map<LabelType, LabelIdType> m_mapLabelToId;
 
 public:
-    SparsePCReader() : m_pMBLayout(make_shared<MBLayout>()) {};
+    SparsePCReader()
+        : m_pMBLayout(make_shared<MBLayout>()){};
     virtual ~SparsePCReader();
     virtual void Destroy();
-    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
-    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    template <class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType&);
+    virtual void Init(const ConfigParameters& config) override
+    {
+        InitFromConfig(config);
+    }
+    virtual void Init(const ScriptableObjects::IConfigRecord& config) override
+    {
+        InitFromConfig(config);
+    }
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t GetNumParallelSequences() { return m_pMBLayout->GetNumParallelSequences(); }
-    void SetNumParallelSequences(const size_t) { };
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); }
+    size_t GetNumParallelSequences()
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    void SetNumParallelSequences(const size_t){};
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    {
+        pMBLayout->CopyFrom(m_pMBLayout);
+    }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/) { RuntimeError("GetData not supported in SparsePCReader"); };
+    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
+    {
+        RuntimeError("GetData not supported in SparsePCReader");
+    };
     virtual bool DataEnd(EndDataType endDataType);
 };
-}}}
+} } }

@@ -19,20 +19,20 @@ using namespace Microsoft::MSR::CNTK;
 template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::SetState(int value, ParseState m_current_state, ParseState next_state)
 {
-    DWORD ul = (DWORD)next_state;
-    int range_shift = ((int)m_current_state) << 8;
-    m_stateTable[range_shift+value] = ul;
+    DWORD ul = (DWORD) next_state;
+    int range_shift = ((int) m_current_state) << 8;
+    m_stateTable[range_shift + value] = ul;
 }
 
 // SetStateRange - set states transitions for a range of values
 template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState m_current_state, ParseState next_state)
 {
-    DWORD ul = (DWORD)next_state;
-    int range_shift = ((int)m_current_state) << 8;
+    DWORD ul = (DWORD) next_state;
+    int range_shift = ((int) m_current_state) << 8;
     for (int value = value1; value <= value2; value++)
     {
-        m_stateTable[range_shift+value] = ul;
+        m_stateTable[range_shift + value] = ul;
     }
 }
 
@@ -45,7 +45,7 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     // STATE = WHITESPACE
     //=========================
 
-    SetStateRange(0,255, Whitespace, Label);
+    SetStateRange(0, 255, Whitespace, Label);
     SetStateRange('0', '9', Whitespace, WholeNumber);
     SetState('-', Whitespace, Sign);
     SetState('+', Whitespace, Sign);
@@ -60,8 +60,8 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     // STATE = NEGATIVE_SIGN
     //=========================
 
-    SetStateRange( 0, 255, Sign, Label);
-    SetStateRange( '0', '9', Sign, WholeNumber);
+    SetStateRange(0, 255, Sign, Label);
+    SetStateRange('0', '9', Sign, WholeNumber);
     // whitespace
     SetState(' ', Sign, Whitespace);
     SetState('\t', Sign, Whitespace);
@@ -72,8 +72,8 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     // STATE = NUMBER
     //=========================
 
-    SetStateRange( 0, 255, WholeNumber, Label);
-    SetStateRange( '0', '9', WholeNumber, WholeNumber);
+    SetStateRange(0, 255, WholeNumber, Label);
+    SetStateRange('0', '9', WholeNumber, WholeNumber);
     SetState('.', WholeNumber, Period);
     SetState('e', WholeNumber, TheLetterE);
     SetState('E', WholeNumber, TheLetterE);
@@ -154,14 +154,13 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     // STATE = END_OF_LINE
     //=========================
     SetStateRange(0, 255, EndOfLine, Label);
-    SetStateRange( '0', '9', EndOfLine, WholeNumber);
-    SetState( '-', EndOfLine, Sign);
-    SetState( '\n', EndOfLine, EndOfLine);
+    SetStateRange('0', '9', EndOfLine, WholeNumber);
+    SetState('-', EndOfLine, Sign);
+    SetState('\n', EndOfLine, EndOfLine);
     // whitespace
     SetState(' ', EndOfLine, Whitespace);
     SetState('\t', EndOfLine, Whitespace);
     SetState('\r', EndOfLine, Whitespace);
-
 
     //=========================
     // STATE = LABEL
@@ -178,7 +177,7 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     // STATE = LINE_COUNT_EOL
     //=========================
     SetStateRange(0, 255, LineCountEOL, LineCountOther);
-    SetState( '\n', LineCountEOL, LineCountEOL);
+    SetState('\n', LineCountEOL, LineCountEOL);
 
     //=========================
     // STATE = LINE_COUNT_OTHER
@@ -186,7 +185,6 @@ void SequenceParser<NumType, LabelType>::SetupStateTables()
     SetStateRange(0, 255, LineCountOther, LineCountOther);
     SetState('\n', LineCountOther, LineCountEOL);
 }
-
 
 // reset all line state variables
 template <typename NumType, typename LabelType>
@@ -217,7 +215,7 @@ template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::PrepareStartPosition(size_t position)
 {
     m_current_state = Whitespace;
-    m_byteCounter = position;  // must come before PrepareStartLine...
+    m_byteCounter = position; // must come before PrepareStartLine...
     m_bufferStart = position;
 
     // prepare state machine for new number and new line
@@ -260,10 +258,10 @@ template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::DoneWithLabel()
 {
     // if we haven't set the max yet, use the current byte Counter
-    if (m_spaceDelimitedMax <= m_spaceDelimitedStart) 
+    if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
     {
-        std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+        std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
         m_labelsConvertedThisLine++;
         m_elementsConvertedThisLine++;
         m_lastLabelIsString = true;
@@ -281,7 +279,7 @@ void SequenceParser<NumType, LabelType>::DoneWithValue()
         NumType FinalResult = 0;
         if (m_current_state == Exponent)
         {
-            FinalResult = (NumType)(m_partialResult*pow(10.0,m_exponentMultiplier * m_builtUpNumber));
+            FinalResult = (NumType)(m_partialResult * pow(10.0, m_exponentMultiplier * m_builtUpNumber));
         }
         else if (m_divider != 0)
         {
@@ -289,10 +287,10 @@ void SequenceParser<NumType, LabelType>::DoneWithValue()
         }
         else
         {
-            FinalResult = (NumType)m_builtUpNumber;
+            FinalResult = (NumType) m_builtUpNumber;
         }
 
-        FinalResult = (NumType)(FinalResult*m_wholeNumberMultiplier);
+        FinalResult = (NumType)(FinalResult * m_wholeNumberMultiplier);
 
         // TODO: In sequence reader we probably don't need to store numbers in labels (we'll see)
         // if it's a label, store in label location instead of number location
@@ -318,7 +316,7 @@ void SequenceParser<NumType, LabelType>::DoneWithValue()
 template <typename NumType, typename LabelType>
 void SequenceParser<NumType, LabelType>::StoreLabel(NumType value)
 {
-    m_labels->push_back((LabelType)value);
+    m_labels->push_back((LabelType) value);
     m_totalNumbersConverted++;
     m_numbersConvertedThisLine++;
     m_elementsConvertedThisLine++;
@@ -333,7 +331,7 @@ void SequenceParser<NumType, LabelType>::StoreLastLabel()
     assert(!m_lastLabelIsString); // file format error, last label was a string...
     NumType value = m_numbers->back();
     m_numbers->pop_back();
-    m_labels->push_back((LabelType)value);
+    m_labels->push_back((LabelType) value);
 }
 
 // GetFilePosition - Get the current file position in the text file
@@ -360,7 +358,7 @@ void SequenceParser<NumType, LabelType>::SetFilePosition(int64_t position)
 
     // setup state machine to start at this position
     PrepareStartPosition(position);
-    
+
     // read in the first buffer of data from this position,  first buffer is expected to be read after a reposition
     UpdateBuffer();
 
@@ -373,10 +371,10 @@ template <typename NumType, typename LabelType>
 bool SequenceParser<NumType, LabelType>::HasMoreData()
 {
     long long byteCounter = m_byteCounter;
-    size_t bufferIndex = m_byteCounter-m_bufferStart;
+    size_t bufferIndex = m_byteCounter - m_bufferStart;
 
     // test without moving parser state
-    for (;byteCounter < m_fileSize; byteCounter++, bufferIndex++)
+    for (; byteCounter < m_fileSize; byteCounter++, bufferIndex++)
     {
         // if we reach the end of the buffer, just assume we have more data
         // won't be right 100% of the time, but close enough
@@ -384,7 +382,7 @@ bool SequenceParser<NumType, LabelType>::HasMoreData()
             return true;
 
         char ch = m_fileBuffer[bufferIndex];
-        ParseState nextState = (ParseState)m_stateTable[(Whitespace<<8)+ch];
+        ParseState nextState = (ParseState) m_stateTable[(Whitespace << 8) + ch];
         if (!(nextState == Whitespace || nextState == EndOfLine))
             return true;
     }
@@ -397,17 +395,17 @@ template <typename NumType, typename LabelType>
 size_t SequenceParser<NumType, LabelType>::UpdateBuffer()
 {
     // state machine might want to look back this far, so copy to beginning
-    size_t saveBytes = m_byteCounter-m_spaceDelimitedStart;
+    size_t saveBytes = m_byteCounter - m_spaceDelimitedStart;
     assert(saveBytes < m_bufferSize);
     if (saveBytes)
     {
-        memcpy_s(m_fileBuffer, m_bufferSize, &m_fileBuffer[m_byteCounter-m_bufferStart-saveBytes], saveBytes);
-        m_bufferStart = m_byteCounter-saveBytes;
+        memcpy_s(m_fileBuffer, m_bufferSize, &m_fileBuffer[m_byteCounter - m_bufferStart - saveBytes], saveBytes);
+        m_bufferStart = m_byteCounter - saveBytes;
     }
 
     // read the next block
-    size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
-    size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
+    size_t bytesToRead = min(m_bufferSize, m_fileSize - m_bufferStart) - saveBytes;
+    size_t bytesRead = fread(m_fileBuffer + saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
         RuntimeError("SequenceParser::UpdateBuffer - error reading file");
     return bytesRead;
@@ -447,7 +445,7 @@ void SequenceParser<float, std::string>::StoreLabel(float /*finalResult*/)
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
         m_spaceDelimitedMax = m_byteCounter;
-    std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+    std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
     if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
         m_beginSequence = true;
     if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
@@ -463,7 +461,7 @@ template <>
 void SequenceParser<float, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
-        StoreLabel(0);  // store the string label
+        StoreLabel(0); // store the string label
     PrepareStartNumber();
 }
 
@@ -490,8 +488,8 @@ void SequenceParser<double, std::string>::StoreLabel(double /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
-        m_spaceDelimitedMax = m_byteCounter; 
-    std::string label((LPCSTR)&m_fileBuffer[m_spaceDelimitedStart-m_bufferStart], m_spaceDelimitedMax-m_spaceDelimitedStart);
+        m_spaceDelimitedMax = m_byteCounter;
+    std::string label((LPCSTR) &m_fileBuffer[m_spaceDelimitedStart - m_bufferStart], m_spaceDelimitedMax - m_spaceDelimitedStart);
     if (!m_beginSequence && !_stricmp(label.c_str(), m_beginTag.c_str()))
         m_beginSequence = true;
     if (!m_endSequence && !_stricmp(label.c_str(), m_endTag.c_str()))
@@ -507,7 +505,7 @@ template <>
 void SequenceParser<double, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
-        StoreLabel(0);  // store the string label
+        StoreLabel(0); // store the string label
     PrepareStartNumber();
 }
 
@@ -527,11 +525,11 @@ void SequenceParser<double, std::string>::StoreLastLabel()
 }
 
 #ifdef STANDALONE
-int wmain(int argc, wchar_t* argv[])
+int wmain(int argc, wchar_t *argv[])
 {
     SequenceParser<double, int> parser;
     std::vector<double> values;
-    values.reserve(784000*6);
+    values.reserve(784000 * 6);
     std::vector<int> labels;
     labels.reserve(60000);
     parser.ParseInit(L"c:\\speech\\mnist\\mnist_train.txt", LabelFirst);
@@ -541,12 +539,11 @@ int wmain(int argc, wchar_t* argv[])
     {
         int recordsRead = parser.Parse(10000, &values, &labels);
         if (recordsRead < 10000)
-            parser.SetFilePosition(0);  // go around again
+            parser.SetFilePosition(0); // go around again
         records += recordsRead;
         values.clear();
         labels.clear();
-    }
-    while (records < 150000);
+    } while (records < 150000);
     return records;
 }
 #endif
@@ -560,7 +557,7 @@ template class SequenceParser<double, double>;
 template class SequenceParser<double, std::string>;
 
 template <typename NumType, typename LabelType>
-void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn/*="<s>"*/, std::string endSequenceIn/*="</s>"*/, std::string beginSequenceOut/*="O"*/, std::string endSequenceOut/*="O"*/)
+void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn /*="<s>"*/, std::string endSequenceIn /*="</s>"*/, std::string beginSequenceOut /*="O"*/, std::string endSequenceOut /*="O"*/)
 {
     ::LMSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
 }
@@ -568,10 +565,10 @@ void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size
 template <typename NumType, typename LabelType>
 long LMBatchSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<NumType> *numbers, std::vector<SequencePosition> *seqPos)
 {
-    long linecnt; 
+    long linecnt;
     linecnt = ::LMSequenceParser<NumType, LabelType>::Parse(recordsRequested, labels, numbers, seqPos);
 
-    size_t prvat = 0;    
+    size_t prvat = 0;
     size_t i = 0;
     for (auto ptr = seqPos->begin(); ptr != seqPos->end(); ptr++, i++)
     {
@@ -580,13 +577,13 @@ long LMBatchSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         stinfo.sLen = iln;
         stinfo.sBegin = prvat;
         stinfo.sEnd = ptr->labelPos;
-        mSentenceIndex2SentenceInfo.push_back(stinfo); 
+        mSentenceIndex2SentenceInfo.push_back(stinfo);
 
         prvat = ptr->labelPos;
     }
 
     assert(mSentenceIndex2SentenceInfo.size() == linecnt);
-    return linecnt; 
+    return linecnt;
 }
 
 template class LMBatchSequenceParser<float, std::string>;

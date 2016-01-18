@@ -5,7 +5,6 @@
 // </copyright>
 //
 
-
 #include "stdafx.h"
 #include "LUSequenceParser.h"
 #include <stdexcept>
@@ -35,7 +34,6 @@ LUSequenceParser<NumType, LabelType>::~LUSequenceParser()
         fclose(m_pFile);
 }
 
-
 // instantiate UCI parsers for supported types
 template class LUSequenceParser<float, int>;
 template class LUSequenceParser<float, float>;
@@ -46,8 +44,8 @@ template class LUSequenceParser<double, double>;
 template class LUSequenceParser<double, std::string>;
 template class LUSequenceParser<double, std::wstring>;
 
-template<class NumType, class LabelType>
-long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool canMultiplePassData)
+template <class NumType, class LabelType>
+long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long> &inputlabel2id, const map<wstring, long> &outputlabel2id, bool canMultiplePassData)
 {
     fprintf(stderr, "BatchLUSequenceParser: Parsing input data...\n");
 
@@ -56,7 +54,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
     m_labels = labels;
 
     long recordCount = 0;
-    long orgRecordCount = (long)labels->size();
+    long orgRecordCount = (long) labels->size();
     long lineCount = 0;
     long tokenCount = 0;
     bool bAtEOS = false; /// whether the reader is at the end of sentence position
@@ -76,7 +74,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
                 continue;
             }
             else
-                break; 
+                break;
         }
 
         std::vector<wstring> vstr;
@@ -120,8 +118,9 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
             labels->push_back(outputlabel2id.find(vstr[vstr.size() - 1])->second);
         input->push_back(vtmp);
         if ((vstr[vstr.size() - 1] == m_endSequenceOut ||
-            /// below is for backward support
-            vstr[0] == m_endTag) && input->size() > 0 && labels->size() > 0)
+             /// below is for backward support
+             vstr[0] == m_endTag) &&
+            input->size() > 0 && labels->size() > 0)
         {
             AddOneItem(labels, input, seqPos, lineCount, recordCount, orgRecordCount, sequencePositionLast);
             bAtEOS = true;
@@ -129,7 +128,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
 
     } // while
 
-    if (sequencePositionLast.inputPos< input->size())
+    if (sequencePositionLast.inputPos < input->size())
         AddOneItem(labels, input, seqPos, lineCount, recordCount, orgRecordCount, sequencePositionLast);
 
     int prvat = 0;
@@ -140,13 +139,13 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         stSentenceInfo stinfo;
         stinfo.sLen = iln;
         stinfo.sBegin = prvat;
-        stinfo.sEnd = (int)ptr->labelPos;
+        stinfo.sEnd = (int) ptr->labelPos;
         mSentenceIndex2SentenceInfo.push_back(stinfo);
 
-        prvat = (int)ptr->labelPos;
+        prvat = (int) ptr->labelPos;
     }
 
-    fprintf(stderr, "BatchLUSequenceParser: Parsed %ld lines with a total of %ld+%ld tokens.\n", (long)lineCount, (long)(tokenCount-lineCount)/*exclude EOS*/, (long)lineCount);
+    fprintf(stderr, "BatchLUSequenceParser: Parsed %ld lines with a total of %ld+%ld tokens.\n", (long) lineCount, (long) (tokenCount - lineCount) /*exclude EOS*/, (long) lineCount);
     return lineCount;
 }
 
@@ -154,5 +153,4 @@ template class BatchLUSequenceParser<float, std::string>;
 template class BatchLUSequenceParser<double, std::string>;
 template class BatchLUSequenceParser<float, std::wstring>;
 template class BatchLUSequenceParser<double, std::wstring>;
-
-}}}
+} } }

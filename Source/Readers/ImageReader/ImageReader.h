@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // REVIEW alexeyk: can't put it into ImageReader itself as ImageReader is a template.
 class ITransform;
 
-template<class ElemType>
+template <class ElemType>
 class ImageReader : public IDataReader<ElemType>
 {
 public:
@@ -30,16 +30,29 @@ public:
     ImageReader(ImageReader&&) = delete;
     ImageReader& operator=(ImageReader&&) = delete;
 
-    template<class ConfigRecordType> void InitFromConfig(const ConfigRecordType &);
-    virtual void Init(const ConfigParameters & config) override { InitFromConfig(config); }
+    template <class ConfigRecordType>
+    void InitFromConfig(const ConfigRecordType&);
+    virtual void Init(const ConfigParameters& config) override
+    {
+        InitFromConfig(config);
+    }
 #if 1
     // ImageReader does not follow standard ConfigParameters conventions, so it cannot be easily adapted to BrainScript.
-    virtual void Init(const ScriptableObjects::IConfigRecord & /*config*/) override { NOT_IMPLEMENTED; }
+    virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
+    {
+        NOT_IMPLEMENTED;
+    }
 #else
-    virtual void Init(const ScriptableObjects::IConfigRecord & config) override { InitFromConfig(config); }
+    virtual void Init(const ScriptableObjects::IConfigRecord& config) override
+    {
+        InitFromConfig(config);
+    }
 #endif
     void Destroy() override;
-    bool SupportsDistributedMBRead() const { return true; }
+    bool SupportsDistributedMBRead() const
+    {
+        return true;
+    }
     void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override
     {
@@ -48,14 +61,24 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
     bool DataEnd(EndDataType endDataType) override;
 
-    size_t GetNumParallelSequences() override  { return m_pMBLayout->GetNumParallelSequences(); }
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override { pMBLayout->CopyFrom(m_pMBLayout); };
+    size_t GetNumParallelSequences() override
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override
+    {
+        pMBLayout->CopyFrom(m_pMBLayout);
+    };
 
     void SetRandomSeed(unsigned int seed) override;
 
 private:
     // Mini-batch format: NCHW (default, cuDNN) or NHWC (legacy).
-    enum class DataFormat { NCHW, NHWC };
+    enum class DataFormat
+    {
+        NCHW,
+        NHWC
+    };
 
     unsigned int m_seed;
     std::mt19937 m_rng;
@@ -94,4 +117,4 @@ private:
 private:
     size_t ReadImages();
 };
-}}}
+} } }

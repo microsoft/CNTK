@@ -5,7 +5,7 @@
 // </copyright>
 //
 
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
 #include "Basics.h"
@@ -18,7 +18,7 @@
 #include "NDLNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
-#include "CPUMatrix.h"  // used for SetNumThreads()
+#include "CPUMatrix.h" // used for SetNumThreads()
 #include "SGD.h"
 #include "MPIWrapper.h"
 #include "Config.h"
@@ -55,10 +55,10 @@
 #endif
 
 // TODO: Get rid of these globals
-Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
+Microsoft::MSR::CNTK::MPIWrapper* g_mpi = nullptr;
 
 // TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the 
+// node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
 
@@ -78,8 +78,8 @@ void RedirectStdErr(wstring logpath)
     {
         RuntimeError("unexpected failure to redirect stderr to log file");
     }
-    setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
-    static auto fKept = f;                  // keep it around (until it gets changed)
+    setvbuf(stderr, NULL, _IONBF, 16384); // unbuffer it
+    static auto fKept = f;                // keep it around (until it gets changed)
 }
 
 std::string WCharToString(const wchar_t* wst)
@@ -95,12 +95,12 @@ void DumpNodeInfo(const ConfigParameters& config)
 {
     wstring modelPath = config(L"modelPath");
     wstring nodeName = config(L"nodeName", L"__AllNodes__");
-	wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
+    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
 
-    ComputationNetwork net(-1);  //always use CPU
+    ComputationNetwork net(-1); //always use CPU
     net.Load<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
@@ -121,7 +121,7 @@ static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConf
         return;
     }
 
-    // if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
+    // if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section
     ConfigArray actions = commandConfig(L"action");
     for (size_t i = 0; i < actions.size(); i++)
     {
@@ -129,7 +129,7 @@ static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConf
         {
             ConfigParameters sgd = ConfigParameters(commandConfig(L"SGD"));
             ConfigParameters reader = ConfigParameters(commandConfig(L"reader"));
-            // reader and SGD sections are two must-have sections in train/trainRNN 
+            // reader and SGD sections are two must-have sections in train/trainRNN
             if (reader.ExistsCurrent(L"Truncated") && !sgd.ExistsCurrent(L"Truncated"))
             {
                 InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
@@ -155,7 +155,7 @@ void DoCommands(const ConfigParameters& config)
     int numCPUThreads = config(L"numCPUThreads", "0");
     numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
 
-    if (numCPUThreads>0)
+    if (numCPUThreads > 0)
     {
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
@@ -176,7 +176,7 @@ void DoCommands(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train"            || action[j] == "trainRNN"
+            if (action[j] == "train" || action[j] == "trainRNN"
 #if 0
                 || action[j] == "trainSequence" || action[j] == "trainSequenceRNN"
 #endif
@@ -195,7 +195,7 @@ void DoCommands(const ConfigParameters& config)
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
     {
-        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
     }
 
     size_t fullEpochsOffset = 0;
@@ -209,7 +209,7 @@ void DoCommands(const ConfigParameters& config)
 
         if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
         {
-            ProgressTracing::SetStepOffset(fullEpochsOffset);   // this is the epoch number that SGD will log relative to
+            ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
 
         // determine the action to perform, and do it
@@ -312,7 +312,7 @@ void DoCommands(const ConfigParameters& config)
 
 std::string TimeDateStamp()
 {
-#if 0   // "safe" version for Windows, not needed it seems
+#if 0 // "safe" version for Windows, not needed it seems
     __time64_t localtime;
 
     _time64(&localtime);// get current time and date
@@ -333,18 +333,18 @@ void PrintBuiltInfo()
     fprintf(stderr, "Build info: \n\n");
     fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
-#ifdef _BUILDTYPE_ 
+#ifdef _BUILDTYPE_
     fprintf(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
-#endif 
+#endif
 #ifdef _MATHLIB_
     fprintf(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
     fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
-#endif 
+#endif
 #ifdef _CUB_PATH_
     fprintf(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
-#endif 
+#endif
 #ifdef _CUDNN_PATH_
     fprintf(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
 #endif
@@ -352,9 +352,9 @@ void PrintBuiltInfo()
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
     fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
 #endif
-#ifdef _BUILDER_ 
+#ifdef _BUILDER_
     fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-#endif 
+#endif
 #ifdef _BUILDPATH_
     fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
@@ -374,7 +374,7 @@ void PrintUsageInfo()
 // main() for use with BrainScript
 // ---------------------------------------------------------------------------
 
-wstring ConsumeArg(vector<wstring> & args)
+wstring ConsumeArg(vector<wstring>& args)
 {
     if (args.empty())
         InvalidArgument("Unexpected end of command line.");
@@ -382,12 +382,15 @@ wstring ConsumeArg(vector<wstring> & args)
     args.erase(args.begin());
     return arg;
 }
-template<class WHAT>
-static void Append(vector<wstring> & toWhat, const WHAT & what) { toWhat.insert(toWhat.end(), what.begin(), what.end()); }
-static wstring PathToBSStringLiteral(const wstring & path)  // quote a pathname for BS
+template <class WHAT>
+static void Append(vector<wstring>& toWhat, const WHAT& what)
+{
+    toWhat.insert(toWhat.end(), what.begin(), what.end());
+}
+static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname for BS
 {
     let hasSingleQuote = path.find(path, L'\'') != wstring::npos;
-    let hasDoubleQuote = path.find(path, L'"')  != wstring::npos;
+    let hasDoubleQuote = path.find(path, L'"') != wstring::npos;
     if (hasSingleQuote && hasDoubleQuote)
         InvalidArgument("Pathname cannot contain both single (') and double (\") quote at the same time: %ls", path.c_str());
     else if (hasSingleQuote)
@@ -401,16 +404,16 @@ extern wstring standardFunctions;
 extern wstring commonMacros;
 extern wstring computationNodes;
 
-int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & reports Win32 exceptions
+int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
-    vector<wstring> args(argv, argv+argc);
+    vector<wstring> args(argv, argv + argc);
     let exePath = ConsumeArg(args);
 
     // startup message
     // In case of a redirect of stderr, this will be printed twice, once upfront, and once again after the redirect so that it goes into the log file
     wstring startupMessage = msra::strfun::wstrprintf(L"running on %ls at %ls\n", msra::strfun::utf16(GetHostName()).c_str(), msra::strfun::utf16(TimeDateStamp()).c_str());
     startupMessage += msra::strfun::wstrprintf(L"command line: %ls", exePath.c_str());
-    for (const auto & arg : args)
+    for (const auto& arg : args)
         startupMessage += L" " + arg;
 
     fprintf(stderr, "%ls\n", startupMessage.c_str());
@@ -423,13 +426,13 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     while (!args.empty())
     {
         let option = ConsumeArg(args);
-        if (option == L"-f" || option == L"--file")                                 // -f defines source files
+        if (option == L"-f" || option == L"--file") // -f defines source files
             Append(sourceFiles, msra::strfun::split(ConsumeArg(args), L";"));
-        else if (option == L"-I")                                                   // -I declares an include search path
+        else if (option == L"-I") // -I declares an include search path
             Append(includePaths, msra::strfun::split(ConsumeArg(args), L";"));
-        else if (option == L"-D")                                                   // -D defines variables inline on the command line (which may override BS)
+        else if (option == L"-D") // -D defines variables inline on the command line (which may override BS)
             overrides.push_back(ConsumeArg(args));
-        else if (option == L"--cd")                                                 // --cd sets the working directory
+        else if (option == L"--cd") // --cd sets the working directory
             workingDir = ConsumeArg(args);
         else
             InvalidArgument("Invalid command-line option '%ls'.", option.c_str());
@@ -441,23 +444,23 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
 
     // compile the BrainScript
     wstring bs = L"[\n";
-    bs += standardFunctions + computationNodes + commonMacros + L"\n";   // start with standard macros
-    for (const auto & sourceFile : sourceFiles)
+    bs += standardFunctions + computationNodes + commonMacros + L"\n"; // start with standard macros
+    for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
     bs += L"\n]\n";
-    for (const auto & over : overrides)
+    for (const auto& over : overrides)
         bs += L"with [ " + over + L" ]\n";
 
     fprintf(stderr, "\n\nBrainScript -->\n\n%ls\n\n", bs.c_str());
 
-    let expr = BS::ParseConfigExpression(bs, move(includePaths));   // parse
-    let valp = BS::Evaluate(expr);                                  // evaluate parse into a dictionary
-    let & config = valp.AsRef<ScriptableObjects::IConfigRecord>();  // this is the dictionary
+    let expr = BS::ParseConfigExpression(bs, move(includePaths)); // parse
+    let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
+    let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
     // legacy parameters that have changed spelling
-    if (config.Find(L"DoneFile"))       // variables follow camel case (start with lower-case letters)
+    if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
-    if (config.Find(L"command"))        // spelling error, should be plural. Using 'actions' instead to match the data type.
+    if (config.Find(L"command")) // spelling error, should be plural. Using 'actions' instead to match the data type.
         InvalidArgument("Legacy spelling of 'command' no longer allowed. Use 'actions'.");
     if (config.Find(L"type"))
         InvalidArgument("Legacy name 'type' no longer allowed. Use 'precision'.");
@@ -478,7 +481,7 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
         logpath += L".log";     // TODO: why do we need to append this here?
 
         if (paralleltrain)
-            logpath += msra::strfun::wstrprintf(L"rank%d", (int)g_mpi->CurrentNodeRank());
+            logpath += msra::strfun::wstrprintf(L"rank%d", (int) g_mpi->CurrentNodeRank());
 
         RedirectStdErr(logpath);
         fprintf(stderr, "%ls\n", startupMessage.c_str());
@@ -490,15 +493,15 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     // execute the actions
     //std::string type = config(L"precision", "float");
     int numCPUThreads = config(L"numCPUThreads", 0);
-    numCPUThreads = CPUMatrix<float/*any will do*/>::SetNumThreads(numCPUThreads);
+    numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
     if (numCPUThreads > 0)
         fprintf(stderr, "Using %d CPU threads.\n", numCPUThreads);
 
     bool progressTracing = config(L"progressTracing", false);
-    size_t fullTotalMaxEpochs = 1;              // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
+    size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
     // set up progress tracing for compute cluster management
     if (progressTracing && ((g_mpi == nullptr) || g_mpi->IsMainNode()))
-        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs);   // enable tracing, using this as the total number of epochs
+        ProgressTracing::TraceTotalNumberOfSteps(fullTotalMaxEpochs); // enable tracing, using this as the total number of epochs
 
     // MAIN LOOP that executes the actions
     auto actionsVal = config[L"actions"];
@@ -507,10 +510,12 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
     //       Since this in the end behaves indistinguishable from the array loop below, we will keep it for now.
     if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
-        const ScriptableObjects::ConfigArray & actions = actionsVal;
+        const ScriptableObjects::ConfigArray& actions = actionsVal;
         for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
         {
-            actions.At(i, [](const wstring &){});  // this will evaluate and thus execute the action
+            actions.At(i, [](const wstring&)
+                       {
+                       }); // this will evaluate and thus execute the action
         }
     }
     // else action has already been executed, see comment above
@@ -533,7 +538,7 @@ int wmainWithBS(int argc, wchar_t* argv[])   // called from wmain which is a wra
 // main() for old CNTK config language
 // ---------------------------------------------------------------------------
 
-int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
+int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & repots Win32 exceptions
 {
     ConfigParameters config;
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
@@ -560,7 +565,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         for (int i = 0; i < command.size(); i++)
         {
             logpath += L"_";
-            logpath += (wstring)command[i];
+            logpath += (wstring) command[i];
         }
         logpath += L".log";
 
@@ -573,7 +578,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         RedirectStdErr(logpath);
     }
 
-    PrintBuiltInfo(); // this one goes to log file 
+    PrintBuiltInfo(); // this one goes to log file
     std::string timestamp = TimeDateStamp();
 
     //dump config info
@@ -630,7 +635,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         RuntimeError("invalid precision specified: %s", type.c_str());
     }
 
-    // still here , write a DoneFile if necessary 
+    // still here , write a DoneFile if necessary
     if (!DoneFile.empty())
     {
         FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
@@ -643,12 +648,11 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
     return EXIT_SUCCESS;
 }
 
-
 // ---------------------------------------------------------------------------
 // main wrapper that catches C++ exceptions and prints them
 // ---------------------------------------------------------------------------
 
-int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & reports Win32 exceptions
+int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     try
     {
@@ -664,13 +668,13 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
         // run from BrainScript
         return wmainWithBS(argc, argv);
     }
-    catch (const ScriptableObjects::ScriptingException &err)
+    catch (const ScriptableObjects::ScriptingException& err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();
         return EXIT_FAILURE;
     }
-    catch (const std::exception &err)
+    catch (const std::exception& err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         PrintUsageInfo();
@@ -685,23 +689,27 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 }
 
 #ifdef __WINDOWS__
-void terminate_this() { fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr); exit(EXIT_FAILURE); }
-
-int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exceptions
+void terminate_this()
 {
-    set_terminate (terminate_this); // insert a termination handler to ensure stderr gets flushed before actually terminating
+    fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr);
+    exit(EXIT_FAILURE);
+}
+
+int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 exceptions
+{
+    set_terminate(terminate_this);   // insert a termination handler to ensure stderr gets flushed before actually terminating
     _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
 
     // Note: this does not seem to work--processes with this seem to just hang instead of terminating
     __try
     {
-        return wmain1 (argc, argv);
+        return wmain1(argc, argv);
     }
-    __except (1/*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
+    __except (1 /*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
     {
-        fprintf (stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n");  // TODO: separate out these two into a separate message
-        fflush (stderr);
-        exit (EXIT_FAILURE);
+        fprintf(stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n"); // TODO: separate out these two into a separate message
+        fflush(stderr);
+        exit(EXIT_FAILURE);
     }
 }
 #endif
@@ -711,7 +719,7 @@ int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exce
 int main(int argc, char* argv[])
 {
     // TODO: change to STL containers
-    wchar_t **wargs = new wchar_t*[argc];
+    wchar_t** wargs = new wchar_t*[argc];
     for (int i = 0; i < argc; ++i)
     {
         wargs[i] = new wchar_t[strlen(argv[i]) + 1];

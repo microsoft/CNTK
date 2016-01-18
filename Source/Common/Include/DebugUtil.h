@@ -33,7 +33,8 @@ private:
 public:
     static void PrintCallStack();
 };
+}
+}
+}
 
-}}}
-
-#endif    // _DEBUGUTIL_
+#endif // _DEBUGUTIL_

@@ -19,12 +19,12 @@ void MatrixFileWriteAndRead()
 {
     CPUMatrix<float> M = CPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
     CPUMatrix<float> Mcopy(M);
-    std::wstring filename(L"c:\\temp\\M.txt");            
-    File file(filename,fileOptionsUnicode|fileOptionsReadWrite);
-    file<<M;
+    std::wstring filename(L"c:\\temp\\M.txt");
+    File file(filename, fileOptionsUnicode | fileOptionsReadWrite);
+    file << M;
     CPUMatrix<float> M1;
     file.SetPosition(0);
-    file>>M1;
+    file >> M1;
     if (!Mcopy.IsEqualTo(M1))
         fprintf(stderr, "matrix read/write doesn't pass");
 }
@@ -44,9 +44,9 @@ void TestFileAPI(const TCHAR* filename, int options)
         if (options & fileOptionsRead)
         {
             string str;
-            file.SetPosition(0);    // rewind to the beginning
+            file.SetPosition(0); // rewind to the beginning
             file.GetLine(str);
-            file.SetPosition(0);    // rewind to the beginning
+            file.SetPosition(0); // rewind to the beginning
             file >> fileTest;
             FileTest fileTest2;
             if (fileTest == fileTest2)
@@ -64,10 +64,10 @@ void TestFileAPI(const TCHAR* filename, int options)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    msra::util::command_line args (argc, argv);
+    msra::util::command_line args(argc, argv);
     int options = fileOptionsNull;
-    while (args.has (1) && args[0][0] == '-') 
-    { 
+    while (args.has(1) && args[0][0] == '-')
+    {
         const wchar_t* arg = args.shift();
         switch (arg[1])
         {
@@ -122,9 +122,9 @@ int _tmain(int argc, _TCHAR* argv[])
         options |= fileOptionsReadWrite;
         fprintf(stderr, "No read or write specified, using read/write\n");
     }
-    const wchar_t * filename = NULL;
-    for (const wchar_t * arg = args.shift(); arg; arg = args.shift()) 
-    { 
+    const wchar_t* filename = NULL;
+    for (const wchar_t* arg = args.shift(); arg; arg = args.shift())
+    {
         filename = arg;
     }
     if (filename == NULL)
@@ -137,7 +137,7 @@ exit:
     return 0;
 }
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 FileTest::FileTest()
 {
@@ -152,14 +152,14 @@ FileTest::FileTest()
     m_single = 1.23456789e-012f;
     m_double = 9.8765432109876548e-098;
     m_str = new char[80];
-    strcpy_s(m_str, 80, "sampleString");  // character string, zero terminated
+    strcpy_s(m_str, 80, "sampleString"); // character string, zero terminated
     m_wstr = new wchar_t[80];
-    wcscpy_s(m_wstr, 80, L"wideSampleString"); // wide character string, zero terminated
-    m_string.append("std:stringSampleString"); // std string
+    wcscpy_s(m_wstr, 80, L"wideSampleString");    // wide character string, zero terminated
+    m_string.append("std:stringSampleString");    // std string
     m_wstring.append(L"std:wstringSampleString"); // std wide string
-    m_vectorLong.push_back(m_int); // vector of supported type
-    m_vectorLong.push_back(m_unsigned); 
-    m_vectorLong.push_back(m_long); 
+    m_vectorLong.push_back(m_int);                // vector of supported type
+    m_vectorLong.push_back(m_unsigned);
+    m_vectorLong.push_back(m_long);
 }
 
 // compare two FileTest objects
@@ -177,14 +177,14 @@ bool FileTest::operator==(FileTest& test2)
     compare = compare && m_size_t == test2.m_size_t;
     compare = compare && m_single == test2.m_single;
     compare = compare && m_double == test2.m_double;
-    compare = compare && strcmp(m_str,test2.m_str)==0;
-    compare = compare && wcscmp(m_wstr,test2.m_wstr)==0;
+    compare = compare && strcmp(m_str, test2.m_str) == 0;
+    compare = compare && wcscmp(m_wstr, test2.m_wstr) == 0;
     compare = compare && m_string == test2.m_string;
     compare = compare && m_wstring == test2.m_wstring;
     compare = compare && m_vectorLong.size() == test2.m_vectorLong.size();
-    for(int i = 0;compare && i < m_vectorLong.size();i++)
+    for (int i = 0; compare && i < m_vectorLong.size(); i++)
     {
-        compare = compare && m_vectorLong[i] == test2.m_vectorLong[i]; 
+        compare = compare && m_vectorLong[i] == test2.m_vectorLong[i];
     }
     return compare;
 }
@@ -208,7 +208,7 @@ File& operator<<(File& stream, FileTest& test)
     stream << test.m_single << test.m_double;
     stream.WriteString(test.m_str);
     stream.WriteString(test.m_wstr);
-    stream << test.m_string << test.m_wstring; 
+    stream << test.m_string << test.m_wstring;
     stream << test.m_vectorLong;
     stream.PutMarker(fileMarkerEndSection, string("endFileTest"));
     return stream;
@@ -232,10 +232,11 @@ File& operator>>(File& stream, FileTest& test)
     test.m_wstr = new wchar_t[80];
     stream.ReadString(test.m_wstr, 80);
     stream >> test.m_string;
-    stream >> test.m_wstring; 
+    stream >> test.m_wstring;
     stream >> test.m_vectorLong;
     stream.GetMarker(fileMarkerEndSection, string("endFileTest"));
     return stream;
 }
-
-}}}
+}
+}
+}

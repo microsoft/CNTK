@@ -17,10 +17,10 @@ inline std::wstring toWStr(std::string s)
 
 inline std::string fileToStr(std::string fname)
 {
-	std::ifstream t(fname, std::ifstream::in);
-	std::stringstream buffer;
-	buffer << t.rdbuf();
-	return buffer.str();
+    std::ifstream t(fname, std::ifstream::in);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    return buffer.str();
 }
 
 inline std::string trimmed(std::string str)
@@ -34,9 +34,9 @@ inline std::string trimmed(std::string str)
     str.erase(0, found);
     found = str.find_last_not_of(" \t\n");
     if (found != string::npos)
-        str.erase(found+1);
+        str.erase(found + 1);
 
     return str;
 }
-
-}}
+}
+}

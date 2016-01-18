@@ -7,35 +7,35 @@
 
 using namespace Microsoft::MSR::CNTK;
 
-namespace Microsoft {  namespace MSR  {  namespace CNTK
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+
+struct UCIReaderFixture : ReaderFixture
 {
-    namespace Test
+    UCIReaderFixture()
+        : ReaderFixture("/Data")
     {
-        struct UCIReaderFixture : ReaderFixture
-        {
-            UCIReaderFixture() : ReaderFixture("/Data")
-            {}
-        };
-
-        BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, UCIReaderFixture)
-
-        BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
-        {
-            HelperRunReaderTest<float>(
-                testDataPath() + "/Config/UCIFastReaderSimpleDataLoop_Config.txt",
-                testDataPath() + "/Control/UCIFastReaderSimpleDataLoop_Control.txt",
-                testDataPath() + "/Control/UCIFastReaderSimpleDataLoop_Output.txt",
-                "Simple_Test",
-                "reader",
-                500,
-                250,
-                2,
-                1,
-                1,
-                0,
-                1);
-
-            BOOST_AUTO_TEST_SUITE_END()
-        }
     }
-}}}
+};
+
+BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, UCIReaderFixture)
+
+BOOST_AUTO_TEST_CASE(UCIFastReaderSimpleDataLoop)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/UCIFastReaderSimpleDataLoop_Config.txt",
+        testDataPath() + "/Control/UCIFastReaderSimpleDataLoop_Control.txt",
+        testDataPath() + "/Control/UCIFastReaderSimpleDataLoop_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+
+    BOOST_AUTO_TEST_SUITE_END()
+}
+}
+} } }

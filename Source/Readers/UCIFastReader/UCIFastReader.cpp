@@ -7,28 +7,28 @@
 //
 
 #include "stdafx.h"
-#define DATAREADER_EXPORTS  // creating the exports here
+#define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "UCIFastReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
-#include "fileutil.h"   // for fexists()
+#include "fileutil.h" // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class ElemType>
+template <class ElemType>
 size_t UCIFastReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
     //size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
     //return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
-    return mbStartSample/m_randomizeRange;
+    return mbStartSample / m_randomizeRange;
 }
 
 // ReadLine - Read a line
 // readSample - sample to read in global sample space
 // returns - true if we successfully read a record, otherwise false
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
     return false; // not used
@@ -38,7 +38,7 @@ bool UCIFastReader<ElemType>::ReadRecord(size_t /*readSample*/)
 // mbStartSample - the starting sample from which to read
 // tail - we are checking for possible remainer records to read (default false)
 // returns - true if we have more to read, false if we hit the end of the dataset
-template<class ElemType>
+template <class ElemType>
 size_t UCIFastReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 {
     assert(mbStartSample >= m_epochStartSample);
@@ -74,7 +74,7 @@ size_t UCIFastReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 // mbStartSample - the starting sample we are ensureing are good
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool endOfDataCheck)
 {
     assert(mbStartSample >= m_epochStartSample);
@@ -88,12 +88,12 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
     size_t numberToRead = RecordsToRead(mbStartSample);
 
     // check to see if we have the proper records read already
-    if (m_readNextSample >= mbStartSample+numberToRead && mbStartSample >= m_epochStartSample)
+    if (m_readNextSample >= mbStartSample + numberToRead && mbStartSample >= m_epochStartSample)
         return true;
 
     // truncate the present arrays to the location we are reading from, parser appends on these arrays
-    if (m_featureData.size() > epochSample*m_featureCount) // should be this size, if not, truncate
-        m_featureData.resize(epochSample*m_featureCount);
+    if (m_featureData.size() > epochSample * m_featureCount) // should be this size, if not, truncate
+        m_featureData.resize(epochSample * m_featureCount);
     if (m_labelType != labelNone && m_labelData.size() > epochSample)
     {
         // make sure the labelId array is also the correct size
@@ -105,19 +105,19 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
     int recordsRead = 0;
     do
     {
-        int numRead = m_parser.Parse(numberToRead-recordsRead, &m_featureData, &m_labelData);
+        int numRead = m_parser.Parse(numberToRead - recordsRead, &m_featureData, &m_labelData);
 
         recordsRead += numRead;
         if (!m_endReached)
-            m_totalSamples += numRead;   // total number of records in the dataset
+            m_totalSamples += numRead; // total number of records in the dataset
 
         // we should only get less records than requested at when we hit the end of the dataset
         if (recordsRead < numberToRead)
         {
             // update dataset variables
-            size_t additionalToRead = UpdateDataVariables(mbStartSample+recordsRead);
+            size_t additionalToRead = UpdateDataVariables(mbStartSample + recordsRead);
 
-            m_parser.SetFilePosition(0);  // make another pass of the dataset
+            m_parser.SetFilePosition(0); // make another pass of the dataset
 
             // if doing and end of data check, and we are at the end
             // or a partial minibatch was found exit now
@@ -131,17 +131,16 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
             // get the additional number to read
             numberToRead = recordsRead + additionalToRead;
         }
-    }
-    while (recordsRead < numberToRead);
+    } while (recordsRead < numberToRead);
     m_readNextSample += recordsRead;
 
     // for category labels, we need to build up a list of IDs and a mapping table
     if (m_labelType == labelCategory)
     {
         // loop through all the newly read records
-        for (int numberRead=0; numberRead < recordsRead; numberRead++)
+        for (int numberRead = 0; numberRead < recordsRead; numberRead++)
         {
-            LabelType& label = m_labelData[epochSample+numberRead];
+            LabelType& label = m_labelData[epochSample + numberRead];
             // check to see if we have seen this label before
             auto value = m_mapLabelToId.find(label);
             LabelIdType labelId;
@@ -172,14 +171,14 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
 }
 
 // UpdateDataVariables - Update variables that depend on the dataset being completely read
-template<class ElemType>
+template <class ElemType>
 size_t UCIFastReader<ElemType>::UpdateDataVariables(size_t mbStartSample)
 {
     // if we haven't been all the way through the file yet
     if (!m_endReached)
     {
         // get the size of the dataset
-        assert(m_totalSamples*m_featureCount >= m_featureData.size());
+        assert(m_totalSamples * m_featureCount >= m_featureData.size());
 
         // if they want us to determine epoch size based on dataset size, do that
         if (m_epochSize == requestDataSize)
@@ -200,7 +199,7 @@ size_t UCIFastReader<ElemType>::UpdateDataVariables(size_t mbStartSample)
         if (m_randomizeRange > m_epochSize)
         {
             m_randomizeRange = m_epochSize;
-            m_randomordering.Resize(m_randomizeRange,m_randomizeRange);
+            m_randomordering.Resize(m_randomizeRange, m_randomizeRange);
         }
 
         // write the label file if we hit the end of the file
@@ -212,13 +211,13 @@ size_t UCIFastReader<ElemType>::UpdateDataVariables(size_t mbStartSample)
 
     // update the label dimension if it is not big enough, need it here because m_labelIdMax get's updated in the processing loop (after a read)
     if (m_labelType == labelCategory && m_labelIdMax > m_labelDim)
-        m_labelDim = m_labelIdMax;  // update the label dimensions if different
+        m_labelDim = m_labelIdMax; // update the label dimensions if different
 
-    bool recordsToRead = mbStartSample < m_epochStartSample + m_epochSize;    // still some to read after potential epochSize change?
-    return recordsToRead?RecordsToRead(mbStartSample):0;
+    bool recordsToRead = mbStartSample < m_epochStartSample + m_epochSize; // still some to read after potential epochSize change?
+    return recordsToRead ? RecordsToRead(mbStartSample) : 0;
 }
 
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::WriteLabelFile()
 {
     // write out the label file if they don't have one
@@ -227,7 +226,7 @@ void UCIFastReader<ElemType>::WriteLabelFile()
         if (m_mapIdToLabel.size() > 0)
         {
             File labelFile(m_labelFileToWrite, fileOptionsWrite | fileOptionsText);
-            for (int i=0; i < m_mapIdToLabel.size(); ++i)
+            for (int i = 0; i < m_mapIdToLabel.size(); ++i)
             {
                 labelFile << m_mapIdToLabel[i] << '\n';
             }
@@ -243,7 +242,7 @@ void UCIFastReader<ElemType>::WriteLabelFile()
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::Destroy()
 {
     delete this;
@@ -272,9 +271,9 @@ void UCIFastReader<ElemType>::Destroy()
 //      labelType=Category
 //  ]
 //]
-template<class ElemType>
-template<class ConfigRecordType>
-void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
+template <class ElemType>
+template <class ConfigRecordType>
+void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -303,18 +302,18 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     bool hasLabels = readerConfig.Exists(m_labelsName);
     if (!hasLabels)
         fprintf(stderr, "Warning: labels are not specified.");
-    const ConfigRecordType & configFeatures = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
-    const ConfigRecordType & configLabels   = readerConfig(m_labelsName.c_str(), ConfigRecordType::Record());
+    const ConfigRecordType& configFeatures = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
+    const ConfigRecordType& configLabels = readerConfig(m_labelsName.c_str(), ConfigRecordType::Record());
     if (configFeatures(L"file", L"") != configLabels(L"file", L""))
         RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
     size_t vdim = configFeatures(L"dim");
     //string name = configFeatures.Name();            // TODO: Aaargh!!!
-    size_t udim = configLabels(L"labelDim", (size_t)0);
+    size_t udim = configLabels(L"labelDim", (size_t) 0);
 
     // initialize all the variables
     m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = 0;
-    m_labelIdMax = m_labelDim = 0; 
+    m_labelIdMax = m_labelDim = 0;
     m_partialMinibatch = m_endReached = false;
     m_labelType = labelCategory;
     m_featureCount = vdim;
@@ -324,7 +323,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
 
     m_prefetchEnabled = readerConfig(L"prefetch", false);
     // set the feature count to at least one (we better have one feature...)
-    assert (m_featureCount != 0);
+    assert(m_featureCount != 0);
 
     if (readerConfig.Exists(L"randomize"))
     {
@@ -348,22 +347,22 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     }
 
     // determine if we partial minibatches are desired
-    std::string minibatchMode(readerConfig(L"minibatchMode","partial"));
-    m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"partial");
+    std::string minibatchMode(readerConfig(L"minibatchMode", "partial"));
+    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "partial");
 
     // get start and dimensions for labels and features
-    size_t startLabels = configLabels(L"start", (size_t)0);
-    size_t dimLabels = configLabels(L"dim", (size_t)0);
+    size_t startLabels = configLabels(L"start", (size_t) 0);
+    size_t dimLabels = configLabels(L"dim", (size_t) 0);
 
-    size_t startFeatures = configFeatures(L"start", (size_t)0);
-    size_t dimFeatures = configFeatures(L"dim", (size_t)0);
+    size_t startFeatures = configFeatures(L"start", (size_t) 0);
+    size_t dimFeatures = configFeatures(L"dim", (size_t) 0);
 
     // determine label type desired
     std::wstring labelType;
     if (!hasLabels)
         labelType = L"none";
     else
-        labelType = (wstring)configLabels(L"labelType", L"category");
+        labelType = (wstring) configLabels(L"labelType", L"category");
 
     //convert to lower case for case insensitive comparison
     if (!_wcsicmp(labelType.c_str(), L"category"))
@@ -377,7 +376,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     else if (!_wcsicmp(labelType.c_str(), L"none"))
     {
         m_labelType = labelNone;
-        dimLabels = 0;   // override for no labels
+        dimLabels = 0; // override for no labels
     }
 
     std::wstring file = configFeatures(L"file");
@@ -385,7 +384,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
         fprintf(stderr, "Reading UCI file %ls\n", file.c_str());
 
     // Simple heuristic to ensure buffer size and avoid breaking existing experiments.
-    size_t bufSize = max(dimFeatures * 16, (size_t)256 * 1024);
+    size_t bufSize = max(dimFeatures * 16, (size_t) 256 * 1024);
     m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels, bufSize);
 
     // if we have labels, we need a label Mapping file, it will be a file with one label per line
@@ -397,13 +396,13 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
             // TODO: We use the old CNTK config reader for this. With BrainScript, we would have to parse the file locally here, which should be easy.
             ConfigArray arrayLabels;
             arrayLabels.LoadConfigFile(labelPath);
-            for (int i=0; i < arrayLabels.size(); ++i)
+            for (int i = 0; i < arrayLabels.size(); ++i)
             {
                 LabelType label = arrayLabels[i];
                 m_mapIdToLabel[i] = label;
                 m_mapLabelToId[label] = i;
             }
-            m_labelIdMax = (LabelIdType)arrayLabels.size();
+            m_labelIdMax = (LabelIdType) arrayLabels.size();
         }
         else
         {
@@ -424,15 +423,15 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConf
     // if the value they passed in as udim is not big enough, add something on
     if (udim < m_labelIdMax)
         udim = m_labelIdMax;
-    m_labelDim = (LabelIdType)udim;
+    m_labelDim = (LabelIdType) udim;
 
     mOneLinePerFile = readerConfig(L"oneLinePerFile", false);
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
 // readerConfig - reader configuration
-template<class ElemType>
-void UCIFastReader<ElemType>::InitCache(const ScriptableObjects::IConfigRecord & readerConfig)
+template <class ElemType>
+void UCIFastReader<ElemType>::InitCache(const ScriptableObjects::IConfigRecord& readerConfig)
 {
     // check for a writer tag first (lets us know we are caching)
     if (readerConfig.Exists(L"writerType"))
@@ -442,7 +441,7 @@ void UCIFastReader<ElemType>::InitCache(const ScriptableObjects::IConfigRecord &
     // BrainScript also cannot support this because a copy of the readerConfig is kept. IConfigRecords are not copyable.
     // TODO: We could copy the IConfigRecordPtr. That is allowed. Not trivial to do with template magic.
 }
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
 {
     // first time we are called we cache our parameters
@@ -468,7 +467,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
-        for (const auto & name : names)
+        for (const auto& name : names)
         {
             ConfigParameters config = readerConfig(name);
             filesList.push_back(config("wfile"));
@@ -493,7 +492,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
             m_cachingWriter->GetSections(sections);
-            for (const auto & pair : sections)
+            for (const auto& pair : sections)
             {
                 if (pair.second == sectionTypeCategoryLabel)
                 {
@@ -509,7 +508,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
     catch (runtime_error err)
     {
         // In case caching reader/writer cannot be created, we gracefully fail over and disable caching.
-        fprintf(stderr,"Error attemping to create Binary%s\n%s\n",found?"Reader":"Writer",err.what());
+        fprintf(stderr, "Error attemping to create Binary%s\n%s\n", found ? "Reader" : "Writer", err.what());
         delete m_cachingReader;
         m_cachingReader = NULL;
         delete m_cachingWriter;
@@ -518,7 +517,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
     catch (...)
     {
         // if there is any error, just get rid of the object
-        fprintf(stderr,"Error attemping to create Binary%s\n",found?"Reader":"Writer");
+        fprintf(stderr, "Error attemping to create Binary%s\n", found ? "Reader" : "Writer");
         delete m_cachingReader;
         m_cachingReader = NULL;
         delete m_cachingWriter;
@@ -526,8 +525,8 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
     }
 }
 
-// destructor - virtual so it gets called properly 
-template<class ElemType>
+// destructor - virtual so it gets called properly
+template <class ElemType>
 UCIFastReader<ElemType>::~UCIFastReader()
 {
     ReleaseMemory();
@@ -537,19 +536,19 @@ UCIFastReader<ElemType>::~UCIFastReader()
 
 // ReleaseMemory - release the memory footprint of UCIFastReader
 // used when the caching reader is taking over
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::ReleaseMemory()
 {
-    m_featuresBuffer=NULL;
-    m_labelsBuffer=NULL;
-    m_labelsIdBuffer=NULL;
+    m_featuresBuffer = NULL;
+    m_labelsBuffer = NULL;
+    m_labelsIdBuffer = NULL;
     m_featureData.clear();
     m_labelIdData.clear();
     m_labelData.clear();
 }
 
 //SetupEpoch - Setup the proper position in the file, and other variable settings to start a particular epoch
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::SetupEpoch()
 {
     // if we are starting fresh (epoch zero and no data read), init everything
@@ -559,28 +558,28 @@ void UCIFastReader<ElemType>::SetupEpoch()
         m_readNextSample = m_epochStartSample = m_mbStartSample = 0;
         m_parser.SetFilePosition(0);
     }
-    else  // otherwise, position the read to start at the right location
+    else // otherwise, position the read to start at the right location
     {
         // don't know the total number of samples yet, so count them
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %lu counting lines to determine record count\n", (unsigned long)m_epoch);
+                fprintf(stderr, "starting at epoch %lu counting lines to determine record count\n", (unsigned long) m_epoch);
             m_parser.SetParseMode(ParseLineCount);
-            m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);   
+            m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);
             m_parser.SetParseMode(ParseNormal);
             m_parser.SetFilePosition(0);
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %lu records found\n", (unsigned long)m_totalSamples);
+                fprintf(stderr, "\n %lu records found\n", (unsigned long) m_totalSamples);
         }
 
         // make sure we are in the correct location for mid-dataset epochs
         size_t mbStartSample = m_epoch * m_epochSize;
 
-        size_t fileRecord = m_totalSamples?mbStartSample % m_totalSamples:0;
-        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long)m_epoch, (unsigned long)mbStartSample, (unsigned long)fileRecord);
+        size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
+        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long) m_epoch, (unsigned long) mbStartSample, (unsigned long) fileRecord);
         size_t currentFileRecord = m_mbStartSample % m_totalSamples;
 
         // reset the next read sample
@@ -603,27 +602,25 @@ void UCIFastReader<ElemType>::SetupEpoch()
                 }
             }
             // move the read pointer to the end since we have everything already in memory.
-            if (endReached && m_epochStartSample % m_totalSamples == fileRecord
-                && m_featureData.size() >= m_epochSize*m_featureCount)
+            if (endReached && m_epochStartSample % m_totalSamples == fileRecord && m_featureData.size() >= m_epochSize * m_featureCount)
             {
-                m_readNextSample = mbStartSample + m_epochSize;    
+                m_readNextSample = mbStartSample + m_epochSize;
                 // write the label file here to make sure we do it somewhere. We know the entire dataset has been read at this point
-                WriteLabelFile();   
+                WriteLabelFile();
             }
-
         }
         // not the right position, need to get there
         else
-        {   
+        {
             // if we are already past the desired record, start at the beginning again
             if (currentFileRecord > fileRecord)
             {
-                m_parser.SetFilePosition(0); 
+                m_parser.SetFilePosition(0);
                 currentFileRecord = 0;
             }
-            fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long)currentFileRecord, (unsigned long)fileRecord);
+            fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long) currentFileRecord, (unsigned long) fileRecord);
             m_parser.SetParseMode(ParseLineCount);
-            m_parser.Parse(fileRecord-currentFileRecord, NULL, NULL);
+            m_parser.Parse(fileRecord - currentFileRecord, NULL, NULL);
             m_parser.SetParseMode(ParseNormal);
             if (!m_labelFileToWrite.empty())
             {
@@ -637,25 +634,25 @@ void UCIFastReader<ElemType>::SetupEpoch()
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+size_t RoundUp(size_t value, size_t size)
 {
-    return ((value + size -1)/size)*size;
+    return ((value + size - 1) / size) * size;
 }
 
-template<class ElemType>
-void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz) 
+template <class ElemType>
+void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz)
 {
-    mRequestedNumParallelSequences = sz; 
+    mRequestedNumParallelSequences = sz;
     if (mOneLinePerFile)
         m_mbSize = mRequestedNumParallelSequences;
 };
 
-//StartMinibatchLoop - Startup a minibatch loop 
+//StartMinibatchLoop - Startup a minibatch loop
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
 // epoch - [in] epoch number for this loop, if > 0 the requestedEpochSamples must be specified (unless epoch zero was completed this run)
 // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 //   this value must be a multiple of mbSize, if it is not, it will be rounded up to one.
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize */)
 {
     m_subsetNum = subsetNum;
@@ -668,7 +665,7 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     {
         InitCache(m_readerConfig);
         if (m_cachingReader)
-            ReleaseMemory();    // free the memory used by the UCIFastReader
+            ReleaseMemory(); // free the memory used by the UCIFastReader
     }
 
     // if we are reading from the cache, do so now and return
@@ -676,15 +673,15 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     {
         m_cachingReader->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
         return;
-    } 
+    }
 
-        // if we are reallocating bigger, release the original
+    // if we are reallocating bigger, release the original
     if (mbSize > m_mbSize)
     {
         m_featuresBuffer = NULL;
         m_labelsBuffer = NULL;
-            m_labelsIdBuffer = NULL;
-        }
+        m_labelsIdBuffer = NULL;
+    }
 
     m_mbSize = mbSize;
     if (requestedEpochSamples == requestDataSize)
@@ -700,9 +697,9 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
         if (!m_partialMinibatch)
             m_epochSize = RoundUp(requestedEpochSamples, mbSize);
         if (m_epochSize != requestedEpochSamples)
-            fprintf(stderr, "epochSize rounded up to %d to fit an integral number of minibatches\n", (int)m_epochSize);
+            fprintf(stderr, "epochSize rounded up to %d to fit an integral number of minibatches\n", (int) m_epochSize);
     }
-    
+
     // set the randomization range for randomizationAuto
     // or if it's invalid less than the minibatch size, we need to make it at least minibatch size
     if (m_randomizeRange != randomizeNone)
@@ -721,12 +718,12 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     }
 
     // we use epochSize, which might not be set yet, so use a default value for allocations if not yet set
-    size_t epochSize = m_epochSize == requestDataSize?1000:m_epochSize;
+    size_t epochSize = m_epochSize == requestDataSize ? 1000 : m_epochSize;
     m_epoch = epoch;
-    m_mbStartSample = epoch*m_epochSize;
+    m_mbStartSample = epoch * m_epochSize;
 
     // allocate room for the data
-    m_featureData.reserve(m_featureCount*epochSize);
+    m_featureData.reserve(m_featureCount * epochSize);
     if (m_labelType == labelCategory)
         m_labelIdData.reserve(epochSize);
     else if (m_labelType != labelNone)
@@ -737,17 +734,17 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
 
 // function to store the LabelType in an ElemType
 // required for string labels, which can't be stored in ElemType arrays
-template<class ElemType>
+template <class ElemType>
 void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& labelValue)
 {
-    labelStore = (ElemType)m_mapLabelToId[labelValue];
+    labelStore = (ElemType) m_mapLabelToId[labelValue];
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
-//             [out] each matrix resized if necessary containing data. 
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+//             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     bool minibatchesRemaining = true;
@@ -792,28 +789,28 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         Matrix<ElemType>& features = *matrices[m_featuresName];
         int deviceId = features.GetDeviceId();
         m_pendingAsyncGetMinibatch = std::async(std::launch::async, [this, deviceId]()
-        {
-            // Set the device since this will execute on a new thread
-            Matrix<ElemType>::SetDevice(deviceId);
+                                                {
+                                                    // Set the device since this will execute on a new thread
+                                                    Matrix<ElemType>::SetDevice(deviceId);
 
-            std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
-            for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
-            {
-                prefetchMatrices[iter->first] = iter->second.get();
-            }
+                                                    std::map<std::wstring, Matrix<ElemType>*> prefetchMatrices;
+                                                    for (auto iter = m_prefetchMatrices.begin(); iter != m_prefetchMatrices.end(); ++iter)
+                                                    {
+                                                        prefetchMatrices[iter->first] = iter->second.get();
+                                                    }
 
-            return GetMinibatchImpl(prefetchMatrices);
-        });
+                                                    return GetMinibatchImpl(prefetchMatrices);
+                                                });
     }
 
     return minibatchesRemaining;
 }
 
 // GetMinibatchImpl - The actual implementation of getting the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
-//             [out] each matrix resized if necessary containing data. 
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+//             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     if (m_cachingReader)
@@ -823,7 +820,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     // get the features array
     if (matrices.find(m_featuresName) == matrices.end())
         RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
-        
+
     Matrix<ElemType>& features = *matrices[m_featuresName];
 
     // get out if they didn't call StartMinibatchLoop() first
@@ -841,17 +838,17 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     size_t epochSample = m_mbStartSample % m_epochSize; // where the minibatch starts in this epoch
     //size_t samplesExtra = m_totalSamples % m_epochSize; // extra samples at the end of an epoch
     //size_t epochsDS = (m_totalSamples+m_epochSize-1)/m_epochSize; // how many epochs per dataset
-    size_t randomizeSet = randomize?RandomizeSweep(m_mbStartSample):0;
-    const auto & tmap = m_randomordering(randomizeSet);
+    size_t randomizeSet = randomize ? RandomizeSweep(m_mbStartSample) : 0;
+    const auto& tmap = m_randomordering(randomizeSet);
     size_t epochEnd = m_epochSize;
-    size_t recordStart = m_totalSamples?m_mbStartSample%m_totalSamples:m_mbStartSample;
+    size_t recordStart = m_totalSamples ? m_mbStartSample % m_totalSamples : m_mbStartSample;
 
     // actual size is either what requested, or total number of samples read so far
-    size_t actualmbsize = min(m_totalSamples, m_mbSize);   // it may still return less if at end of sweep
+    size_t actualmbsize = min(m_totalSamples, m_mbSize); // it may still return less if at end of sweep
 
     // check for an odd sized last minibatch
     if (epochSample + actualmbsize > epochEnd)
-    {   
+    {
         actualmbsize = epochEnd - epochSample;
     }
 
@@ -859,7 +856,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     if (!moreData)
     {
         // make sure we take into account hitting the end of the dataset (not wrapping around)
-        actualmbsize = min(m_totalSamples-recordStart,actualmbsize);
+        actualmbsize = min(m_totalSamples - recordStart, actualmbsize);
     }
 
     if (m_featuresBuffer == NULL)
@@ -870,15 +867,16 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     if (m_labelsBuffer == NULL)
     {
-    if (m_labelType == labelCategory)
-    {
+        if (m_labelType == labelCategory)
+        {
             m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_labelDim * m_mbSize);
-            m_labelsIdBuffer = std::shared_ptr<LabelIdType>(new LabelIdType[m_mbSize], [](LabelIdType* p) {
-                delete[] p;
-            });
-    }
-    else if (m_labelType != labelNone)
-    {
+            m_labelsIdBuffer = std::shared_ptr<LabelIdType>(new LabelIdType[m_mbSize], [](LabelIdType* p)
+                                                            {
+                                                                delete[] p;
+                                                            });
+        }
+        else if (m_labelType != labelNone)
+        {
             m_labelsBuffer = AllocateIntermediateBuffer(features.GetDeviceId(), m_mbSize);
             m_labelsIdBuffer = NULL;
         }
@@ -886,8 +884,8 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     if (m_labelType == labelCategory)
     {
-        memset(m_labelsBuffer.get(), 0, sizeof(ElemType)*m_labelDim*actualmbsize);
-        memset(m_labelsIdBuffer.get(), 0, sizeof(LabelIdType)*actualmbsize);
+        memset(m_labelsBuffer.get(), 0, sizeof(ElemType) * m_labelDim * actualmbsize);
+        memset(m_labelsIdBuffer.get(), 0, sizeof(LabelIdType) * actualmbsize);
     }
     else if (m_labelType != labelNone)
     {
@@ -899,30 +897,30 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         // loop through and copy data to matrix
         int j = 0; // vector of vectors of feature data
         // determine randomization base index
-        size_t randBase = 0;    // (keep compiler happy)
+        size_t randBase = 0; // (keep compiler happy)
         if (randomize)
-            randBase = epochSample - epochSample%m_randomizeRange;
+            randBase = epochSample - epochSample % m_randomizeRange;
 
         //loop through all the samples
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired
-            size_t jRand = randomize?(randBase + tmap[jSample%m_randomizeRange]):jSample;
+            size_t jRand = randomize ? (randBase + tmap[jSample % m_randomizeRange]) : jSample;
             jRand %= m_epochSize;
-         
+
             // vector of feature data goes into matrix column
-            memcpy(&m_featuresBuffer.get()[j*m_featureCount], &m_featureData[jRand*m_featureCount], sizeof(ElemType)*m_featureCount);
+            memcpy(&m_featuresBuffer.get()[j * m_featureCount], &m_featureData[jRand * m_featureCount], sizeof(ElemType) * m_featureCount);
 
             if (m_labelType == labelCategory)
-            {            
-                m_labelsBuffer.get()[j*m_labelDim + m_labelIdData[jRand]] = (ElemType)1;
+            {
+                m_labelsBuffer.get()[j * m_labelDim + m_labelIdData[jRand]] = (ElemType) 1;
                 m_labelsIdBuffer.get()[j] = m_labelIdData[jRand];
             }
             else if (m_labelType != labelNone)
             {
                 if (m_labelType == labelRegression)
                 {
-                    m_labelsBuffer.get()[j] = (ElemType)atof(m_labelData[jRand].c_str());
+                    m_labelsBuffer.get()[j] = (ElemType) atof(m_labelData[jRand].c_str());
                 }
                 else
                 {
@@ -981,8 +979,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     m_mbStartSample += actualmbsize;
 
     // if they don't want partial minibatches, skip data transfer and return
-    if (actualmbsize < m_mbSize && !m_partialMinibatch
-        || actualmbsize == 0 || currSubsetSize == 0) // no records found (end of minibatch)
+    if (actualmbsize < m_mbSize && !m_partialMinibatch || actualmbsize == 0 || currSubsetSize == 0) // no records found (end of minibatch)
     {
         return false;
     }
@@ -1013,9 +1010,9 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
     return true;
 }
 
-// GetLabelMapping - Gets the label mapping from integer index to label type 
-// returns - a map from numeric datatype to native label type 
-template<class ElemType>
+// GetLabelMapping - Gets the label mapping from integer index to label type
+// returns - a map from numeric datatype to native label type
+template <class ElemType>
 const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& UCIFastReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     if (m_cachingReader)
@@ -1025,10 +1022,10 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
     return m_mapIdToLabel;
 }
 
-// SetLabelMapping - Sets the label mapping from integer index to label 
+// SetLabelMapping - Sets the label mapping from integer index to label
 // labelMapping - mapping table from label values to IDs (must be 0-n)
-// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-template<class ElemType>
+// note: for tasks with labels, the mapping table must be the same between a training run and a testing run
+template <class ElemType>
 void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
@@ -1043,7 +1040,7 @@ void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*
     }
 }
 
-// GetData - Gets metadata from the specified section (into CPU memory) 
+// GetData - Gets metadata from the specified section (into CPU memory)
 // sectionName - section name to retrieve data from
 // numRecords - number of records to read
 // data - pointer to data buffer, if NULL, dataBufferSize will be set to size of required buffer to accomidate request
@@ -1051,7 +1048,7 @@ void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*
 //                  [out] size of buffer filled with data
 // recordStart - record to start reading from, defaults to zero (start of data)
 // returns: true if data remains to be read, false if the end of data was reached
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
     if (m_cachingReader)
@@ -1061,7 +1058,7 @@ bool UCIFastReader<ElemType>::GetData(const std::wstring& sectionName, size_t nu
     RuntimeError("GetData not supported in UCIFastReader");
 }
 
-template<class ElemType>
+template <class ElemType>
 bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     if (m_cachingReader)
@@ -1081,14 +1078,14 @@ bool UCIFastReader<ElemType>::DataEnd(EndDataType endDataType)
     case endDataSet:
         ret = EnsureDataAvailable(m_mbStartSample, true);
         break;
-    case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
+    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
         break;
     }
     return ret;
 }
 
-template<class ElemType>
+template <class ElemType>
 unique_ptr<CUDAPageLockedMemAllocator>& UCIFastReader<ElemType>::GetCUDAAllocator(int deviceID)
 {
     if (m_cudaAllocator != nullptr)
@@ -1107,26 +1104,28 @@ unique_ptr<CUDAPageLockedMemAllocator>& UCIFastReader<ElemType>::GetCUDAAllocato
     return m_cudaAllocator;
 }
 
-template<class ElemType>
+template <class ElemType>
 std::shared_ptr<ElemType> UCIFastReader<ElemType>::AllocateIntermediateBuffer(int deviceID, size_t numElements)
 {
     if (deviceID >= 0)
     {
         // Use pinned memory for GPU devices for better copy performance
         size_t totalSize = sizeof(ElemType) * numElements;
-        return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-        });
+        return std::shared_ptr<ElemType>((ElemType*) GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p)
+                                         {
+                                             this->GetCUDAAllocator(deviceID)->Free((char*) p);
+                                         });
     }
     else
     {
-        return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
-            delete[] p;
-        });
+        return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p)
+                                         {
+                                             delete[] p;
+                                         });
     }
 }
 
 // instantiate all the combinations we expect to be used
-template class UCIFastReader<double>; 
+template class UCIFastReader<double>;
 template class UCIFastReader<float>;
-}}}
+} } }

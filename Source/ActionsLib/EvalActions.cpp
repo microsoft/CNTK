@@ -5,7 +5,7 @@
 // </copyright>
 //
 
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
 #include "Basics.h"
@@ -179,10 +179,10 @@ void DoCrossValidate(const ConfigParameters& config)
         minErrIds.push_back(0);
     }
 
-    for (int i = 0; i<cvErrorResults.size(); i++)
+    for (int i = 0; i < cvErrorResults.size(); i++)
     {
         evalErrors = cvErrorResults[i];
-        for (int j = 0; j<evalErrors.size(); j++)
+        for (int j = 0; j < evalErrors.size(); j++)
         {
             if (evalErrors[j] < minErrors[j])
             {
@@ -212,7 +212,7 @@ void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-    readerConfig.Insert("randomize", "None");  //we don't want randomization when output results
+    readerConfig.Insert("randomize", "None"); //we don't want randomization when output results
 
     DataReader<ElemType> testDataReader(readerConfig);
 
@@ -247,7 +247,7 @@ void DoWriteOutput(const ConfigParameters& config)
     }
     else if (config.Exists("outputPath"))
     {
-        wstring outputPath = config(L"outputPath"); // crashes if no default given? 
+        wstring outputPath = config(L"outputPath"); // crashes if no default given?
         writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
     }
     //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);

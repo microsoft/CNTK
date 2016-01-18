@@ -2,92 +2,92 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    struct DistGradHeader
+struct DistGradHeader
+{
+public:
+    size_t numSamples;
+    size_t numSamplesWithLabel;
+    double criterion;
+
+    // variable-size array
+    int numEvalNode;
+    double evalErrors[1];
+
+    static DistGradHeader* Create(int numEvalNode)
     {
-    public:
-        size_t numSamples;
-        size_t numSamplesWithLabel;
-        double criterion;
+        DistGradHeader* header = (DistGradHeader*) new char[DistGradHeaderSize(numEvalNode)];
+        header->numEvalNode = numEvalNode;
+        return header;
+    }
 
-        // variable-size array
-        int numEvalNode;
-        double evalErrors[1];
+    static void Destroy(DistGradHeader* header)
+    {
+        delete[]((char*) header);
+    }
 
-        static DistGradHeader* Create(int numEvalNode)
+    //aggregate header information
+    void Aggregate(DistGradHeader* other, bool add = false)
+    {
+        if (other->numEvalNode != numEvalNode)
+            RuntimeError("mismatched size");
+        if (!add)
         {
-            DistGradHeader* header = (DistGradHeader*)new char[DistGradHeaderSize(numEvalNode)];
-            header->numEvalNode = numEvalNode;
-            return header;
+            memcpy((void*) this, (void*) other, DistGradHeaderSize(numEvalNode));
         }
-
-        static void Destroy(DistGradHeader* header)
+        else
         {
-            delete[]((char*)header);
-        }
-
-        //aggregate header information
-        void Aggregate(DistGradHeader* other, bool add = false)
-        {
-            if (other->numEvalNode != numEvalNode)
-                RuntimeError("mismatched size");
-            if (!add)
-            {
-                memcpy((void*)this, (void*)other, DistGradHeaderSize(numEvalNode));
-            }
-            else
-            {
-                numSamples += other->numSamples;
-                numSamplesWithLabel += other->numSamplesWithLabel;
-                criterion += other->criterion;
-                for (int i = 0; i < numEvalNode; i++)
-                {
-                    evalErrors[i] += other->evalErrors[i];
-                }
-            }
-        }
-
-        size_t Size() const
-        {
-            return DistGradHeaderSize(numEvalNode);
-        }
-
-        void Clear()
-        {
-            numSamples = 0;
-            numSamplesWithLabel = 0;
-            criterion = 0;
+            numSamples += other->numSamples;
+            numSamplesWithLabel += other->numSamplesWithLabel;
+            criterion += other->criterion;
             for (int i = 0; i < numEvalNode; i++)
             {
-                evalErrors[i] = 0;
+                evalErrors[i] += other->evalErrors[i];
             }
         }
+    }
 
-        friend void swap(DistGradHeader& first, DistGradHeader& second)
+    size_t Size() const
+    {
+        return DistGradHeaderSize(numEvalNode);
+    }
+
+    void Clear()
+    {
+        numSamples = 0;
+        numSamplesWithLabel = 0;
+        criterion = 0;
+        for (int i = 0; i < numEvalNode; i++)
         {
-            if (first.numEvalNode != second.numEvalNode)
-                LogicError("Cannot swap DistGradHeader objects with different number of evalNodes!");
-
-            std::swap(first.numSamples, second.numSamples);
-            std::swap(first.numSamplesWithLabel, second.numSamplesWithLabel);
-            std::swap(first.criterion, second.criterion);
-            for (int i = 0; i < first.numEvalNode; i++)
-            {
-                std::swap(first.evalErrors[i], second.evalErrors[i]);
-            }
+            evalErrors[i] = 0;
         }
+    }
 
-    private:
-        static size_t DistGradHeaderSize(size_t nEvalNode)
+    friend void swap(DistGradHeader& first, DistGradHeader& second)
+    {
+        if (first.numEvalNode != second.numEvalNode)
+            LogicError("Cannot swap DistGradHeader objects with different number of evalNodes!");
+
+        std::swap(first.numSamples, second.numSamples);
+        std::swap(first.numSamplesWithLabel, second.numSamplesWithLabel);
+        std::swap(first.criterion, second.criterion);
+        for (int i = 0; i < first.numEvalNode; i++)
         {
-            return sizeof(DistGradHeader)+(sizeof(double) * (nEvalNode - 1));
+            std::swap(first.evalErrors[i], second.evalErrors[i]);
         }
+    }
 
-        // Disallow construction and destruction since this type contains a variable sized array member
-        // and hence must be constructed through the create and destroy functions
-        DistGradHeader() = delete;
-        ~DistGradHeader() = delete;
+private:
+    static size_t DistGradHeaderSize(size_t nEvalNode)
+    {
+        return sizeof(DistGradHeader) + (sizeof(double) * (nEvalNode - 1));
+    }
 
-        // Disallow copy and move construction/assignment
-        DISABLE_COPY_AND_MOVE(DistGradHeader);
-    };
-}}}
+    // Disallow construction and destruction since this type contains a variable sized array member
+    // and hence must be constructed through the create and destroy functions
+    DistGradHeader() = delete;
+    ~DistGradHeader() = delete;
+
+    // Disallow copy and move construction/assignment
+    DISABLE_COPY_AND_MOVE(DistGradHeader);
+};
+} } }

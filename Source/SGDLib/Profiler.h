@@ -21,4 +21,3 @@ private:
     int m_numSamples;
     bool m_isProfilingActive;
 };
-
