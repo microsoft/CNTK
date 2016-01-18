@@ -257,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId(deviceId), m_outputNeededDuringBackprop(true),
             m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name),
-            m_numRows(0), m_numCols(0) 
+            m_numCols(0) 
         { }
         virtual ~ComputationNodeBase(){}
 
@@ -300,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // dimensions
 
-        size_t GetNumRows() const { assert(m_numRows == m_sampleLayout.GetAllocation()); return m_numRows; }
+        size_t GetNumRows() const { return m_sampleLayout.GetNumElements(); }
         size_t GetNumCols() const { return m_numCols; }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
@@ -321,7 +321,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetDims(const TensorShape & sampleLayout, size_t cols)
         {
             m_sampleLayout = sampleLayout;
-            m_numRows = m_sampleLayout.GetNumElements();
             m_numCols = cols;
         }
         // copy dimensions (rows, cols, sample layout) from another node
@@ -340,7 +339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numCols = cols;
             // actual memory allocation happens elsewhere
         }
-        virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal state, e.g. m_numRows, m_numCols
+        virtual void NotifyFunctionValuesMBSizeModified() { } // someone outside changed our m_value--update our internal dimensions
         void VerifyDims(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
@@ -514,7 +513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         fprintf(stderr, "%ls[%lu [%s] {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(),
                                 child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0], mbSizeMark, child->GetNumCols());
                     //BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-                    else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions   --TODO: there will be no numRows in the future, only the tensor
+                    else if (child->m_sampleLayout.GetRank() > 1)           // tensor: output the tensor dimensions
                         fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
@@ -766,11 +765,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<ComputationNodeBasePtr> m_inputs;
 
         // dimensions and layout
-        // Data is stored as a matrix, but often it is interpreted as a more complex structure.
-        // If the matrix is minibatch data (inputs, activations, labels), then matrix columns are samples.
-        // Note that the actual matrix storage does not always exist.
-        size_t m_numRows, m_numCols;        // matrix dimension of function values and gradients
-        TensorShape m_sampleLayout;    // and the output
+        // Data is stored as a Matrix object, but often it is interpreted as a tensor.
+        // For nodes that carry data (samples), each sample is a column of the matrix, which is interpreted as
+        // a tensor (n-dimensional array) described by m_sampleLayout. The MBLayout describes the meaning
+        // of the column index.
+        // For nodes that do not carry data, the last tensor index of m_sampleLayout is the number of columns.
+        TensorShape m_sampleLayout;         // sample layout
+        size_t m_numCols;                   // #cols
         MBLayoutPtr m_pMBLayout;
 
         // flags related to gradient propagation
@@ -821,22 +822,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
         // helper to load m_value from a stream
-        // Since the dimensions are read as well, this function also updates m_numRows/m_numCols.
+        // This function updates the dimensions to a 2D matrix.
+        // If a different tensor layout is associated with this, it must be implanted afterwards.
         void LoadValue(File& fstream)
         {
             CreateMatrixIfNull(m_value);
             fstream >> Value();
-            // above reads dimensions, so we must update our own m_numRows/m_numCols
+            // above reads dimensions, so we must update our own dimensions
             SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
-            // BUGBUG: This looses the sample layout (tensor shape). The caller must know this and fix it up if needed (currently needed for LearnableParameterNode).
         }
 
         // reader updated m_functionValue--update our internal state, i.e. m_numCols
-        // This is meant for the case when a new minibatch was read. Hence, theonly change that is allowed if for column dimension.
+        // This is meant for the case when a new minibatch was read. Hence, the only change that is allowed if for column dimension.
+        // TODO: This should be redundant with the MBLayout. Can we just verify here?
         virtual void NotifyFunctionValuesMBSizeModified() override final
         {
-            if (m_numRows != Value().GetNumRows())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)m_numRows, (int)Value().GetNumRows());
+            if (GetNumRows() != Value().GetNumRows())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)GetNumRows(), (int)Value().GetNumRows());
             m_numCols = Value().GetNumCols();
         }
         virtual double Get00Element() const override final { return Value().Get00Element(); }
@@ -991,8 +993,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
             auto f_numRows = m_value->GetNumRows();    // variables for easy inspection in debugger
             auto f_numCols = m_value->GetNumCols();
-            if (f_numRows != m_numRows || f_numCols != m_numCols)
-                LogicError("UpdateFunctionMBSize: m_value out of sync with m_numRows/m_numCols");
+            if (f_numRows != GetNumRows() || f_numCols != GetNumCols())
+                LogicError("UpdateFunctionMBSize: m_value out of sync with GetNumRows()/GetNumCols()");
 
 #ifdef SHOW_MATRIX_TYPE
             fprintf(stderr, "MatrixType %ls: %ls(%ls  %ls)\n",
@@ -1172,7 +1174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // update the actual matrix allocation for m_value based on the node dimension
         void UpdateFunctionValuesSize()
         {
-            Value().Resize(m_numRows, m_numCols);
+            Value().Resize(GetNumRows(), GetNumCols());
         }
 
         // this is called before a node's ForwardProp() function is called (in loops: for the first time)

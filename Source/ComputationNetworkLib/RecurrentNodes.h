@@ -6,10 +6,10 @@
 #pragma once
 
 #include "Basics.h"
-#include "Matrix.h"
-#include "TensorShape.h"
 #include "ComputationNode.h"
 #include "Sequences.h"
+#include "Matrix.h"
+#include "TensorShape.h"
 
 #include <unordered_set>
 #include <map>
