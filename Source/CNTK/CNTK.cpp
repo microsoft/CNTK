@@ -553,6 +553,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])   // called from wmain which i
         g_mpi = new MPIWrapper();
     }
 
+    g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+
     if (logpath != L"")
     {
         for (int i = 0; i < command.size(); i++)
