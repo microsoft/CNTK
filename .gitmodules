@@ -1,0 +1,3 @@
+[submodule "Source/1BitSGD"]
+	path = Source/1BitSGD
+	url = https://github.com/Microsoft/CNTK-1bit-SGD.git
