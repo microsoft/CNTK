@@ -349,7 +349,7 @@ bool SparseBinaryInput<ElemType>::Randomize()
                     return true;
                 }
                 return false;
-				*/
+                */
 }
 
 template <class ElemType>
@@ -548,14 +548,14 @@ size_t SparseBinaryInput<ElemType>::ReadMinibatch(void* data_buffer, std::map<st
     //fprintf(stderr, "start read minibatch.\n");
     /*
                 size_t readSize = m_offsets[cur_batch + 1] - m_offsets[cur_batch];
-				void* data_buffer = GetTempDataPointer(readSize);
+                void* data_buffer = GetTempDataPointer(readSize);
 
-				fprintf(stderr, "start reading data.\n");
+                fprintf(stderr, "start reading data.\n");
                 m_inFile.clear();
                 m_inFile.seekg(m_dataStart + m_offsets[cur_batch], ios::beg);
-				m_inFile.read((char*)data_buffer, readSize);
-				fprintf(stderr, "done reading data.\n");
-				*/
+                m_inFile.read((char*)data_buffer, readSize);
+                fprintf(stderr, "done reading data.\n");
+                */
 
     int32_t nnz;
     int32_t curMBSize;
@@ -850,7 +850,7 @@ bool LibSVMBinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<El
 
                 timer = clock() - timer;
                 fprintf(stderr, "It took me %d clicks (%f seconds).\n", timer, ((float)timer) / CLOCKS_PER_SEC);
-				*/
+                */
     //fprintf(stderr, "done\n");
     return true;
 }
