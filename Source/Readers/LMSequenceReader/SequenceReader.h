@@ -282,7 +282,7 @@ public:
         delete m_labelsIdBufferRow;
         delete m_labelsBlock2Id;
         delete m_labelsBlock2UniqId;
-		*/
+        */
     }
     virtual ~SequenceReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
@@ -336,8 +336,8 @@ public:
     using SequenceReader<ElemType>::m_traceLevel;
     using SequenceReader<ElemType>::m_featureCount;
     using SequenceReader<ElemType>::m_endReached;
-    //	using IDataReader<ElemType>::labelIn;
-    //	using IDataReader<ElemType>::labelOut;
+    //  using IDataReader<ElemType>::labelIn;
+    //  using IDataReader<ElemType>::labelOut;
     using SequenceReader<ElemType>::InitCache;
     using SequenceReader<ElemType>::m_readerConfig;
     using SequenceReader<ElemType>::ReleaseMemory;
@@ -345,8 +345,8 @@ public:
     using SequenceReader<ElemType>::m_featuresBufferRow;
     using SequenceReader<ElemType>::m_labelsBuffer;
     using SequenceReader<ElemType>::m_labelsIdBuffer;
-    //	using IDataReader<ElemType>::labelInfo;
-    //	using SequenceReader<ElemType>::m_featuresBufferRowIndex;
+    //  using IDataReader<ElemType>::labelInfo;
+    //  using SequenceReader<ElemType>::m_featuresBufferRowIndex;
     using SequenceReader<ElemType>::m_labelsIdBufferRow;
     using SequenceReader<ElemType>::m_labelsBlock2Id;
     using SequenceReader<ElemType>::m_labelsBlock2UniqId;

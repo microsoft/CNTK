@@ -148,7 +148,7 @@ template void DoCreateLabelMap<double>(const ConfigParameters& config);
 //                  1)  modelPath           -- path to the existing model
 //                  2)  outputmodelPath     -- where to write the transformed model
 //                  3)  KeepRatio           -- how many percentage of energy we want to keep
-//					4)	AlignedSize			-- the resultant number of signular values is aligned to e.g., 32 or 64
+//                  4)  AlignedSize         -- the resultant number of signular values is aligned to e.g., 32 or 64
 //                  5)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition
 //
 //////////////////////////////////////////////////////////////////////////

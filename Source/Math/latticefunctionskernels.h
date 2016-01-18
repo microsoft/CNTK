@@ -423,12 +423,12 @@ struct latticefunctionskernels
                     pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts); 
                     pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);      
                 }
-				else                                                                    //for others, only -1 to 0 is permitted
-				{
-					pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);                                
-					pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);                                
+                else                                                                    //for others, only -1 to 0 is permitted
+                {
+                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);                                
+                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);                                
 
-				}*/
+                }*/
                 pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
                 pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
                 //state1stepm1to1 = ts;

@@ -4481,7 +4481,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     if (do_sync)
         CUDA_CALL(cudaEventCreate(&done));
     _assignElementProductOfWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(m_pArray, a.m_pArray, b.m_pArray, shift, nt + 1, BS);
-    //		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+    //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
     if (do_sync)
         CUDA_CALL(cudaEventRecord(done));
@@ -4556,7 +4556,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
     if (do_sync)
         CUDA_CALL(cudaEventCreate(&done));
     _getARowByIndex<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(m_pArray, a.m_pArray, n, P, m);
-    //		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+    //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
     if (do_sync)
         CUDA_CALL(cudaEventRecord(done));
