@@ -22,6 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ParallelNode (input0, input1)
+    // TODO: How is this different from RowStack?
     // -----------------------------------------------------------------------
 
     /**

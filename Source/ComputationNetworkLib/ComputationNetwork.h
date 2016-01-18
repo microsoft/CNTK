@@ -285,19 +285,6 @@ public:
         return actualMBSize;
     }
 
-    // only called from MultiNetworksEvaluator
-    // a helper function for some places that like to hack the features directly
-    // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
-    // This is now changed in that they must actually resize the features, and then the system takes it from here.
-    // UNTESTED stopgap. Most likely places that are never used.
-    // This function does not actually allocate the matrices. I don't know whether that currently happens correctly.
-    void ResizeAllFeatureNodes(size_t cols)
-    {
-        auto & featureNodes = FeatureNodes();
-        for (auto & nodeIter : featureNodes)
-            nodeIter->SetNumCols(cols);
-    }
-
     // When external code (readers, namely) updates InputValue's m_value,
     // calling this function is required to make sure that any internal state gets updated correctly.
     // Only a change to the column dimension i sallowed

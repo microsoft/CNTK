@@ -866,12 +866,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // TODO: currently we only support one node for regularization
                 if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
                 {
-#if 0               // TODO: where does refNet get its features from?
-                    refNet->ResizeAllFeatureNodes(actualMBSize);
-#endif
-                    //size_t actualMBSize2 = refNet->SetActualMiniBatchSizeFromFeatures();
                     size_t actualMBSize2 = refNet->DetermineActualMBSizeFromFeatures();
-                    refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr());       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                    refNet->GetMBLayoutPtr()->CopyFrom(net->GetMBLayoutPtr());
                     refNet->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
                     if (actualMBSize2 != actualMBSize)
