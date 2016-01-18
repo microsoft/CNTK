@@ -105,7 +105,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "License", "License", "{63024704-A2D7-497E-AD4B-5C10C6AA1374}"
 	ProjectSection(SolutionItems) = preProject
-		license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).docx = license\MSR Computational Network Toolkit_MSR-LA (2014-03-28).docx
+		LICENSE.md = LICENSE.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lyx", "lyx", "{F9BEB27E-8AF5-464E-8D45-0000D5AFA2D3}"
