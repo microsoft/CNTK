@@ -1,9 +1,9 @@
 //
-// <copyright file="minibatchiterator.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // minibatchiterator.h -- iterator for minibatches
+//
 
 #pragma once
 #define NONUMLATTICEMMI // [v-hansu] move from main.cpp, no numerator lattice for mmi training

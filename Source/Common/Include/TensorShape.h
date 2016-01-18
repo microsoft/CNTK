@@ -1,8 +1,8 @@
-// TensorShape.h -- tensor descriptor that describes the inner structure of data vectors
 //
-// <copyright file="TensorShape.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// TensorShape.h -- tensor descriptor that describes the inner structure of data vectors
 //
 
 #pragma once

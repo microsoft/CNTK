@@ -1,7 +1,8 @@
 //
-// fileutil.h - file I/O with error checking
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
+// fileutil.h - file I/O with error checking
 //
 #pragma once
 #ifndef _FILEUTIL_

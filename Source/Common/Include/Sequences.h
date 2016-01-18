@@ -1,8 +1,8 @@
-// Sequences.h -- all about iterating over sequences, that is, MBLayout, FrameRange, and iterators
 //
-// <copyright file="Sequences.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// Sequences.h -- all about iterating over sequences, that is, MBLayout, FrameRange, and iterators
 //
 
 #pragma once

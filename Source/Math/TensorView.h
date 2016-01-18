@@ -1,10 +1,9 @@
 //
-// <copyright file="TensorView.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 // This implements the TensorView class, which is a layer around Matrix that reinterprets its content as a generic tensor. [fseide]
+//
 
 #pragma once
 

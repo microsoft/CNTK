@@ -1,8 +1,8 @@
-// ReshapingNodes.h -- collection of nodes that reshape or sub-sample matrices leading to layout changes
 //
-// <copyright file="ReshapingNodes.h" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// ReshapingNodes.h -- collection of nodes that reshape or sub-sample matrices leading to layout changes
 //
 #pragma once
 
