@@ -746,7 +746,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Save(fstream);
 
             fstream << m_timeStep;
-            fstream << GetNumRows() << GetNumCols();
+            size_t colsDummy = 0;
+            fstream << GetNumRows() << colsDummy;
 
             fstream << m_initialActivationValue;
         }
@@ -758,10 +759,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fstream >> m_timeStep;
 
-            size_t rows, cols;
-            fstream >> rows >> cols;
+            size_t rows, colsDummy;
+            fstream >> rows >> colsDummy;
 
-            // Note: Do we need load cols for delay node? I just set to zero to see if there is any problem.
             SetDims(TensorShape(rows), 0);          // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
             m_delayedValue.Resize(rows, 0);    // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 

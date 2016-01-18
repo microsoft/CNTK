@@ -45,11 +45,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // If this returns false, the matrices may contain garbage or not sized to 0 columns.
             // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
 
-            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-            net->NotifyInputNodesFunctionValuesMBSizeModified();
-
             if (wasDataRead)
                 trainSetDataReader.CopyMBLayoutTo(pMBLayout);                       // get layout meta-data
+
+            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+            net->NotifyInputNodesFunctionValuesMBSizeModified();
 
 #if 0       // (this test is wrong... I think)
             if (net->DetermineActualMBSizeFromFeatures() == 0)

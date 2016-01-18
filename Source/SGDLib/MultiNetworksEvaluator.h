@@ -501,7 +501,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                decoderNet->ResizeAllFeatureNodes(actualMBSize);
+                //decoderNet->ResizeAllFeatureNodes(actualMBSize);  // BUGBUG: Function was deleted, but this may be necessary.
+#if 0           // What this ^^ used to be:
+                // only called from MultiNetworksEvaluator
+                // a helper function for some places that like to hack the features directly
+                // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
+                // This is now changed in that they must actually resize the features, and then the system takes it from here.
+                // UNTESTED stopgap. Most likely places that are never used.
+                // This function does not actually allocate the matrices. I don't know whether that currently happens correctly.
+                void ResizeAllFeatureNodes(size_t cols)
+                {
+                    auto & featureNodes = FeatureNodes();
+                    for (auto & nodeIter : featureNodes)
+                        nodeIter->SetNumCols(cols);
+                }
+
+#endif
                 //decoderNet->SetActualMiniBatchSizeFromFeatures();
                 encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
                 decoderNet->VerifyActualNumParallelSequences(mNutt);
@@ -898,7 +913,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t mbSize = inputLength;
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the beginning of sentence
-            evalnet->ResizeAllFeatureNodes(mbSize);
+            //evalnet->ResizeAllFeatureNodes(mbSize);    // BUGBUG: Function was deleted, but this may be necessary.
             //evalnet->SetActualMiniBatchSizeFromFeatures();
             // TODO: not setting MBLayout?
             evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
@@ -930,7 +945,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             // BUGBUG: This is almost certainly wrong; slice != MB size
             //evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
-            evalnet->ResizeAllFeatureNodes(1);
+            //evalnet->ResizeAllFeatureNodes(1);    // BUGBUG: Function was deleted, but this may be necessary.
             //evalnet->SetActualMiniBatchSizeFromFeatures();
 
             double best_score = -numeric_limits<double>::infinity();

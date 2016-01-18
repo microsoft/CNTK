@@ -301,7 +301,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // dimensions
 
         size_t GetNumRows() const { return m_sampleLayout.GetNumElements(); }
-        size_t GetNumCols() const { return m_numCols; }
+        size_t GetNumCols() const
+        {
+            if (HasMBLayout() && GetMBLayout()->GetNumCols() != m_numCols)
+                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols and MBLayout", NodeName().c_str(), OperationName().c_str());
+            return m_numCols;
+        }
         pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         // TODO: add an overload SetDims(TensorShape, cols)
         // Currently called from:
@@ -334,8 +339,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(TensorShape(rows), cols);
         }
         // update number of columns (in response to MB size)
+        // TODO: this should go away, as m_numCols should be derived from MBLayout each time
         void SetNumCols(size_t cols)
         {
+            if (!HasMBLayout())
+                LogicError("SetNumCols: %ls %ls operation has no MBLayout.", NodeName().c_str(), OperationName().c_str());
+            if (cols != m_pMBLayout->GetNumCols())
+                LogicError("SetNumCols: %ls %ls operation: SetNumCols() is redundant with MBLayout %d, but got differing value %d.", NodeName().c_str(), OperationName().c_str(), (int)m_pMBLayout->GetNumCols(), (int)cols);
+            // TODO: replace by a check
             m_numCols = cols;
             // actual memory allocation happens elsewhere
         }
@@ -814,13 +825,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define DeclareConstructorFromConfig(C)              C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp); }
 #define DeclareConstructorFromConfigWithNumInputs(C) C(const ScriptableObjects::IConfigRecordPtr configp) : C(configp->Get(L"deviceId"), L"<placeholder>") { AttachInputs(configp, this->GetExpectedNumInputs()); }
 
-#ifdef DISPLAY_DEBUG
-        virtual ~ComputationNode()
-        {
-            fprintf (stderr, "Called Destructor NodeName: %s\n", (msra::strfun::utf8 (NodeName())).c_str()), fflush(stderr);
-        }
-#endif
-
         // helper to load m_value from a stream
         // This function updates the dimensions to a 2D matrix.
         // If a different tensor layout is associated with this, it must be implanted afterwards.
@@ -834,12 +838,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // reader updated m_functionValue--update our internal state, i.e. m_numCols
         // This is meant for the case when a new minibatch was read. Hence, the only change that is allowed if for column dimension.
-        // TODO: This should be redundant with the MBLayout. Can we just verify here?
+        // TODO: Redundant with the MBLayout. Just verify here. Update comment above if this works.
         virtual void NotifyFunctionValuesMBSizeModified() override final
         {
+            if (!HasMBLayout())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation does not have an MBLayout.", NodeName().c_str(), OperationName().c_str());
             if (GetNumRows() != Value().GetNumRows())
                 LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)GetNumRows(), (int)Value().GetNumRows());
+            if (GetMBLayout()->GetNumCols() != Value().GetNumCols())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, but different from MBLayout.", NodeName().c_str(), OperationName().c_str(), (int)GetNumCols(), (int)Value().GetNumCols());
             m_numCols = Value().GetNumCols();
+            if (GetNumCols() != Value().GetNumCols())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, MBLayout was not updated.", NodeName().c_str(), OperationName().c_str(), (int)GetNumCols(), (int)Value().GetNumCols());
         }
         virtual double Get00Element() const override final { return Value().Get00Element(); }
 
@@ -984,6 +994,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: How is this function different from BeginForwardProp()?  --> answer: it will be called from there some day
         virtual void UpdateFunctionMBSize() override
         {
+            // TODO: just remove this
             if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
                 SetNumCols(m_pMBLayout->GetNumCols());
         }
@@ -994,7 +1005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto f_numRows = m_value->GetNumRows();    // variables for easy inspection in debugger
             auto f_numCols = m_value->GetNumCols();
             if (f_numRows != GetNumRows() || f_numCols != GetNumCols())
-                LogicError("UpdateFunctionMBSize: m_value out of sync with GetNumRows()/GetNumCols()");
+                LogicError("VerifyDimsMatch: m_value out of sync with GetNumRows()/GetNumCols()");
 
 #ifdef SHOW_MATRIX_TYPE
             fprintf(stderr, "MatrixType %ls: %ls(%ls  %ls)\n",
