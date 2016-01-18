@@ -13,7 +13,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<class ElemType>
+template <class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
 {
     *preader = new ImageReader<ElemType>();
@@ -27,4 +27,6 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
 {
     GetReader(preader);
 }
-}}}
+}
+}
+}

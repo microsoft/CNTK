@@ -9,9 +9,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This class deals with the interaction with Kaldi in order to do sequence
 // in CNTK.
-template<class ElemType>
-class KaldiSequenceTrainingDerivative :
-    public UtteranceDerivativeComputationInterface<ElemType>
+template <class ElemType>
+class KaldiSequenceTrainingDerivative : public UtteranceDerivativeComputationInterface<ElemType>
 {
 private:
     bool m_oneSilenceClass;
@@ -54,5 +53,4 @@ public:
 
     bool HasResourceForDerivative(const wstring& uttID) const;
 };
-
-}}}
+} } }

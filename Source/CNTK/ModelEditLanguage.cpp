@@ -19,12 +19,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate/*=NULL*/)
+bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate /*=NULL*/)
 {
     bool equal = !_strnicmp(string1.c_str(), string2, string1.size());
 
     // don't allow partial matches that are less than half the string
-    if (equal && string1.size() < strlen(string2)/2)
+    if (equal && string1.size() < strlen(string2) / 2)
         equal = false;
 
     // if we have a (partial) match replace with the full name
@@ -36,7 +36,7 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
         equal = !_strnicmp(string1.c_str(), alternate, string1.size());
 
         // don't allow partial matches that are less than half the string
-        if (equal && string1.size() < strlen(alternate)/2)
+        if (equal && string1.size() < strlen(alternate) / 2)
             equal = false;
 
         // if we have a match of the alternate string replace with the full name
@@ -69,7 +69,7 @@ template <typename ElemType>
 void MELScript<ElemType>::SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set)
 {
     auto found = propArray.begin();
-    for (;found != propArray.end() && *found != nodeProp; ++found)
+    for (; found != propArray.end() && *found != nodeProp; ++found)
         ; // loop until you find the node, or the end
 
     if (set && found == propArray.end())
@@ -82,7 +82,7 @@ void MELScript<ElemType>::SetProperty(ComputationNodeBasePtr nodeProp, vector<Co
     }
 }
 
-// ProcessNDLScript - Process the NDL script 
+// ProcessNDLScript - Process the NDL script
 // netNdl - netNDL structure
 // ndlPassUntil - complete processing through this pass, all passes if ndlPassAll
 // fullValidate - validate as a complete network? (false if this might be a snippet of a full network)
@@ -100,7 +100,7 @@ template <typename ElemType>
 void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigParamList& params)
 {
     std::string name = p_name;
-    if (EqualInsensitive(name, "CreateModel"))  // create a blank model
+    if (EqualInsensitive(name, "CreateModel")) // create a blank model
     {
         size_t numFixedParams = 0, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -109,7 +109,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
     }
-    if (EqualInsensitive(name, "CreateModelWithName"))  // create a blank model
+    if (EqualInsensitive(name, "CreateModelWithName")) // create a blank model
     {
         size_t numFixedParams = 1, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -139,17 +139,17 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
-#if 1   // support for a specific kind of legacy format, for the sole purpose of allowing users to convert (=load & save) them
+#if 1 // support for a specific kind of legacy format, for the sole purpose of allowing users to convert (=load & save) them
         if (modelFormat == L"cntk_legacy_no_tensorlib")
         {
             cn->Read<ElemType>(params[1]);
             for (auto node : cn->FeatureNodes())
-                node->SetDims(TensorShape(node->GetNumRows()), 0);  // pre-tensorlib InputValues had incorrect tensor dimensions
+                node->SetDims(TensorShape(node->GetNumRows()), 0); // pre-tensorlib InputValues had incorrect tensor dimensions
             cn->CompileNetwork();
         }
         else
 #endif
-        cn->Load<ElemType>(params[1]);
+            cn->Load<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadNDLSnippet"))
@@ -162,7 +162,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         wstring ndlSnippetFileName = params[1];
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
         NDLScript<ElemType> script;
-        ConfigParameters ndlScript (script.ReadConfigFile(ndlSnippetFileName));
+        ConfigParameters ndlScript(script.ReadConfigFile(ndlSnippetFileName));
 
         // check for a section of the snippet file we wish to read
         std::string section = GetOptionalSnippetSection(params, numFixedParams);
@@ -231,7 +231,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     else if (EqualInsensitive(name, "UnloadModel"))
     {
         // UnloadModel takes a variable number of parameters, all expected to be model names
-        for (int i=0; i < params.size(); ++i)
+        for (int i = 0; i < params.size(); ++i)
         {
             string modelName = params[i];
             auto found = m_mapNameToNetNdl.find(modelName);
@@ -247,7 +247,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 fprintf(stderr, "WARNING: model %s does not exist.", modelName.c_str());
         }
     }
-    else if (EqualInsensitive(name, "DumpModel", "Dump"))        
+    else if (EqualInsensitive(name, "DumpModel", "Dump"))
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -267,8 +267,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             ProcessNDLScript(netNdl, ndlPassAll, true);
             found->second.cn->DumpAllNodesToFile(includeData, fileName);
         }
-    }    
-    else if (EqualInsensitive(name, "DumpNode"))        
+    }
+    else if (EqualInsensitive(name, "DumpNode"))
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
@@ -325,11 +325,11 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdlFrom, ndlPassAll);
         for (GenNameValue name : names)
         {
-            auto & node = name.first;
+            auto& node = name.first;
             std::wstring nodeName = node->NodeName();
             std::wstring toNodeName = name.second;
 
-            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName,toNodeName,CopyNodeFlags::copyNodeChildren);
+            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, toNodeName, CopyNodeFlags::copyNodeChildren);
         }
     }
     else if (EqualInsensitive(name, "SetNodeInput", "SetInput"))
@@ -349,13 +349,13 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             RuntimeError("SetNodeInput() requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[2].c_str());
 
         if (nodeFrom.size() != 1)
-            RuntimeError("SetNodeInput() must have a single value input, %s doesn't represent one item",params[0].c_str());
+            RuntimeError("SetNodeInput() must have a single value input, %s doesn't represent one item", params[0].c_str());
         if (nodeTo.size() < 1)
-            RuntimeError("SetNodeInput() must have at least one target, %s doesn't represent any items",params[2].c_str());
+            RuntimeError("SetNodeInput() must have at least one target, %s doesn't represent any items", params[2].c_str());
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
-        ProcessNDLScript(netNdlFrom, ndlPassResolve); 
-        for (auto & node : nodeTo)
+        ProcessNDLScript(netNdlFrom, ndlPassResolve);
+        for (auto& node : nodeTo)
         {
             node->SetInput(inputNum, nodeFrom[0]);
         }
@@ -369,15 +369,15 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         NetNdl<ElemType>* netNdlTo;
         vector<ComputationNodeBasePtr> nodeTo = FindSymbols(params[0], netNdlTo);
         if (nodeTo.size() != 1)
-            RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0].c_str());
-        
+            RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.", params[0].c_str());
+
         vector<ComputationNodeBasePtr> inputNodes;
-        inputNodes.resize(params.size()-1);
+        inputNodes.resize(params.size() - 1);
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
-        ProcessNDLScript(netNdlTo, ndlPassResolve); 
+        ProcessNDLScript(netNdlTo, ndlPassResolve);
 
-        for (int i=1; i<params.size(); i++)
+        for (int i = 1; i < params.size(); i++)
         {
             NetNdl<ElemType>* netNdlFrom;
             vector<ComputationNodeBasePtr> nodeFrom = FindSymbols(params[i], netNdlFrom);
@@ -388,7 +388,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             if (nodeFrom.size() != 1)
                 RuntimeError("SetNodeInputs() each input node should be translated to one node name. %s is translated to multiple node names.", params[i].c_str());
 
-            inputNodes[i-1] = nodeFrom[0];
+            inputNodes[i - 1] = nodeFrom[0];
         }
 
         if (inputNodes.size() == 1)
@@ -404,9 +404,9 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         if (params.size() != 3)
             RuntimeError("Invalid number of parameters: Valid parameters are: SetProperty(toNode, propertyName, propertyValue)");
-        
+
         std::string propName = params[1];
-        MELProperty prop=melPropNull;
+        MELProperty prop = melPropNull;
         if (EqualInsensitive(propName, "computeGradient", "needsGradient"))
         {
             prop = melPropComputeGradient;
@@ -456,81 +456,81 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
         auto cn = netNdl->cn;
-        for (auto & node : nodes)
+        for (auto& node : nodes)
         {
-            switch(prop)
+            switch (prop)
             {
-                case melPropComputeGradient:
+            case melPropComputeGradient:
+            {
+                node->SetParameterUpdateRequired(params[2]);
+                break;
+            }
+            case melPropFeature:
+            {
+                bool set = params[2];
+                SetProperty(node, cn->FeatureNodes(), set);
+                break;
+            }
+            case melPropLabel:
+            {
+                bool set = params[2];
+                SetProperty(node, cn->LabelNodes(), set);
+                break;
+            }
+            case melPropFinalCriterion:
+            {
+                bool set = params[2];
+                SetProperty(node, cn->FinalCriterionNodes(), set);
+                break;
+            }
+            case melPropEvaluation:
+            {
+                bool set = params[2];
+                SetProperty(node, cn->EvaluationNodes(), set);
+                break;
+            }
+            case melPropOutput:
+            {
+                bool set = params[2];
+                SetProperty(node, cn->OutputNodes(), set);
+                break;
+            }
+            case melPropRecurrent:
+            {
+                // what to do here?
+                break;
+            }
+            case melPropBatchNormMode:
+            {
+                if (node->OperationName() != OperationNameOf(BatchNormalizationNode))
                 {
-                    node->SetParameterUpdateRequired(params[2]);
-                    break;
+                    RuntimeError("Invalid node type: node %ls (type:%ls) is not a %ls node; therefore cannot apply batchNormEvalMode on it.",
+                                 node->NodeName().c_str(),
+                                 node->OperationName().c_str(),
+                                 OperationNameOf(BatchNormalizationNode).c_str());
                 }
-                case melPropFeature:
+                bool property = params[2];
+                auto pnode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
+                if (pnode)
+                    pnode->SetEvalMode(property);
+                else
                 {
-                    bool set = params[2];
-                    SetProperty(node, cn->FeatureNodes(), set);
-                    break;
-                }
-                case melPropLabel:
-                {
-                    bool set = params[2];
-                    SetProperty(node, cn->LabelNodes(), set);
-                    break;
-                }
-                case melPropFinalCriterion:
-                {
-                    bool set = params[2];
-                    SetProperty(node, cn->FinalCriterionNodes(), set);
-                    break;
-                }
-                case melPropEvaluation:
-                {
-                    bool set = params[2];
-                    SetProperty(node, cn->EvaluationNodes(), set);
-                    break;
-                }
-                case melPropOutput:
-                {
-                    bool set = params[2];
-                    SetProperty(node, cn->OutputNodes(), set);
-                    break;
-                }
-                case melPropRecurrent:
-                {
-                    // what to do here?
-                    break;
-                }
-                case melPropBatchNormMode:
-                {
-                    if (node->OperationName() != OperationNameOf(BatchNormalizationNode))
-                    {
-                        RuntimeError("Invalid node type: node %ls (type:%ls) is not a %ls node; therefore cannot apply batchNormEvalMode on it.",
-                            node->NodeName().c_str(),
-                            node->OperationName().c_str(),
-                            OperationNameOf(BatchNormalizationNode).c_str());
-                    }
-                    bool property = params[2];
-                    auto pnode = dynamic_pointer_cast<BatchNormalizationNode<float>>(node);
-                    if (pnode)
-                        pnode->SetEvalMode(property);
+                    auto pnode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
+                    if (pnode2)
+                        pnode2->SetEvalMode(property);
                     else
                     {
-                        auto pnode2 = dynamic_pointer_cast<BatchNormalizationNode<double>>(node);
-                        if (pnode2)
-                            pnode2->SetEvalMode(property);
-                        else
-                        {
-                            RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n",
-                                node->NodeName().c_str());
-                        }
+                        RuntimeError("Invalid node type: node name=%ls. We assume either BatchNormalizationNode<float> or BatchNormalizationNode<double>\n",
+                                     node->NodeName().c_str());
                     }
-                    break;
                 }
-                default:
-                {
-                    RuntimeError("Invalid property, %s, is not supported", propName.c_str());
-                    break;
-                }
+                break;
+            }
+            default:
+            {
+                RuntimeError("Invalid property, %s, is not supported", propName.c_str());
+                break;
+            }
             }
         }
     }
@@ -539,17 +539,17 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         size_t numFixedParams = 3, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters are: SetPropertyForSubTree(rootNodeName, propertyName, propertyValue)");
-        
+
         std::string propName = params[1];
-        MELProperty prop=melPropNull;
+        MELProperty prop = melPropNull;
         if (EqualInsensitive(propName, "ComputeGradient", "NeedsGradient"))
         {
             prop = melPropComputeGradient;
         }
-	    else if (EqualInsensitive(propName, "batchNormEvalMode"))
-	    {
-	        prop = melPropBatchNormMode; 
-	    }
+        else if (EqualInsensitive(propName, "batchNormEvalMode"))
+        {
+            prop = melPropBatchNormMode;
+        }
         else
         {
             RuntimeError("Invalid property, %s, is not supported", propName.c_str());
@@ -562,35 +562,35 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
 
-        for (auto & node : nodes)
+        for (auto& node : nodes)
         {
-            switch(prop)
+            switch (prop)
             {
-                case melPropComputeGradient:
-                {
-                    bool needGradient = params[2];
-                    netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
-                    break;
-                }
-                case melPropBatchNormMode:
-                {
-                    bool evalMode = params[2];
-                    netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
-                    break;
-                }
-                default:
-                {
-                    RuntimeError("Invalid property, %s, is not supported", propName.c_str());
-                    break;
-                }
+            case melPropComputeGradient:
+            {
+                bool needGradient = params[2];
+                netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
+                break;
+            }
+            case melPropBatchNormMode:
+            {
+                bool evalMode = params[2];
+                netNdl->cn->SetBatchNormlizationNodesBelowEvalMode(evalMode, node);
+                break;
+            }
+            default:
+            {
+                RuntimeError("Invalid property, %s, is not supported", propName.c_str());
+                break;
+            }
             }
         }
     }
     else if (EqualInsensitive(name, "RemoveNode", "Remove") || EqualInsensitive(name, "DeleteNode", "Delete"))
     {
-        std::map<NetNdl<ElemType>*,bool> processed;
+        std::map<NetNdl<ElemType>*, bool> processed;
         // remove takes a variable number of parameters, all expected to be node names or wildcard patterns
-        for (int i=0; i < params.size(); ++i)
+        for (int i = 0; i < params.size(); ++i)
         {
             // get the nodes
             NetNdl<ElemType>* netNdl;
@@ -606,7 +606,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
             if (nodes.size() < 1)
                 RuntimeError("Delete must have at least one target, %s doesn't represent any items", params[i].c_str());
-            for (const auto & node : nodes)
+            for (const auto& node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
             }
@@ -632,7 +632,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // now we have the original nodeNames from the input symbol, generate the output nodeNames
         for (GenNameValue nodeName : nodeNames)
         {
-            auto & node = nodeName.first;
+            auto& node = nodeName.first;
             netNdlFrom->cn->RenameNode(node, nodeName.second);
         }
     }
@@ -644,15 +644,15 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::string nodeName = params[0];
         std::string paramPath = params[1];
 
-        NetNdl<ElemType>* netNdl; 
+        NetNdl<ElemType>* netNdl;
         vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
-        for (auto & pNodes : nodes)
+        for (auto& pNodes : nodes)
         {
             if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
             {
                 fprintf(stderr, "WARNING: you want to change the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
-                    pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
+                        pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
                 continue;
             }
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
@@ -666,7 +666,6 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     }
 }
 
-template class MELScript<float>; 
+template class MELScript<float>;
 template class MELScript<double>;
-
-}}}
+} } }

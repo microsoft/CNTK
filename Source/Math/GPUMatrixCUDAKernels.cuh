@@ -14,7 +14,7 @@
 #define TENSOR_OPS_DECL __device__ __host__
 #include "CommonMatrix.h"
 #include "GPUMatrix.h"
-#include "TensorOps.h"  // for exp_() etc.
+#include "TensorOps.h" // for exp_() etc.
 #include "device_functions.h"
 #include <cuda_runtime.h>
 #include <assert.h>
@@ -23,15 +23,15 @@
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
-#pragma warning (push)
-#pragma warning (disable: 4100)
-#pragma warning (disable: 4127)
-#pragma warning (disable: 4201)
-#pragma warning (disable: 4515)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#pragma warning(disable : 4127)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4515)
 #endif
 #include <cub/cub.cuh>
 #ifdef _MSC_VER
-#pragma warning (pop)
+#pragma warning(pop)
 #endif
 
 // We would like to use 64-bit integer to support large matrices. However, CUDA seems to support only 32-bit integer
@@ -41,14 +41,15 @@
 #define CUDA_LONG int32_t
 #endif
 
-#define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
+#define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
 // CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
 static __inline__ __device__ double atomicAdd(double* address, double val)
 {
-    unsigned long long int* address_as_ull = (unsigned long long int*)address;
+    unsigned long long int* address_as_ull = (unsigned long long int*) address;
     unsigned long long int old = *address_as_ull, assumed;
-    do {
+    do
+    {
         assumed = old;
         old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
     } while (assumed != old);
@@ -57,14 +58,16 @@ static __inline__ __device__ double atomicAdd(double* address, double val)
 
 // TODO: replace this with TensorOps.h LogAdd(). It differs in using ElemType throughout, while this one seems to use 'double' versions of exp() and log().
 // The 'k' in the name is to avoid naming conflicts with various versions of logadd() that are defined throughout the codebase.
-template<class ElemType>
+template <class ElemType>
 static inline __device__ __host__ ElemType logaddk(ElemType x, ElemType y)
 {
     ElemType temp, diff, z;
 
     if (x < y)
     {
-        temp = x; x = y; y = temp;
+        temp = x;
+        x = y;
+        y = temp;
     }
     diff = y - x;
     if (diff < MINLOGEXP)
@@ -84,31 +87,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // GridDim -- helper to choose the CUDA grid dimensions
 // ---------------------------------------------------------------------------
 
-template<class INT, class INT2>
-static INT CeilDiv(INT a, INT2 b)   // ceil(a/b)
+template <class INT, class INT2>
+static INT CeilDiv(INT a, INT2 b) // ceil(a/b)
 {
-    return (INT)(((size_t)a + (size_t)b - 1) / (size_t)b);  // these size_t casts are necessary since b may be INT_MAX (for maxGridSize[])
+    return (INT)(((size_t) a + (size_t) b - 1) / (size_t) b); // these size_t casts are necessary since b may be INT_MAX (for maxGridSize[])
 }
 
 struct GridDim
 {
-    static const CUDA_LONG maxThreadsPerBlock = 512;    // use this many threads per block
-    static const CUDA_LONG maxWarpsPerBlock = 16;       // use this many warps per block
+    static const CUDA_LONG maxThreadsPerBlock = 512; // use this many threads per block
+    static const CUDA_LONG maxWarpsPerBlock = 16;    // use this many warps per block
 
     // use these for launching
     //   GridDim grid(NN);
     //   kernel<<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, ...>>>(...)
-    int m_blocksPerGrid, m_threadsPerBlock;             // (these may in the future be extended to multi-dimensional ones)
+    int m_blocksPerGrid, m_threadsPerBlock; // (these may in the future be extended to multi-dimensional ones)
     CUDA_LONG m_N;
 
-    GridDim(CUDA_LONG N)    // linear grid
+    GridDim(CUDA_LONG N) // linear grid
     {
         m_N = N;
-        if (N == 0)                     // CUDA will fail to launch with 0 blocks
+        if (N == 0) // CUDA will fail to launch with 0 blocks
             N = 1;
 
         // get device information
-        const auto & props = GetDeviceProps();
+        const auto& props = GetDeviceProps();
         CUDA_LONG numProcs = props.multiProcessorCount;
         CUDA_LONG warpSize = props.warpSize;
 
@@ -126,7 +129,7 @@ struct GridDim
         m_threadsPerBlock = warpsPerProc * warpSize;
         m_blocksPerGrid = CeilDiv(N, m_threadsPerBlock);
         if (m_blocksPerGrid == 1)
-            m_threadsPerBlock = N;  // don't launch more than necessary  --TODO: Does this make a difference at all?
+            m_threadsPerBlock = N; // don't launch more than necessary  --TODO: Does this make a difference at all?
         assert(m_blocksPerGrid * m_threadsPerBlock >= N);
     }
 
@@ -137,7 +140,7 @@ struct GridDim
         std::vector<cudaDeviceProp> props(numDevices);
         for (int i = 0; i < numDevices; i++)
             CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
-#if 0   // on Linux, maxGridSize[0] gets reported as 0
+#if 0 // on Linux, maxGridSize[0] gets reported as 0
         for (int i = 0; i < numDevices; i++)
             fprintf(stderr, "%d procs  %d warps  %d %d %d max grid  on  %s\n", (int)props[i].multiProcessorCount, (int)props[i].warpSize, (int)props[i].maxGridSize[0], (int)props[i].maxGridSize[1], (int)props[i].maxGridSize[2], props[i].name);
 #endif
@@ -145,9 +148,9 @@ struct GridDim
     }
 
     // get device properties of current device
-    static const cudaDeviceProp & GetDeviceProps()
+    static const cudaDeviceProp& GetDeviceProps()
     {
-        static std::vector<cudaDeviceProp> props = CacheDeviceProps();   // thread-safe according to C++ standard
+        static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
         int deviceId;
         cudaGetDevice(&deviceId);
         return props[deviceId];
@@ -160,10 +163,13 @@ struct GridDim
     }
 };
 
-#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) CUDA_LONG id = GridDim::GetLinearThreadId(); if (id>=N) return;
+#define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N) \
+    CUDA_LONG id = GridDim::GetLinearThreadId();   \
+    if (id >= N)                                   \
+        return;
 
 #ifdef __GNUC__
-#define UNUSED_FUNCTION_ATTRIBUTE __attribute__ ((unused))
+#define UNUSED_FUNCTION_ATTRIBUTE __attribute__((unused))
 #else
 #define UNUSED_FUNCTION_ATTRIBUTE
 #endif
@@ -179,53 +185,53 @@ struct GridDim
 // (ElemenType *res, CUDA_LONG N), a pointer and length of the output block. Each thread computes a function
 // of the inputs for one value in the output.
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _elementWisePowerOnCuda(
-    const ElemType alpha,     
-    const ElemType *a, 
-    ElemType *res,    
+    const ElemType alpha,
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    if (alpha==0)
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    if (alpha == 0)
     {
-        res[id]=1;
+        res[id] = 1;
     }
-    else if (alpha==1)
+    else if (alpha == 1)
     {
-        res[id]=a[id];
+        res[id] = a[id];
     }
-    else if (alpha==2)
+    else if (alpha == 2)
     {
-        res[id]=a[id]*a[id];
+        res[id] = a[id] * a[id];
     }
-    else if (alpha==3)
+    else if (alpha == 3)
     {
-        res[id]=a[id]*a[id]*a[id];
+        res[id] = a[id] * a[id] * a[id];
     }
     else
     {
-        if (sizeof(ElemType)==sizeof(double))
+        if (sizeof(ElemType) == sizeof(double))
         {
-            res[id]=pow(a[id],alpha);
+            res[id] = pow(a[id], alpha);
         }
         else
         {
-            res[id]=powf(a[id],alpha);
+            res[id] = powf(a[id], alpha);
         }
-    }    
+    }
 };
 
 // Note that this code is inefficient on CUDA due to diverging code paths.
 // Use Sigmoid() in TensorOps.h instead, which solves this problem.
-template<class ElemType>
-__global__ void _elementWiseSigmoidOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseSigmoidOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-#if 0   // this computes the same thing but is twice as fast on CUDA
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+#if 0 // this computes the same thing but is twice as fast on CUDA
     res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
 #else
     if (a[id] >= 0)
@@ -241,19 +247,19 @@ __global__ void _elementWiseSigmoidOnCuda(
 #endif
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignSigmoidOf(
     const ElemType* a,
     ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 
-    // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
-    // and e^x / (1 + e^x) if x is positive.
-    // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
-    //         There is a second version of this function that does. That should be used.
-#if 0   // this has the same speed now, although not identical accuracy
+// This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
+// and e^x / (1 + e^x) if x is positive.
+// BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
+//         There is a second version of this function that does. That should be used.
+#if 0 // this has the same speed now, although not identical accuracy
     res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
 #else
     ElemType negElem = -a[id];
@@ -263,124 +269,124 @@ __global__ void _assignSigmoidOf(
 #endif
 };
 
-template<class ElemType>
-__global__ void _elementWiseLinRectDerivativeOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseLinRectDerivativeOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = (a[id] <= 0) ? 0 : 1;
 }
 
-template<class ElemType>
-__global__ void _elementWiseSigmoidDerivativeOnCuda( 
-    const ElemType *a,
-    ElemType *res,
+template <class ElemType>
+__global__ void _elementWiseSigmoidDerivativeOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = a[id] * (1-a[id]);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = a[id] * (1 - a[id]);
 }
 
-template<class ElemType>
-__global__ void _elementWiseTanhOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseTanhOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = tanh_(a[id]);
 };
 
 //to prevent negative values caused by floating operations, we force inputs to be >=0
 //this may, however, hide problems in the caller.
-template<class ElemType>
-__global__ void _elementWiseSqrtOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseSqrtOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
-    res[id] = sqrt_(max((ElemType)0, a[id]));
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = sqrt_(max((ElemType) 0, a[id]));
 };
 
-template<class ElemType>
-__global__ void _elementWiseExpOnCuda(  
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseExpOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = exp_(a[id]);
 };
 
-template<class ElemType>
-__global__ void _elementWiseLogOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseLogOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log_(a[id]);
 };
 
-template<class ElemType>
-__global__ void _elementWiseAbsOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseAbsOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = fabs_(a[id]);
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _elementWiseCosineOnCuda(
-    const ElemType *a,
-    ElemType *res,    
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = cos_(a[id]);
 };
 
-template<class ElemType>
-__global__ void _elementWiseNegativeSineOnCuda(    
-    const ElemType *a,
-    ElemType *res,    
+template <class ElemType>
+__global__ void _elementWiseNegativeSineOnCuda(
+    const ElemType* a,
+    ElemType* res,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = -sin_(a[id]);
 };
 
-template<class ElemType>
-__global__ void _setValue(    
+template <class ElemType>
+__global__ void _setValue(
     ElemType* a,
     const ElemType v,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    a[id]=v;
+    a[id] = v;
 };
 
-template<class ElemType>
-__global__ void _setValue(    
+template <class ElemType>
+__global__ void _setValue(
     ElemType* a,
     const ElemType* d_v,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    a[id]=d_v[0];
+    a[id] = d_v[0];
 };
 
-template<class ElemType>
-__global__ void _copyColumnsStrided(ElemType * dest, ElemType * src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
+template <class ElemType>
+__global__ void _copyColumnsStrided(ElemType* dest, ElemType* src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -389,11 +395,11 @@ __global__ void _copyColumnsStrided(ElemType * dest, ElemType * src, CUDA_LONG N
     CUDA_LONG denseColIdx = id / numRows;
     CUDA_LONG rowIdx = id - (denseColIdx * numRows);
 
-    dest[(denseColIdx*destNumColsStride*numRows) + rowIdx] = src[(denseColIdx*srcNumColsStride*numRows) + rowIdx];
+    dest[(denseColIdx * destNumColsStride * numRows) + rowIdx] = src[(denseColIdx * srcNumColsStride * numRows) + rowIdx];
 }
 
-template<class ElemType>
-__global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
+template <class ElemType>
+__global__ void _assignToRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -402,14 +408,14 @@ __global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const
     CUDA_LONG col = id / srcRows;
     CUDA_LONG row = id - (col * srcRows);
 
-    dest[col*destRows + row + startIndex] = src[id];
+    dest[col * destRows + row + startIndex] = src[id];
 }
 
-template<class ElemType>
-__global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
+template <class ElemType>
+__global__ void _assignRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
     CUDA_LONG col = id / destRows;
@@ -419,35 +425,35 @@ __global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const C
     dest[id] = src[IDX2C(row + startIndex, col, srcRows)];
 }
 
-template<class ElemType>
-__global__ void _addToRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
+template <class ElemType>
+__global__ void _addToRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
-    CUDA_LONG col = id / srcRows;  //src is the full matrix, rowslice is taken from the dest
+    CUDA_LONG col = id / srcRows; //src is the full matrix, rowslice is taken from the dest
     CUDA_LONG row = id - (col * srcRows);
 
     //dest[col*destRows + row + startIndex] += src[id];
     dest[IDX2C(row + startIndex, col, destRows)] += src[id];
 }
 
-template<class ElemType>
-__global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
+template <class ElemType>
+__global__ void _addWithRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    CUDA_LONG col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    CUDA_LONG col = id / destRows; //dest is the full matrix, rowslice is taken from the src
     CUDA_LONG row = id - (col * destRows);
 
     dest[id] += src[IDX2C(row + startIndex, col, srcRows)];
 }
 
-template<class ElemType>
-__global__ void _assignToDiagonalValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG srcCols)
+template <class ElemType>
+__global__ void _assignToDiagonalValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcCols)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -460,29 +466,29 @@ __global__ void _assignToDiagonalValuesOf(ElemType * dest, ElemType * src, const
         dest[row] = src[id];
 }
 
-template<class ElemType>
-__global__ void _assignRowStackValuesOf(ElemType * dest, ElemType ** srces, size_t* startRowIndeces, const CUDA_LONG numSrces, const CUDA_LONG N, const CUDA_LONG destRows, const CUDA_LONG destCols)
+template <class ElemType>
+__global__ void _assignRowStackValuesOf(ElemType* dest, ElemType** srces, size_t* startRowIndeces, const CUDA_LONG numSrces, const CUDA_LONG N, const CUDA_LONG destRows, const CUDA_LONG destCols)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    CUDA_LONG col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    CUDA_LONG col = id / destRows; //dest is the full matrix, rowslice is taken from the src
     CUDA_LONG row = id - (col * destRows);
 
     //can we replace the for loop with something better?
     int srcId = 0;
     for (; srcId < numSrces; srcId++)
     {
-        if (startRowIndeces[srcId + 1]>row)
+        if (startRowIndeces[srcId + 1] > row)
             break;
     }
 
-    dest[id] = srces[srcId][IDX2C(row - startRowIndeces[srcId], col, startRowIndeces[srcId+1] - startRowIndeces[srcId])];
+    dest[id] = srces[srcId][IDX2C(row - startRowIndeces[srcId], col, startRowIndeces[srcId + 1] - startRowIndeces[srcId])];
 }
 
-template<class ElemType>
-__global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
+template <class ElemType>
+__global__ void _assignRepeatOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -494,11 +500,11 @@ __global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const CUDA_LONG
     CUDA_LONG srcRow = destRow % srcRows;
     CUDA_LONG srcCol = destCol % srcCols;
 
-    dest[id] = src[IDX2C(srcRow,srcCol,srcRows)];
+    dest[id] = src[IDX2C(srcRow, srcCol, srcRows)];
 }
 
-template<class ElemType>
-__global__ void _addToRowRepeatValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
+template <class ElemType>
+__global__ void _addToRowRepeatValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -511,8 +517,8 @@ __global__ void _addToRowRepeatValuesOf(ElemType * dest, ElemType * src, const C
     dest[IDX2C(row, col, destRows)] += src[id];
 }
 
-template<class ElemType>
-__global__ void _assignPositiveAndShiftedNegSample(ElemType * dest, const ElemType * src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows, const CUDA_LONG posNumber, const CUDA_LONG shiftNumber)
+template <class ElemType>
+__global__ void _assignPositiveAndShiftedNegSample(ElemType* dest, const ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows, const CUDA_LONG posNumber, const CUDA_LONG shiftNumber)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -528,8 +534,8 @@ __global__ void _assignPositiveAndShiftedNegSample(ElemType * dest, const ElemTy
     dest[id] = src[IDX2C(srcRow, srcCol, srcRows)];
 }
 
-template<class ElemType>
-__global__ void _addFoldedPositiveAndShiftedNegSample(ElemType * folded, const ElemType * unfolded, const CUDA_LONG unfoldedN, const CUDA_LONG unfoldedRows, const CUDA_LONG unfoldedCols, const CUDA_LONG foldedRows, const CUDA_LONG posNumber, const CUDA_LONG shiftNumber)
+template <class ElemType>
+__global__ void _addFoldedPositiveAndShiftedNegSample(ElemType* folded, const ElemType* unfolded, const CUDA_LONG unfoldedN, const CUDA_LONG unfoldedRows, const CUDA_LONG unfoldedCols, const CUDA_LONG foldedRows, const CUDA_LONG posNumber, const CUDA_LONG shiftNumber)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= unfoldedN)
@@ -545,7 +551,7 @@ __global__ void _addFoldedPositiveAndShiftedNegSample(ElemType * folded, const E
     atomicAdd(&folded[IDX2C(foldedRow, foldedCol, foldedRows)], unfolded[id]);
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignDifferenceOf1(
     ElemType* us,
     const ElemType alpha,
@@ -553,12 +559,12 @@ __global__ void _assignDifferenceOf1(
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    us[id]=alpha-a[id];
+    us[id] = alpha - a[id];
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignDifferenceOf2(
     ElemType* us,
     const ElemType alpha,
@@ -566,79 +572,77 @@ __global__ void _assignDifferenceOf2(
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    us[id]=a[id]-alpha;
+    us[id] = a[id] - alpha;
 };
 
 ///a is a scalar
-template<class ElemType>
+template <class ElemType>
 __global__ void _scaleAndAddScalar(
     ElemType* c,
     const CUDA_LONG N,
     const ElemType alpha,
-    const ElemType *a,
-    const ElemType *b
-)
+    const ElemType* a,
+    const ElemType* b)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    c[id] = alpha*a[0] + b[id];
+    c[id] = alpha * a[0] + b[id];
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(
     ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    ElemType f = alpha * *a;    // scalar matrix
-    if (beta == 0)              // don't even read the memory if beta is 0
+    ElemType f = alpha * *a; // scalar matrix
+    if (beta == 0)           // don't even read the memory if beta is 0
         c[id] = b[id] * f;
     else
         c[id] = b[id] * f + c[id] * beta;
 }
 
-template<class ElemType>
-__global__ void _addValue(    
+template <class ElemType>
+__global__ void _addValue(
     ElemType* a,
     const ElemType v,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    a[id]+=v;
+    a[id] += v;
 };
 
-template<class ElemType>
-__global__ void _addValue(    
+template <class ElemType>
+__global__ void _addValue(
     ElemType* a,
     const ElemType* d_v,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    a[id]+=d_v[0];
+    a[id] += d_v[0];
 };
 
-
-template<class ElemType>
-__global__ void _elemMul(    
+template <class ElemType>
+__global__ void _elemMul(
     ElemType* a,
     const ElemType* b,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    a[id]*=b[id];
+    a[id] *= b[id];
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignElementProductOf(
     ElemType* us,
     const ElemType* a,
@@ -646,49 +650,49 @@ __global__ void _assignElementProductOf(
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    us[id]=a[id]*b[id];
+    us[id] = a[id] * b[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignKhatriRaoProductOf(
     ElemType* us,
     const ElemType* a,
     const ElemType* b,
-    const CUDA_LONG rowsA, 
-    const CUDA_LONG rowsB, 
+    const CUDA_LONG rowsA,
+    const CUDA_LONG rowsB,
     const CUDA_LONG cols)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 
     const CUDA_LONG rows = rowsA * rowsB;
     const CUDA_LONG col = id / rows;
-    if (col >= cols) 
-        return; 
+    if (col >= cols)
+        return;
 
     const CUDA_LONG row = id % rows;
-    const CUDA_LONG rowB = row / rowsA; 
+    const CUDA_LONG rowB = row / rowsA;
     const CUDA_LONG rowA = row % rowsA;
 
     us[id] = a[rowA + col * rowsA] * b[rowB + col * rowsB];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _addColumnReshapeProductOf(
     ElemType* us,
     const ElemType* a,
     const ElemType* b,
-    const CUDA_LONG rowsB, 
-    const CUDA_LONG rowsC, 
+    const CUDA_LONG rowsB,
+    const CUDA_LONG rowsC,
     const CUDA_LONG cols,
     const bool transposeAColumn)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 
     const CUDA_LONG col = id / rowsC;
-    if (col >= cols) 
-        return; 
+    if (col >= cols)
+        return;
 
     const CUDA_LONG row = id % rowsC;
     CUDA_LONG bBase = col * rowsB;
@@ -698,7 +702,7 @@ __global__ void _addColumnReshapeProductOf(
     if (transposeAColumn)
     {
         aBase += row * rowsB;
-        for (CUDA_LONG i=0; i<rowsB; i++)
+        for (CUDA_LONG i = 0; i < rowsB; i++)
         {
             v += a[aBase++] * b[bBase++];
         }
@@ -706,7 +710,7 @@ __global__ void _addColumnReshapeProductOf(
     else
     {
         aBase += row;
-        for (CUDA_LONG i=0; i<rowsB; i++)
+        for (CUDA_LONG i = 0; i < rowsB; i++)
         {
             v += a[aBase] * b[bBase++];
             aBase += rowsC;
@@ -715,7 +719,7 @@ __global__ void _addColumnReshapeProductOf(
     us[row + col * rowsC] += v;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignElementDivisionOf(
     ElemType* us,
     const ElemType* a,
@@ -725,20 +729,20 @@ __global__ void _assignElementDivisionOf(
     ElemType smallValue = EPS_IN_INVERSE;
 
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
     ElemType v = b[id];
 
-    if (v <0 && v > -smallValue)
-        us[id] = a[id]/(-smallValue);
-    else if (v >=0 && v < smallValue)
-        us[id] = a[id]/smallValue;
+    if (v < 0 && v > -smallValue)
+        us[id] = a[id] / (-smallValue);
+    else if (v >= 0 && v < smallValue)
+        us[id] = a[id] / smallValue;
     else
-        us[id]=a[id]/v;
+        us[id] = a[id] / v;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _elemInverse(
     ElemType* us,
     const CUDA_LONG N)
@@ -746,20 +750,20 @@ __global__ void _elemInverse(
     ElemType smallValue = EPS_IN_INVERSE;
 
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
-    if (us[id] <0 && us[id] > -smallValue)
-        us[id] = 1/-smallValue;
-    else if (us[id] >=0 && us[id] < smallValue)
-        us[id] = 1/smallValue;
+    if (us[id] < 0 && us[id] > -smallValue)
+        us[id] = 1 / -smallValue;
+    else if (us[id] >= 0 && us[id] < smallValue)
+        us[id] = 1 / smallValue;
     else
-        us[id]=1/us[id];
+        us[id] = 1 / us[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _logSoftMaxColWise(
-    ElemType *a,
+    ElemType* a,
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows) //ld
 {
@@ -772,21 +776,21 @@ __global__ void _logSoftMaxColWise(
     maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
     Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG i = 0; i<m_numRows; ++i)
+    for (CUDA_LONG i = 0; i < m_numRows; ++i)
     {
-        if (a[IDX2C(i, col_id, m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(i, col_id, m_numRows)] > maxV[threadIdx.x])
         {
             maxV[threadIdx.x] = a[IDX2C(i, col_id, m_numRows)];
         }
     }
 
-    for (CUDA_LONG i = 0; i<m_numRows; ++i)
+    for (CUDA_LONG i = 0; i < m_numRows; ++i)
     {
         ElemType tmp = a[IDX2C(i, col_id, m_numRows)] - maxV[threadIdx.x];
         Sum[threadIdx.x] += (sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp));
     }
     Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
-    for (CUDA_LONG i = 0; i<m_numRows; ++i)
+    for (CUDA_LONG i = 0; i < m_numRows; ++i)
     {
         a[IDX2C(i, col_id, m_numRows)] -= Sum[threadIdx.x];
     }
@@ -836,9 +840,9 @@ __global__ void _logSoftMaxColWise(
 //}
 
 // each block processes one column. There must be 512 threads in a block
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignColumnwiseLogSoftmaxOf(
-    const ElemType *a,
+    const ElemType* a,
     ElemType* us,
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows)
@@ -970,9 +974,9 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _logSoftMaxRowWise(
-    ElemType *a,
+    ElemType* a,
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows) //ld
 {
@@ -985,33 +989,33 @@ __global__ void _logSoftMaxRowWise(
     maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
     Sum[threadIdx.x] = 0;
 
-    for (CUDA_LONG j = 0; j<m_numCols; ++j)
+    for (CUDA_LONG j = 0; j < m_numCols; ++j)
     {
-        if (a[IDX2C(row_id, j, m_numRows)]>maxV[threadIdx.x])
+        if (a[IDX2C(row_id, j, m_numRows)] > maxV[threadIdx.x])
         {
             maxV[threadIdx.x] = a[IDX2C(row_id, j, m_numRows)];
         }
     }
 
-    for (CUDA_LONG j = 0; j<m_numCols; ++j)
+    for (CUDA_LONG j = 0; j < m_numCols; ++j)
     {
         ElemType tmp = a[IDX2C(row_id, j, m_numRows)] - maxV[threadIdx.x];
         Sum[threadIdx.x] += sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp);
     }
     Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
-    for (CUDA_LONG j = 0; j<m_numCols; ++j)
+    for (CUDA_LONG j = 0; j < m_numCols; ++j)
     {
         a[IDX2C(row_id, j, m_numRows)] -= Sum[threadIdx.x];
     }
 }
 
 // each block processes one column. There must be 512 threads in a block
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignColumnwiseHardmaxOf(
-    const ElemType *a,
+    const ElemType* a,
     ElemType* us,
     const CUDA_LONG m_numCols,
-    const CUDA_LONG m_numRows) 
+    const CUDA_LONG m_numRows)
 {
     // We first find max per column
     __shared__ ElemType partials[512];
@@ -1163,14 +1167,14 @@ __global__ void _inplaceTruncateBottom(
 }
 #endif
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignTruncateBottom(
     ElemType* us,
     const ElemType* a,
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     us[id] = a[id] < threshold ? threshold : a[id];
 }
 
@@ -1189,102 +1193,102 @@ __global__ void _inplaceTruncateTop(
 }
 #endif
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignTruncateTop(
     ElemType* us,
     const ElemType* a,
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     us[id] = a[id] > threshold ? threshold : a[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _setToZeroIfAbsLessThan(
     ElemType* a,
     const ElemType threshold,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    if (sizeof(ElemType)==sizeof(float))
+    if (sizeof(ElemType) == sizeof(float))
     {
-        if (fabsf(a[id])<threshold)
-            a[id]=0;
+        if (fabsf(a[id]) < threshold)
+            a[id] = 0;
     }
     else
     {
-        if (fabs(a[id])<threshold)
-            a[id]=0;
+        if (fabs(a[id]) < threshold)
+            a[id] = 0;
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _areEqual(
     const ElemType* a,
     const ElemType* b,
     const CUDA_LONG N,
     const ElemType threshold,
-    long *d_res)
+    long* d_res)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
-    if (sizeof(ElemType)==sizeof(float))
+    if (sizeof(ElemType) == sizeof(float))
     {
-        if (fabsf(a[id]-b[id]) > threshold) 
+        if (fabsf(a[id] - b[id]) > threshold)
         {
-            d_res[0]=0;
+            d_res[0] = 0;
         }
     }
     else
     {
-        if (fabs(1.0*a[id]-1.0*b[id]) > threshold) 
+        if (fabs(1.0 * a[id] - 1.0 * b[id]) > threshold)
         {
-            d_res[0]=0;
+            d_res[0] = 0;
         }
     }
 }
 
 // see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
-template<class ElemType>
+template <class ElemType>
 __global__ void _tensorShuffleScaleAndAdd(
     ElemType keepWeight, const ElemType* pa, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const ElemType* pb, ElemType* pc)
 {
     size_t N = D * S * M * K * T;
-    CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x; // input tensor of dimension (D x S x M x K x T)
     if (na >= N)
         return;
     // recover the 5 indices from the loop counter
-    size_t d =  na                  % D;
-    size_t s = (na / D            ) % S;
-    size_t m = (na / D / S        ) % M;
-    size_t k = (na / D / S / M    ) % K;
+    size_t d = na % D;
+    size_t s = (na / D) % S;
+    size_t m = (na / D / S) % M;
+    size_t k = (na / D / S / M) % K;
     size_t t = (na / D / S / M / K) % T;
     // compute index for the a and b/c tensors
-    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
+    size_t nb = (((t * S + s) * M + m) * K + k) * D + d; // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
     // perform the computation
-    ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+    ElemType cval = keepWeight ? keepWeight * pb[nb] : 0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
     cval += scaleFactor * pa[na];
     pc[nb] = cval;
 }
 
 // see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
-template<class ElemType>
+template <class ElemType>
 __global__ void _tensorShuffleScaleAndAddRowSparse(
-    const ElemType* anzValues,  //source nz values
+    const ElemType* anzValues, //source nz values
     const GPUSPARSE_INDEX_TYPE* aRowIndex,
     const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
-    ElemType* cnzValues,  //target nz values
+    ElemType* cnzValues, //target nz values
     GPUSPARSE_INDEX_TYPE* cRowIndex,
     GPUSPARSE_INDEX_TYPE* cColCSCIndex,
     size_t D, size_t S, size_t M, size_t K, size_t T,
     size_t nz)
 {
-    CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    CUDA_LONG N = blockDim.x * blockIdx.x + threadIdx.x; // input tensor of dimension (D x S x M x K x T)
     if (N < aColCSCIndex[0] || N >= aColCSCIndex[T])
         return;
 
@@ -1300,26 +1304,26 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     int end = aColCSCIndex[col + 1];
 
     // recover the 5 indices from the loop counter
-    size_t d = (na                  ) % D;
-    size_t s = (na / D              ) % S;
-    size_t m = (na / D / S          ) % M;
-    size_t k = (na / D / S / M      ) % K;
+    size_t d = (na) % D;
+    size_t s = (na / D) % S;
+    size_t m = (na / D / S) % M;
+    size_t k = (na / D / S / M) % K;
 
     // compute index for the a and b/c tensors
-    size_t nc = ((s * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+    size_t nc = ((s * M + m) * K + k) * D + d; // output tensor of dimension (D x K x M x S): k/K and s/S swapped
 
     int rowIdx = start;
     for (size_t j = start; j < end; j++)
     {
         // recover the 5 indices from the loop counter
         size_t na_i = aRowIndex[j];
-        size_t d_i = (na_i              ) % D;
-        size_t s_i = (na_i / D          ) % S;
-        size_t m_i = (na_i / D / S      ) % M;
-        size_t k_i = (na_i / D / S / M  ) % K;
+        size_t d_i = (na_i) % D;
+        size_t s_i = (na_i / D) % S;
+        size_t m_i = (na_i / D / S) % M;
+        size_t k_i = (na_i / D / S / M) % K;
 
         // compute index for the a and b/c tensors
-        size_t nc_i = ((s_i * M + m_i) * K + k_i) * D + d_i;    // output tensor of dimension (D x K x M x S): k/K and s/S swapped
+        size_t nc_i = ((s_i * M + m_i) * K + k_i) * D + d_i; // output tensor of dimension (D x K x M x S): k/K and s/S swapped
         if (nc_i < nc)
         {
             rowIdx++;
@@ -1338,11 +1342,11 @@ __global__ void _tensorShuffleScaleAndAddRowSparse(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _hasElement(
     const ElemType* a,
     const CUDA_LONG N,
-    ElemType *d_res  /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
+    ElemType* d_res /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1355,7 +1359,7 @@ __global__ void _hasElement(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _setDiagonalValue(
     ElemType* a,
     const ElemType v,
@@ -1363,25 +1367,24 @@ __global__ void _setDiagonalValue(
     const CUDA_LONG ld)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;    
-    a[IDX2C(id,id,ld)]=v;
-
+    if (id >= N)
+        return;
+    a[IDX2C(id, id, ld)] = v;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _setDiagonalValueFromVector(
     ElemType* a,
     const ElemType* b,
     const CUDA_LONG N)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return; 
-    a[IDX2C(id,id,N)]=b[id];
+    if (id >= N)
+        return;
+    a[IDX2C(id, id, N)] = b[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _adagrad(
     ElemType* a,
     ElemType* d_v,
@@ -1395,22 +1398,22 @@ __global__ void _adagrad(
     const ElemType floor = 1e-16f;
 
     a[id] += d_v[id] * d_v[id];
-    ElemType temp = sqrt(a[id]+floor);
+    ElemType temp = sqrt(a[id] + floor);
     d_v[id] /= temp;
 
     if (multipliers != nullptr)
-        multipliers[id] = 1/temp;
+        multipliers[id] = 1 / temp;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _adagrad4BlockSparse(
-    ElemType* a,  //dense
+    ElemType* a,          //dense
     const size_t numRows, //number of rows in a and in d_v
-    ElemType* d_v, //block sparse
+    ElemType* d_v,        //block sparse
     const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow,
     ElemType* multipliers,
     const bool colMajor,
-    const size_t len, //major dim, numRows in colMajor and numcols in rowMajor
+    const size_t len,  //major dim, numRows in colMajor and numcols in rowMajor
     const CUDA_LONG N) //total number of non-zero values
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1418,11 +1421,11 @@ __global__ void _adagrad4BlockSparse(
         return;
 
     const ElemType floor = 1e-16f;
-    CUDA_LONG blockid = id / len;  
-    CUDA_LONG row = colMajor ? id - blockid*len : blockId2ColOrRow[blockid];
-    CUDA_LONG col = colMajor ? blockId2ColOrRow[blockid] : id - blockid*len;
+    CUDA_LONG blockid = id / len;
+    CUDA_LONG row = colMajor ? id - blockid * len : blockId2ColOrRow[blockid];
+    CUDA_LONG col = colMajor ? blockId2ColOrRow[blockid] : id - blockid * len;
 
-    size_t indexInA = row + col*numRows;
+    size_t indexInA = row + col * numRows;
     a[indexInA] += d_v[id] * d_v[id];
     ElemType temp = sqrt(a[indexInA] + floor);
     d_v[id] /= temp;
@@ -1431,9 +1434,9 @@ __global__ void _adagrad4BlockSparse(
         multipliers[id] = 1 / temp;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
@@ -1470,12 +1473,11 @@ __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, 
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rmsprop_init(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,
-    const CUDA_LONG N
-    )
+    const CUDA_LONG N)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
@@ -1487,22 +1489,21 @@ __global__ void _rmsprop_init(
     steps[i] = ElemType(0.02);
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rmsprop(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,
     const CUDA_LONG N,
-    ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
+    ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN,
     ElemType floor,
-    ElemType *upd_gpu,
-    ElemType* multipliers
-    )
+    ElemType* upd_gpu,
+    ElemType* multipliers)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0)-RMS_GAMMA)* (curr_grad[i] * curr_grad[i]);
+    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (curr_grad[i] * curr_grad[i]);
 
     //// grad sign base 3: 0->neg, 1->zero, 2->pos
     //const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
@@ -1528,7 +1529,7 @@ __global__ void _rmsprop(
 
     const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-    if( signs[i] * grad_sign > 0 )
+    if (signs[i] * grad_sign > 0)
         steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
     else
         steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
@@ -1541,7 +1542,7 @@ __global__ void _rmsprop(
         multipliers[i] = temp;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rescaleToRange(
     ElemType* a,
     const CUDA_LONG N,
@@ -1549,12 +1550,12 @@ __global__ void _rescaleToRange(
     const ElemType high)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;    
-    a[id]=a[id]*(high-low)+low;
+    if (id >= N)
+        return;
+    a[id] = a[id] * (high - low) + low;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _setMaskAndScale(
     ElemType* a,
     const CUDA_LONG N,
@@ -1562,14 +1563,14 @@ __global__ void _setMaskAndScale(
     const ElemType scaleValue)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;    
-    a[id]=a[id]<=maskRate? 0 : scaleValue;
+    if (id >= N)
+        return;
+    a[id] = a[id] <= maskRate ? 0 : scaleValue;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _vectorSum(
-    ElemType* c, //output
+    ElemType* c,       //output
     const ElemType* a, //input
     const CUDA_LONG n, //a.numRows
     const CUDA_LONG m, //a.numCols
@@ -1583,14 +1584,14 @@ __global__ void _vectorSum(
 
     if (isColWise)
     {
-        for (CUDA_LONG i = 0; i<n; ++i)
+        for (CUDA_LONG i = 0; i < n; ++i)
         {
             sum += a[IDX2C(i, id, n)];
         }
     }
     else
     {
-        for (CUDA_LONG j = 0; j<m; ++j)
+        for (CUDA_LONG j = 0; j < m; ++j)
         {
             sum += a[IDX2C(id, j, n)];
         }
@@ -1598,79 +1599,78 @@ __global__ void _vectorSum(
     c[id] = sum;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _vectorNorm1(
-    ElemType* c, //output
+    ElemType* c,       //output
     const ElemType* a, //input
     const CUDA_LONG n, //a.numRows
     const CUDA_LONG m, //a.numCols
     const bool isColWise)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((isColWise && id>=m)||(!isColWise && id>=n))
+    if ((isColWise && id >= m) || (!isColWise && id >= n))
         return;
 
     ElemType sum = 0;
 
     if (isColWise)
     {
-        for (CUDA_LONG i=0;i<n;++i)
+        for (CUDA_LONG i = 0; i < n; ++i)
         {
-            if (sizeof(ElemType)==sizeof(float))
+            if (sizeof(ElemType) == sizeof(float))
             {
-                sum+=fabsf(a[IDX2C(i,id,n)]);
+                sum += fabsf(a[IDX2C(i, id, n)]);
             }
             else
             {
-                sum+=fabs(a[IDX2C(i,id,n)]);
+                sum += fabs(a[IDX2C(i, id, n)]);
             }
         }
     }
     else
     {
-        for (CUDA_LONG j=0;j<m;++j)
+        for (CUDA_LONG j = 0; j < m; ++j)
         {
-            if (sizeof(ElemType)==sizeof(float))
+            if (sizeof(ElemType) == sizeof(float))
             {
-                sum+=fabsf(a[IDX2C(id,j,n)]);
+                sum += fabsf(a[IDX2C(id, j, n)]);
             }
             else
             {
-                sum+=fabs(a[IDX2C(id,j,n)]);
+                sum += fabs(a[IDX2C(id, j, n)]);
             }
         }
     }
-    c[id]=sum;
+    c[id] = sum;
 }
 
-
 //one column per thread
-template<class ElemType>
+template <class ElemType>
 __global__ void _vectorNorm2(
-    ElemType* c,  //output
+    ElemType* c,       //output
     const ElemType* a, //input
     const CUDA_LONG N, //a.GetNumRows();
     const CUDA_LONG M, //a.GetNumCols();
-    const bool isColWise) 
+    const bool isColWise)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((isColWise && id>=M) || (!isColWise && id>=N))
+    if ((isColWise && id >= M) || (!isColWise && id >= N))
         return;
 
     ElemType sum = 0;
     if (isColWise)
     {
-        for (CUDA_LONG i=0;i<N;++i)
+        for (CUDA_LONG i = 0; i < N; ++i)
         {
-            ElemType v = a[IDX2C(i,id,N)];
+            ElemType v = a[IDX2C(i, id, N)];
             sum += v * v;
         }
     }
     else
     {
-        for (CUDA_LONG j=0;j<M;++j)
+        for (CUDA_LONG j = 0; j < M; ++j)
         {
-            ElemType v = a[IDX2C(id,j,N)];
+            ElemType v = a[IDX2C(id, j, N)];
             sum += v * v;
         }
     }
@@ -1681,178 +1681,176 @@ __global__ void _vectorNorm2(
         c[id] = sqrt(sum);
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _convertInd2ValsAdjustInd(
     ElemType* inds,
     const ElemType* M,
-    ElemType* vals,    
+    ElemType* vals,
     const CUDA_LONG n, //number of cols
     const CUDA_LONG m, //number of rows
     const bool isColWise)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((isColWise && id>=n)||(!isColWise && id>=m))
+    if ((isColWise && id >= n) || (!isColWise && id >= m))
         return;
     inds[id]--;
     if (isColWise)
     {
-        vals[id]=M[IDX2C((int)inds[id],id,m)];
+        vals[id] = M[IDX2C((int) inds[id], id, m)];
     }
     else
     {
-        vals[id]=M[IDX2C(id,(int)inds[id],m)];
+        vals[id] = M[IDX2C(id, (int) inds[id], m)];
     }
 }
 
-
-    //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
-template<class ElemType>
-__global__ void _assignPackedConvolutionInput(ElemType * packedMatrix, const ElemType * inputSubBatch, const CUDA_LONG batchSize,
-                                                 const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputChannels,
-                                                 const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputChannels,
-                                                 const CUDA_LONG kernelWidth, const CUDA_LONG kernelHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample, const bool zeroPadding)
+//assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+template <class ElemType>
+__global__ void _assignPackedConvolutionInput(ElemType* packedMatrix, const ElemType* inputSubBatch, const CUDA_LONG batchSize,
+                                              const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputChannels,
+                                              const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputChannels,
+                                              const CUDA_LONG kernelWidth, const CUDA_LONG kernelHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample, const bool zeroPadding)
 {
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * inputChannels; 
-    const size_t inputDim = inputWidth*inputHeightTimesChannel;
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * inputChannels;
+    const size_t inputDim = inputWidth * inputHeightTimesChannel;
 
-    const CUDA_LONG idall = blockIdx.x * blockDim.x + threadIdx.x; 
+    const CUDA_LONG idall = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG sample = idall / inputDim;
-    if (sample >= batchSize) 
-        return; 
+    if (sample >= batchSize)
+        return;
 
     const CUDA_LONG id = idall % inputDim;
     const CUDA_LONG y = id / inputHeightTimesChannel; //inputCol
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
-    const size_t packedInputColsPerSample = outputWidth * outputHeight;  //output size per channel
+    const size_t packedInputColsPerSample = outputWidth * outputHeight; //output size per channel
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * inputChannels)
     // IN_ELEM_COLPOS = sample
 
     const CUDA_LONG nXC = id % inputHeightTimesChannel; //channel + inputRow*inputChannels
-    const CUDA_LONG x = nXC / inputChannels; //inputRow
-    const CUDA_LONG c = nXC % inputChannels; //channel
+    const CUDA_LONG x = nXC / inputChannels;            //inputRow
+    const CUDA_LONG c = nXC % inputChannels;            //channel
 
-    ElemType currentInputValue = inputSubBatch[id + sample*inputDim]; 
+    ElemType currentInputValue = inputSubBatch[id + sample * inputDim];
 
     CUDA_LONG x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     if (zeroPadding)
     {
-        const CUDA_LONG halfKernelWidth = kernelWidth/2; 
-        const CUDA_LONG halfKernelHeight = kernelHeight/2; 
+        const CUDA_LONG halfKernelWidth = kernelWidth / 2;
+        const CUDA_LONG halfKernelHeight = kernelHeight / 2;
 
-        x0 = max(0.0f, ceil((x-(ElemType)kernelHeight+1.0f+halfKernelHeight)/ (ElemType)verticalSubsample));  //row : first wrow in which x is in
-        x1 = x+halfKernelHeight-x0*verticalSubsample;    //first posxInKernel
-        y0 = max(0.0f, ceil((y-(ElemType)kernelWidth+1.0f+halfKernelWidth)/(ElemType)horizontalSubsample));  //col : first wcol in which y is in
-        y1 = y+halfKernelWidth-y0*horizontalSubsample;  //first posyInKernel
+        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
+        x1 = x + halfKernelHeight - x0 * verticalSubsample;                                                           //first posxInKernel
+        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y1 = y + halfKernelWidth - y0 * horizontalSubsample;                                                          //first posyInKernel
     }
     else
     {
-        x0 = max(0.0f, ceil((x-(ElemType)kernelHeight+1)/ (ElemType)verticalSubsample));  //row : first wrow in which x is in
-        x1 = x-x0*verticalSubsample;    //first posxInKernel
-        y0 = max(0.0f, ceil((y-(ElemType)kernelWidth+1)/(ElemType)horizontalSubsample));  //col : first wcol in which y is in
-        y1 = y-y0*horizontalSubsample;  //first posyInKernel
+        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
+        x1 = x - x0 * verticalSubsample;                                                         //first posxInKernel
+        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y1 = y - y0 * horizontalSubsample;                                                       //first posyInKernel
     }
 
     // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
     // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
 
-    CUDA_LONG packColBase = sample*packedInputColsPerSample + y0*outputHeight; 
-    for (CUDA_LONG wcol = y0, posyInKernel = y1; wcol < outputWidth && posyInKernel>=0; wcol++, posyInKernel -= horizontalSubsample) 
+    CUDA_LONG packColBase = sample * packedInputColsPerSample + y0 * outputHeight;
+    for (CUDA_LONG wcol = y0, posyInKernel = y1; wcol < outputWidth && posyInKernel >= 0; wcol++, posyInKernel -= horizontalSubsample)
     {
         CUDA_LONG packRowBase = c * kernelWidth * kernelHeight + posyInKernel * kernelHeight;
-        for (CUDA_LONG wrow = x0, posxInKernel = x1; wrow < outputHeight && posxInKernel>=0; wrow++, posxInKernel -= verticalSubsample) 
+        for (CUDA_LONG wrow = x0, posxInKernel = x1; wrow < outputHeight && posxInKernel >= 0; wrow++, posxInKernel -= verticalSubsample)
         {
-            const CUDA_LONG packRow = packRowBase + posxInKernel; 
-            const CUDA_LONG packCol = packColBase + wrow; 
-            packedMatrix[packRow + packCol*packedInputRows] = currentInputValue; 
+            const CUDA_LONG packRow = packRowBase + posxInKernel;
+            const CUDA_LONG packCol = packColBase + wrow;
+            packedMatrix[packRow + packCol * packedInputRows] = currentInputValue;
         }
-        packColBase += outputHeight; 
+        packColBase += outputHeight;
     }
 }
 
-    //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
-template<class ElemType>
-__global__ void _unpackConvolutionInput(const ElemType * packedMatrix, ElemType * inputSubBatch, const CUDA_LONG batchSize,
-                                                 const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputChannels,
-                                                 const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputChannels,
-                                                 const CUDA_LONG kernelWidth, const CUDA_LONG kernelHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample, const bool zeroPadding)
+//assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+template <class ElemType>
+__global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* inputSubBatch, const CUDA_LONG batchSize,
+                                        const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputChannels,
+                                        const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputChannels,
+                                        const CUDA_LONG kernelWidth, const CUDA_LONG kernelHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample, const bool zeroPadding)
 {
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * inputChannels; 
-    const size_t inputDim = inputWidth*inputHeightTimesChannel;
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * inputChannels;
+    const size_t inputDim = inputWidth * inputHeightTimesChannel;
 
-    const CUDA_LONG idall = blockIdx.x * blockDim.x + threadIdx.x; 
+    const CUDA_LONG idall = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG sample = idall / inputDim;
-    if (sample >= batchSize) 
-        return; 
+    if (sample >= batchSize)
+        return;
 
     const CUDA_LONG id = idall % inputDim;
     const CUDA_LONG y = id / inputHeightTimesChannel; //inputCol
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
-    const size_t packedInputColsPerSample = outputWidth * outputHeight;  //output size per channel
+    const size_t packedInputColsPerSample = outputWidth * outputHeight; //output size per channel
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * inputChannels)
     // IN_ELEM_COLPOS = sample
 
     const CUDA_LONG nXC = id % inputHeightTimesChannel; //channel + inputRow*inputChannels
-    const CUDA_LONG x = nXC / inputChannels; //inputRow
-    const CUDA_LONG c = nXC % inputChannels; //channel
+    const CUDA_LONG x = nXC / inputChannels;            //inputRow
+    const CUDA_LONG c = nXC % inputChannels;            //channel
 
     CUDA_LONG x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     if (zeroPadding)
     {
-        const CUDA_LONG halfKernelWidth = kernelWidth/2; 
-        const CUDA_LONG halfKernelHeight = kernelHeight/2; 
+        const CUDA_LONG halfKernelWidth = kernelWidth / 2;
+        const CUDA_LONG halfKernelHeight = kernelHeight / 2;
 
-        x0 = max(0.0f, ceil((x-(ElemType)kernelHeight+1.0f+halfKernelHeight)/ (ElemType)verticalSubsample));  //row : first wrow in which x is in
-        x1 = x+halfKernelHeight-x0*verticalSubsample;    //first posxInKernel
-        y0 = max(0.0f, ceil((y-(ElemType)kernelWidth+1.0f+halfKernelWidth)/(ElemType)horizontalSubsample));  //col : first wcol in which y is in
-        y1 = y+halfKernelWidth-y0*horizontalSubsample;  //first posyInKernel
+        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); //row : first wrow in which x is in
+        x1 = x + halfKernelHeight - x0 * verticalSubsample;                                                           //first posxInKernel
+        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y1 = y + halfKernelWidth - y0 * horizontalSubsample;                                                          //first posyInKernel
     }
     else
     {
-        x0 = max(0.0f, ceil((x-(ElemType)kernelHeight+1)/ (ElemType)verticalSubsample));  //row : first wrow in which x is in
-        x1 = x-x0*verticalSubsample;    //first posxInKernel
-        y0 = max(0.0f, ceil((y-(ElemType)kernelWidth+1)/(ElemType)horizontalSubsample));  //col : first wcol in which y is in
-        y1 = y-y0*horizontalSubsample;  //first posyInKernel
+        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  //row : first wrow in which x is in
+        x1 = x - x0 * verticalSubsample;                                                         //first posxInKernel
+        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); //col : first wcol in which y is in
+        y1 = y - y0 * horizontalSubsample;                                                       //first posyInKernel
     }
 
     // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
     // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
 
-    ElemType currentInputValue = inputSubBatch[id + sample*inputDim]; 
-    CUDA_LONG packColBase = sample*packedInputColsPerSample + y0*outputHeight; 
-    for (CUDA_LONG wcol = y0, posyInKernel = y1; wcol < outputWidth && posyInKernel>=0; wcol++, posyInKernel -= horizontalSubsample) 
+    ElemType currentInputValue = inputSubBatch[id + sample * inputDim];
+    CUDA_LONG packColBase = sample * packedInputColsPerSample + y0 * outputHeight;
+    for (CUDA_LONG wcol = y0, posyInKernel = y1; wcol < outputWidth && posyInKernel >= 0; wcol++, posyInKernel -= horizontalSubsample)
     {
         CUDA_LONG packRowBase = c * kernelWidth * kernelHeight + posyInKernel * kernelHeight;
-        for (CUDA_LONG wrow = x0, posxInKernel = x1; wrow < outputHeight && posxInKernel>=0; wrow++, posxInKernel -= verticalSubsample) 
+        for (CUDA_LONG wrow = x0, posxInKernel = x1; wrow < outputHeight && posxInKernel >= 0; wrow++, posxInKernel -= verticalSubsample)
         {
-            const CUDA_LONG packRow = packRowBase + posxInKernel; 
-            const CUDA_LONG packCol = packColBase + wrow; 
-            currentInputValue += packedMatrix[packRow + packCol*packedInputRows]; 
+            const CUDA_LONG packRow = packRowBase + posxInKernel;
+            const CUDA_LONG packCol = packColBase + wrow;
+            currentInputValue += packedMatrix[packRow + packCol * packedInputRows];
         }
-        packColBase += outputHeight; 
+        packColBase += outputHeight;
     }
 
-    inputSubBatch[id + sample*inputDim] = currentInputValue; 
+    inputSubBatch[id + sample * inputDim] = currentInputValue;
 }
 
-template<class ElemType>
-__global__ void _assignMaxPoolingResult(ElemType * outputBatch, const ElemType * inputBatch, const CUDA_LONG batchSize, const CUDA_LONG channels,
-                                                const CUDA_LONG inputWidth, const CUDA_LONG inputHeight,  const CUDA_LONG inputSizePerSample, 
-                                                const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample, 
-                                                const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+template <class ElemType>
+__global__ void _assignMaxPoolingResult(ElemType* outputBatch, const ElemType* inputBatch, const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                        const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                        const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                        const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
-    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x; 
-    const CUDA_LONG sample = outputIndex / outputSizePerSample; 
-    if (sample >= batchSize) 
-        return; 
+    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sample = outputIndex / outputSizePerSample;
+    if (sample >= batchSize)
+        return;
 
-    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample; 
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels; 
-    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels; 
-
+    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample;
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels;
+    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels;
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
     // IN_ELEM_COLPOS = sample
@@ -1860,43 +1858,43 @@ __global__ void _assignMaxPoolingResult(ElemType * outputBatch, const ElemType *
     // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
     // OUT_ELEM_COLPOS = sample
 
-    const CUDA_LONG y = outputIndexWithinSample / outputHeightTimesChannel; //wcol
+    const CUDA_LONG y = outputIndexWithinSample / outputHeightTimesChannel;   //wcol
     const CUDA_LONG nXC = outputIndexWithinSample % outputHeightTimesChannel; //channel + wrow*channels
-    const CUDA_LONG x = nXC / channels; //wrow
-    const CUDA_LONG c = nXC % channels; //channel
+    const CUDA_LONG x = nXC / channels;                                       //wrow
+    const CUDA_LONG c = nXC % channels;                                       //channel
 
-    const ElemType *inputBatchBase4Sample = inputBatch + sample*inputSizePerSample;
-    register ElemType maxVal = -FLT_MAX; 
-    const CUDA_LONG rowInWindowBase = (x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels+c;
-    for (CUDA_LONG colInWindow=0; colInWindow<windowWidth; colInWindow++) 
-    {   
+    const ElemType* inputBatchBase4Sample = inputBatch + sample * inputSizePerSample;
+    register ElemType maxVal = -FLT_MAX;
+    const CUDA_LONG rowInWindowBase = (x * verticalSubsample + y * horizontalSubsample * inputHeight) * channels + c;
+    for (CUDA_LONG colInWindow = 0; colInWindow < windowWidth; colInWindow++)
+    {
         CUDA_LONG rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
-        for (CUDA_LONG rowInWindow=0; rowInWindow<windowHeight; rowInWindow++)
+        for (CUDA_LONG rowInWindow = 0; rowInWindow < windowHeight; rowInWindow++)
         {
-            const ElemType val = inputBatchBase4Sample[rowInInput]; 
-            maxVal = max(maxVal, val); 
+            const ElemType val = inputBatchBase4Sample[rowInInput];
+            maxVal = max(maxVal, val);
             rowInInput += channels;
         }
     }
-    outputBatch[outputIndexWithinSample + sample*outputSizePerSample] = maxVal; 
+    outputBatch[outputIndexWithinSample + sample * outputSizePerSample] = maxVal;
 }
 
-template<class ElemType>
-__global__ void _addMaxPoolingGradient(ElemType * inputGradientBatch, const ElemType * outputGradientBatch, const ElemType * inputBatch, const ElemType * outputBatch, 
-                                                const CUDA_LONG batchSize, const CUDA_LONG channels, 
-                                                const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample, 
-                                                const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample, 
-                                                const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+template <class ElemType>
+__global__ void _addMaxPoolingGradient(ElemType* inputGradientBatch, const ElemType* outputGradientBatch, const ElemType* inputBatch, const ElemType* outputBatch,
+                                       const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                       const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                       const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                       const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
-    const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x; 
-    const CUDA_LONG sample = inputIndex / inputSizePerSample; 
-    if (sample >= batchSize) 
-        return; 
-   
-    const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample; 
+    const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sample = inputIndex / inputSizePerSample;
+    if (sample >= batchSize)
+        return;
 
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels; 
-    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels; 
+    const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample;
+
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels;
+    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels;
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
     // IN_ELEM_COLPOS = sample
@@ -1904,47 +1902,45 @@ __global__ void _addMaxPoolingGradient(ElemType * inputGradientBatch, const Elem
     // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
     // OUT_ELEM_COLPOS = sample
 
-    const CUDA_LONG y = inputIndexWithinSample / inputHeightTimesChannel; //col in input
+    const CUDA_LONG y = inputIndexWithinSample / inputHeightTimesChannel;   //col in input
     const CUDA_LONG nXC = inputIndexWithinSample % inputHeightTimesChannel; //channel + row*chanels
-    const CUDA_LONG x = nXC / channels; //row in input
-    const CUDA_LONG c = nXC % channels; //channel
+    const CUDA_LONG x = nXC / channels;                                     //row in input
+    const CUDA_LONG c = nXC % channels;                                     //channel
 
-    CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
-    CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
-    CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG startOutX = max(0.0f, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));     //inclusive start
+    CUDA_LONG endOutX = (x / verticalSubsample < outputHeight - 1) ? x / verticalSubsample : outputHeight - 1;   //inclusive end
+    CUDA_LONG startOutY = max(0.0f, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));    //inclusive start
+    CUDA_LONG endOutY = (y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1; //inclusive end
 
+    ElemType* inputGradientBatchBase4Sample = inputGradientBatch + sample * inputSizePerSample;
+    const ElemType* outputGradientBatchBase4Sample = outputGradientBatch + sample * outputSizePerSample;
+    const ElemType* outputBatchBase4Sample = outputBatch + sample * outputSizePerSample;
 
-    ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
-    const ElemType *outputGradientBatchBase4Sample = outputGradientBatch + sample*outputSizePerSample;
-    const ElemType * outputBatchBase4Sample = outputBatch + sample*outputSizePerSample;
-
-    ElemType inputValue = inputBatch[inputIndexWithinSample + sample*inputSizePerSample];
-    for (CUDA_LONG outY=startOutY; outY<=endOutY; outY++)
+    ElemType inputValue = inputBatch[inputIndexWithinSample + sample * inputSizePerSample];
+    for (CUDA_LONG outY = startOutY; outY <= endOutY; outY++)
     {
-        for (CUDA_LONG outX=startOutX; outX<=endOutX; outX++)
+        for (CUDA_LONG outX = startOutX; outX <= endOutX; outX++)
         {
-            CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c; 
+            CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c;
             if (inputValue == outputBatchBase4Sample[outputIndex])
                 inputGradientBatchBase4Sample[inputIndexWithinSample] += outputGradientBatchBase4Sample[outputIndex];
         }
-    }  
+    }
 }
-template<class ElemType>
-__global__ void _assignAveragePoolingResult(ElemType * outputBatch, const ElemType * inputBatch, const CUDA_LONG batchSize, const CUDA_LONG channels,
-                                                const CUDA_LONG inputWidth, const CUDA_LONG inputHeight,  const CUDA_LONG inputSizePerSample, 
-                                                const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample, 
-                                                const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+template <class ElemType>
+__global__ void _assignAveragePoolingResult(ElemType* outputBatch, const ElemType* inputBatch, const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                            const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                            const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                            const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
-    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x; 
-    const CUDA_LONG sample = outputIndex / outputSizePerSample; 
-    if (sample >= batchSize) 
-        return; 
+    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sample = outputIndex / outputSizePerSample;
+    if (sample >= batchSize)
+        return;
 
-    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample; 
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels; 
-    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels; 
-
+    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample;
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels;
+    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels;
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
     // IN_ELEM_COLPOS = sample
@@ -1952,44 +1948,44 @@ __global__ void _assignAveragePoolingResult(ElemType * outputBatch, const ElemTy
     // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
     // OUT_ELEM_COLPOS = sample
 
-    const CUDA_LONG y = outputIndexWithinSample / outputHeightTimesChannel; //wcol
+    const CUDA_LONG y = outputIndexWithinSample / outputHeightTimesChannel;   //wcol
     const CUDA_LONG nXC = outputIndexWithinSample % outputHeightTimesChannel; //channel + wrow*channels
-    const CUDA_LONG x = nXC / channels; //wrow
-    const CUDA_LONG c = nXC % channels; //channel
+    const CUDA_LONG x = nXC / channels;                                       //wrow
+    const CUDA_LONG c = nXC % channels;                                       //channel
 
-    const ElemType *inputBatchBase4Sample = inputBatch + sample*inputSizePerSample;
+    const ElemType* inputBatchBase4Sample = inputBatch + sample * inputSizePerSample;
 
-    register ElemType average = 0; 
-    const CUDA_LONG rowInWindowBase = (x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels+c;
-    for (CUDA_LONG colInWindow=0; colInWindow<windowWidth; colInWindow++) 
-    {   
+    register ElemType average = 0;
+    const CUDA_LONG rowInWindowBase = (x * verticalSubsample + y * horizontalSubsample * inputHeight) * channels + c;
+    for (CUDA_LONG colInWindow = 0; colInWindow < windowWidth; colInWindow++)
+    {
         CUDA_LONG rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
-        for (CUDA_LONG rowInWindow=0; rowInWindow<windowHeight; rowInWindow++)
+        for (CUDA_LONG rowInWindow = 0; rowInWindow < windowHeight; rowInWindow++)
         {
-            average += inputBatchBase4Sample[rowInInput]; 
+            average += inputBatchBase4Sample[rowInInput];
             rowInInput += channels;
         }
     }
 
-    outputBatch[outputIndexWithinSample + sample*outputSizePerSample] = average/windowWidth/windowHeight; 
+    outputBatch[outputIndexWithinSample + sample * outputSizePerSample] = average / windowWidth / windowHeight;
 }
 
-template<class ElemType>
-__global__ void _addAveragePoolingGradient(ElemType * inputGradientBatch, const ElemType * outputGradientBatch, 
-                                                const CUDA_LONG batchSize, const CUDA_LONG channels, 
-                                                const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample, 
-                                                const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample, 
-                                                const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+template <class ElemType>
+__global__ void _addAveragePoolingGradient(ElemType* inputGradientBatch, const ElemType* outputGradientBatch,
+                                           const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                           const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                           const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                           const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
-    const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x; 
-    const CUDA_LONG sample = inputIndex / inputSizePerSample; 
-    if (sample >= batchSize) 
-        return; 
-   
-    const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample; 
+    const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sample = inputIndex / inputSizePerSample;
+    if (sample >= batchSize)
+        return;
 
-    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels; 
-    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels; 
+    const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample;
+
+    const CUDA_LONG inputHeightTimesChannel = inputHeight * channels;
+    const CUDA_LONG outputHeightTimesChannel = outputHeight * channels;
     const CUDA_LONG windowSize = windowWidth * windowHeight;
 
     // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
@@ -1998,61 +1994,61 @@ __global__ void _addAveragePoolingGradient(ElemType * inputGradientBatch, const 
     // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
     // OUT_ELEM_COLPOS = sample
 
-    const CUDA_LONG y = inputIndexWithinSample / inputHeightTimesChannel; //col in input
+    const CUDA_LONG y = inputIndexWithinSample / inputHeightTimesChannel;   //col in input
     const CUDA_LONG nXC = inputIndexWithinSample % inputHeightTimesChannel; //channel + row*chanels
-    const CUDA_LONG x = nXC / channels; //row in input
-    const CUDA_LONG c = nXC % channels; //channel
+    const CUDA_LONG x = nXC / channels;                                     //row in input
+    const CUDA_LONG c = nXC % channels;                                     //channel
 
-    CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
-    CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
-    CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG startOutX = max(0.0f, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));     //inclusive start
+    CUDA_LONG endOutX = (x / verticalSubsample < outputHeight - 1) ? x / verticalSubsample : outputHeight - 1;   //inclusive end
+    CUDA_LONG startOutY = max(0.0f, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));    //inclusive start
+    CUDA_LONG endOutY = (y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1; //inclusive end
 
-    ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
-    const ElemType *outputGradientBatchBase4Sample = outputGradientBatch + sample*outputSizePerSample;
+    ElemType* inputGradientBatchBase4Sample = inputGradientBatch + sample * inputSizePerSample;
+    const ElemType* outputGradientBatchBase4Sample = outputGradientBatch + sample * outputSizePerSample;
 
-    for (CUDA_LONG outY=startOutY; outY<=endOutY; outY++)
+    for (CUDA_LONG outY = startOutY; outY <= endOutY; outY++)
     {
-        for (CUDA_LONG outX=startOutX; outX<=endOutX; outX++)
+        for (CUDA_LONG outX = startOutX; outX <= endOutX; outX++)
         {
-            CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c; 
-            inputGradientBatchBase4Sample[inputIndexWithinSample] += outputGradientBatchBase4Sample[outputIndex]/windowSize;
+            CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c;
+            inputGradientBatchBase4Sample[inputIndexWithinSample] += outputGradientBatchBase4Sample[outputIndex] / windowSize;
         }
-    }  
+    }
 }
 
-template<class ElemType>
-__global__ void _addMaxPoolingGradientLoopOut(ElemType * inputGradientBatch, const ElemType * outputGradientBatch, const ElemType * inputBatch, const ElemType * outputBatch, 
-                                                const CUDA_LONG batchSize, const CUDA_LONG channels, 
-                                                const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample, 
-                                                const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample, 
-                                                const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+template <class ElemType>
+__global__ void _addMaxPoolingGradientLoopOut(ElemType* inputGradientBatch, const ElemType* outputGradientBatch, const ElemType* inputBatch, const ElemType* outputBatch,
+                                              const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                              const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                              const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                              const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
-    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x; 
-    const CUDA_LONG sample = outputIndex / outputSizePerSample; 
-    if (sample >= batchSize) 
-        return; 
-   
-    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample; 
-    const CUDA_LONG inputWidthTimesChannel = inputWidth * channels; 
-    const CUDA_LONG outputWidthTimesChannel = outputWidth * channels; 
-    const CUDA_LONG y = outputIndexWithinSample / outputWidthTimesChannel; 
-    const CUDA_LONG nXC = outputIndexWithinSample % outputWidthTimesChannel; 
-    const CUDA_LONG x = nXC / channels; 
-    const CUDA_LONG c = nXC % channels; 
+    const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sample = outputIndex / outputSizePerSample;
+    if (sample >= batchSize)
+        return;
 
-    const CUDA_LONG offset0 = sample*inputSizePerSample + y*verticalSubsample*inputWidthTimesChannel + x*horizontalSubsample*channels;
-    const ElemType *pCurWindow4Input = inputBatch + offset0; // pooling to current window's first input pixel 
-    ElemType *pCurWindow4InGradient = inputGradientBatch + offset0; 
-    for (CUDA_LONG yy=0; yy<windowHeight; yy++) 
+    const CUDA_LONG outputIndexWithinSample = outputIndex % outputSizePerSample;
+    const CUDA_LONG inputWidthTimesChannel = inputWidth * channels;
+    const CUDA_LONG outputWidthTimesChannel = outputWidth * channels;
+    const CUDA_LONG y = outputIndexWithinSample / outputWidthTimesChannel;
+    const CUDA_LONG nXC = outputIndexWithinSample % outputWidthTimesChannel;
+    const CUDA_LONG x = nXC / channels;
+    const CUDA_LONG c = nXC % channels;
+
+    const CUDA_LONG offset0 = sample * inputSizePerSample + y * verticalSubsample * inputWidthTimesChannel + x * horizontalSubsample * channels;
+    const ElemType* pCurWindow4Input = inputBatch + offset0; // pooling to current window's first input pixel
+    ElemType* pCurWindow4InGradient = inputGradientBatch + offset0;
+    for (CUDA_LONG yy = 0; yy < windowHeight; yy++)
     {
-        const CUDA_LONG offset1 = yy*inputWidthTimesChannel + c; 
-        const ElemType *pf0 = pCurWindow4Input + offset1; 
-        ElemType *pf1 = pCurWindow4InGradient + offset1; 
-        for (CUDA_LONG xx=0; xx<windowWidth; xx++)
+        const CUDA_LONG offset1 = yy * inputWidthTimesChannel + c;
+        const ElemType* pf0 = pCurWindow4Input + offset1;
+        ElemType* pf1 = pCurWindow4InGradient + offset1;
+        for (CUDA_LONG xx = 0; xx < windowWidth; xx++)
         {
-            const CUDA_LONG offset2 = xx*channels; 
-            if (pf0[offset2] == outputBatch[outputIndex]) 
+            const CUDA_LONG offset2 = xx * channels;
+            if (pf0[offset2] == outputBatch[outputIndex])
             {
                 pf1[offset2] += outputGradientBatch[outputIndex]; //need to be atomic however atomicAdd on double is not supported.
             }
@@ -2060,7 +2056,7 @@ __global__ void _addMaxPoolingGradientLoopOut(ElemType * inputGradientBatch, con
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _addElementProductOf(
     ElemType* us,
     const ElemType* a,
@@ -2068,12 +2064,12 @@ __global__ void _addElementProductOf(
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    us[id]+=(a[id]*b[id]);
+    us[id] += (a[id] * b[id]);
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _columnElementMultiplyWith(
     ElemType* us,
     const ElemType* a,
@@ -2081,19 +2077,19 @@ __global__ void _columnElementMultiplyWith(
     const CUDA_LONG M) //us.GetNumCols();
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
     //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
-    ElemType mul=a[id];
-    for (CUDA_LONG j=0;j<M;++j)
+    ElemType mul = a[id];
+    for (CUDA_LONG j = 0; j < M; ++j)
     {
-        us[IDX2C(id,j,N)]=us[IDX2C(id,j,N)]*mul;
+        us[IDX2C(id, j, N)] = us[IDX2C(id, j, N)] * mul;
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rowElementMultiplyWith(
     ElemType* us,
     const ElemType* a,
@@ -2101,19 +2097,19 @@ __global__ void _rowElementMultiplyWith(
     const CUDA_LONG M) //a.GetNumCols();
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=M)
+    if (id >= M)
         return;
 
     //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
-    ElemType mul=a[id];
-    for (CUDA_LONG i=0;i<N;++i)
+    ElemType mul = a[id];
+    for (CUDA_LONG i = 0; i < N; ++i)
     {
-        us[IDX2C(i,id,N)]=us[IDX2C(i,id,N)]*mul;
+        us[IDX2C(i, id, N)] = us[IDX2C(i, id, N)] * mul;
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rowElementDivideBy(
     ElemType* us,
     const ElemType* a,
@@ -2132,13 +2128,13 @@ __global__ void _rowElementDivideBy(
     else if (v < 0 && v > -EPS_IN_INVERSE)
         v = (-EPS_IN_INVERSE);
 
-    for (CUDA_LONG i = 0; i<N; ++i)
+    for (CUDA_LONG i = 0; i < N; ++i)
     {
         us[IDX2C(i, id, N)] = us[IDX2C(i, id, N)] / v;
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _ColumnElementDivideBy(
     ElemType* us,
     const ElemType* a,
@@ -2146,117 +2142,114 @@ __global__ void _ColumnElementDivideBy(
     const CUDA_LONG M) //us.GetNumCols();
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
 
     ElemType smallValue = EPS_IN_INVERSE;
 
     //__shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     //_a[threadIdx.x]=a[id];
-    ElemType v=a[id];
-    for (CUDA_LONG j=0;j<M;++j)
+    ElemType v = a[id];
+    for (CUDA_LONG j = 0; j < M; ++j)
     {
-        if (v <0 && v > -smallValue)
-            us[IDX2C(id,j,N)] /= (-smallValue);
-        else if (v >=0 && v < smallValue)
-            us[IDX2C(id,j,N)] /= smallValue;
+        if (v < 0 && v > -smallValue)
+            us[IDX2C(id, j, N)] /= (-smallValue);
+        else if (v >= 0 && v < smallValue)
+            us[IDX2C(id, j, N)] /= smallValue;
         else
-            us[IDX2C(id,j,N)] /= v;
+            us[IDX2C(id, j, N)] /= v;
     }
-
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _innerProduct(
     ElemType* c,
     const ElemType* a,
     const ElemType* b,
     const CUDA_LONG N, //a.GetNumRows();
     const CUDA_LONG M, //a.GetNumCols();
-    const bool isColWise) 
+    const bool isColWise)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if ((isColWise && id>=M) || (!isColWise && id>=N))
+    if ((isColWise && id >= M) || (!isColWise && id >= N))
         return;
 
     ElemType sum = 0;
     CUDA_LONG index;
     if (isColWise)
     {
-        for (CUDA_LONG i=0; i<N; ++i)
+        for (CUDA_LONG i = 0; i < N; ++i)
         {
-            index = IDX2C(i,id,N);
-            sum += a[index]* b[index];
+            index = IDX2C(i, id, N);
+            sum += a[index] * b[index];
         }
     }
     else
     {
-        for (CUDA_LONG j=0; j<M; ++j)
+        for (CUDA_LONG j = 0; j < M; ++j)
         {
-            index = IDX2C(id,j, N);
-            sum += a[index]* b[index];
+            index = IDX2C(id, j, N);
+            sum += a[index] * b[index];
         }
     }
 
     c[id] = sum;
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignSignOf(
     ElemType* a,
     const ElemType* b,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
     ElemType v = b[id];
-    a[id] = (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
+    a[id] = (v == (ElemType) 0 ? (ElemType) 0 : (v > 0 ? (ElemType) 1 : (ElemType)(-1)));
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _addSignOf(
     ElemType* a,
     const ElemType* b,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
     ElemType v = b[id];
-    a[id] += (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
+    a[id] += (v == (ElemType) 0 ? (ElemType) 0 : (v > 0 ? (ElemType) 1 : (ElemType)(-1)));
 }
 
 // This function processes 1 column per block. this function needs 512 threads
-template<class ElemType, bool IsMax>
-__global__ void _vectorMaxMinReduce( 
+template <class ElemType, bool IsMax>
+__global__ void _vectorMaxMinReduce(
     const ElemType* us,
     ElemType* Indexes,
     ElemType* Values,
     const CUDA_LONG numRows,
     const CUDA_LONG numCols)
 {
-    //we first find max per column    
-    __shared__ ElemType partials[512];        
+    //we first find max per column
+    __shared__ ElemType partials[512];
     __shared__ int partialsInd[512];
     if (IsMax)
     {
-        partials[threadIdx.x]=-10000000;
+        partials[threadIdx.x] = -10000000;
     }
     else
     {
-        partials[threadIdx.x]=10000000;
+        partials[threadIdx.x] = 10000000;
     }
-    partialsInd[threadIdx.x]=-1;
+    partialsInd[threadIdx.x] = -1;
 
     for (int i = threadIdx.x; i < numRows; i += 512)
     {
         if ((IsMax ? (us[IDX2C(i, blockIdx.x, numRows)] > partials[threadIdx.x]) : (us[IDX2C(i, blockIdx.x, numRows)] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
             partials[threadIdx.x] = us[IDX2C(i, blockIdx.x, numRows)];
-            partialsInd[threadIdx.x]=i;       
+            partialsInd[threadIdx.x] = i;
         }
     }
     __syncthreads();
@@ -2355,14 +2348,14 @@ __global__ void _vectorMaxMinReduce(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _vectorMax(
     const ElemType* us,
     ElemType* maxIndexes,
     ElemType* maxValues,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n,  //number of cols
-    const bool isColWise) 
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n, //number of cols
+    const bool isColWise)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG maxInd = -1;
@@ -2370,44 +2363,44 @@ __global__ void _vectorMax(
 
     if (isColWise)
     {
-        if (id>=n)
+        if (id >= n)
             return;
 
-        for (CUDA_LONG i=0;i<m;i++)
+        for (CUDA_LONG i = 0; i < m; i++)
         {
-            if (maxInd==-1 || us[IDX2C(i,id,m)]>=maxVal)
+            if (maxInd == -1 || us[IDX2C(i, id, m)] >= maxVal)
             {
                 maxInd = i;
-                maxVal = us[IDX2C(i,id,m)];
+                maxVal = us[IDX2C(i, id, m)];
             }
         }
     }
     else
     {
-        if (id>=m)
+        if (id >= m)
             return;
 
-        for (CUDA_LONG j=0;j<n;j++)
+        for (CUDA_LONG j = 0; j < n; j++)
         {
-            if (maxInd==-1 || us[IDX2C(id,j,m)]>=maxVal)
+            if (maxInd == -1 || us[IDX2C(id, j, m)] >= maxVal)
             {
                 maxInd = j;
-                maxVal = us[IDX2C(id,j,m)];
+                maxVal = us[IDX2C(id, j, m)];
             }
         }
     }
-    maxIndexes[id]=maxInd;
-    maxValues[id]=maxVal;
+    maxIndexes[id] = maxInd;
+    maxValues[id] = maxVal;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _vectorMin(
     const ElemType* us,
     ElemType* minIndexes,
     ElemType* minValues,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n,  //number of cols
-    const bool isColWise) 
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n, //number of cols
+    const bool isColWise)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG minInd = -1;
@@ -2415,289 +2408,283 @@ __global__ void _vectorMin(
 
     if (isColWise)
     {
-        if (id>=n)
+        if (id >= n)
             return;
 
-        for (CUDA_LONG i=0;i<m;i++)
+        for (CUDA_LONG i = 0; i < m; i++)
         {
-            if (minInd==-1 || us[IDX2C(i,id,m)]<=minVal)
+            if (minInd == -1 || us[IDX2C(i, id, m)] <= minVal)
             {
                 minInd = i;
-                minVal = us[IDX2C(i,id,m)];
+                minVal = us[IDX2C(i, id, m)];
             }
         }
     }
     else
     {
-        if (id>=m)
+        if (id >= m)
             return;
 
-        for (CUDA_LONG j=0;j<n;j++)
+        for (CUDA_LONG j = 0; j < n; j++)
         {
-            if (minInd==-1 || us[IDX2C(id,j,m)]<=minVal)
+            if (minInd == -1 || us[IDX2C(id, j, m)] <= minVal)
             {
                 minInd = j;
-                minVal = us[IDX2C(id,j,m)];
+                minVal = us[IDX2C(id, j, m)];
             }
         }
     }
-    minIndexes[id]=minInd;
-    minValues[id]=minVal;
+    minIndexes[id] = minInd;
+    minValues[id] = minVal;
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _matrixMatrixAddOnCuda(
     const ElemType alpha,
-    const ElemType *a,
-    const ElemType *b,
-    ElemType *c,
-    const CUDA_LONG N
-    )
+    const ElemType* a,
+    const ElemType* b,
+    ElemType* c,
+    const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     c[id] = alpha * a[id] + b[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _matrixVectorRowWiseAddWithThreadPerElem(
-    const ElemType *a,
-    const ElemType *b,
+    const ElemType* a,
+    const ElemType* b,
     ElemType* us,
     ElemType alpha,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n)  //number of cols     
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n) //number of cols
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CUDA_LONG N = m * n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 
     CUDA_LONG col = id / m;
 
-    us[id] = alpha*a[col] + b[id];
+    us[id] = alpha * a[col] + b[id];
 }
 
 //this implementation uses more threads but also more memory access
-template<class ElemType>
+template <class ElemType>
 __global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
-    const ElemType *a,
-    const ElemType *b,
+    const ElemType* a,
+    const ElemType* b,
     ElemType* us,
     ElemType alpha,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n)  //number of cols     
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n) //number of cols
 {
-    CUDA_LONG N = m*n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N);
+    CUDA_LONG N = m * n; // used in CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N) macro
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 
     CUDA_LONG col = id / m;
-    CUDA_LONG row = id - col*m;
+    CUDA_LONG row = id - col * m;
 
-    us[id] = alpha*a[row] + b[id];
+    us[id] = alpha * a[row] + b[id];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _matrixVectorColumnWiseAddWithThreadPerRow(
-    const ElemType *a,
+    const ElemType* a,
     ElemType* us,
     ElemType alpha,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n)  //number of cols     
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n) //number of cols
 {
 #ifdef VALIDATION
     if (blockDim.x * blockIdx.x + threadIdx.x == 0)
     {
-        printf("** _matrixVectorColumnWiseAdd on device:\na = %p, us = %p, alpha = %f, m = %ld, n = %ld\n", 
-            a,us,alpha,m,n);
+        printf("** _matrixVectorColumnWiseAdd on device:\na = %p, us = %p, alpha = %f, m = %ld, n = %ld\n",
+               a, us, alpha, m, n);
         printf("us[0] = %f\n", us[0]);
         printf("a[0] = %f\n", a[0]);
     }
 #endif
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=m)
+    if (id >= m)
         return;
     ElemType tmp = a[id];
 #ifdef VALIDATION
     printf("  a[%d] = %f\n", id, tmp);
 #endif
-    for (CUDA_LONG j = 0; j < n; ++j )
+    for (CUDA_LONG j = 0; j < n; ++j)
     {
-        us[j*m+id] += alpha*tmp;
+        us[j * m + id] += alpha * tmp;
     }
- 
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _matrixVectorColumnWiseAddBlockPerRow(
     const ElemType* a,
     ElemType* us,
     ElemType alpha,
-    const CUDA_LONG m,  //number of rows
-    const CUDA_LONG n)  //number of cols     
-{    
+    const CUDA_LONG m, //number of rows
+    const CUDA_LONG n) //number of cols
+{
     ElemType tmp;
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
         tmp = a[blockIdx.x];
     }
     __syncthreads();
 
-    int loadPerThread = n/blockDim.x; 
+    int loadPerThread = n / blockDim.x;
 
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? n : (threadIdx.x+1)*loadPerThread);++i)
+    for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? n : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        us[m*blockIdx.x + i] += alpha*tmp;
+        us[m * blockIdx.x + i] += alpha * tmp;
     }
 }
 
-
-
-template<class ElemType>
-__global__ void _addScaledDifference( 
+template <class ElemType>
+__global__ void _addScaledDifference(
     ElemType alpha,
-    ElemType *a,
-    ElemType *b,
-    ElemType *c,
+    ElemType* a,
+    ElemType* b,
+    ElemType* c,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    c[id] = c[id] + (a[id]-b[id]) * (alpha);
+    c[id] = c[id] + (a[id] - b[id]) * (alpha);
 }
 
-template<class ElemType>
-__global__ void _assignScaledDifference( 
+template <class ElemType>
+__global__ void _assignScaledDifference(
     ElemType alpha,
-    ElemType *a,
-    ElemType *b,
-    ElemType *c,
+    ElemType* a,
+    ElemType* b,
+    ElemType* c,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    c[id] = (a[id]-b[id]) * (alpha);
+    c[id] = (a[id] - b[id]) * (alpha);
 }
 
-template<class ElemType>
-__global__ void _addScaledDifference( 
-    ElemType *alpha,
-    ElemType *a,
-    ElemType *b,
-    ElemType *c,
+template <class ElemType>
+__global__ void _addScaledDifference(
+    ElemType* alpha,
+    ElemType* a,
+    ElemType* b,
+    ElemType* c,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    c[id] = c[id] + (a[id]-b[id]) * alpha[0];
+    c[id] = c[id] + (a[id] - b[id]) * alpha[0];
 }
 
-template<class ElemType>
-__global__ void _assignScaledDifference( 
-    ElemType *alpha,
-    ElemType *a,
-    ElemType *b,
-    ElemType *c,
+template <class ElemType>
+__global__ void _assignScaledDifference(
+    ElemType* alpha,
+    ElemType* a,
+    ElemType* b,
+    ElemType* c,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    c[id] = (a[id]-b[id]) * alpha[0];
+    c[id] = (a[id] - b[id]) * alpha[0];
 }
 
-template<class ElemType>
-__global__ void _addElementToElement( 
-    const ElemType *a, CUDA_LONG indexA,
-    ElemType *c, CUDA_LONG indexC)
+template <class ElemType>
+__global__ void _addElementToElement(
+    const ElemType* a, CUDA_LONG indexA,
+    ElemType* c, CUDA_LONG indexC)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>0)
+    if (id > 0)
         return;
     c[indexC] += a[indexA];
 }
 
-template<class ElemType>
-__global__ void _assignNumOfDiff( 
-    const ElemType *a,
-    const ElemType *b,
-    ElemType *c,
+template <class ElemType>
+__global__ void _assignNumOfDiff(
+    const ElemType* a,
+    const ElemType* b,
+    ElemType* c,
     CUDA_LONG N)
 {
     __shared__ ElemType partialSums[1024];
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG loadPerThread = N/blockDim.x; 
-    for (CUDA_LONG i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)
+    CUDA_LONG loadPerThread = N / blockDim.x;
+    for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x]+=(a[i] != b[i]);
+        partialSums[threadIdx.x] += (a[i] != b[i]);
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+512];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 512];
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+256];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 256];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+128];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 128];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+64];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 64];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+32];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 32];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+16];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 16];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+8];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 8];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+4];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        c[0] = partialSums[0]+partialSums[1]+partialSums[2]+partialSums[3];
+        c[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
     }
 }
-
 
 /*template<class ElemType>
 __global__ void _assignNumOfDiff( 
@@ -2723,20 +2710,19 @@ __syncthreads();
 c[id] = totalSum;
 }*/
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _scaleArray(
     ElemType alpha,
-    ElemType *us,
+    ElemType* us,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
+    if (id >= N)
         return;
-    us[id]=us[id]*alpha;
+    us[id] = us[id] * alpha;
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _sparseCSRPlusDense(
     ElemType alpha,
     const ElemType* m_dVal,
@@ -2746,19 +2732,19 @@ __global__ void _sparseCSRPlusDense(
     CUDA_LONG M)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=M)
+    if (id >= M)
         return;
     int start = m_dRow[id];
-    int end = m_dRow[id+1];
-    for (int _i=start;_i<end;++_i)  //_i is index in m_dVal and m_dCol
+    int end = m_dRow[id + 1];
+    for (int _i = start; _i < end; ++_i) //_i is index in m_dVal and m_dCol
     {
         int j = m_dCol[_i];
-        pArrayDev[IDX2C(id,j,M)]+=(alpha*m_dVal[_i]);
+        pArrayDev[IDX2C(id, j, M)] += (alpha * m_dVal[_i]);
     }
 }
 
-template<class ElemType>
-__global__ void _sparseCSRElemMulDense(    
+template <class ElemType>
+__global__ void _sparseCSRElemMulDense(
     const ElemType* m_dVal,
     const int* m_dRow,
     const int* m_dCol,
@@ -2767,26 +2753,25 @@ __global__ void _sparseCSRElemMulDense(
     CUDA_LONG M)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=M)
+    if (id >= M)
         return;
     int start = m_dRow[id];
-    int end = m_dRow[id+1];
-    for (int _i=start;_i<end;++_i)  //_i is index in m_dVal and m_dCol
+    int end = m_dRow[id + 1];
+    for (int _i = start; _i < end; ++_i) //_i is index in m_dVal and m_dCol
     {
         int j = m_dCol[_i];
-        c[IDX2C(id,j,M)]=b[IDX2C(id,j,M)]*m_dVal[_i];
+        c[IDX2C(id, j, M)] = b[IDX2C(id, j, M)] * m_dVal[_i];
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _isValid(
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
     const int rows,
     const int cols,
     const int nz,
-    long* d_res
-    )
+    long* d_res)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= cols || d_res[0] <= 0)
@@ -2817,7 +2802,7 @@ __global__ void _isValid(
     }
     else
     {
-        for (int j = start; j < end; j++)  //j points to the value
+        for (int j = start; j < end; j++) //j points to the value
         {
             if (rowIndex[j] >= rows)
             {
@@ -2845,12 +2830,11 @@ __global__ void _isValid(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
     GPUSPARSE_INDEX_TYPE* colCSCIndex,
     const int cols,
-    const int nz
-    )
+    const int nz)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= cols)
@@ -2864,38 +2848,38 @@ __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
 
 //c = alpha * op(a) * op(b) + beta*c
 // TODO: This function can be further improved by loading the kernel in shared memory
-template<class ElemType>
+template <class ElemType>
 __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
-    const int m,                  // rowDense
-    const int k,                  // colDense
-    const int n,                  // colSparse
-    const int numChannels,        // input num channels
-    const int numSteps,           // convolution num steps
-    const int horizontalSubsample,// convolution step size
-    const bool channelwise,       // pixelwise for normal multiplication and channelwise for convolution operation
+    const int m,                   // rowDense
+    const int k,                   // colDense
+    const int n,                   // colSparse
+    const int numChannels,         // input num channels
+    const int numSteps,            // convolution num steps
+    const int horizontalSubsample, // convolution step size
+    const bool channelwise,        // pixelwise for normal multiplication and channelwise for convolution operation
     const ElemType alpha,
-    const ElemType* a,      //dense
+    const ElemType* a, //dense
     const bool transposeA,
-    const ElemType* bnzValues,  //sparse nz values
+    const ElemType* bnzValues, //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
     const ElemType beta,
-    ElemType* c  //dense target
+    ElemType* c //dense target
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*numSteps*n)
+    if (id >= m * numSteps * n)
         return;
 
     int colInC = id / (m * numSteps);
     int rowInC = id % (m * numSteps);
     int stepIdx = rowInC / m;
-    
+
     int start = colCSCIndex[colInC];
     int end = colCSCIndex[colInC + 1];
 
     ElemType s = 0;
-    for (int j = start; j < end; j++)  //j points to the value
+    for (int j = start; j < end; j++) //j points to the value
     {
         int i = rowIndex[j] - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
@@ -2925,27 +2909,27 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
 }
 
 /// c += alpha * a * b^T
-template<class ElemType>
+template <class ElemType>
 __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
-    int m,                      // rowDense
-    int k,                      // colDense
-    int n,                      // colSparse
-    int numChannels,            // input num channels
-    int numSteps,               // convolution num steps
-    int horizontalSubsample,    // convolution step size
-    bool channelwise,           // pixelwise for normal multiplication and channelwise for convolution operation
-    int rowInB,                 // row index of the sparse matrix
+    int m,                   // rowDense
+    int k,                   // colDense
+    int n,                   // colSparse
+    int numChannels,         // input num channels
+    int numSteps,            // convolution num steps
+    int horizontalSubsample, // convolution step size
+    bool channelwise,        // pixelwise for normal multiplication and channelwise for convolution operation
+    int rowInB,              // row index of the sparse matrix
     ElemType alpha,
-    const ElemType* a,          //dense
+    const ElemType* a, //dense
     bool transposeA,
-    const ElemType* bnzValues,  //sparse nz values
+    const ElemType* bnzValues, //sparse nz values
     const GPUSPARSE_INDEX_TYPE* rowIndex,
     const GPUSPARSE_INDEX_TYPE* colCSCIndex,
-    ElemType* c                 //dense target
+    ElemType* c //dense target
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*numSteps)
+    if (id >= m * numSteps)
         return;
 
     int rowInC = id;
@@ -2969,10 +2953,10 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     int end = colCSCIndex[rowInB + 1];
 
     ElemType s = 0;
-    for (int j = start; j<end; j++)  //j points to the value that are in the same row
+    for (int j = start; j < end; j++) //j points to the value that are in the same row
     {
-        int colInC = rowIndex[j];  // the column index because of transpose
-        
+        int colInC = rowIndex[j]; // the column index because of transpose
+
         // bnzValues[j] = the b[][j] value
         if (!transposeA)
             s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
@@ -2983,7 +2967,7 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count
     const int oldNumCols,                       // old col count
@@ -3011,7 +2995,7 @@ __global__ void _reshape(
         int end = oldColumnIndex[oldCol + 1];
         bool done = false;
 
-        for (int j = start; j < end; j++)  //j points to the value
+        for (int j = start; j < end; j++) //j points to the value
         {
             int oldRow = oldRowIndex[j];
             int index = (oldCol * oldNumRows + oldRow);
@@ -3044,9 +3028,9 @@ __global__ void _reshape(
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
-//blockIDs: the blockID mapping in the resulting matrix; 
+//blockIDs: the blockID mapping in the resulting matrix;
 //nnz: number of nonzero value or the size of rowIndexes;
-template<class ElemType>
+template <class ElemType>
 __global__ void _findColsWithValues(
     const GPUSPARSE_INDEX_TYPE* rowIndexes, GPUSPARSE_INDEX_TYPE* blockIds, const size_t nnz)
 {
@@ -3060,13 +3044,13 @@ __global__ void _findColsWithValues(
 //called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
-//blockId2Col: the blockID to colum id mapping in the resulting matrix; 
-//col2BlockId: the col2BlockId to blockID mapping in the resulting matrix; 
+//blockId2Col: the blockID to colum id mapping in the resulting matrix;
+//col2BlockId: the col2BlockId to blockID mapping in the resulting matrix;
 //numCols: number of columns in the resulting matrix or the size of blockIDs
 //blockSize: return the blockSize with values, *blockSize must be zero before passed in.
-template<class ElemType>
+template <class ElemType>
 __global__ void _determineBlockIds(
-    GPUSPARSE_INDEX_TYPE* blockId2Col, GPUSPARSE_INDEX_TYPE*col2BlockId, const size_t numCols, size_t* blockSize)
+    GPUSPARSE_INDEX_TYPE* blockId2Col, GPUSPARSE_INDEX_TYPE* col2BlockId, const size_t numCols, size_t* blockSize)
 {
     const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= numCols)
@@ -3075,7 +3059,7 @@ __global__ void _determineBlockIds(
     size_t blockIndex = numCols;
     if (blockId2Col[index] > 0)
     {
-        blockIndex = atomicAdd((unsigned int *)blockSize, (unsigned int)1);
+        blockIndex = atomicAdd((unsigned int*) blockSize, (unsigned int) 1);
         col2BlockId[index] = blockIndex;
     }
 
@@ -3088,7 +3072,7 @@ __global__ void _determineBlockIds(
 // backward pass from hidden layer to feature weight
 //result (sparse BlockCol)= alpha * (lhs (dense) X rhs^T (sparse CSC)
 //assume resultValues are 0-initialized
-template<class ElemType>
+template <class ElemType>
 __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
     const ElemType alpha,
     const ElemType* lhsValues,
@@ -3104,10 +3088,10 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
     const CUDA_LONG lhsCol = index / numRowsLhs; //rhsCol == lhsCol
     if (lhsCol >= numColsRhs)
         return;
-    const CUDA_LONG lhsRow = index - numRowsLhs*lhsCol; //resultRow == lhsRow
+    const CUDA_LONG lhsRow = index - numRowsLhs * lhsCol; //resultRow == lhsRow
 
     //each thread handles one [row, col] combination
-    ElemType lhsValue = alpha*lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
+    ElemType lhsValue = alpha * lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
 
     CUDA_LONG start = rhsCols[lhsCol]; //rhsCol == lhsCol
     CUDA_LONG end = rhsCols[lhsCol + 1];
@@ -3116,7 +3100,7 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
     {
         CUDA_LONG rhsRow = rhsRows[p];
         ElemType rhsVal = rhsNZValues[p];
-        CUDA_LONG resultCol = col2blockIds[rhsRow]; //resultCol == rhsRow maps to columnid 
+        CUDA_LONG resultCol = col2blockIds[rhsRow]; //resultCol == rhsRow maps to columnid
 
         //assume resultValues are 0-initialized
         atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
@@ -3126,7 +3110,7 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
 // backward pass from hidden layer to feature weight
 //result (sparse BlockCol)= alpha * (lhs (dense) X rhs^T (sparse CSC)
 //assume resultValues are 0-initialized
-template<class ElemType>
+template <class ElemType>
 __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
     const ElemType alpha,
     const ElemType* lhsValues,
@@ -3143,36 +3127,35 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
     const CUDA_LONG lhsCol = index / numRowsLhs; //rhsCol == lhsCol
     if (lhsCol >= numColsRhs)
         return;
-    const CUDA_LONG lhsRow = index - numRowsLhs*lhsCol; //resultRow == lhsRow
+    const CUDA_LONG lhsRow = index - numRowsLhs * lhsCol; //resultRow == lhsRow
 
     //each thread handles one [row, col] combination
-    ElemType lhsValue = alpha*lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
+    ElemType lhsValue = alpha * lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
 
     CUDA_LONG start = rhsCols[lhsCol]; //rhsCol == lhsCol
     CUDA_LONG end = rhsCols[lhsCol + 1];
 
     for (CUDA_LONG p = start; p < end; p++)
     {
-        CUDA_LONG rhsRow = rhsRows[p]; 
+        CUDA_LONG rhsRow = rhsRows[p];
         ElemType rhsVal = rhsNZValues[p];
-        CUDA_LONG resultCol = rhsRowIdx[p]; //resultCol == rhsRow maps to columnid 
-        resultBlockIds[resultCol] = rhsRow;  //indicate which colmn it actually points to
+        CUDA_LONG resultCol = rhsRowIdx[p]; //resultCol == rhsRow maps to columnid
+        resultBlockIds[resultCol] = rhsRow; //indicate which colmn it actually points to
 
         //assume resultValues are 0-initialized
         atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
     }
 }
 
-
 // gradients update
-template<class ElemType>
-__global__ void _scaleSparseBlockAndAddToDense(    
+template <class ElemType>
+__global__ void _scaleSparseBlockAndAddToDense(
     const ElemType alpha,
     const bool blockCol, //true if blockRow
     const size_t numRows,
     const size_t numCols,
     const size_t numBlocks,
-    const ElemType* lhsValues,  //lhs is blockCol or blockRow
+    const ElemType* lhsValues, //lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs)
 {
@@ -3183,7 +3166,7 @@ __global__ void _scaleSparseBlockAndAddToDense(
         const CUDA_LONG blockId = index / numRows;
         if (blockId >= numBlocks)
             return;
-        row = index - numRows* blockId;
+        row = index - numRows * blockId;
         col = blockIds[blockId];
     }
     else
@@ -3191,25 +3174,25 @@ __global__ void _scaleSparseBlockAndAddToDense(
         const CUDA_LONG blockId = index / numCols;
         if (blockId >= numBlocks)
             return;
-        col = index - numCols* blockId;
+        col = index - numCols * blockId;
         row = blockIds[blockId];
     }
     rhs[IDX2C(row, col, numRows)] += alpha * lhsValues[index];
 }
 
 // compute predictions in cross entory node
-template<class ElemType>
+template <class ElemType>
 __global__ void _computePrediction(
     int nv,
     const ElemType* a,
     int numrows,
-    const ElemType* weight,   
+    const ElemType* weight,
     int nrs,
     int labelSize,
     const GPUSPARSE_INDEX_TYPE* labelRow,
     const size_t* block2Id,
     const ElemType* cls,
-    const ElemType* idx2cls,    
+    const ElemType* idx2cls,
     ElemType* val,
     GPUSPARSE_INDEX_TYPE* row,
     GPUSPARSE_INDEX_TYPE* pb)
@@ -3217,68 +3200,68 @@ __global__ void _computePrediction(
     // get label block id
     int id = -1;
     int offset = -1;
-    for(int i = 1; i < labelSize; i++) 
+    for (int i = 1; i < labelSize; i++)
     {
-        if (blockIdx.x < block2Id[i]) 
+        if (blockIdx.x < block2Id[i])
         {
-            id = i-1;
-            offset = blockIdx.x - block2Id[i-1];
+            id = i - 1;
+            offset = blockIdx.x - block2Id[i - 1];
             break;
         }
     }
-    if( id == -1) 
+    if (id == -1)
     {
-        id = labelSize-1;
-        offset = blockIdx.x - block2Id[labelSize-1];
+        id = labelSize - 1;
+        offset = blockIdx.x - block2Id[labelSize - 1];
     }
 
     int t = labelRow[id];
     int iStt;
     int iEnd;
-    if(t < nv) 
+    if (t < nv)
     {
         int clsid = idx2cls[t];
         iStt = cls[IDX2C(0, clsid, 2)];
         iEnd = cls[IDX2C(1, clsid, 2)];
-    } 
-    else 
+    }
+    else
     {
         iStt = nv;
         iEnd = nrs;
     }
     int i = iStt + offset;
-    int j = id /2;
-    
-    int loadPerThread = (numrows+blockDim.x-1)/blockDim.x;
+    int j = id / 2;
+
+    int loadPerThread = (numrows + blockDim.x - 1) / blockDim.x;
     int tStart = loadPerThread * threadIdx.x;
-    int tEnd = min((int)numrows, loadPerThread + tStart);
+    int tEnd = min((int) numrows, loadPerThread + tStart);
 
     ElemType v = 0.0;
     for (int h = tStart; h < tEnd; h++)
     {
-        v += weight[IDX2C(i,h,nrs)] * a[IDX2C(h,j,numrows)]; 
+        v += weight[IDX2C(i, h, nrs)] * a[IDX2C(h, j, numrows)];
     }
     atomicAdd(&val[blockIdx.x], v);
     row[blockIdx.x] = i;
 
-    if(blockIdx.x == 0 && threadIdx.x == 0) 
+    if (blockIdx.x == 0 && threadIdx.x == 0)
         pb[0] = 0;
-    
-    if((threadIdx.x == 0) && (i == iEnd-1) && (i >= nv)) 
-        pb[j+1] = blockIdx.x+1;
+
+    if ((threadIdx.x == 0) && (i == iEnd - 1) && (i >= nv))
+        pb[j + 1] = blockIdx.x + 1;
 }
 
 // normalize predictions in cross entropy node
-template<class ElemType>
+template <class ElemType>
 __global__ void _normalizePrediction(
     const size_t labelSize,
     const size_t expandedLabelSize,
     const GPUSPARSE_INDEX_TYPE* labelRow,
-    const size_t* block2Id,    
+    const size_t* block2Id,
     const GPUSPARSE_INDEX_TYPE* row,
     ElemType* val,
     ElemType* entropyScore)
-{    
+{
     __shared__ ElemType partials[512];
     partials[threadIdx.x] = 0;
 
@@ -3286,21 +3269,21 @@ __global__ void _normalizePrediction(
     int t = labelRow[p];
     int start = block2Id[p];
     int end;
-    if(p == labelSize -1) 
+    if (p == labelSize - 1)
     {
         end = expandedLabelSize;
-    } 
-    else 
+    }
+    else
     {
-        end = block2Id[p+1];
+        end = block2Id[p + 1];
     }
     int len = end - start;
 
-    int loadPerThread = (len+blockDim.x-1)/blockDim.x;
+    int loadPerThread = (len + blockDim.x - 1) / blockDim.x;
     int tStart = loadPerThread * threadIdx.x;
-    int tLen = min((int)len, loadPerThread + tStart);
+    int tLen = min((int) len, loadPerThread + tStart);
 
-    for(int i = start + tStart; i < start + tLen; i++) 
+    for (int i = start + tStart; i < start + tLen; i++)
     {
         partials[threadIdx.x] += exp(val[i]);
     }
@@ -3310,22 +3293,22 @@ __global__ void _normalizePrediction(
     // now sum up the objective function
     int nTotalThreads = blockDim.x;
 
-    while (nTotalThreads >1)
+    while (nTotalThreads > 1)
     {
         int halfPoint = (nTotalThreads >> 1);
 
         if (threadIdx.x < halfPoint)
-            partials[threadIdx.x] += partials[threadIdx.x+halfPoint];
+            partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
 
         __syncthreads();
 
-        nTotalThreads = (nTotalThreads>>1);
+        nTotalThreads = (nTotalThreads >> 1);
     }
-    
-    for(int i = start + tStart; i < start + tLen; i++) 
+
+    for (int i = start + tStart; i < start + tLen; i++)
     {
-        val[i] = log(exp(val[i])/partials[0]);
-        if(row[i] == t) 
+        val[i] = log(exp(val[i]) / partials[0]);
+        if (row[i] == t)
         {
             atomicAdd(entropyScore, -val[i]);
             val[i] *= -1;
@@ -3334,55 +3317,54 @@ __global__ void _normalizePrediction(
 }
 
 // compute prediction error in cross entropy node
-template<class ElemType>
+template <class ElemType>
 __global__ void _computePredictionError(
     ElemType* val,
     int N)
-{    
+{
     int p = blockDim.x * blockIdx.x + threadIdx.x;
-    if (p>=N)
+    if (p >= N)
         return;
 
-    if(val[p] < 0) 
+    if (val[p] < 0)
         val[p] = exp(val[p]); //negative;
-    else 
-        val[p] = exp(-val[p])-1; //positive
+    else
+        val[p] = exp(-val[p]) - 1; //positive
 }
 
 // compute gradients of input in cross entropy node
-template<class ElemType>
+template <class ElemType>
 __global__ void _computeGradientOfInput(
     const ElemType* val,
     const GPUSPARSE_INDEX_TYPE* row,
-    const GPUSPARSE_INDEX_TYPE* pb,    
+    const GPUSPARSE_INDEX_TYPE* pb,
     ElemType* weight,
     size_t nrs,
     ElemType* grd,
     size_t numrows)
-{        
-    int h = blockIdx.x%numrows;
-    int j = blockIdx.x/numrows;
+{
+    int h = blockIdx.x % numrows;
+    int j = blockIdx.x / numrows;
 
     int start = pb[j];
-    int end = pb[j+1];
+    int end = pb[j + 1];
     int len = end - start;
-    
-    int load = (len+blockDim.x-1)/blockDim.x;
+
+    int load = (len + blockDim.x - 1) / blockDim.x;
     int pStart = start + load * threadIdx.x;
-    int pEnd = start + min(len, load * (threadIdx.x+1));
+    int pEnd = start + min(len, load * (threadIdx.x + 1));
 
     ElemType sum = 0;
-    for(int p = pStart; p < pEnd; p++) 
+    for (int p = pStart; p < pEnd; p++)
     {
         int i = row[p];
-        sum += val[p] * weight[IDX2C(i, h, nrs)]; 
-    }    
+        sum += val[p] * weight[IDX2C(i, h, nrs)];
+    }
 
-    atomicAdd(&grd[IDX2C(h,j,numrows)], sum);
+    atomicAdd(&grd[IDX2C(h, j, numrows)], sum);
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void computeNCEForwardProp(
     const ElemType* val,
     const int* col,
@@ -3394,7 +3376,7 @@ __global__ void computeNCEForwardProp(
     ElemType* res)
 {
     // val and col are in CSR format
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
@@ -3429,7 +3411,7 @@ __global__ void computeNCEForwardProp(
         // sum up
         int nTotalThreads = blockDim.x;
 
-        while (nTotalThreads >1)
+        while (nTotalThreads > 1)
         {
             int halfPoint = (nTotalThreads >> 1);
 
@@ -3446,7 +3428,7 @@ __global__ void computeNCEForwardProp(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _computeNceOutput(
     const ElemType* col,
     int numRows,
@@ -3458,7 +3440,7 @@ __global__ void _computeNceOutput(
     ElemType* res)
 {
     // val and col are in CSR format
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
@@ -3483,7 +3465,7 @@ __global__ void _computeNceOutput(
 
     for (int i = start; i < end; i++)
     {
-        int wid = (int)col[2 * i];
+        int wid = (int) col[2 * i];
         int batchid = i / sampleCount;
 
         int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
@@ -3498,7 +3480,7 @@ __global__ void _computeNceOutput(
         // sum up
         int nTotalThreads = blockDim.x;
 
-        while (nTotalThreads >1)
+        while (nTotalThreads > 1)
         {
             int halfPoint = (nTotalThreads >> 1);
 
@@ -3515,16 +3497,15 @@ __global__ void _computeNceOutput(
     }
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignSoftmaxSum(
-    const ElemType* softmax,    
+    const ElemType* softmax,
     int sampleCount,
-    const ElemType* a, 
+    const ElemType* a,
     ElemType* c) // run on 512 threads per block
 {
     // val and col are in CSR format
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
@@ -3540,10 +3521,10 @@ __global__ void _assignSoftmaxSum(
 
     // find out the items this thread is responsible for
     int start = loadPerThread * threadIdx.x;
-    int end = min(total, loadPerThread * (threadIdx.x + 1));    
+    int end = min(total, loadPerThread * (threadIdx.x + 1));
     for (int i = start; i < end; i++)
     {
-        int wid = (int)a[i];
+        int wid = (int) a[i];
         partials[threadIdx.x] += softmax[IDX2C(i, wid, sampleCount)];
     }
 
@@ -3552,7 +3533,7 @@ __global__ void _assignSoftmaxSum(
     // now sum up the objective function
     int nTotalThreads = blockDim.x;
 
-    while (nTotalThreads >1)
+    while (nTotalThreads > 1)
     {
         int halfPoint = (nTotalThreads >> 1);
 
@@ -3568,7 +3549,7 @@ __global__ void _assignSoftmaxSum(
         c[0] = -partials[0];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignNoiseContrastiveEstimation(
     const ElemType* val,
     int numRows,
@@ -3580,7 +3561,7 @@ __global__ void _assignNoiseContrastiveEstimation(
     ElemType* c) // run on 512 threads per block
 {
     // val and col are in CSR format
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
@@ -3623,7 +3604,7 @@ __global__ void _assignNoiseContrastiveEstimation(
     // now sum up the objective function
     int nTotalThreads = blockDim.x;
 
-    while (nTotalThreads >1)
+    while (nTotalThreads > 1)
     {
         int halfPoint = (nTotalThreads >> 1);
 
@@ -3639,7 +3620,7 @@ __global__ void _assignNoiseContrastiveEstimation(
         c[0] = -partials[0];
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignNceDerivative(
     const ElemType* val,
     int numRows,
@@ -3669,15 +3650,15 @@ __global__ void _assignNceDerivative(
 
     for (int i = start; i < end; i++)
     {
-        int wid = (int)val[2 * i];
+        int wid = (int) val[2 * i];
         int batchId = i / sampleCount;
 
         ElemType er = tmp[i]; // precalculated error for this output node
-      
+
         // calculate gradients
         int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
         int tstart = loadPerThread * threadIdx.x;
-        int tend = min(width, loadPerThread*(threadIdx.x + 1));
+        int tend = min(width, loadPerThread * (threadIdx.x + 1));
 
         if (inputIndex == 1) // hidden layer output
         {
@@ -3707,7 +3688,7 @@ __global__ void _assignNceDerivative(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignNceDerivativeNew(
     const ElemType* val,
     int numRows,
@@ -3729,14 +3710,14 @@ __global__ void _assignNceDerivativeNew(
     // c is the output matrix to store calculated gradients
 
     // logical single index for this thread
-    int n = threadIdx.x + blockDim.x* blockIdx.x;
+    int n = threadIdx.x + blockDim.x * blockIdx.x;
 
     int batchId = n / sampleCount;
     int total = numRows * sampleCount;
     // is thread in range for the addition
     if (n < total)
     {
-        int wid = (int)val[2 * n];
+        int wid = (int) val[2 * n];
         ElemType er = tmp[n];
         if (inputIndex == 1)
         {
@@ -3761,7 +3742,7 @@ __global__ void _assignNceDerivativeNew(
     }
 }
 // compute gradients of weights in cross entropy node
-template<class ElemType>
+template <class ElemType>
 __global__ void _computeGradientOfWeight(
     const ElemType* val,
     const GPUSPARSE_INDEX_TYPE* row,
@@ -3781,68 +3762,68 @@ __global__ void _computeGradientOfWeight(
     ElemType v = val[p];
     int i = row[p];
     int j = -1;
-    for(int k = 1; k < mb; k++) 
+    for (int k = 1; k < mb; k++)
     {
-        if( p < pb[k]) 
+        if (p < pb[k])
         {
-            j = k-1;
+            j = k - 1;
             break;
         }
     }
-    if( j == -1) 
+    if (j == -1)
     {
-        j = mb-1;
+        j = mb - 1;
     }
 
     //figure out blocks
-    int bId = i < nv ? 2*j : 2*j+1;
+    int bId = i < nv ? 2 * j : 2 * j + 1;
     int t = labelRow[bId];
     int iStt;
-    if(t < nv) 
+    if (t < nv)
     {
         int clsid = idx2cls[t];
         iStt = cls[IDX2C(0, clsid, 2)];
-    } 
-    else 
+    }
+    else
     {
         iStt = nv;
     }
     int offset = i - iStt;
     int ii = labelBlock2UniqId[bId] + offset;
 
-    int load = (nrs+blockDim.x-1)/blockDim.x;
+    int load = (nrs + blockDim.x - 1) / blockDim.x;
     int pStart = load * threadIdx.x;
-    int pEnd = min((int)nrs, load + pStart);
+    int pEnd = min((int) nrs, load + pStart);
 
-    for(int h = pStart; h < pEnd; h++) 
-    {        
-        ElemType temp = v * input[IDX2C(h, j, nrs)];    
-        atomicAdd(&blockVal[ii*nrs+h], temp);
+    for (int h = pStart; h < pEnd; h++)
+    {
+        ElemType temp = v * input[IDX2C(h, j, nrs)];
+        atomicAdd(&blockVal[ii * nrs + h], temp);
         blockIds[ii] = i;
     }
 }
 
 // used in clipping gradients
-template<class ElemType>
+template <class ElemType>
 __global__ void _inplaceTruncate(
     ElemType* a,
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id,N)
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N)
     ElemType locThresholdPos = abs(threshold);
-    ElemType locTHresholdNeg = -locThresholdPos; 
+    ElemType locTHresholdNeg = -locThresholdPos;
     if (a[id] > locThresholdPos)
     {
         a[id] = locThresholdPos;
     }
-    else if(a[id] < locTHresholdNeg)
+    else if (a[id] < locTHresholdNeg)
     {
         a[id] = locTHresholdNeg;
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _inplaceSoftThreshold(
     ElemType* a,
     const ElemType threshold,
@@ -3864,15 +3845,14 @@ __global__ void _inplaceSoftThreshold(
         a[id] = 0;
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _normalGradForSparseBlock(
     const ElemType momentum,
     const bool blockCol, //true if blockRow
     const size_t numRows,
     const size_t numCols,
     const size_t numBlocks,
-    ElemType* lhsValues,  //lhs is blockCol or blockRow
+    ElemType* lhsValues, //lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs)
 {
@@ -3883,7 +3863,7 @@ __global__ void _normalGradForSparseBlock(
         const CUDA_LONG blockId = index / numRows;
         if (blockId >= numBlocks)
             return;
-        row = index - numRows* blockId;
+        row = index - numRows * blockId;
         col = blockIds[blockId];
     }
     else
@@ -3891,97 +3871,97 @@ __global__ void _normalGradForSparseBlock(
         const CUDA_LONG blockId = index / numCols;
         if (blockId >= numBlocks)
             return;
-        col = index - numCols* blockId;
+        col = index - numCols * blockId;
         row = blockIds[blockId];
     }
-    rhs[IDX2C(row, col, numRows)] = (1 - momentum)*lhsValues[index] + momentum*rhs[IDX2C(row, col, numRows)];
+    rhs[IDX2C(row, col, numRows)] = (1 - momentum) * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
 }
 
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionSum(
     const ElemType* data,
-    ElemType *sum,
+    ElemType* sum,
     CUDA_LONG N)
 {
 
     __shared__ ElemType partialSums[1024];
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG loadPerThread = N/blockDim.x; 
-    for (CUDA_LONG i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)
+    CUDA_LONG loadPerThread = N / blockDim.x;
+    for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x]+=data[i];
+        partialSums[threadIdx.x] += data[i];
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+512];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 512];
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+256];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 256];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+128];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 128];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+64];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 64];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+32];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 32];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+16];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 16];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+8];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 8];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+4];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        sum[0] = partialSums[0]+partialSums[1]+partialSums[2]+partialSums[3];
+        sum[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
     }
 }
 
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionSumAndAssign(
     ElemType* toAssign,
     const ElemType* data,
@@ -3990,380 +3970,377 @@ __global__ void _reductionSumAndAssign(
 {
     __shared__ ElemType partialSums[1024];
     __shared__ ElemType res;
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG loadPerThread = N/blockDim.x; 
-    for (CUDA_LONG i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)
+    CUDA_LONG loadPerThread = N / blockDim.x;
+    for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x]+=data[i];
+        partialSums[threadIdx.x] += data[i];
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+512];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 512];
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+256];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 256];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+128];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 128];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+64];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 64];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+32];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 32];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+16];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 16];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+8];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 8];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+4];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        res = partialSums[0]+partialSums[1]+partialSums[2]+partialSums[3];
-        for (CUDA_LONG i=0;i<M;++i)
-            toAssign[i]=res;
+        res = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
+        for (CUDA_LONG i = 0; i < M; ++i)
+            toAssign[i] = res;
     }
 }
 
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionSum2(
     const ElemType* data,
-    ElemType *sum,
-    CUDA_LONG N, 
-    bool takeSqrt=false)
+    ElemType* sum,
+    CUDA_LONG N,
+    bool takeSqrt = false)
 {
 
     __shared__ ElemType partialSums[1024];
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG loadPerThread = N/blockDim.x; 
-    for (CUDA_LONG i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)
-        //for (int i= threadIdx.x*loadPerThread; i<(threadIdx.x+1)*loadPerThread;++i)
+    CUDA_LONG loadPerThread = N / blockDim.x;
+    for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
+    //for (int i= threadIdx.x*loadPerThread; i<(threadIdx.x+1)*loadPerThread;++i)
     {
-        partialSums[threadIdx.x]+=(data[i]*data[i]);
+        partialSums[threadIdx.x] += (data[i] * data[i]);
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+512];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 512];
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+256];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 256];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+128];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 128];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+64];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 64];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+32];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 32];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+16];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 16];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+8];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 8];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]+=partialSums[threadIdx.x+4];
+        partialSums[threadIdx.x] += partialSums[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        sum[0] = partialSums[0]+partialSums[1]+partialSums[2]+partialSums[3];
+        sum[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
         if (takeSqrt)
         {
-            if (sizeof(ElemType)==sizeof(float))
+            if (sizeof(ElemType) == sizeof(float))
                 sum[0] = sqrtf(sum[0]);
             else
-                sum[0] = sqrt(sum[0]); 
+                sum[0] = sqrt(sum[0]);
         }
     }
 }
 
-
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionMatrixNormInf(
     const ElemType* data,
-    ElemType *maxAbs,
+    ElemType* maxAbs,
     CUDA_LONG N)
 {
 
     __shared__ ElemType partialSums[1024];
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = N/blockDim.x; 
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)    
+    int loadPerThread = N / blockDim.x;
+    for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        if (sizeof(ElemType)==sizeof(float))
+        if (sizeof(ElemType) == sizeof(float))
         {
-            partialSums[threadIdx.x]=max(fabsf(data[i]),partialSums[threadIdx.x]);
+            partialSums[threadIdx.x] = max(fabsf(data[i]), partialSums[threadIdx.x]);
         }
         else
         {
-            partialSums[threadIdx.x]=max(fabs(data[i]),partialSums[threadIdx.x]);
+            partialSums[threadIdx.x] = max(fabs(data[i]), partialSums[threadIdx.x]);
         }
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+512],partialSums[threadIdx.x]);        
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 512], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+256],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 256], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+128],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 128], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+64],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 64], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+32],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 32], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+16],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 16], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+8],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 8], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]=max(partialSums[threadIdx.x+4],partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(partialSums[threadIdx.x + 4], partialSums[threadIdx.x]);
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        maxAbs[0] = max(max(partialSums[0],partialSums[1]),max(partialSums[2],partialSums[3]));
+        maxAbs[0] = max(max(partialSums[0], partialSums[1]), max(partialSums[2], partialSums[3]));
     }
 }
 
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionMatrixNorm0(
     const ElemType* data,
-    ElemType *nz,
+    ElemType* nz,
     CUDA_LONG N)
 {
 
     __shared__ ElemType partialSums[1024];
-    partialSums[threadIdx.x]=0;
+    partialSums[threadIdx.x] = 0;
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG loadPerThread = N/blockDim.x; 
-    for (CUDA_LONG i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)    
+    CUDA_LONG loadPerThread = N / blockDim.x;
+    for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        if (data[i]!=0)
+        if (data[i] != 0)
             ++partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //512
-    if (threadIdx.x<512)
+    if (threadIdx.x < 512)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+512]+partialSums[threadIdx.x];        
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 512] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+256]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 256] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+128]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 128] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+64]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 64] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+32]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 32] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+16]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 16] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+8]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 8] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums[threadIdx.x]=partialSums[threadIdx.x+4]+partialSums[threadIdx.x];
+        partialSums[threadIdx.x] = partialSums[threadIdx.x + 4] + partialSums[threadIdx.x];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        nz[0] = partialSums[0]+partialSums[1]+partialSums[2]+partialSums[3];
+        nz[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
     }
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _getSparseVectorRepresntationForCSCMatrix(
     const int* m_dRow,
-    const int* m_dCol,    
-    int* vectArray,    
+    const int* m_dCol,
+    int* vectArray,
     const CUDA_LONG M,
     const CUDA_LONG N)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (i>=M)
+    if (i >= M)
         return;
     int start = m_dRow[i];
-    int end = m_dRow[i+1];
-    for (int _i=start;_i<end;++_i)  //_i is index in m_dVal and m_dCol
+    int end = m_dRow[i + 1];
+    for (int _i = start; _i < end; ++_i) //_i is index in m_dVal and m_dCol
     {
         int j = m_dCol[_i];
-        vectArray[_i] = i*N + j;
+        vectArray[_i] = i * N + j;
     }
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _lrHelper(
-    const ElemType* data1,    
-    const ElemType* data2,    
+    const ElemType* data1,
+    const ElemType* data2,
     const CUDA_LONG N,
     ElemType* d_res)
 {
     __shared__ ElemType partialSums1[512];
     __shared__ ElemType partialSums2[512];
-    partialSums1[threadIdx.x]=0;
-    partialSums2[threadIdx.x]=0;
+    partialSums1[threadIdx.x] = 0;
+    partialSums2[threadIdx.x] = 0;
 
     //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = N/blockDim.x;     
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x+1)*loadPerThread);++i)        
+    int loadPerThread = N / blockDim.x;
+    for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums1[threadIdx.x]+=(data1[i]*data1[i]);
-        partialSums2[threadIdx.x]+=(data2[i]*data2[i]);
+        partialSums1[threadIdx.x] += (data1[i] * data1[i]);
+        partialSums2[threadIdx.x] += (data2[i] * data2[i]);
     }
     __syncthreads();
 
@@ -4377,73 +4354,73 @@ __global__ void _lrHelper(
     __syncthreads();*/
 
     //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+256];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+256];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 256];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 256];
     }
     __syncthreads();
 
     //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+128];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+128];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 128];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 128];
     }
     __syncthreads();
 
     //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+64];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+64];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 64];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 64];
     }
     __syncthreads();
 
     //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+32];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+32];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 32];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 32];
     }
     __syncthreads();
 
     //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+16];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+16];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 16];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 16];
     }
     __syncthreads();
 
     //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+8];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+8];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 8];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 8];
     }
     __syncthreads();
 
     //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partialSums1[threadIdx.x]+=partialSums1[threadIdx.x+4];
-        partialSums2[threadIdx.x]+=partialSums2[threadIdx.x+4];        
+        partialSums1[threadIdx.x] += partialSums1[threadIdx.x + 4];
+        partialSums2[threadIdx.x] += partialSums2[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
-    {        
-        ElemType fns1 = partialSums1[0]+partialSums1[1]+partialSums1[2]+partialSums1[3];
-        ElemType fns2 = partialSums2[0]+partialSums2[1]+partialSums2[2]+partialSums2[3];
-        if (sizeof(ElemType)==sizeof(float))
-        {                    
-            d_res[0] = max((ElemType)0, d_res[0]/max((ElemType)1.0e-10,sqrtf(fns1))/max((ElemType)1.0e-10,sqrtf(fns2)));            
+    if (threadIdx.x == 0)
+    {
+        ElemType fns1 = partialSums1[0] + partialSums1[1] + partialSums1[2] + partialSums1[3];
+        ElemType fns2 = partialSums2[0] + partialSums2[1] + partialSums2[2] + partialSums2[3];
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            d_res[0] = max((ElemType) 0, d_res[0] / max((ElemType) 1.0e-10, sqrtf(fns1)) / max((ElemType) 1.0e-10, sqrtf(fns2)));
         }
         else
-        {            
-            d_res[0] = max((ElemType)0, d_res[0]/max((ElemType)1.0e-10,sqrt(fns1))/max((ElemType)1.0e-10,sqrt(fns2)));              
-        }   
+        {
+            d_res[0] = max((ElemType) 0, d_res[0] / max((ElemType) 1.0e-10, sqrt(fns1)) / max((ElemType) 1.0e-10, sqrt(fns2)));
+        }
     }
 }
 
@@ -4463,8 +4440,7 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 */
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignElementProductOfWithShiftNeg(
     ElemType* us,
     const ElemType* a,
@@ -4492,7 +4468,7 @@ __global__ void _assignElementProductOfWithShiftNeg(
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _innerProductWithShiftNeg(
     ElemType* c,
     const ElemType* a,
@@ -4500,8 +4476,7 @@ __global__ void _innerProductWithShiftNeg(
     const CUDA_LONG N, //a.GetNumRows();
     const CUDA_LONG M, //a.GetNumCols();
     const CUDA_LONG shift,
-    const CUDA_LONG NTPlusOne
-    )
+    const CUDA_LONG NTPlusOne)
 {
     CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
@@ -4538,16 +4513,15 @@ __global__ void _innerProductWithShiftNeg(
         }
     }
     c[IDX2C(idx, idy, NTPlusOne)] = sum;
-
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _getARowByIndex(
     ElemType* us,
     const ElemType* a,
     const int O, // a's rows
     const int P, // a's cols
-    const int m // the m-th row of a
+    const int m  // the m-th row of a
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -4557,8 +4531,7 @@ __global__ void _getARowByIndex(
     us[id] = a[IDX2C(m, id, O)];
 }
 
-
-template<class ElemType>
+template <class ElemType>
 __global__ void _conductRowElementMultiplyWithShift(
     ElemType* us,
     const ElemType* a,
@@ -4585,10 +4558,9 @@ __global__ void _conductRowElementMultiplyWithShift(
         // we fix b, but shift a
         us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
     }
-
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _assignElementProductOfWithShift(
     ElemType* us,
     const ElemType* a,
@@ -4604,29 +4576,27 @@ __global__ void _assignElementProductOfWithShift(
     us[id] = a[id] * b[tmpidb];
 }
 
-
 /// minus 1 at a specific position
-template<class ElemType>
+template <class ElemType>
 __global__ void _minusOneAt(
-    ElemType *c,
-    CUDA_LONG position, 
+    ElemType* c,
+    CUDA_LONG position,
     CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
     if (id == position)
-        c[id] = c[id] - 1.0; 
+        c[id] = c[id] - 1.0;
 }
-
 
 /// the kernel function for RCRF  backward computation
 /// assume a column slice of input and output
-template<class ElemType>
+template <class ElemType>
 __global__ void _rcrfBackwardCompute(
     const size_t iNumPos,
-    const ElemType* galpha,   /// column slice at current time t
-    ElemType* gbeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, /// column slice at current time t
+    ElemType* gbeta,        /// column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab, const int shift)
 {
@@ -4635,9 +4605,9 @@ __global__ void _rcrfBackwardCompute(
     extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
     /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
-    ElemType * pair_scores = alpha + iNumPos * iNumLab;
-    ElemType * beta = alpha + iNumPos * iNumLab + iNumLab * iNumLab;
+    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
+    ElemType* pair_scores = alpha + iNumPos * iNumLab;
+    ElemType* beta = alpha + iNumPos * iNumLab + iNumLab * iNumLab;
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4695,14 +4665,14 @@ __global__ void _rcrfBackwardCompute(
 
 /// the kernel function for RCRF  backward computation
 /// assume a column slice of input and output
-template<class ElemType>
+template <class ElemType>
 __global__ void _rcrfBackwardCompute(
-    const size_t t, /// time position 
+    const size_t t, /// time position
     const size_t iNumPos,
-    const ElemType* galpha,   /// column slice at current time t
-    ElemType* gbeta,          /// column slices with [row, 2] at current time t for [
-    const ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
-    const ElemType* gpair_scores,   /// column slice at current time t
+    const ElemType* galpha,       /// column slice at current time t
+    ElemType* gbeta,              /// column slices with [row, 2] at current time t for [
+    const ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores, /// column slice at current time t
     const size_t iNumLab, const int shift)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -4710,9 +4680,9 @@ __global__ void _rcrfBackwardCompute(
     extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
     /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
-    ElemType * beta_t1 = (ElemType*)(alpha + iNumLab);
-    ElemType * zeta = (ElemType*)(beta_t1 + iNumLab);
+    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
+    ElemType* beta_t1 = (ElemType*) (alpha + iNumLab);
+    ElemType* zeta = (ElemType*) (beta_t1 + iNumLab);
     ElemType pair_scores[1024];
 
     if (id < 0 || id >= iNumLab)
@@ -4743,16 +4713,15 @@ __global__ void _rcrfBackwardCompute(
     }
 
     gbeta[IDX2C(id, t, iNumLab)] = fTmp;
-
 }
 
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
-template<class ElemType>
+template <class ElemType>
 __global__ void _rcrfBackwardComputeZeta(
-    const size_t t, /// time position 
+    const size_t t, /// time position
     const size_t iNumPos,
-    const ElemType* galpha,   /// column slice at current time t
-    ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, /// column slice at current time t
+    ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab, const int shift)
 {
@@ -4761,7 +4730,7 @@ __global__ void _rcrfBackwardComputeZeta(
     extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
     /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType pair_scores[1024];
 
     if (id < 0 || id >= iNumLab)
@@ -4785,16 +4754,15 @@ __global__ void _rcrfBackwardComputeZeta(
     }
 
     gzeta[id] = fSum;
-
 }
 
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
-template<class ElemType>
+template <class ElemType>
 __global__ void _rcrfTransGrdComputeZeta(
-    const int t, /// time position 
+    const int t, /// time position
     const size_t iNumPos,
-    const ElemType* galpha,   /// column slice at current time t
-    ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, /// column slice at current time t
+    ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab,
     const size_t start_lbl,
@@ -4805,7 +4773,7 @@ __global__ void _rcrfTransGrdComputeZeta(
     extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
     /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType pair_scores[1024];
 
     if (id < 0 || id >= iNumLab)
@@ -4828,7 +4796,8 @@ __global__ void _rcrfTransGrdComputeZeta(
         {
             if (m == start_lbl)
                 fTmp = 0;
-            else fTmp = LZERO;
+            else
+                fTmp = LZERO;
         }
         else
             fTmp = alpha[m];
@@ -4837,18 +4806,17 @@ __global__ void _rcrfTransGrdComputeZeta(
     }
 
     gzeta[id] = fSum;
-
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _rcrfTransGrdCompute(
     int t,
     const size_t start_lbl,
-    const ElemType*   galpha,
+    const ElemType* galpha,
     const ElemType* gbeta,
     const ElemType* gzeta,
     const ElemType* gpair_scores,
-    const ElemType * lbls,
+    const ElemType* lbls,
     ElemType* grd,
     const size_t iNumPos,
     const size_t iNumLab,
@@ -4859,9 +4827,9 @@ __global__ void _rcrfTransGrdCompute(
     extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
     /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
-    ElemType * beta = (ElemType*)(alpha + iNumLab);
-    ElemType * zeta = (ElemType*)(beta + iNumLab);
+    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
+    ElemType* beta = (ElemType*) (alpha + iNumLab);
+    ElemType* zeta = (ElemType*) (beta + iNumLab);
     ElemType pair_scores[1024];
 
     if (id < 0 || id >= iNumLab)
@@ -4880,7 +4848,8 @@ __global__ void _rcrfTransGrdCompute(
 
     ElemType fTmp;
     ElemType fTmp2;
-    for (int j = 0; j < iNumLab; j++){
+    for (int j = 0; j < iNumLab; j++)
+    {
         if (t == 0)
         {
             if (id == start_lbl)
@@ -4907,13 +4876,12 @@ __global__ void _rcrfTransGrdCompute(
                 grd[IDX2C(ik, id, iNumLab)] -= 1.0;
         }
     }
-
 };
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _reductionLogAddSum(
     const ElemType* data,
-    ElemType *sum,
+    ElemType* sum,
     const size_t sum_size,
     CUDA_LONG N)
 {
@@ -4935,13 +4903,13 @@ __global__ void _reductionLogAddSum(
     for (size_t s = start_width; s > 0; s >>= 1)
     {
         ElemType lSum = LZERO;
-        if (tid < s){
+        if (tid < s)
+        {
             lSum = logaddk(partialLogAddSum[tid], partialLogAddSum[tid + s]);
             partialLogAddSum[tid] = lSum;
         }
     }
     __syncthreads();
-
 
     if (tid == 0)
         sum[0] = partialLogAddSum[0];
@@ -4951,11 +4919,11 @@ __global__ void _reductionLogAddSum(
 // the column is decided by threshhold value
 // TODO: This kernel has very poor performace and needs to
 // be optimized
-template<class ElemType>
+template <class ElemType>
 __global__ void _DropFrame(
-    ElemType *a,
-    const ElemType *label,
-    const ElemType *gamma,
+    ElemType* a,
+    const ElemType* label,
+    const ElemType* gamma,
     const ElemType framedropthreshhold,
     const long m_numCols,
     const long m_numRows) //ld
@@ -4966,11 +4934,11 @@ __global__ void _DropFrame(
     bool dropframe = false;
     // find the 1 in the one-hot representation of the labels
     // This is a linear scan--bad perf!
-    for (long i = 0; i<m_numRows; ++i)
+    for (long i = 0; i < m_numRows; ++i)
     {
         int idx = IDX2C(i, col_id, m_numRows);
         //printf("%u ", idx);
-        if (fabs(label[idx] - 1.0) < 0.1)       // we found the 1 in the vector
+        if (fabs(label[idx] - 1.0) < 0.1) // we found the 1 in the vector
         {
             if (gamma[idx] < framedropthreshhold)
                 dropframe = true;
@@ -4986,25 +4954,23 @@ __global__ void _DropFrame(
             a[IDX2C(i, col_id, m_numRows)] = 0.0;
         }
     }
-
 }
 
-template<class ElemType>
-__global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType *error, const ElemType *label,
-    const ElemType *dnnoutput, const ElemType *gamma, ElemType alpha, const long N)
+template <class ElemType>
+__global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType* error, const ElemType* label,
+                                     const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight)*dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
     //change to ce
     //error[id] -= alpha * (label[id] - dnnoutput[id] );
-
 }
 
-template<class ElemType>
+template <class ElemType>
 __global__ void _copyTopKResults(const uint64_t* indexes, const ElemType* values, ElemType* maxIndexes, ElemType* maxValues,
-    CUDA_LONG crow, CUDA_LONG ccol, int topK)
+                                 CUDA_LONG crow, CUDA_LONG ccol, int topK)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= topK * ccol)
@@ -5015,8 +4981,8 @@ __global__ void _copyTopKResults(const uint64_t* indexes, const ElemType* values
     maxValues[id] = values[icol * crow + irow];
 }
 
-template<int BlockSize, class ElemType>
-__global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemType *c, CUDA_LONG crowB, CUDA_LONG ccol)
+template <int BlockSize, class ElemType>
+__global__ void _assignNumOfDiffCol(const ElemType* a, const ElemType* b, ElemType* c, CUDA_LONG crowB, CUDA_LONG ccol)
 {
     assert(gridDim.x == 1 && gridDim.y == 1 && gridDim.z == 1);
 
@@ -5044,8 +5010,8 @@ __global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemTy
         *c = res;
 }
 
-template<class ElemType>
-__global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+template <class ElemType>
+__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
 {
     CUDA_LONG colIdx = blockIdx.x;
     if (colIdx > numCols)
@@ -5060,7 +5026,8 @@ __global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LON
         a[IDX2C(rowIdx, colIdx, numRows)] = val;
     }
 }
-
-}}}
+}
+}
+}
 
 #endif // !CPUONLY

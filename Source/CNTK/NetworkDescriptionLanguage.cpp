@@ -36,14 +36,15 @@ NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node)
 }
 
 template <typename ElemType>
-NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
+NDLScript<ElemType>::NDLScript(const NDLScript& copyMe)
+    : ConfigParser(copyMe)
 {
     m_baseName = copyMe.m_baseName;
     m_scriptString = copyMe.m_scriptString;
     m_macroNode = copyMe.m_macroNode;
     m_noDefinitions = copyMe.m_noDefinitions; // no definitions can be made in this script, interpret all macro/function names as calls
-    m_definingMacro = false; // not defining when expanding macros (only reason to call this method
-    m_cn = copyMe.m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    m_definingMacro = false;                  // not defining when expanding macros (only reason to call this method
+    m_cn = copyMe.m_cn;                       // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
 
     // script lines in parsed node order
     for (NDLNode<ElemType>* node : copyMe.m_script)
@@ -84,12 +85,12 @@ NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 template <typename ElemType>
 NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
 {
-    m_name = copyMe.m_name; // value on the left of the equals
-    m_value = copyMe.m_value; // value on the right of the equals (CN node name, or value)
-    m_parent = copyMe.m_parent; // parent script
-    m_type = copyMe.m_type; //type of node
+    m_name = copyMe.m_name;               // value on the left of the equals
+    m_value = copyMe.m_value;             // value on the right of the equals (CN node name, or value)
+    m_parent = copyMe.m_parent;           // parent script
+    m_type = copyMe.m_type;               //type of node
     m_paramString = copyMe.m_paramString; // parameter of a function/array
-    m_paramMacro = copyMe.m_paramMacro; // parameter of a macro (the variables used in the macro definition)
+    m_paramMacro = copyMe.m_paramMacro;   // parameter of a macro (the variables used in the macro definition)
     // don't copy over the parameters, they will be reparsed after the copy
     //m_parameters = copyMe.m_parameters; // copy over the parameters straight
 
@@ -99,30 +100,31 @@ NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
     m_script = (copyMe.m_script) ? new NDLScript<ElemType>(*copyMe.m_script) : nullptr;
 }
 template <typename ElemType>
-NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe) : ConfigParser(move(moveMe))
+NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe)
+    : ConfigParser(move(moveMe))
 {
     m_baseName = move(moveMe.m_baseName);
     m_scriptString = move(moveMe.m_scriptString);
-    m_script = move(moveMe.m_script); // script lines in parsed node order, macros will have definition followed by body
-    m_symbols = move(moveMe.m_symbols); // symbol table
-    m_macroNode = move(moveMe.m_macroNode); // set when interpretting a macro definition
+    m_script = move(moveMe.m_script);               // script lines in parsed node order, macros will have definition followed by body
+    m_symbols = move(moveMe.m_symbols);             // symbol table
+    m_macroNode = move(moveMe.m_macroNode);         // set when interpretting a macro definition
     m_noDefinitions = move(moveMe.m_noDefinitions); // no definitions can be made in this script, interpret all macro/function names as calls
     m_definingMacro = move(moveMe.m_definingMacro);
     m_children = move(moveMe.m_children); // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
-    m_cn = move(moveMe.m_cn); // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    m_cn = move(moveMe.m_cn);             // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
 }
 
-// EqualInsensitive - check to see if two nodes are equal 
+// EqualInsensitive - check to see if two nodes are equal
 // string1 - [in,out] string to compare, if comparision is equal insensitive but not sensitive, will replace with sensitive version
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const wchar_t* alternate/*=NULL*/)
+bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const wchar_t* alternate /*=NULL*/)
 {
-    bool equal = !_wcsnicmp(string1.c_str(), string2.c_str(), string1.size()) && string1.size()==string2.size();
+    bool equal = !_wcsnicmp(string1.c_str(), string2.c_str(), string1.size()) && string1.size() == string2.size();
 
     if (!equal && alternate != NULL)
-        equal = !_wcsnicmp(string1.c_str(), alternate, string1.size()) && string1.size()==wcslen(alternate);
+        equal = !_wcsnicmp(string1.c_str(), alternate, string1.size()) && string1.size() == wcslen(alternate);
 
     if (equal)
         string1 = string2;
@@ -131,7 +133,8 @@ bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const 
 }
 
 // ++ operator for this enum, so loops work
-NDLPass &operator++(NDLPass &ndlPass) {
+NDLPass& operator++(NDLPass& ndlPass)
+{
     assert(ndlPass != ndlPassMax);
     ndlPass = static_cast<NDLPass>(ndlPass + 1);
     return ndlPass;
@@ -149,21 +152,21 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
     if (EqualInsensitive(nodeType, OperationNameOf(InputValue), L"Input"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput"))
-        ret = true; 
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, L"ImageParameter"))
         ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(SparseLearnableParameter), L"SparseParameter"))
-    //    ret = true;  
+    //    ret = true;
     else if (EqualInsensitive(nodeType, L"Constant", L"Const"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, L"ImageInput", L"Image"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode)))
@@ -231,11 +234,11 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL2RegNode), L"L2Reg"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm"))
-        ret = true;            
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarDeNormalizationNode), L"PerDimMVDeNorm"))
-        ret = true;            
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError"))
-        ret = true;    
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode)))
@@ -249,11 +252,11 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve"))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MaxPoolingNode)))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode)))
-        ret = true;   
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PastValueNode), L"Delay"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode)))
@@ -297,16 +300,19 @@ template <typename ElemType>
 NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 
 // declare the static variables from the classes
-template<> NDLScript<float> NDLScript<float>::s_global{};
-template<> NDLScript<double> NDLScript<double>::s_global{};
+template <>
+NDLScript<float> NDLScript<float>::s_global{};
+template <>
+NDLScript<double> NDLScript<double>::s_global{};
 
-template<> int NDLNode<float>::s_nameCounter = 0;
-template<> int NDLNode<double>::s_nameCounter = 0;
+template <>
+int NDLNode<float>::s_nameCounter = 0;
+template <>
+int NDLNode<double>::s_nameCounter = 0;
 
 template class NDLNode<float>;
 template class NDLNode<double>;
 
 template class NDLScript<float>;
 template class NDLScript<double>;
-
-}}}
+} } }

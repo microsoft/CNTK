@@ -25,16 +25,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // SequencePosition, save the ending indexes into the array for a sequence
 struct SequencePosition
 {
-    long inputPos; // max position in the number array for this sequence
-    long labelPos; // max position in the label array for this sequence
+    long inputPos;  // max position in the number array for this sequence
+    long labelPos;  // max position in the label array for this sequence
     unsigned flags; // flags that apply to this sequence
-    SequencePosition(long inPos, long labelPos, unsigned flags) :
-            inputPos(inPos), labelPos(labelPos), flags(flags)
-    {}
+    SequencePosition(long inPos, long labelPos, unsigned flags)
+        : inputPos(inPos), labelPos(labelPos), flags(flags)
+    {
+    }
 };
 
-
-    // LUSequenceParser - the parser for the UCI format files
+// LUSequenceParser - the parser for the UCI format files
 // for ultimate speed, this class implements a state machine to read these format files
 template <typename NumType, typename LabelType = wstring>
 class LUSequenceParser
@@ -48,11 +48,11 @@ protected:
 
     size_t m_dimLabelsIn;
     wstring m_beginSequenceIn; // starting sequence string (i.e. <s>)
-    wstring m_endSequenceIn; // ending sequence string (i.e. </s>)
+    wstring m_endSequenceIn;   // ending sequence string (i.e. </s>)
 
     size_t m_dimLabelsOut;
     wstring m_beginSequenceOut; // starting sequence string (i.e. 'O')
-    wstring m_endSequenceOut; // ending sequence string (i.e. 'O')
+    wstring m_endSequenceOut;   // ending sequence string (i.e. 'O')
 
     // level of screen output
     int m_traceLevel;
@@ -64,16 +64,15 @@ protected:
     wstring m_endTag;
 
     // file positions/buffer
-    FILE * m_pFile;
+    FILE* m_pFile;
 
-    BYTE * m_fileBuffer;
+    BYTE* m_fileBuffer;
 
     std::vector<vector<LabelIdType>>* m_inputs; // pointer to vectors to append with numbers
-    std::vector<LabelIdType>* m_labels; // pointer to vector to append with labels (may be numeric)
+    std::vector<LabelIdType>* m_labels;         // pointer to vector to append with labels (may be numeric)
     // FUTURE: do we want a vector to collect string labels in the non string label case? (signifies an error)
 
 public:
-
     // LUSequenceParser constructor
     LUSequenceParser();
     // setup all the state variables and state tables for state machine
@@ -83,7 +82,6 @@ public:
     ~LUSequenceParser();
 
 public:
-
     // ParseInit - Initialize a parse of a file
     // fileName - path to the file to open
     // dimFeatures - number of features for precomputed features
@@ -95,7 +93,7 @@ public:
     // endSequenceOut - endSequence output label
     // bufferSize - size of temporary buffer to store reads
     // startPosition - file position on which we should start
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, wstring beginSequenceIn, wstring endSequenceIn, wstring beginSequenceOut, wstring endSequenceOut )
+    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, wstring beginSequenceIn, wstring endSequenceIn, wstring beginSequenceOut, wstring endSequenceOut)
     {
         assert(fileName != NULL);
         m_dimFeatures = dimFeatures;
@@ -115,9 +113,9 @@ public:
         if (m_pFile != NULL)
             LUSequenceParser<NumType, LabelType>::~LUSequenceParser();
 
-        errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
+        errno_t err = _wfopen_s(&m_pFile, fileName, L"rb");
         if (err)
-            RuntimeError("LUSequenceParser::ParseInit - error opening file"); 
+            RuntimeError("LUSequenceParser::ParseInit - error opening file");
         int rc = _fseeki64(m_pFile, 0, SEEK_END);
         if (rc)
             RuntimeError("LUSequenceParser::ParseInit - error seeking in file");
@@ -125,7 +123,8 @@ public:
 };
 
 /// language model sequence parser
-typedef struct{
+typedef struct
+{
     size_t sLen;
     int sBegin;
     int sEnd;
@@ -135,11 +134,11 @@ template <typename NumType, typename LabelType = wstring>
 class BatchLUSequenceParser : public LUSequenceParser<NumType, LabelType>
 {
 public:
-    wstring mUnkStr; 
+    wstring mUnkStr;
 
 public:
-    std::wifstream mFile; 
-    std::wstring mFileName; 
+    std::wifstream mFile;
+    std::wstring mFileName;
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
@@ -158,12 +157,10 @@ public:
     using LUSequenceParser<NumType, LabelType>::m_labels;
     using LUSequenceParser<NumType, LabelType>::m_beginSequence;
     using LUSequenceParser<NumType, LabelType>::m_endSequence;
-    BatchLUSequenceParser()
-    {
-    };
+    BatchLUSequenceParser(){};
     ~BatchLUSequenceParser()
     {
-        mFile.close(); 
+        mFile.close();
     }
 
     void ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, wstring beginSequenceIn, wstring endSequenceIn, wstring beginSequenceOut, wstring endSequenceOut, wstring unkstr = "<UNK>")
@@ -182,7 +179,7 @@ public:
         m_beginTag = m_beginSequenceIn;
         m_endTag = m_endSequenceIn;
 
-        mUnkStr = unkstr; 
+        mUnkStr = unkstr;
 
         mFile.close();
 #ifdef __unix__
@@ -206,31 +203,31 @@ public:
             RuntimeError("cannot open file %ls", mFileName.c_str());
     }
 
-    void AddOneItem(std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, long& lineCount,
-        long & recordCount, long orgRecordCount, SequencePosition& sequencePositionLast)
+    void AddOneItem(std::vector<long>* labels, std::vector<vector<long>>* input, std::vector<SequencePosition>* seqPos, long& lineCount,
+                    long& recordCount, long orgRecordCount, SequencePosition& sequencePositionLast)
     {
-        SequencePosition sequencePos((long)input->size(), (long)labels->size(), 1);
+        SequencePosition sequencePos((long) input->size(), (long) labels->size(), 1);
         seqPos->push_back(sequencePos);
         sequencePositionLast = sequencePos;
 
-        recordCount = (long)labels->size() - orgRecordCount;
+        recordCount = (long) labels->size() - orgRecordCount;
         lineCount++;
     }
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels 
-    // numbers - pointer to vector to return the numbers 
+    // labels - pointer to vector to return the labels
+    // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     // Parse - Parse the data
     // recordsRequested - number of records requested
-    // labels - pointer to vector to return the labels 
-    // numbers - pointer to vector to return the numbers 
+    // labels - pointer to vector to return the labels
+    // numbers - pointer to vector to return the numbers
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
-    long Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool mAllowMultPassData = false);
-
+    long Parse(size_t recordsRequested, std::vector<long>* labels, std::vector<vector<long>>* input, std::vector<SequencePosition>* seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool mAllowMultPassData = false);
 };
-
-}}};
+}
+}
+};

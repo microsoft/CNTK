@@ -5,7 +5,7 @@
 // </copyright>
 //
 
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
 #include "Basics.h"
@@ -69,8 +69,8 @@ template void DoConvertFromDbn<double>(const ConfigParameters& config);
 // ===========================================================================
 
 // Special early implementation of RNNs by emulating them as a DNN.
-// The code is very restricted to simple RNNs. 
-// The idea can be used for more complicated network but need to know which nodes are stateful or time-dependent so that unroll is done in a correct way to represent recurrent networks. 
+// The code is very restricted to simple RNNs.
+// The idea can be used for more complicated network but need to know which nodes are stateful or time-dependent so that unroll is done in a correct way to represent recurrent networks.
 // TODO: can probably be removed.
 template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
@@ -140,7 +140,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
     if (config.Exists("EncoderNetworkBuilder"))
     {
         ConfigParameters configSNB = config(L"EncoderNetworkBuilder");
-        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*) new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
     {
@@ -150,7 +150,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
     if (config.Exists("DecoderNetworkBuilder"))
     {
         ConfigParameters configSNB = config(L"DecoderNetworkBuilder");
-        decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        decoderNetBuilder = (IComputationNetBuilder<ElemType>*) new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
     {
@@ -168,7 +168,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
     validationDataReader.push_back(cvEncoderDataReader);
     validationDataReader.push_back(cvDecoderDataReader);
 
-    sgd.EncoderDecoder(netBuilders, (int)config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
+    sgd.EncoderDecoder(netBuilders, (int) config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
@@ -222,7 +222,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     if (config.Exists("EncoderNetworkBuilder"))
     {
         ConfigParameters configSNB = config(L"EncoderNetworkBuilder");
-        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*) new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
         LogicError("Need encoder network");
@@ -230,7 +230,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     if (config.Exists("DecoderNetworkBuilder"))
     {
         ConfigParameters configSNB = config(L"DecoderNetworkBuilder");
-        forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*) new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
     {
@@ -240,7 +240,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     if (config.Exists("BackwardDecoderNetworkBuilder"))
     {
         ConfigParameters configSNB = config(L"BackwardDecoderNetworkBuilder");
-        backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*) new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
     {
@@ -261,7 +261,7 @@ void DoBidirectionEncoderDecoder(const ConfigParameters& config)
     validationDataReader.push_back(cvDecoderDataReader);
     validationDataReader.push_back(cvBackwardDecoderDataReader);
 
-    sgd.EncoderDecoder(netBuilders, (int)config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
+    sgd.EncoderDecoder(netBuilders, (int) config(L"deviceId"), trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
@@ -346,7 +346,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     MultiNetworksEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
-    eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
+    eval.EncodingEvaluateDecodingBeamSearch(nets, readers,
                                             testDataWriter, evalNodeNamesVector,
                                             outputNodeNamesVector,
                                             mbSize[0], beamWidth, epochSize);

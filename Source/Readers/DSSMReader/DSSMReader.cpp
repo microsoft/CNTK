@@ -7,18 +7,24 @@
 //
 
 #include "stdafx.h"
-#define DATAREADER_EXPORTS  // creating the exports here
+#define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "DSSMReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
-#include "fileutil.h"   // for fexists()
+#include "fileutil.h" // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-DWORD HIDWORD(size_t size) {return size>>32;}
-DWORD LODWORD(size_t size) {return size&0xFFFFFFFF;}
+DWORD HIDWORD(size_t size)
+{
+    return size >> 32;
+}
+DWORD LODWORD(size_t size)
+{
+    return size & 0xFFFFFFFF;
+}
 
 std::string ws2s(const std::wstring& wstr)
 {
@@ -28,18 +34,18 @@ std::string ws2s(const std::wstring& wstr)
     return strTo;
 }
 
-template<class ElemType>
+template <class ElemType>
 size_t DSSMReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
     //size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
     //return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
-    return mbStartSample/m_randomizeRange;
+    return mbStartSample / m_randomizeRange;
 }
 
 // ReadLine - Read a line
 // readSample - sample to read in global sample space
 // returns - true if we successfully read a record, otherwise false
-template<class ElemType>
+template <class ElemType>
 bool DSSMReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
     return false; // not used
@@ -49,7 +55,7 @@ bool DSSMReader<ElemType>::ReadRecord(size_t /*readSample*/)
 // mbStartSample - the starting sample from which to read
 // tail - we are checking for possible remainer records to read (default false)
 // returns - true if we have more to read, false if we hit the end of the dataset
-template<class ElemType>
+template <class ElemType>
 size_t DSSMReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 {
     assert(mbStartSample >= m_epochStartSample);
@@ -81,7 +87,7 @@ size_t DSSMReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
     return numberToRead;
 }
 
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::WriteLabelFile()
 {
     // write out the label file if they don't have one
@@ -90,7 +96,7 @@ void DSSMReader<ElemType>::WriteLabelFile()
         if (m_mapIdToLabel.size() > 0)
         {
             File labelFile(m_labelFileToWrite, fileOptionsWrite | fileOptionsText);
-            for (int i=0; i < m_mapIdToLabel.size(); ++i)
+            for (int i = 0; i < m_mapIdToLabel.size(); ++i)
             {
                 labelFile << m_mapIdToLabel[i] << '\n';
             }
@@ -106,7 +112,7 @@ void DSSMReader<ElemType>::WriteLabelFile()
 
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::Destroy()
 {
     delete this;
@@ -135,9 +141,9 @@ void DSSMReader<ElemType>::Destroy()
 //      labelType=Category
 //  ]
 //]
-template<class ElemType>
-template<class ConfigRecordType>
-void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
+template <class ElemType>
+template <class ConfigRecordType>
+void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     std::vector<std::wstring> features;
     std::vector<std::wstring> labels;
@@ -161,7 +167,6 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
         RuntimeError("DSSM requires exactly two features and one label. Their names should match those in NDL definition");
         return;
     }
-
 
     m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = 0;
     m_labelIdMax = m_labelDim = 0;
@@ -195,7 +200,6 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
     std::string minibatchMode(readerConfig(L"minibatchMode", "Partial"));
     m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
-
     // Get the config parameters for query feature and doc feature
     ConfigParameters configFeaturesQuery = readerConfig(m_featuresNameQuery, "");
     ConfigParameters configFeaturesDoc = readerConfig(m_featuresNameDoc, "");
@@ -226,10 +230,9 @@ void DSSMReader<ElemType>::InitFromConfig(const ConfigRecordType & readerConfig)
         }
     }
     m_mbSize = 0;
-
 }
-// destructor - virtual so it gets called properly 
-template<class ElemType>
+// destructor - virtual so it gets called properly
+template <class ElemType>
 DSSMReader<ElemType>::~DSSMReader()
 {
     ReleaseMemory();
@@ -237,44 +240,44 @@ DSSMReader<ElemType>::~DSSMReader()
 
 // ReleaseMemory - release the memory footprint of DSSMReader
 // used when the caching reader is taking over
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::ReleaseMemory()
 {
-    if (m_qfeaturesBuffer!=NULL)
+    if (m_qfeaturesBuffer != NULL)
         delete[] m_qfeaturesBuffer;
-    m_qfeaturesBuffer=NULL;
-    if (m_dfeaturesBuffer!=NULL)
+    m_qfeaturesBuffer = NULL;
+    if (m_dfeaturesBuffer != NULL)
         delete[] m_dfeaturesBuffer;
-    m_dfeaturesBuffer=NULL;
-    if (m_labelsBuffer!=NULL)
+    m_dfeaturesBuffer = NULL;
+    if (m_labelsBuffer != NULL)
         delete[] m_labelsBuffer;
-    m_labelsBuffer=NULL;
-    if (m_labelsIdBuffer!=NULL)
+    m_labelsBuffer = NULL;
+    if (m_labelsIdBuffer != NULL)
         delete[] m_labelsIdBuffer;
-    m_labelsIdBuffer=NULL;
+    m_labelsIdBuffer = NULL;
     m_featureData.clear();
     m_labelIdData.clear();
     m_labelData.clear();
 }
 
 //SetupEpoch - Setup the proper position in the file, and other variable settings to start a particular epoch
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::SetupEpoch()
 {
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+size_t RoundUp(size_t value, size_t size)
 {
-    return ((value + size -1)/size)*size;
+    return ((value + size - 1) / size) * size;
 }
 
-//StartMinibatchLoop - Startup a minibatch loop 
+//StartMinibatchLoop - Startup a minibatch loop
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
 // epoch - [in] epoch number for this loop, if > 0 the requestedEpochSamples must be specified (unless epoch zero was completed this run)
 // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 //   this value must be a multiple of mbSize, if it is not, it will be rounded up to one.
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     size_t mbStartSample = m_epoch * m_epochSize;
@@ -286,8 +289,6 @@ void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
     size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
     fprintf(stderr, "starting epoch %lld at record count %lld, and file position %lld\n", m_epoch, mbStartSample, fileRecord);
 
-
-
     // reset the next read sample
     m_readNextSample = 0;
     m_epochStartSample = m_mbStartSample = mbStartSample;
@@ -295,32 +296,31 @@ void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
     m_epochSize = requestedEpochSamples;
     dssm_queryInput.SetupEpoch(mbSize);
     dssm_docInput.SetupEpoch(mbSize);
-    if (m_epochSize > (size_t)dssm_queryInput.numRows)
+    if (m_epochSize > (size_t) dssm_queryInput.numRows)
     {
-        m_epochSize = (size_t)dssm_queryInput.numRows;
+        m_epochSize = (size_t) dssm_queryInput.numRows;
     }
     if (Randomize())
     {
         random_shuffle(&read_order[0], &read_order[m_epochSize]);
     }
     m_epoch = epoch;
-    m_mbStartSample = epoch*m_epochSize;
-
+    m_mbStartSample = epoch * m_epochSize;
 }
 
 // function to store the LabelType in an ElemType
 // required for string labels, which can't be stored in ElemType arrays
-template<class ElemType>
+template <class ElemType>
 void DSSMReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& labelValue)
 {
-    labelStore = (ElemType)m_mapLabelToId[labelValue];
+    labelStore = (ElemType) m_mapLabelToId[labelValue];
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
-//             [out] each matrix resized if necessary containing data. 
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+//             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
-template<class ElemType>
+template <class ElemType>
 bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     if (m_readNextSample >= m_totalSamples)
@@ -333,9 +333,8 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     Matrix<ElemType>& featuresQ = *matrices[m_featuresNameQuery];
     Matrix<ElemType>& featuresD = *matrices[m_featuresNameDoc];
     Matrix<ElemType>& labels = *matrices[m_labelsName]; // will change this part later.
-    
-    size_t actualMBSize = ( m_readNextSample + m_mbSize > m_totalSamples ) ? m_totalSamples - m_readNextSample : m_mbSize;
 
+    size_t actualMBSize = (m_readNextSample + m_mbSize > m_totalSamples) ? m_totalSamples - m_readNextSample : m_mbSize;
 
     featuresQ.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
     featuresD.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -391,16 +390,17 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     exit(1);
     */
 
-    if (actualMBSize > m_mbSize || m_labelsBuffer == NULL) {
+    if (actualMBSize > m_mbSize || m_labelsBuffer == NULL)
+    {
         size_t rows = labels.GetNumRows();
         m_labelsBuffer = new ElemType[rows * actualMBSize];
-        memset(m_labelsBuffer, 0, sizeof(ElemType)* rows * actualMBSize);
+        memset(m_labelsBuffer, 0, sizeof(ElemType) * rows * actualMBSize);
         for (int i = 0; i < actualMBSize; i++)
         {
             m_labelsBuffer[i * rows] = 1;
         }
     }
-    if (actualMBSize != labels.GetNumCols()) 
+    if (actualMBSize != labels.GetNumCols())
     {
         size_t rows = labels.GetNumRows();
         labels.Resize(rows, actualMBSize);
@@ -416,10 +416,9 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     return true;
 }
 
-
-// GetLabelMapping - Gets the label mapping from integer index to label type 
-// returns - a map from numeric datatype to native label type 
-template<class ElemType>
+// GetLabelMapping - Gets the label mapping from integer index to label type
+// returns - a map from numeric datatype to native label type
+template <class ElemType>
 const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& DSSMReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     if (m_cachingReader)
@@ -429,10 +428,10 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
     return m_mapIdToLabel;
 }
 
-// SetLabelMapping - Sets the label mapping from integer index to label 
+// SetLabelMapping - Sets the label mapping from integer index to label
 // labelMapping - mapping table from label values to IDs (must be 0-n)
-// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-template<class ElemType>
+// note: for tasks with labels, the mapping table must be the same between a training run and a testing run
+template <class ElemType>
 void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
 {
     if (m_cachingReader)
@@ -447,7 +446,7 @@ void DSSMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, 
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool ret = false;
@@ -463,22 +462,25 @@ bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
     case endDataSet:
         ret = (m_readNextSample >= m_totalSamples);
         break;
-    case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
+    case endDataSentence: // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
         break;
     }
     return ret;
 }
-    
-template<class ElemType>
-DSSM_BinaryInput<ElemType>::DSSM_BinaryInput(){
+
+template <class ElemType>
+DSSM_BinaryInput<ElemType>::DSSM_BinaryInput()
+{
 }
-template<class ElemType>
-DSSM_BinaryInput<ElemType>::~DSSM_BinaryInput(){
+template <class ElemType>
+DSSM_BinaryInput<ElemType>::~DSSM_BinaryInput()
+{
     Dispose();
 }
-template<class ElemType>
-void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim){
+template <class ElemType>
+void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim)
+{
 
     m_dim = dim;
     mbSize = 0;
@@ -487,7 +489,7 @@ void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim){
         FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     */
     m_hndl = CreateFile(fileName.c_str(), GENERIC_READ,
-        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (m_hndl == INVALID_HANDLE_VALUE)
     {
         char message[256];
@@ -501,56 +503,56 @@ void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim){
     GetSystemInfo(&sysinfo);
     DWORD sysGran = sysinfo.dwAllocationGranularity;
 
-    header_buffer = MapViewOfFile(m_filemap,   // handle to map object
-        FILE_MAP_READ, // get correct permissions
-        HIDWORD(0),
-        LODWORD(0),
-        sizeof(int64_t)* 2 + sizeof(int32_t));
+    header_buffer = MapViewOfFile(m_filemap,     // handle to map object
+                                  FILE_MAP_READ, // get correct permissions
+                                  HIDWORD(0),
+                                  LODWORD(0),
+                                  sizeof(int64_t) * 2 + sizeof(int32_t));
 
     //cout << "After mapviewoffile" << endl;
 
     memcpy(&numRows, header_buffer, sizeof(int64_t));
-    memcpy(&numCols, (char*)header_buffer + sizeof(int64_t), sizeof(int32_t));
-    memcpy(&totalNNz, (char*)header_buffer + sizeof(int64_t)+sizeof(int32_t), sizeof(int64_t));
+    memcpy(&numCols, (char*) header_buffer + sizeof(int64_t), sizeof(int32_t));
+    memcpy(&totalNNz, (char*) header_buffer + sizeof(int64_t) + sizeof(int32_t), sizeof(int64_t));
 
     //cout << "After gotvalues" << endl;
-    int64_t base_offset = sizeof(int64_t)* 2 + sizeof(int32_t);
+    int64_t base_offset = sizeof(int64_t) * 2 + sizeof(int32_t);
 
     int64_t offsets_padding = base_offset % sysGran;
     base_offset -= offsets_padding;
 
-    int64_t header_size = numRows*sizeof(int64_t)+offsets_padding;
+    int64_t header_size = numRows * sizeof(int64_t) + offsets_padding;
 
-    void* offsets_orig = MapViewOfFile(m_filemap,   // handle to map object
-        FILE_MAP_READ, // get correct permissions
-        HIDWORD(base_offset),
-        LODWORD(base_offset),
-        header_size);
+    void* offsets_orig = MapViewOfFile(m_filemap,     // handle to map object
+                                       FILE_MAP_READ, // get correct permissions
+                                       HIDWORD(base_offset),
+                                       LODWORD(base_offset),
+                                       header_size);
 
-    offsets_buffer = (char*)offsets_orig + offsets_padding;
-    
-    if (offsets != NULL){
+    offsets_buffer = (char*) offsets_orig + offsets_padding;
+
+    if (offsets != NULL)
+    {
         free(offsets);
     }
-    offsets = (int64_t*)malloc(sizeof(int64_t)*numRows);
-    memcpy(offsets, offsets_buffer, numRows*sizeof(int64_t));
-
+    offsets = (int64_t*) malloc(sizeof(int64_t) * numRows);
+    memcpy(offsets, offsets_buffer, numRows * sizeof(int64_t));
 
     int64_t header_offset = base_offset + offsets_padding + numRows * sizeof(int64_t);
 
     int64_t data_padding = header_offset % sysGran;
     header_offset -= data_padding;
 
-    void* data_orig = MapViewOfFile(m_filemap,   // handle to map object
-        FILE_MAP_READ, // get correct permissions
-        HIDWORD(header_offset),
-        LODWORD(header_offset),
-        0);
-    data_buffer = (char*)data_orig + data_padding;
-
+    void* data_orig = MapViewOfFile(m_filemap,     // handle to map object
+                                    FILE_MAP_READ, // get correct permissions
+                                    HIDWORD(header_offset),
+                                    LODWORD(header_offset),
+                                    0);
+    data_buffer = (char*) data_orig + data_padding;
 }
-template<class ElemType>
-bool DSSM_BinaryInput<ElemType>::SetupEpoch( size_t minibatchSize){
+template <class ElemType>
+bool DSSM_BinaryInput<ElemType>::SetupEpoch(size_t minibatchSize)
+{
     if (values == NULL || mbSize < minibatchSize)
     {
         if (values != NULL)
@@ -559,10 +561,10 @@ bool DSSM_BinaryInput<ElemType>::SetupEpoch( size_t minibatchSize){
             free(colIndices);
             free(rowIndices);
         }
-        
-        values = (ElemType*)malloc(sizeof(ElemType)*MAX_BUFFER*minibatchSize);
-        colIndices = (int32_t*)malloc(sizeof(int32_t)*(minibatchSize+1));
-        rowIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*minibatchSize);
+
+        values = (ElemType*) malloc(sizeof(ElemType) * MAX_BUFFER * minibatchSize);
+        colIndices = (int32_t*) malloc(sizeof(int32_t) * (minibatchSize + 1));
+        rowIndices = (int32_t*) malloc(sizeof(int32_t) * MAX_BUFFER * minibatchSize);
         //fprintf(stderr, "values  size: %d",sizeof(ElemType)*MAX_BUFFER*minibatchSize);
         //fprintf(stderr, "colindi size: %d",sizeof(int32_t)*MAX_BUFFER*(1+minibatchSize));
         //fprintf(stderr, "rowindi size: %d",sizeof(int32_t)*MAX_BUFFER*minibatchSize);
@@ -574,8 +576,9 @@ bool DSSM_BinaryInput<ElemType>::SetupEpoch( size_t minibatchSize){
 
     return true;
 }
-template<class ElemType>
-bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t cur, size_t numToRead, int* /*ordering*/){
+template <class ElemType>
+bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t cur, size_t numToRead, int* /*ordering*/)
+{
     /*
     int devId = matrices.GetDeviceId();
     matrices.TransferFromDeviceToDevice(devId, -1);
@@ -583,17 +586,17 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
 
     int32_t cur_index = 0;
 
-    for (int c = 0; c < numToRead; c++,cur++)
+    for (int c = 0; c < numToRead; c++, cur++)
     {
         //int64_t cur_offset = offsets[ordering[cur]];
         int64_t cur_offset = offsets[cur];
         //int64_t cur_offset = offsets[ordering[c]];
         //int32_t nnz;
         colIndices[c] = cur_index;
-        int32_t nnz = *(int32_t*)((char*)data_buffer + cur_offset);
+        int32_t nnz = *(int32_t*) ((char*) data_buffer + cur_offset);
         //memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
-        memcpy(values+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType)*nnz);
-        memcpy(rowIndices+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t)+sizeof(ElemType)*nnz, sizeof(int32_t)*nnz);
+        memcpy(values + cur_index, (char*) data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType) * nnz);
+        memcpy(rowIndices + cur_index, (char*) data_buffer + cur_offset + sizeof(int32_t) + sizeof(ElemType) * nnz, sizeof(int32_t) * nnz);
         /**
         fprintf(stderr, "%4d (%3d, %6d): ", c, nnz, cur_index + nnz);
         for (int i = 0; i < nnz; i++)
@@ -603,7 +606,7 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
         }
         fprintf(stderr, "\n");
         **/
-        
+
         cur_index += nnz;
     }
     colIndices[numToRead] = cur_index;
@@ -643,9 +646,11 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
     return true;
 }
 
-template<class ElemType>
-void DSSM_BinaryInput<ElemType>::Dispose(){
-    if (offsets_orig != NULL){
+template <class ElemType>
+void DSSM_BinaryInput<ElemType>::Dispose()
+{
+    if (offsets_orig != NULL)
+    {
         UnmapViewOfFile(offsets_orig);
     }
     if (data_orig != NULL)
@@ -653,23 +658,25 @@ void DSSM_BinaryInput<ElemType>::Dispose(){
         UnmapViewOfFile(data_orig);
     }
 
-    if (offsets!= NULL)
+    if (offsets != NULL)
     {
-        free(offsets);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
+        free(offsets); // = (ElemType*)malloc(sizeof(float)* 230 * 1024);
     }
     if (values != NULL)
     {
-        free(values);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
+        free(values); // = (ElemType*)malloc(sizeof(float)* 230 * 1024);
     }
-    if (rowIndices != NULL){
-        free(rowIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
+    if (rowIndices != NULL)
+    {
+        free(rowIndices); // = (int*)malloc(sizeof(float)* 230 * 1024);
     }
-    if (colIndices != NULL){
-        free(colIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
+    if (colIndices != NULL)
+    {
+        free(colIndices); // = (int*)malloc(sizeof(float)* 230 * 1024);
     }
 }
 
-template<class ElemType>
+template <class ElemType>
 bool DSSMReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
     if (m_cachingReader)
@@ -680,6 +687,6 @@ bool DSSMReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRe
 }
 
 // instantiate all the combinations we expect to be used
-template class DSSMReader<double>; 
+template class DSSMReader<double>;
 template class DSSMReader<float>;
-}}}
+} } }

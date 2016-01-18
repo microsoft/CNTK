@@ -34,7 +34,7 @@ enum ParseMode
 
 // UCIParser - the parser for the UCI format files
 // for ultimate speed, this class implements a state machine to read these format files
-template <typename NumType, typename LabelType=int>
+template <typename NumType, typename LabelType = int>
 class UCIParser
 {
 private:
@@ -48,8 +48,8 @@ private:
         ExponentSign = 5,
         Period = 6,
         TheLetterE = 7,
-        EndOfLine = 8, 
-        Label = 9, // any non-number things we run into
+        EndOfLine = 8,
+        Label = 9,          // any non-number things we run into
         ParseStateMax = 10, // number of parse states
         LineCountEOL = 10,
         LineCountOther = 11,
@@ -94,11 +94,11 @@ private:
     int64_t m_totalLabelsConverted;
 
     // file positions/buffer
-    FILE * m_pFile;
+    FILE *m_pFile;
     int64_t m_byteCounter;
     int64_t m_fileSize;
 
-    BYTE * m_fileBuffer;
+    BYTE *m_fileBuffer;
     size_t m_bufferStart;
     size_t m_bufferSize;
 
@@ -106,8 +106,8 @@ private:
     bool m_lastLabelIsString;
 
     // vectors to append to
-    std::vector<NumType>* m_numbers; // pointer to vectors to append with numbers
-    std::vector<LabelType>* m_labels; // pointer to vector to append with labels (may be numeric)
+    std::vector<NumType> *m_numbers;  // pointer to vectors to append with numbers
+    std::vector<LabelType> *m_labels; // pointer to vector to append with labels (may be numeric)
     // FUTURE: do we want a vector to collect string labels in the non string label case? (signifies an error)
 
     // SetState for a particular value
@@ -134,7 +134,6 @@ private:
     size_t UpdateBuffer();
 
 public:
-
     // UCIParser constructor
     UCIParser();
     // setup all the state variables and state tables for state machine
@@ -166,7 +165,6 @@ public:
     // traceLevel - traceLevel, zero means no output, 1 epoch related output, > 1 all output
     void SetTraceLevel(int traceLevel);
 
-
     // ParseInit - Initialize a parse of a file
     // fileName - path to the file to open
     // startFeatures - column (zero based) where features start
@@ -175,14 +173,14 @@ public:
     // dimLabels - number of Labels
     // bufferSize - size of temporary buffer to store reads
     // startPosition - file position on which we should start
-    void ParseInit(LPCWSTR fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize=1024*256, size_t startPosition=0);
+    void ParseInit(LPCWSTR fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize = 1024 * 256, size_t startPosition = 0);
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
     // numbers - pointer to vector to return the numbers (must be allocated)
     // labels - pointer to vector to return the labels (defaults to null)
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
-    long Parse(size_t recordsRequested, std::vector<NumType> *numbers, std::vector<LabelType> *labels=NULL);
+    long Parse(size_t recordsRequested, std::vector<NumType> *numbers, std::vector<LabelType> *labels = NULL);
 
     int64_t GetFilePosition();
     void SetFilePosition(int64_t position);

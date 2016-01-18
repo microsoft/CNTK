@@ -9,7 +9,7 @@
 #include "IExecutionEngine.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
-#include "fileutil.h"   // for fexists()
+#include "fileutil.h" // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -20,12 +20,15 @@ template <typename ElemType>
 class SynchronousNodeEvaluator : public NDLNodeEvaluator<ElemType>
 {
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+
 public:
     // Constructor - create evaluator
-    SynchronousNodeEvaluator(ComputationNetworkPtr cn) : m_net(cn)
-    { }
+    SynchronousNodeEvaluator(ComputationNetworkPtr cn)
+        : m_net(cn)
+    {
+    }
 
-    // Evaluate - evaluate a node and translate into underlying 
+    // Evaluate - evaluate a node and translate into underlying
     // node - node we are evaluating
     // baseName - base name for all symbols at this level
     // pass - NDLPass through the evaluation (0-initial, 1-resolve variables, 2-final)
@@ -48,7 +51,7 @@ public:
             if (nodeParam->GetType() == ndlTypeDotParameter)
             {
                 // When we see a variable of the form "A.B" in a macro, we need to resolve it to an actual node, by first constructing it's
-                // fully-qualified name. There are 2 possibilities: 
+                // fully-qualified name. There are 2 possibilities:
                 // 1) "A" was defined locally within the macro.  In this case, we must find the fully-qualified name of the node that this macro
                 //    call is being assigned to (eg, "C" in the example "C=Macro(X)"), and concatenate it's name with "A.B" (eg, "C.A.B").
                 // 2) "A" was passed in as a parameter to a macro.  In this case, we must find the fully-qualified name of the node that
@@ -57,15 +60,15 @@ public:
                 // Consider the following example:
                 // NdlBLob=[
                 //      P=MacroCall1(...)
-                //      C=MacroCall2(P) 
+                //      C=MacroCall2(P)
                 // ]
                 // # MacroDefinition
                 // MacroCall2(X)
-                // { 
+                // {
                 //      A=MacroCall3(...)
                 //      D=Times(A.B,X.B)}
                 // }
-                // 
+                //
 
                 // In this example, in the call D=Times(A.B,X.B), we need to resolve A.B and X.B appropriately.
                 // Specifically, "A.B" must be resolved to the fully qualified name "C.A.B", whereas "X.B" must be resolved to the fully qualified name "P.B".
@@ -89,9 +92,7 @@ public:
                     NDLScript<ElemType>* parentScript = resolvedParam->GetParentScript();
                     baseName = parentScript->GetBaseName();
                     std::wstring resolvedParamName = msra::strfun::utf16(resolvedParam->GetName());
-                    wname = baseName.empty() ?
-                        resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot) :
-                        baseName + L"." + resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot);
+                    wname = baseName.empty() ? resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot) : baseName + L"." + resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot);
                 }
                 else if (!baseName.empty())
                 {
@@ -107,10 +108,10 @@ public:
             // fully qualified names can be looked up in the model
             if (m_net->NodeNameExists(wname))
             {
-                void* np = (void*)m_net->GetNodeFromName(wname);
+                void* np = (void*) m_net->GetNodeFromName(wname);
                 nodeParam->SetEvalValue(np);
             }
-            // NOTE: there is a bug here, we allow an abbreviated node reference (i.e. L1.BFF) based on return values in NDL 
+            // NOTE: there is a bug here, we allow an abbreviated node reference (i.e. L1.BFF) based on return values in NDL
             // when the actual full node reference that the computational network uses would be L1.BFF.FF.P, so that is what CN sees
             // can we do the normal find symbol here to allow abbreviated node references?
 
@@ -130,7 +131,7 @@ public:
     // baseName - name of the base node
     // pass - which pass through the NDL nodes
     // returns: the node that is the evaluated parameter
-    virtual NDLNode<ElemType>* EvaluateParameter(NDLNode<ElemType>* node, NDLNode<ElemType>* nodeParam, const std::wstring& baseNameP, const NDLPass pass )
+    virtual NDLNode<ElemType>* EvaluateParameter(NDLNode<ElemType>* node, NDLNode<ElemType>* nodeParam, const std::wstring& baseNameP, const NDLPass pass)
     {
         // get the parent script that includes the symbol table we are interested in
         NDLScript<ElemType>* script = node->GetParentScript();
@@ -172,7 +173,7 @@ public:
                     std::wstring wname = msra::strfun::utf16(name);
                     if (m_net->NodeNameExists(wname))
                     {
-                        void* np = (void*)m_net->GetNodeFromName(wname).get();
+                        void* np = (void*) m_net->GetNodeFromName(wname).get();
                         // if we don't have a resolve node, it's because the name didn't exist in NDL
                         if (!nodeResolve)
                             nodeResolve = nodeParam;
@@ -198,14 +199,14 @@ public:
         // constants and variables are good as is
         case ndlTypeConstant:
         case ndlTypeVariable:
-                break;
+            break;
         // everything else is illegal as a parameter
         default:
-            {
-                std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
-                RuntimeError("Invalid parameter (macro definitions and arrays not allowed), see call to %ls\n", name.c_str());
-            }
-            break;
+        {
+            std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
+            RuntimeError("Invalid parameter (macro definitions and arrays not allowed), see call to %ls\n", name.c_str());
+        }
+        break;
         }
         return nodeParam;
     }
@@ -230,9 +231,9 @@ public:
         if (nodeParamStart + nodeParamCount > parameter.size())
             LogicError("EvaluateParmeters: nodeParamters specified that do not exist");
         size_t numChildren = nodeParamCount;
-        for (size_t i=0; i < numChildren;++i)
+        for (size_t i = 0; i < numChildren; ++i)
         {
-            int index = i+nodeParamStart;
+            int index = i + nodeParamStart;
             NDLNode<ElemType>* nodeParam = parameter[index];
             std::wstring paramS = paramString[index];
 
@@ -246,11 +247,11 @@ public:
             {
                 void* np = nodeResult->GetEvalValue();
                 assert(np != nullptr);
-                inputs.push_back((void*)np);
+                inputs.push_back((void*) np);
             }
             else if (pass == ndlPassInitial) // for initial pass we are only interested in resolved nodes (to get constant values)
             {
-                inputs.push_back((void*)nodeResult);
+                inputs.push_back((void*) nodeResult);
             }
             // NOTE: in final pass inputs are always NULL
         }
@@ -299,16 +300,15 @@ public:
                 SetOutputNode(m_net->OutputNodes(), compNode);
             }
         }
-
     }
 
     // SetOutputNode - Set the output node, checks to see if it already exists first
     // nodeGroup - group vector to add to
     // compNode - computation node to add
     // TODO: It seems that this is also applied to other tyoes of nodes, so the name of this function is wrong.
-    static void SetOutputNode(std::vector<ComputationNodeBasePtr> & nodeGroup, ComputationNodePtr compNode)
+    static void SetOutputNode(std::vector<ComputationNodeBasePtr>& nodeGroup, ComputationNodePtr compNode)
     {
-        for (const auto & node : nodeGroup)
+        for (const auto& node : nodeGroup)
         {
             if (node == compNode)
                 return;
@@ -326,10 +326,12 @@ public:
         return nullptr;
     }
 
-    virtual ~SynchronousNodeEvaluator() { }
+    virtual ~SynchronousNodeEvaluator()
+    {
+    }
 
 protected:
-    TensorShape ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*> & params, size_t & i, bool isImage, const wstring & cnNodeType/*for error messages only*/);
+    TensorShape ProcessTensorShapeParameters(const NDLNode<ElemType>* node, const vector<void*>& params, size_t& i, bool isImage, const wstring& cnNodeType /*for error messages only*/);
 
 private:
     ComputationNetworkPtr m_net;
@@ -342,7 +344,7 @@ template <typename ElemType>
 class SynchronousExecutionEngine : public IExecutionEngine<ElemType>
 {
 public:
-    SynchronousExecutionEngine(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, unsigned long randomSeedOffset=0)
+    SynchronousExecutionEngine(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, unsigned long randomSeedOffset = 0)
     {
         m_computationNetwork = make_shared<ComputationNetwork>(deviceId);
         m_computationNetwork->SetRandomSeedOffset(randomSeedOffset);
@@ -356,7 +358,7 @@ public:
     }
 
     virtual ~SynchronousExecutionEngine()
-    { 
+    {
         delete m_nodeEvaluator;
     }
 
@@ -373,18 +375,18 @@ public:
 private:
     ComputationNetworkPtr m_computationNetwork;
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
+
 protected:
     // Copy constructor, should never be called.
-    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
-    {         
+    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/)
+    {
         LogicError("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
-    } 
+    }
 
     // Assignment operator, should never be called.
-    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
-    {            
+    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/)
+    {
         LogicError("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
-    } 
+    }
 };
-
-}}}
+} } }

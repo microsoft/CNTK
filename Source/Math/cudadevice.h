@@ -18,11 +18,18 @@ const int deviceMax = 8;
 class objectondevice
 {
 protected:
-    size_t deviceid;                    // CUDA card in which this matrix lives ("virtual" index amongst cards allocated to this process); default: 0
+    size_t deviceid; // CUDA card in which this matrix lives ("virtual" index amongst cards allocated to this process); default: 0
 protected:
-    objectondevice (size_t d) : deviceid (d) { }
+    objectondevice(size_t d)
+        : deviceid(d)
+    {
+    }
+
 public:
-    size_t getdevice() const {return deviceid;} 
+    size_t getdevice() const
+    {
+        return deviceid;
+    }
 };
 
 // auto-class to set device (through context) inside a function
@@ -31,8 +38,12 @@ public:
 class ondevice
 {
 public:
-    ondevice (size_t deviceid) { cudaSetDevice((int)deviceid) || "cudaSetDevice failed!"; }
-    ~ondevice() {}
+    ondevice(size_t deviceid)
+    {
+        cudaSetDevice((int) deviceid) || "cudaSetDevice failed!";
+    }
+    ~ondevice()
+    {
+    }
 };
-
-}}
+} }

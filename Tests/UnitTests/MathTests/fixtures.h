@@ -8,6 +8,7 @@
 class RandomSeedFixture
 {
     static unsigned long s_counter;
+
 public:
     RandomSeedFixture();
     unsigned long IncrementCounter();

@@ -16,76 +16,79 @@
 #ifdef __unix__
 #include <unistd.h>
 #endif
-#include "fileutil.h"   // for f{ge,pu}t{,Text}()
-#include <fstream>      // for LoadMatrixFromTextFile() --TODO: change to using this File class
+#include "fileutil.h" // for f{ge,pu}t{,Text}()
+#include <fstream>    // for LoadMatrixFromTextFile() --TODO: change to using this File class
 #include <sstream>
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
 // file options, Type of textfile to use
 enum FileOptions
 {
-    fileOptionsNull = 0, // invalid value
-    fileOptionsBinary = 1,  // binary file
-    fileOptionsText = 2, // text based file, UTF-8
-    fileOptionsUnicode = 4,   // text based file, Unicode
+    fileOptionsNull = 0,                                                        // invalid value
+    fileOptionsBinary = 1,                                                      // binary file
+    fileOptionsText = 2,                                                        // text based file, UTF-8
+    fileOptionsUnicode = 4,                                                     // text based file, Unicode
     fileOptionsType = fileOptionsBinary | fileOptionsText | fileOptionsUnicode, // file types
-    fileOptionsRead = 8,   // open in read mode
-    fileOptionsWrite = 16,  // open in write mode
-    fileOptionsSequential = 32,     // optimize for sequential reads (allocates big buffer)
-    fileOptionsReadWrite = fileOptionsRead | fileOptionsWrite, // read/write mode
+    fileOptionsRead = 8,                                                        // open in read mode
+    fileOptionsWrite = 16,                                                      // open in write mode
+    fileOptionsSequential = 32,                                                 // optimize for sequential reads (allocates big buffer)
+    fileOptionsReadWrite = fileOptionsRead | fileOptionsWrite,                  // read/write mode
 };
 
 // markers used for text files
 enum FileMarker
 {
-    fileMarkerNull = 0, // invalid value
-    fileMarkerBeginFile = 1, // begin of file marker
-    fileMarkerEndFile = 2, // end of file marker
-    fileMarkerBeginList = 3, // Beginning of list marker
+    fileMarkerNull = 0,          // invalid value
+    fileMarkerBeginFile = 1,     // begin of file marker
+    fileMarkerEndFile = 2,       // end of file marker
+    fileMarkerBeginList = 3,     // Beginning of list marker
     fileMarkerListSeparator = 4, // separate elements of a list
-    fileMarkerEndList = 5, // end of line/list marker
-    fileMarkerBeginSection = 6, // beginning of section
-    fileMarkerEndSection = 7, // end of section
+    fileMarkerEndList = 5,       // end of line/list marker
+    fileMarkerBeginSection = 6,  // beginning of section
+    fileMarkerEndSection = 7,    // end of section
 };
 
 // attempt a given operation (lambda) and retry multiple times
 // body - the lambda to retry, must be restartable
 
-template<typename FUNCTION> static void attempt(int retries, const FUNCTION & body)
+template <typename FUNCTION>
+static void attempt(int retries, const FUNCTION& body)
 {
-    for (int attempt = 1; ; attempt++)
+    for (int attempt = 1;; attempt++)
     {
         try
         {
             body();
-            if (attempt > 1) fprintf (stderr, "attempt: success after %d retries\n", attempt);
+            if (attempt > 1)
+                fprintf(stderr, "attempt: success after %d retries\n", attempt);
             break;
         }
-        catch (const std::exception & e)
+        catch (const std::exception& e)
         {
 #ifdef _WIN32
             void sleep(size_t ms);
 #endif
             if (attempt >= retries)
-                throw;      // failed N times --give up and rethrow the error
-            fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
-            // wait a little, then try again
+                throw; // failed N times --give up and rethrow the error
+            fprintf(stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt + 1, retries);
+// wait a little, then try again
 #ifdef _WIN32
             ::Sleep(1000);
-#else       // assuming __unix__
+#else // assuming __unix__
             ::sleep(1);
 #endif
         }
     }
 }
 
-template<typename FUNCTION> static void attempt (const FUNCTION & body)
+template <typename FUNCTION>
+static void attempt(const FUNCTION& body)
 {
     static const int retries = 5;
-    attempt<FUNCTION> (retries, body);
+    attempt<FUNCTION>(retries, body);
     //msra::util::attempt<FUNCTION> (retries, body);
 }
 
@@ -93,10 +96,10 @@ class File
 {
 private:
     std::wstring m_filename;
-    FILE* m_file;           // file handle
-    bool m_pcloseNeeded;    // was opened with popen(), use pclose() when destructing
-    bool m_seekable;        // this stream is seekable
-    int m_options;          // FileOptions ored togther
+    FILE* m_file;        // file handle
+    bool m_pcloseNeeded; // was opened with popen(), use pclose() when destructing
+    bool m_seekable;     // this stream is seekable
+    int m_options;       // FileOptions ored togther
     void Init(const wchar_t* filename, int fileOptions);
 
 public:
@@ -107,7 +110,10 @@ public:
 
     void Flush();
 
-    bool CanSeek() const { return m_seekable; }
+    bool CanSeek() const
+    {
+        return m_seekable;
+    }
     size_t Size();
     uint64_t GetPosition();
     void SetPosition(uint64_t pos);
@@ -115,10 +121,10 @@ public:
 
     bool IsTextBased();
 
-    bool IsUnicodeBOM(bool skip=false);
+    bool IsUnicodeBOM(bool skip = false);
     bool IsEOF();
-    bool IsWhiteSpace(bool skip=false);
-    int EndOfLineOrEOF(bool skip=false);
+    bool IsWhiteSpace(bool skip = false);
+    int EndOfLineOrEOF(bool skip = false);
 
     // TryGetText - for text value, try and get a particular type
     // returns - true if value returned, otherwise false, can't parse
@@ -138,22 +144,22 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
-#ifndef    __CUDACC__      // TODO: CUDA compiler blows up, fix this
+#ifndef __CUDACC__ // TODO: CUDA compiler blows up, fix this
         attempt([=]()
 #endif
-        {
-            if (IsTextBased())
-                fputText(m_file, val);
-            else
-                fput(m_file, val);
-        }
-#ifndef    __CUDACC__
-        );
+                {
+                    if (IsTextBased())
+                        fputText(m_file, val);
+                    else
+                        fput(m_file, val);
+                }
+#ifndef __CUDACC__
+                );
 #endif
         return *this;
     }
     File& operator<<(const std::wstring& val);
-    File& operator<<(const std::string& val);  
+    File& operator<<(const std::string& val);
     File& operator<<(FileMarker marker);
     File& PutMarker(FileMarker marker, size_t count);
     File& PutMarker(FileMarker marker, const std::string& section);
@@ -176,27 +182,27 @@ public:
     template <typename T>
     File& operator>>(T& val)
     {
-#ifndef    __CUDACC__      // TODO: CUDA compiler blows up, fix this
+#ifndef __CUDACC__ // TODO: CUDA compiler blows up, fix this
         attempt([&]()
 #endif
-        {
-            if (IsTextBased())
-                fgetText(m_file, val);
-            else
-                fget(m_file, val);
-        }
-#ifndef    __CUDACC__
-        );
+                {
+                    if (IsTextBased())
+                        fgetText(m_file, val);
+                    else
+                        fget(m_file, val);
+                }
+#ifndef __CUDACC__
+                );
 #endif
         return *this;
     }
 
-    void WriteString(const char* str, int size=0); // zero terminated strings use size=0
-    void ReadString(char* str, int size);    // read up to size bytes, or a zero terminator (or space in text mode)
-    void WriteString(const wchar_t* str, int size=0); // zero terminated strings use size=0
-    void ReadString(wchar_t* str, int size);    // read up to size bytes, or a zero terminator (or space in text mode)
-    void ReadChars(std::string& val, size_t cnt, bool reset=false); // read a specified number of characters, and reset read pointer if requested
-    void ReadChars(std::wstring& val, size_t cnt, bool reset=false); // read a specified number of characters, and reset read pointer if requested
+    void WriteString(const char* str, int size = 0);                   // zero terminated strings use size=0
+    void ReadString(char* str, int size);                              // read up to size bytes, or a zero terminator (or space in text mode)
+    void WriteString(const wchar_t* str, int size = 0);                // zero terminated strings use size=0
+    void ReadString(wchar_t* str, int size);                           // read up to size bytes, or a zero terminator (or space in text mode)
+    void ReadChars(std::string& val, size_t cnt, bool reset = false);  // read a specified number of characters, and reset read pointer if requested
+    void ReadChars(std::wstring& val, size_t cnt, bool reset = false); // read a specified number of characters, and reset read pointer if requested
 
     File& operator>>(std::wstring& val);
     File& operator>>(std::string& val);
@@ -215,7 +221,7 @@ public:
     {
         T element;
         val.clear();
-        size_t size=0;
+        size_t size = 0;
         this->GetMarker(fileMarkerBeginList, size);
         if (size > 0)
         {
@@ -252,7 +258,7 @@ public:
     // NOTE: caller is responsible for deleting the returned buffer once it is finished using it.
     // TODO: change to return a std::vector<ElemType>; solves the ownership issue
     // This function does not quite fit here, but it fits elsewhere even worse. TODO: change to use File class!
-    template<class ElemType>
+    template <class ElemType>
     static vector<ElemType> LoadMatrixFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
     {
         size_t r = 0;
@@ -312,7 +318,9 @@ public:
         return array;
     }
 
-    operator FILE*() const { return m_file; }
+    operator FILE*() const
+    {
+        return m_file;
+    }
 };
-
-}}}
+} } }

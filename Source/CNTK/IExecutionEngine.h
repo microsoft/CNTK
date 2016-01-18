@@ -10,14 +10,15 @@
 //#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-    template<class ElemType>
-    class IExecutionEngine
-    {
-    public:
-        virtual ComputationNetworkPtr GetComputationNetwork() = 0;
 
-        virtual NDLNodeEvaluator<ElemType> & GetNodeEvaluator() = 0;
+template <class ElemType>
+class IExecutionEngine
+{
+public:
+    virtual ComputationNetworkPtr GetComputationNetwork() = 0;
 
-        virtual ~IExecutionEngine() {};
-    };
-}}}
+    virtual NDLNodeEvaluator<ElemType>& GetNodeEvaluator() = 0;
+
+    virtual ~IExecutionEngine(){};
+};
+} } }

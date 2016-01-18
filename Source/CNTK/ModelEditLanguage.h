@@ -21,10 +21,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate=NULL);
+bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate = NULL);
 
 template <typename ElemType>
-class MELScript: public ConfigParser
+class MELScript : public ConfigParser
 {
 private:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -32,18 +32,24 @@ private:
 
     std::string m_scriptString;
     MapNameToNetNdl m_mapNameToNetNdl; // computational networks
-    NetNdl<ElemType>* m_netNdlDefault; 
+    NetNdl<ElemType>* m_netNdlDefault;
     NDLScript<ElemType> m_ndlScript; // one to store the macros
 
 public:
-    typedef map<ComputationNodePtr,ComputationNodePtr> MapNodes;
+    typedef map<ComputationNodePtr, ComputationNodePtr> MapNodes;
 
     // constructors that take a config name
-    MELScript (const std::string & configname) : ConfigParser(';', configname) { }
-    MELScript (const std::wstring & configname) : ConfigParser(';', configname) { }
+    MELScript(const std::string& configname)
+        : ConfigParser(';', configname)
+    {
+    }
+    MELScript(const std::wstring& configname)
+        : ConfigParser(';', configname)
+    {
+    }
 
     // cleanup all the computational networks we loaded
-    ~MELScript() 
+    ~MELScript()
     {
         for (auto iter : m_mapNameToNetNdl)
         {
@@ -52,40 +58,45 @@ public:
         m_mapNameToNetNdl.clear();
     }
 
-    // empty constructor 
-    MELScript () : ConfigParser(';') { } // parameterless version if needed
+    // empty constructor
+    MELScript()
+        : ConfigParser(';')
+    {
+    } // parameterless version if needed
 
     // construct MELScript from a ConfigValue, propogate the config Name
-    MELScript(const ConfigValue& configValue) : ConfigParser(';',configValue.Name())
+    MELScript(const ConfigValue& configValue)
+        : ConfigParser(';', configValue.Name())
     {
         m_scriptString = configValue;
         Parse(m_scriptString);
     }
 
-
     // copy and move constructors
-    MELScript(const MELScript& melScript) : ConfigParser(melScript)
+    MELScript(const MELScript& melScript)
+        : ConfigParser(melScript)
     {
         m_scriptString = melScript.m_scriptString;
         m_mapNameToNetNdl = melScript.m_mapNameToNetNdl; // computational networks
         m_netNdlDefault = melScript.m_netNdlDefault;
         // don't need to copy m_ndlScript, only used to store macros (which are stored in global instance anyway)
     }
-    MELScript(const MELScript&& melScript) : ConfigParser(move(melScript))
+    MELScript(const MELScript&& melScript)
+        : ConfigParser(move(melScript))
     {
         m_scriptString = move(melScript.m_scriptString);
         m_mapNameToNetNdl = move(melScript.m_mapNameToNetNdl); // computational networks
         m_netNdlDefault = move(melScript.m_netNdlDefault);
     }
-    void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil=ndlPassAll, bool fullValidate = false);
+    void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil = ndlPassAll, bool fullValidate = false);
     void SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set);
     void CallFunction(const std::string& name, const ConfigParamList& params);
 
     // ParseName - Parse the name and find positions of the wildcard matches
     // name - name to parse
-    // firstStart - [out] starting position of the first section 
+    // firstStart - [out] starting position of the first section
     // firstCount - [out] length of the first section
-    // secondStart - [out] starting position of the second section 
+    // secondStart - [out] starting position of the second section
     // secondCount - [out] length of the second section
     // returns: NetNdl structure that matches the prefix name
     // Notes: This functions handles the following patterns:
@@ -97,29 +108,29 @@ public:
         NetNdl<ElemType>* netNdl = m_netNdlDefault;
 
         // find the where the first section starts (if there is one)
-        std::string symb = name.substr(0,firstDot);
+        std::string symb = name.substr(0, firstDot);
         auto found = m_mapNameToNetNdl.find(symb);
         if (found != m_mapNameToNetNdl.end())
         {
-            firstStart=(firstDot==npos?name.length():firstDot+1);
+            firstStart = (firstDot == npos ? name.length() : firstDot + 1);
             netNdl = &found->second;
         }
         else
         {
-            firstStart=0;
+            firstStart = 0;
         }
 
         // determine where the second element starts (after the asterisk)
-        size_t foundStar = name.find_first_of('*',firstStart);
+        size_t foundStar = name.find_first_of('*', firstStart);
         if (foundStar != npos)
         {
-            firstCount = foundStar-firstStart;
-            secondStart = foundStar+1;
-            secondCount = name.length()-secondStart;
+            firstCount = foundStar - firstStart;
+            secondStart = foundStar + 1;
+            secondCount = name.length() - secondStart;
         }
         else
         {
-            firstCount = name.length()-firstStart;
+            firstCount = name.length() - firstStart;
             secondCount = 0;
             secondStart = name.length();
         }
@@ -186,14 +197,14 @@ public:
     // netNdlIn -  netNdl to copy from
     // netNdlOut - netNdl to copy to
     // returns - Source nodes and Target names
-    typedef pair<ComputationNodeBasePtr,std::wstring> GenNameValue;
+    typedef pair<ComputationNodeBasePtr, std::wstring> GenNameValue;
     vector<GenNameValue> GenerateNames(const std::string& symbolIn, const std::string& symbolOut, NetNdl<ElemType>*& netNdlIn, NetNdl<ElemType>*& netNdlOut)
     {
         MapNodes mapInOut;
         size_t firstStart, firstCount, secondStart, secondCount;
         netNdlIn = ParseName(symbolIn, firstStart, firstCount, secondStart, secondCount);
 
-        bool inWildcard = !(firstStart+firstCount == secondStart && secondCount == 0);
+        bool inWildcard = !(firstStart + firstCount == secondStart && secondCount == 0);
 
         // take off the prefix
         std::string search;
@@ -207,7 +218,7 @@ public:
         {
             search = symbolIn.substr(firstStart);
         }
-        
+
         wstring name = msra::strfun::utf16(search);
         vector<ComputationNodeBasePtr> nodes = netNdlIn->cn->GetNodesFromName(name);
 
@@ -218,7 +229,7 @@ public:
         netNdlOut = ParseName(symbolOut, firstStartOut, firstCountOut, secondStartOut, secondCountOut);
 
         // check for wildcards on input and output
-        bool outWildcard = !(firstStartOut+firstCountOut == secondStartOut && secondCountOut == 0);
+        bool outWildcard = !(firstStartOut + firstCountOut == secondStartOut && secondCountOut == 0);
 
         // take off the prefix
         if (firstStartOut == symbolOut.length())
@@ -251,7 +262,7 @@ public:
         // now we have the original names from the input symbol, generate the output names
         vector<GenNameValue> ret;
 
-        // if we have more than one matching parameter 
+        // if we have more than one matching parameter
         if (singleInputMultiOutput)
         {
             auto nodeIn = nodes[0];
@@ -263,13 +274,12 @@ public:
 
             // this is the *.W = L2.W case
             // We want to find all the destination existing matches and then assign the in node to all of them
-            for (const auto & node : nodesOut)
+            for (const auto& node : nodesOut)
             {
                 std::wstring nodeOutName = node->NodeName();
                 GenNameValue value(nodeIn, nodeOutName);
                 ret.push_back(value);
             }
-
         }
         else
         {
@@ -302,7 +312,7 @@ public:
         NetNdl<ElemType>* netNdlTo;
         NetNdl<ElemType>* netNdlFrom;
         vector<GenNameValue> copyNodes = GenerateNames(symbolIn, symbolOut, netNdlFrom, netNdlTo);
-        map<ComputationNodeBasePtr,ComputationNodeBasePtr> mapCopied; // map from old nodes to new nodes
+        map<ComputationNodeBasePtr, ComputationNodeBasePtr> mapCopied; // map from old nodes to new nodes
 
         // Process any outstanding NDL Scripts
         bool crossNetwork = netNdlTo->cn != netNdlFrom->cn;
@@ -319,7 +329,7 @@ public:
         // now we have the original names from the input symbol, generate the output names
         for (GenNameValue name : copyNodes)
         {
-            auto & node = name.first;
+            auto& node = name.first;
             std::wstring nodeName = node->NodeName();
             std::wstring nodeOutName = name.second;
 
@@ -327,20 +337,20 @@ public:
             mapCopied[node] = newNode;
         }
 
-        // if we are doing a children link copy as well, so set the links up if the nodes were copied 
-        if (copyFlags & CopyNodeFlags::copyNodeChildren) 
+        // if we are doing a children link copy as well, so set the links up if the nodes were copied
+        if (copyFlags & CopyNodeFlags::copyNodeChildren)
         {
             // loop through the nodes that were copied and fixup all the child links
             for (GenNameValue nodeVal : copyNodes)
             {
                 ComputationNodeBasePtr fromNode = nodeVal.first;
                 ComputationNodeBasePtr toNode = mapCopied[fromNode];
-                for (int i=0; i<fromNode->GetNumInputs(); i++)
+                for (int i = 0; i < fromNode->GetNumInputs(); i++)
                 {
                     auto found = mapCopied.find(fromNode->GetInputs()[i]);
-                    auto newNode = (found == mapCopied.end())?ComputationNodePtr():found->second;
+                    auto newNode = (found == mapCopied.end()) ? ComputationNodePtr() : found->second;
                     toNode->SetInput(i, newNode);
-                }                     
+                }
             }
         }
     }
@@ -353,7 +363,7 @@ public:
     {
         // get the nodes
         NetNdl<ElemType>* netNdlFrom;
-        
+
         vector<ComputationNodeBasePtr> fromNodes = FindSymbols(symbolFrom, netNdlFrom);
         size_t firstStart, firstCount, secondStart, secondCount;
         NetNdl<ElemType>* netNdlTo = ParseName(toCNName, firstStart, firstCount, secondStart, secondCount);
@@ -366,10 +376,10 @@ public:
             ProcessNDLScript(netNdlTo, ndlPassAll);
         }
 
-        std::wstring toNamePrefixW= msra::strfun::utf16(toNamePrefix);
+        std::wstring toNamePrefixW = msra::strfun::utf16(toNamePrefix);
 
         // now we have the original names from the input symbol, generate the output names
-        for (int i=0; i<fromNodes.size(); i++)
+        for (int i = 0; i < fromNodes.size(); i++)
         {
             ComputationNodeBasePtr fromNode = fromNodes[i];
             std::wstring fromNodeName = fromNode->NodeName();
@@ -377,7 +387,7 @@ public:
             netNdlTo->cn->CopySubTree(*netNdlFrom->cn, fromNodeName, toNamePrefixW, copyFlags);
         }
     }
-    
+
     void OverrideModelNameAndSetDefaultModel(ComputationNetworkPtr cn, string modelName = "default")
     {
         auto found = m_mapNameToNetNdl.find(modelName);
@@ -390,7 +400,7 @@ public:
             found->second.Clear();
         }
 
-        m_mapNameToNetNdl[modelName] = NetNdl<ElemType>(cn);  //newly loaded model will be the new default if none has been set yet
+        m_mapNameToNetNdl[modelName] = NetNdl<ElemType>(cn); //newly loaded model will be the new default if none has been set yet
         if (m_netNdlDefault == nullptr)
         {
             m_netNdlDefault = &m_mapNameToNetNdl[modelName];
@@ -413,7 +423,7 @@ public:
         {
             // process optional parameter if it exists
             std::string propName, value;
-            if (OptionalParameter(params[paramNumber-1], propName, value))
+            if (OptionalParameter(params[paramNumber - 1], propName, value))
             {
                 if (EqualInsensitive(propName, "includeData"))
                 {
@@ -424,7 +434,7 @@ public:
                     RuntimeError("Invalid optional parameter %s, valid optional parameters: includeData=(false|true)", propName.c_str());
                 }
             }
-        }        
+        }
 
         return includeData;
     }
@@ -435,7 +445,7 @@ public:
         {
             // process optional parameter if it exists
             std::string propName, value;
-            if (OptionalParameter(params[paramNumber-1], propName, value))
+            if (OptionalParameter(params[paramNumber - 1], propName, value))
             {
                 if (EqualInsensitive(propName, "format"))
                 {
@@ -443,7 +453,7 @@ public:
                     {
                         modelFormat = L"cntk";
                     }
-                    else if (EqualInsensitive(value, "cntk_legacy_no_tensorlib"))    // model of late 2015 which had a bug in setting InputValue's tensor dimensions
+                    else if (EqualInsensitive(value, "cntk_legacy_no_tensorlib")) // model of late 2015 which had a bug in setting InputValue's tensor dimensions
                     {
                         modelFormat = L"cntk_legacy_no_tensorlib";
                     }
@@ -457,7 +467,7 @@ public:
                     RuntimeError("Invalid optional parameter %s, valid optional parameters: format=(cntk)", propName.c_str());
                 }
             }
-        }        
+        }
 
         return modelFormat;
     }
@@ -468,7 +478,7 @@ public:
         std::string propName, value;
         for (size_t paramNumber = params.size(); paramNumber > numFixedParams; paramNumber--)
         {
-            if (OptionalParameter(params[paramNumber-1], propName, value))
+            if (OptionalParameter(params[paramNumber - 1], propName, value))
             {
                 if (EqualInsensitive(propName, "section"))
                 {
@@ -482,7 +492,7 @@ public:
                     RuntimeError("Invalid optional parameter %s, valid optional parameters: section=(sectionName)", propName.c_str());
                 }
             }
-        }        
+        }
 
         return value;
     }
@@ -495,7 +505,7 @@ public:
         {
             // process optional parameter if it exists
             std::string propName, value;
-            if (OptionalParameter(params[paramNumber-1], propName, value))
+            if (OptionalParameter(params[paramNumber - 1], propName, value))
             {
                 if (EqualInsensitive(propName, "copyFlag", "copy"))
                 {
@@ -536,11 +546,11 @@ public:
             loadOrEditFound = true;
         }
 
-        // load and then execute 
+        // load and then execute
         if (sections.Exists("edit"))
         {
             auto config = ConfigArray(sections("edit"));
-            for (int i=0; i < config.size(); ++i)
+            for (int i = 0; i < config.size(); ++i)
             {
                 Parse(sections(config[i]));
             }
@@ -551,7 +561,7 @@ public:
         if (!loadOrEditFound)
         {
             // surround text in braces so we parse correctly
-            std::string textInBraces = "[ "+stringParse+" ]";
+            std::string textInBraces = "[ " + stringParse + " ]";
             Parse(textInBraces);
         }
     }
@@ -578,7 +588,7 @@ public:
         {
             name = token.substr(0, foundEqual);
             Trim(name);
-            value = token.substr(foundEqual+1);
+            value = token.substr(foundEqual + 1);
             Trim(value);
             TrimQuotes(value);
         }
@@ -622,9 +632,9 @@ public:
     {
         // skip leading spaces
         tokenStart = stringParse.find_first_not_of(" \t", tokenStart);
-        auto keyEnd = stringParse.find_first_of(OPENBRACES"=", tokenStart);
+        auto keyEnd = stringParse.find_first_of(OPENBRACES "=", tokenStart);
         bool equalFound = (keyEnd != npos && keyEnd < tokenEnd && stringParse[keyEnd] == '=');
-        std::string key = stringParse.substr(tokenStart, keyEnd-tokenStart);
+        std::string key = stringParse.substr(tokenStart, keyEnd - tokenStart);
         Trim(key);
 
         // key=Function(x,y,z) - function with return
@@ -632,10 +642,10 @@ public:
         // model1=[...] - Embedded NDL script
         if (equalFound)
         {
-            size_t tokenStartNew = keyEnd+1;
+            size_t tokenStartNew = keyEnd + 1;
             if (!(tokenStartNew < tokenEnd))
                 RuntimeError("Equal at the end of line not allowed");
-            std::string rightValue = stringParse.substr(tokenStartNew,tokenEnd-tokenStartNew);
+            std::string rightValue = stringParse.substr(tokenStartNew, tokenEnd - tokenStartNew);
             Trim(rightValue);
 
             auto foundBrace = rightValue.find_first_of(OPENBRACES);
@@ -664,18 +674,18 @@ public:
                     CallStringParse(rightValue, functionName, paramList);
                     ConfigParamList params(paramList);
 
-                    if (EqualInsensitive(functionName,"CreateModel"))
+                    if (EqualInsensitive(functionName, "CreateModel"))
                     {
                         params.insert(params.begin(), key);
                         CallFunction("CreateModelWithName", params);
                     }
-                    else if (EqualInsensitive(functionName,"LoadModel"))
+                    else if (EqualInsensitive(functionName, "LoadModel"))
                     {
                         params.insert(params.begin(), key);
                         CallFunction("LoadModelWithName", params);
                     }
                     else
-                    {  // not a MEL command, so pass it on to NDL
+                    { // not a MEL command, so pass it on to NDL
                         if (!m_netNdlDefault)
                             RuntimeError("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
                         HandleNDLInline(stringParse, tokenStart, tokenEnd);
@@ -687,7 +697,7 @@ public:
         // Function(x,y,z) - function with no return
         else
         {
-            std::string value = stringParse.substr(tokenStart,tokenEnd-tokenStart);
+            std::string value = stringParse.substr(tokenStart, tokenEnd - tokenStart);
             if (keyEnd > tokenEnd)
                 RuntimeError("Invalid line, expecting function call, %s", value.c_str());
             std::string functionName;
@@ -700,5 +710,4 @@ public:
         return tokenEnd;
     }
 };
-
-}}}
+} } }

@@ -5,7 +5,7 @@
 // </copyright>
 //
 
-#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+#define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
 #include "Basics.h"
@@ -124,7 +124,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     auto end = std::chrono::system_clock::now();
     auto elapsed = end - start;
     if (traceLevel > 1)
-        fprintf(stderr, "%f seconds elapsed\n", (float)(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / 1000);
+        fprintf(stderr, "%f seconds elapsed\n", (float) (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / 1000);
 }
 
 template void DoCreateLabelMap<float>(const ConfigParameters& config);
@@ -136,24 +136,24 @@ template void DoCreateLabelMap<double>(const ConfigParameters& config);
 
 //////////////////////////////////////////////////////////////////////////
 //  for action SVD
-//      An action "SVD" performs the following process to transform an existing model: 
-//          1.  For a Learnable Parameter A whose name matches with the user specified regex, 
-//              A is approximated by two matrice multiplication B*C ; 
-//          2.  In order to keep the low-rank structure in training, 
+//      An action "SVD" performs the following process to transform an existing model:
+//          1.  For a Learnable Parameter A whose name matches with the user specified regex,
+//              A is approximated by two matrice multiplication B*C ;
+//          2.  In order to keep the low-rank structure in training,
 //              the original A node will be replaced by A' whose opertions is Times
-//              with its left children being B and right chilren being 
+//              with its left children being B and right chilren being
 //
 //      To use this command,
-//          user need to specify: 
-//                  1)  modelPath           -- path to the existing model 
-//                  2)  outputmodelPath     -- where to write the transformed model 
+//          user need to specify:
+//                  1)  modelPath           -- path to the existing model
+//                  2)  outputmodelPath     -- where to write the transformed model
 //                  3)  KeepRatio           -- how many percentage of energy we want to keep
-//					4)	AlignedSize			-- the resultant number of signular values is aligned to e.g., 32 or 64  
-//                  5)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
-//              
+//					4)	AlignedSize			-- the resultant number of signular values is aligned to e.g., 32 or 64
+//                  5)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition
+//
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-//  helper function for DoParameterSVD 
+//  helper function for DoParameterSVD
 //////////////////////////////////////////////////////////////////////////
 bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
 {
@@ -164,11 +164,11 @@ bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
         vector<wstring> tokens = msra::strfun::split(line, L"\t ");
         if (tokens.size() != 2)
             return false;
-        config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
+        config[tokens[0]] = (float) msra::strfun::todouble(tokens[1]);
     }
     return true;
 }
-// a brief on the SVD config file usage 
+// a brief on the SVD config file usage
 void SVDConfigFileUsage()
 {
     fprintf(stderr, "usage of SVDConfigFile\n");
@@ -177,19 +177,17 @@ void SVDConfigFileUsage()
     fprintf(stderr, "An example: \n");
     fprintf(stderr, "W0         1.0\n");
     fprintf(stderr, "W[1-5]     0.4\n");
-
-
 }
-template<typename ElemType>
+template <typename ElemType>
 void DoParameterSVD(const ConfigParameters& config)
 {
-    DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
+    DEVICEID_TYPE deviceID = -1; // use CPU for SVD
     wstring modelPath = config(L"modelPath");
     wstring outputmodelPath = config(L"outputmodelPath");
-    map<wstring, float>     svdconfig;
+    map<wstring, float> svdconfig;
 
     float keepratio = config(L"KeepRatio", "0.4");
-	size_t AlignedSize = config(L"AlignedSize", "8");
+    size_t AlignedSize = config(L"AlignedSize", "8");
     wstring svdnodeRegex = config(L"NodeNameRegex", L"");
     if (!svdnodeRegex.empty())
     {
@@ -197,7 +195,7 @@ void DoParameterSVD(const ConfigParameters& config)
     }
     else
     {
-        // alternatively, user can also use a config to specify KeepRatios for different groups of nodes 
+        // alternatively, user can also use a config to specify KeepRatios for different groups of nodes
         wstring svdnodeConfigFile = config(L"SVDConfig", L"");
         if (!ParseSVDConfigFile(svdnodeConfigFile, svdconfig))
         {
@@ -206,13 +204,11 @@ void DoParameterSVD(const ConfigParameters& config)
         }
     }
 
-
     if (modelPath.empty())
     {
         fprintf(stderr, "ERROR: in DoParameterSVD, modelPath is empty!\n");
         return;
     }
-
 
     ComputationNetwork net(deviceID);
     net.Load<ElemType>(modelPath);
@@ -220,7 +216,6 @@ void DoParameterSVD(const ConfigParameters& config)
     net.PerformSVDecomposition<ElemType>(svdconfig, AlignedSize);
     if (!outputmodelPath.empty())
         net.Save(outputmodelPath);
-
 }
 
 template void DoParameterSVD<float>(const ConfigParameters& config);
@@ -233,7 +228,10 @@ template void DoParameterSVD<double>(const ConfigParameters& config);
 template <typename T>
 struct compare_second
 {
-    bool operator()(const T &lhs, const T &rhs) const { return lhs.second < rhs.second; }
+    bool operator()(const T& lhs, const T& rhs) const
+    {
+        return lhs.second < rhs.second;
+    }
 };
 
 ///
@@ -248,7 +246,7 @@ struct compare_second
 ///       2      45020  <unk>   1
 ///       the first column is word index
 ///       the last column is class index of the word
-///       the second column and the third column are for information purpose and 
+///       the second column and the third column are for information purpose and
 ///       are not really used in generating outputs for later process in the neural networks training
 ///
 ///    wrd2cls in dense matrix in[vocab_size X 1].it maps a word to its class id.
@@ -265,9 +263,9 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string outputWord2Cls = config(L"outputWord2Cls");
     string outputVocabFile = config(L"outputVocabFile");
     string outputCls2Index = config(L"outputCls2Index");
-    size_t  vocabSize = config(L"vocabSize");
-    int  nbrCls = config(L"nbrClass", "0");
-    int  cutoff = config(L"cutoff", "1");
+    size_t vocabSize = config(L"vocabSize");
+    int nbrCls = config(L"nbrClass", "0");
+    int cutoff = config(L"cutoff", "1");
 
     DEVICEID_TYPE deviceId = CPUDEVICE;
     Matrix<ElemType> wrd2cls(deviceId);
@@ -293,8 +291,8 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string token;
     while (getline(fp, str))
     {
-        str.erase(0, str.find_first_not_of(' '));       //prefixing spaces
-        str.erase(str.find_last_not_of(' ') + 1);         //surfixing spaces
+        str.erase(0, str.find_first_not_of(' ')); //prefixing spaces
+        str.erase(str.find_last_not_of(' ') + 1); //surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos)
@@ -322,10 +320,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     std::unordered_map<std::string, size_t> m_index;
 
     std::vector<double> m_count;
-    std::vector<int> m_class;// class index of each word
+    std::vector<int> m_class; // class index of each word
 
     typedef std::pair<std::string, double> stringdouble;
-    std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
+    std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble>>
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
 
     size_t wordCountLessCutoff = v_count.size();
@@ -355,7 +353,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     double unkCount = 0;
     size_t size = 0;
     size_t actual_vocab_size = vocabSize - 1;
-    while (size < actual_vocab_size  && !q.empty())
+    while (size < actual_vocab_size && !q.empty())
     {
         size++;
         std::string word = q.top().first;
@@ -374,7 +372,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         q.pop();
     }
     removed["<unk>"] = unkCount;
-    std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
+    std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble>>
         p(compare_second<stringdouble>(), std::vector<stringdouble>(removed.begin(), removed.end()));
     cerr << "p.size():" << p.size() << endl;
     m_count.resize(removed.size());
@@ -433,11 +431,11 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     for (size_t i = 0; i < m_index.size(); i++)
     {
         if (nbrCls > 0)
-            wrd2cls(i, 0) = (ElemType)m_class[i];
+            wrd2cls(i, 0) = (ElemType) m_class[i];
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
-            cls2idx(clsIdx, 0) = (ElemType)i; /// the left boundary of clsIdx
+            cls2idx(clsIdx, 0) = (ElemType) i; /// the left boundary of clsIdx
             prevClsIdx = m_class[i];
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
@@ -452,7 +450,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         if (!ofp)
             RuntimeError("cannot write to %s", outputWord2Cls.c_str());
         for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
-            ofp << (int)wrd2cls(r, 0) << endl;
+            ofp << (int) wrd2cls(r, 0) << endl;
         ofp.close();
 
         msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
@@ -464,7 +462,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
         {
-            ofp << (int)cls2idx(r, 0) << endl;
+            ofp << (int) cls2idx(r, 0) << endl;
         }
         ofp.close();
     }
@@ -476,16 +474,16 @@ template void DoWriteWordAndClassInfo<double>(const ConfigParameters& config);
 // DoTopologyPlot() - implements CNTK "plot" command
 // ===========================================================================
 
-// do topological plot of computation network 
+// do topological plot of computation network
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
     wstring modelPath = config(L"modelPath");
-    wstring outdot = config(L"outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
-    wstring outRending = config(L"outputFile");      // filename for the rendered topology plot
+    wstring outdot = config(L"outputDotFile");  // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outRending = config(L"outputFile"); // filename for the rendered topology plot
     // this can be empty, in that case no rendering will be done
-    // or if this is set, renderCmd must be set, so CNTK will call re       
-    wstring RenderCmd = config(L"RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    // or if this is set, renderCmd must be set, so CNTK will call re
+    wstring RenderCmd = config(L"RenderCmd"); // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
@@ -498,7 +496,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     }
 
     wstring rescmd;
-    if (!outRending.empty())        // we need to render the plot
+    if (!outRending.empty()) // we need to render the plot
     {
         std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
         std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
@@ -516,7 +514,8 @@ void DoTopologyPlot(const ConfigParameters& config)
     {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
-        const auto rc = system(msra::strfun::utf8(rescmd).c_str()); rc/*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
+        const auto rc = system(msra::strfun::utf8(rescmd).c_str());
+        rc /*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
 #else
         _wsystem(rescmd.c_str());
 #endif

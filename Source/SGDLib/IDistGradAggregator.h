@@ -5,43 +5,44 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    template<class ElemType>
-    class IDistGradAggregator
+template <class ElemType>
+class IDistGradAggregator
+{
+public:
+    IDistGradAggregator(MPIWrapper* mpi)
+        : m_mpi(mpi)
     {
-    public:
-        IDistGradAggregator(MPIWrapper* mpi)
-            : m_mpi(mpi)
-        {
-        }
-        
-        virtual ~IDistGradAggregator()
-        {
-        }
-        
-        // Returns a boolean indicating if any samples were processed
-        virtual bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader *headerCPU, int epochNumber) = 0;
+    }
 
-        size_t NumProc()
-        {
-            return m_mpi->NumNodesInUse();
-        }
+    virtual ~IDistGradAggregator()
+    {
+    }
 
-        size_t MyRank()
-        {
-            return m_mpi->CurrentNodeRank();
-        }
+    // Returns a boolean indicating if any samples were processed
+    virtual bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, int epochNumber) = 0;
 
-        void WaitAll()
-        {
-            m_mpi->WaitAll();
-        }
+    size_t NumProc()
+    {
+        return m_mpi->NumNodesInUse();
+    }
 
-    protected:
-        MPIWrapper* m_mpi;
-    };
+    size_t MyRank()
+    {
+        return m_mpi->CurrentNodeRank();
+    }
 
-#define UsingIDistGradAggregatorMembers \
-    protected: \
-        using IDistGradAggregator<ElemType>::m_mpi; using IDistGradAggregator<ElemType>::NumProc; using IDistGradAggregator<ElemType>::MyRank
+    void WaitAll()
+    {
+        m_mpi->WaitAll();
+    }
 
-}}}
+protected:
+    MPIWrapper* m_mpi;
+};
+
+#define UsingIDistGradAggregatorMembers           \
+protected:                                        \
+    using IDistGradAggregator<ElemType>::m_mpi;   \
+    using IDistGradAggregator<ElemType>::NumProc; \
+    using IDistGradAggregator<ElemType>::MyRank
+} } }
