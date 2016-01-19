@@ -6,9 +6,10 @@
 #include "DataReader.h"
 #include "ComputationNetwork.h"
 #include "MPIWrapper.h"
+#include "TrainingCriterionNodes.h"
 #include <string>
 #include <map>
-#include "TrainingCriterionNodes.h"
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,16 +45,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If this returns false, the matrices may contain garbage or not sized to 0 columns.
         // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
 
-        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-        net->NotifyInputNodesFunctionValuesMBSizeModified();
-
         if (wasDataRead)
+        {
             trainSetDataReader.CopyMBLayoutTo(pMBLayout); // get layout meta-data
 
-#if 0 // (this test is wrong... I think)
-            if (net->DetermineActualMBSizeFromFeatures() == 0)
-                wasDataRead = false;
-#endif
+            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+            // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+            std::set<Matrix<ElemType>*> matrices;
+            for (const auto & iter : inputMatrices)
+                matrices.insert(iter.second);
+            for (auto & node : net->FeatureNodes())
+                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                    node->NotifyFunctionValuesMBSizeModified();
+            for (auto & node : net->LabelNodes())
+                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                    node->NotifyFunctionValuesMBSizeModified();
+        }
 
         // get some additional information when doing sequence training
         // TODO: This should not need to be called in case of wasDataRead == false, since in that case, returned values are invalid.

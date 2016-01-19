@@ -563,7 +563,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %lu counting lines to determine record count\n", (unsigned long) m_epoch);
+                fprintf(stderr, "UCIFastReader: Starting at epoch %lu, counting lines to determine record count...\n", (unsigned long) m_epoch);
             m_parser.SetParseMode(ParseLineCount);
             m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);
             m_parser.SetParseMode(ParseNormal);
@@ -571,7 +571,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %lu records found\n", (unsigned long) m_totalSamples);
+                fprintf(stderr, " %lu records found.\n", (unsigned long) m_totalSamples);
         }
 
         // make sure we are in the correct location for mid-dataset epochs

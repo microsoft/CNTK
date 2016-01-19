@@ -262,18 +262,12 @@ void BestGpu::Init()
     if (m_initialized)
         return;
 
-    //get the count of objects
-    cudaError_t err =
-        cudaGetDeviceCount(&m_deviceCount);
-    // TODO: use CUDA_CALL here
+    // get the count of objects
+    cudaError_t err = cudaGetDeviceCount(&m_deviceCount);
     if (err != cudaSuccess)
-    {
-        const char* errmsg = cudaGetErrorString(err);
-        fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        RuntimeError("%s", errmsg);
-    }
+        m_deviceCount = 0;       // if this fails, we have no GPUs
 
-    ProcessorData pdEmpty = {0};
+    ProcessorData pdEmpty = { 0 };
     for (int i = 0; i < m_deviceCount; i++)
     {
         ProcessorData* data = new ProcessorData();

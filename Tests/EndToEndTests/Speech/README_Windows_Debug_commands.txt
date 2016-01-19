@@ -9,6 +9,10 @@ COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  con
 
 Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../QuickE2E/cntk.config  stderr=../RunDir/QuickE2E/models/cntkSpeech.dnn.log  RunDir=../RunDir/QuickE2E  DataDir=.  DeviceId=auto  makeMode=false
 
+--- Speech\Simple:
+
+COMMAND:    currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=..\Simple\cntk.config  RunDir=../RunDir/Simple  stderr=../RunDir/Simple/models/cntkSpeech.dnn.log  DataDir=$(SolutionDir)Tests\EndToEndTests\Speech\Data  ConfigDir=$(SolutionDir)Tests\EndToEndTests\Speech\Simple  DeviceId=auto  makeMode=false
+
 --- Speech\LSTM\Truncated:
 
 COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  makeMode=false
