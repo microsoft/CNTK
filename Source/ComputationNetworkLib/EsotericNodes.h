@@ -1613,6 +1613,194 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class PairNetworkNode<double>;
 
     // -----------------------------------------------------------------------
+    // ParallelNode (input0, input1)
+    // TODO: How is this different from RowStack?
+    // -----------------------------------------------------------------------
+
+    /**
+    parallel node to join two streams into one 
+    
+    join parallel children node, avoids any operations except putting outputs from children to corresponding columns
+    input(0) : [nDim0 X T]
+    input(1) : [nDim1 X T]
+    output   : [[nDim0 + nDim1] X T]
+    */
+    template<class ElemType>
+    class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Parallel"; }
+    public:
+        DeclareConstructorFromConfigWithNumInputs(ParallelNode);
+        ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void BackpropToNonLooping(size_t inputIndex) override
+        {
+            if (inputIndex > 1)
+                InvalidArgument("Parallel operation only takes two input.");
+            ComputationNodePtr child = Input(inputIndex);
+            size_t startidx = (inputIndex == 0) ? 0 : Input(0)->GetNumRows();
+            size_t nrows = child->GetNumRows();
+
+            // TODO: why is this needed? If it is, it should be solved more centrally.
+            if (child->Gradient().GetNumRows() != child->GetNumRows() || child->Gradient().GetNumCols() != GetNumCols())
+            {
+                child->Gradient().Resize(child->GetNumRows(), child->GetNumCols());
+                child->Gradient().SetValue(0);
+            }
+
+            Matrix<ElemType> tmpMat(m_deviceId);
+            tmpMat.AssignRowSliceValuesOf(Gradient(), startidx, nrows);
+
+            BackpropToS(tmpMat, child->Gradient());
+        }
+
+        virtual bool OutputUsedInComputingInputNodesGradients() const override
+        {
+            // The ParallelNode does not require its output value for computing
+            // the gradients of its input nodes
+            return false;
+        }
+
+        virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+        {
+            // The ParallelNode does not require any of it's input's values for computing
+            // the gradients of its input nodes
+            UNREFERENCED_PARAMETER(childIndex);
+            return false;
+        }
+
+        /*TODO: merge with call site*/void BackpropToS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        {
+            inputGradientValues += gradientValues;
+        }
+
+        virtual void /*ComputationNodeNonLooping::*/ForwardPropNonLooping() override
+        {
+            ForwardPropS(Value(), Input(0)->Value(), Input(1)->Value());
+        }
+
+        /*TODO: merge with call site*/void ForwardPropS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        {
+            size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
+            size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
+
+            if (cols0 != cols1)
+                LogicError("ParallelNode: column dimension mismatched!");
+
+            functionValues.Resize(rows0 + rows1, cols0);
+            functionValues.SetValue(0);
+
+            functionValues.AssignToRowSliceValuesOf(inputFunctionValues0, 0, rows0);
+            functionValues.AssignToRowSliceValuesOf(inputFunctionValues1, rows0, rows1);
+        }
+
+        /// input(0) : [nDim1 X T]
+        /// input(1) : [nDim2 X T]
+        /// output   : [[nDim1 + nDim2] X T]
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+
+            size_t rows1, cols1;
+            rows1 = Input(1)->GetNumRows();
+            cols1 = Input(1)->GetNumCols();
+
+            size_t rows0, cols0;
+            rows0 = Input(0)->GetNumRows();
+            cols0 = Input(0)->GetNumCols();
+
+            if (isFinalValidationPass && cols0 != cols1)
+                LogicError("ParallelNode: column dimension mismatched!");
+
+            size_t rows = rows0 + rows1;
+            size_t cols = cols0;
+
+            SetDims(TensorShape(rows), cols);
+            m_sampleLayout = GetInputSampleLayout(0);
+            // BUGBUG: Inconsistent with 'rows'
+        }
+
+    public:
+        virtual bool UnitTest() {
+            size_t nT = 3;
+            size_t nInput0 = 3;
+            size_t nInput1 = 3;
+
+            Matrix<ElemType> f0(m_deviceId), func(m_deviceId), f1(m_deviceId);
+
+            f0 = Input(0)->Value();
+            f1 = Input(1)->Value();
+            func = Value();
+
+            Input(0)->SetDims1(nInput0, nT);
+            Input(0)->UpdateFunctionValuesSize();
+            Input(0)->Value().SetValue(0);
+            Input(0)->Value()(0, 0) = 1;
+            Input(0)->Value()(0, 1) = 2;
+            Input(0)->Value()(0, 2) = 3;
+
+            Input(1)->SetDims1(nInput1, nT);
+            Input(1)->UpdateFunctionValuesSize();
+            Input(1)->Value().SetValue(0);
+            Input(1)->Value()(0, 0) = 4;
+            Input(1)->Value()(0, 1) = 5;
+            Input(1)->Value()(0, 2) = 6;
+            SetDims1(nInput0 + nInput1, nT);
+            UpdateFunctionValuesSize();
+
+            ForwardProp(FrameRange(m_pMBLayout));
+
+            /// check with expected values
+            if (!ISCLOSE(Value()(0, 0), 1, EPSILON) ||
+                !ISCLOSE(Value()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(Value()(0, 2), 3, EPSILON) ||
+                !ISCLOSE(Value()(3, 0), 4, EPSILON) ||
+                !ISCLOSE(Value()(3, 1), 5, EPSILON) ||
+                !ISCLOSE(Value()(3, 2), 6, EPSILON))
+                return false;
+            Value().TransferToDeviceIfNotThere(m_deviceId, true);
+
+            Gradient().Resize(nInput0 + nInput1, nT);
+            Gradient().SetValue(0);
+            Input(0)->Gradient().Resize(nInput0, nT);
+            Input(1)->Gradient().Resize(nInput1, nT);
+            Input(0)->Gradient().SetValue(0);
+            Input(1)->Gradient().SetValue(0);
+            Gradient()(0, 0) = 1;
+            Gradient()(0, 1) = 2;
+            Gradient()(0, 2) = 3;
+            Gradient()(3, 0) = 4;
+            Gradient()(3, 1) = 5;
+            Gradient()(3, 2) = 6;
+
+            BackpropTo(0, FrameRange(m_pMBLayout));
+            BackpropTo(1, FrameRange(m_pMBLayout));
+
+            /// check with expected values
+            if (!ISCLOSE(Input(0)->Gradient()(0, 0), 1, EPSILON)
+                || !ISCLOSE(Input(0)->Gradient()(0, 1), 2, EPSILON)
+                || !ISCLOSE(Input(0)->Gradient()(0, 2), 3, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 1), 5, EPSILON)
+                || !ISCLOSE(Input(1)->Gradient()(0, 2), 6, EPSILON))
+                return false;
+
+            Input(0)->Gradient().TransferToDeviceIfNotThere( m_deviceId, true);
+            Input(1)->Gradient().TransferToDeviceIfNotThere( m_deviceId, true);
+
+            return true;
+        }
+
+    };
+
+    template class ParallelNode<float>;
+    template class ParallelNode<double>;
+
+    // -----------------------------------------------------------------------
     // LSTMNode (obs, inputGate, forgetGate, outputGate, memoryCellWgt)
     // deprecated early implementation of LSTM operating on minibatches directly
     //  - input(0) : child with dimension [inputdim x T]
