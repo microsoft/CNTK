@@ -44,8 +44,8 @@ public:
 
     ComputationNetwork()
         : m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_pMBLayout(make_shared<MBLayout>())
+        m_isCompiled(false),
+        m_pMBLayout(make_shared<MBLayout>())
     {
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
@@ -298,19 +298,6 @@ public:
         return actualMBSize;
     }
 
-    // only called from MultiNetworksEvaluator
-    // a helper function for some places that like to hack the features directly
-    // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
-    // This is now changed in that they must actually resize the features, and then the system takes it from here.
-    // UNTESTED stopgap. Most likely places that are never used.
-    // This function does not actually allocate the matrices. I don't know whether that currently happens correctly.
-    void ResizeAllFeatureNodes(size_t cols)
-    {
-        auto& featureNodes = FeatureNodes();
-        for (auto& nodeIter : featureNodes)
-            nodeIter->SetNumCols(cols);
-    }
-
     // When external code (readers, namely) updates InputValue's m_value,
     // calling this function is required to make sure that any internal state gets updated correctly.
     // Only a change to the column dimension i sallowed
@@ -414,7 +401,7 @@ public:
         {
             if (NodeNameExists(name))
                 nodes.push_back(GetNodeFromName(name));
-        }
+            }
         else
         {
             std::wstring head = name.substr(0, found);
@@ -428,8 +415,8 @@ public:
                 bool tailMatch = tail.empty() || nodeName.rfind(tail) == nodeName.size() - tail.size();
                 if (headMatch && tailMatch)
                     nodes.push_back(nodeIter->second);
+                }
             }
-        }
         return nodes;
     }
 
@@ -441,10 +428,10 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
     template <class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net,
-                            const ComputationNodeBasePtr criterionNode,
+    static void SetSeqParam(ComputationNetworkPtr net, 
+                            const ComputationNodeBasePtr criterionNode, 
                             const double& hsmoothingWeight,
-                            const double& frameDropThresh,
+                            const double& frameDropThresh, 
                             const bool& doreferencealign,
                             const double& amf = 14.0f,
                             const double& lmf = 14.0f,
@@ -629,11 +616,11 @@ public:
     };
 
 protected:
-// -----------------------------------------------------------------------
-// construction
-// -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
 
-// Copy constructor, should never be called.
+    // Copy constructor, should never be called.
 #pragma warning(push)
 #pragma warning(disable : 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)
@@ -728,7 +715,7 @@ public:
             else //node name is not found, dump all nodes
             {
                 fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
-                        nodeName.c_str());
+                    nodeName.c_str());
                 DumpAllNodesToFile(printValues, outputFile);
             }
         }
@@ -867,7 +854,7 @@ protected:
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur)
             : m_loopId(loopId),
-              m_sourceNode(cur)
+            m_sourceNode(cur)
         {
             SetNodeName(L"Loop_" + m_sourceNode->NodeName());
         }
@@ -959,7 +946,7 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes};
     }
 
-    // used for sentence boundary information passed from reader to reset RNN state
+    // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     // TODO: This will change once we allow for multiple inconsistent layouts.
     MBLayoutPtr m_pMBLayout; // note that this must be installed before doing anything that needs it (default leaves a nullptr)
