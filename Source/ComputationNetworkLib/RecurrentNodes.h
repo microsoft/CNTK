@@ -384,14 +384,14 @@ private:
         if (isTimeIteration)
         {
             ForAllBoundaryIntersectingSequences(fr, outSliceLogical, T, [&](const MBLayout::SequenceInfo& toSeqInfo)
-                                                {
-                                                    // determine FrameRanges for from and to
-                                                    FrameRange frFrom, frTo;
-                                                    DetermineBoundaryFrameRanges(fr, toSeqInfo, fromNode, frFrom, T, frTo);
+            {
+                // determine FrameRanges for from and to
+                FrameRange frFrom, frTo;
+                DetermineBoundaryFrameRanges(fr, toSeqInfo, fromNode, frFrom, T, frTo);
 
-                                                    // copy/backprop
-                                                    Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward, +1);
-                                                });
+                // copy/backprop
+                Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward, +1);
+            });
         }
         // iterating over fixed sample-shape dimensions
         else if (!isTimeIteration && (inSliceLogical.first[m_shiftDim] < 0 || inSliceLogical.second[m_shiftDim] >= T))
@@ -492,8 +492,8 @@ public:
             if (inSliceMain.second[m_shiftDim] > inSliceMain.first[m_shiftDim])
             {
                 Input(0)->MaskMissingGradientColumnsToZero(fr); // zero out gaps, which will leak (note: we really only need to zero out gaps close enough to boundaries)
-                auto from = DataTensorFor(Input(0)->Gradient(), inShape, inSliceMain);
-                auto to = DataTensorFor(Gradient(), outShape, outSliceMain);
+                auto from = DataTensorFor(Input(0)->Gradient(),  inShape,  inSliceMain);
+                auto to =   DataTensorFor(          Gradient(), outShape, outSliceMain);
                 from.AddCopyOf(to);
 
                 // We have now propagated anything from within the logical bounds.
@@ -514,16 +514,16 @@ public:
                 if (isTimeIteration)
                 {
                     ForAllBoundaryIntersectingSequences(fr, outSliceMain /*already clipped*/, T, [&](const MBLayout::SequenceInfo& toSeqInfo)
-                                                        {
-                                                            // determine FrameRanges for from and to
-                                                            FrameRange frTo;
-                                                            DetermineBoundaryToFrameRange(fr, toSeqInfo, T, frTo);
-                                                            FrameRange frFrom = frTo.WithTimeOffset(m_fromOffset);
-                                                            assert((int) frFrom.timeIdxInSeq + frFrom.m_timeOffset >= 0 && (int) frFrom.timeIdxInSeq + frFrom.m_timeOffset + (int) frFrom.m_timeRange <= (int) T);
+                    {
+                        // determine FrameRanges for from and to
+                        FrameRange frTo;
+                        DetermineBoundaryToFrameRange(fr, toSeqInfo, T, frTo);
+                        FrameRange frFrom = frTo.WithTimeOffset(m_fromOffset);
+                        assert((int) frFrom.timeIdxInSeq + frFrom.m_timeOffset >= 0 && (int) frFrom.timeIdxInSeq + frFrom.m_timeOffset + (int) frFrom.m_timeRange <= (int) T);
 
-                                                            // copy/backprop
-                                                            Propagate(shared_from_this(), inShape, frFrom, outShape, frTo, /*isForward=*/false, -1 /*subtract*/);
-                                                        });
+                        // copy/backprop
+                        Propagate(shared_from_this(), inShape, frFrom, outShape, frTo, /*isForward=*/false, -1 /*subtract*/);
+                    });
                 }
             }
         }
