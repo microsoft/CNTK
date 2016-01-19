@@ -740,7 +740,7 @@ void UCIFastReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& 
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
@@ -758,7 +758,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         {
             if (m_prefetchMatrices.find(iter->first) == m_prefetchMatrices.end())
             {
-                LogicError("No mathing prefetch matrix found for matrix named %S!", iter->first.c_str());
+                LogicError("No matching prefetch matrix found for matrix named %S!", iter->first.c_str());
             }
 
             Matrix<ElemType>* prefetchMatrix = m_prefetchMatrices[iter->first].get();
@@ -806,7 +806,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
 }
 
 // GetMinibatchImpl - The actual implementation of getting the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
