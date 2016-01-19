@@ -164,7 +164,7 @@ void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t e
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
-// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix,
+// matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template <class ElemType>
