@@ -2,6 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+// Wrapper.cpp -- Managed code wrapping the native EvaluateModel interface
+//
+
 #include <windows.h>
 #include <vcclr.h>
 #include <string>
@@ -16,19 +19,21 @@
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
-
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft {
 namespace MSR {
 namespace CNTK {
+namespace Extensibility {
+namespace Managed {
+
 // Used for retrieving the model appropriate for the element type (float / double)
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
-public ref class IEvaluateModelManaged
+public ref class IEvaluateModelManaged : IDisposable
 {
     typedef std::pair<std::wstring, std::vector<ElemType>*> MapEntry;
 
@@ -49,24 +54,29 @@ public:
     }
 
     /// <summary>Initializes the model evaluation library with a CNTK configuration</summary>
+    /// <param name="config">Model configuration entries</param>
     void Init(String^ config)
     {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
         msclr::interop::marshal_context context;
         const std::string stdConfig = context.marshal_as<std::string>(config);
 
         m_eval->Init(stdConfig);
     }
 
-    /// <summary>Destroys the model evaluation object</summary>
-    void Destroy()
-    {
-        m_eval->Destroy();
-    }
-
     /// <summary>Loads a model file</summary>
     /// <param name="modelFileName">The model file name to load</param>
     void LoadModel(String^ modelFileName)
     {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
         pin_ptr<const WCHAR> stdModelPath = PtrToStringChars(modelFileName);
         m_eval->LoadModel(stdModelPath);
     }
@@ -76,49 +86,57 @@ public:
     /// <param name="outputs"></param>
     void Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, Dictionary<String^, List<ElemType>^>^ outputs)
     {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+
         std::map<std::wstring, std::vector<ElemType>*> stdInputs;
         std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
 
-        for each (auto item in inputs)
+        try
         {
-            pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-            stdInputs.insert(MapEntry(key, CopyList(item.Value)));
-        }
+            std::vector<shared_ptr<std::vector<ElemType>>> sharedInputVectors;
+            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
 
-        for each (auto item in outputs)
-        {
-            pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-            stdOutputs.insert(MapEntry(key, CopyList(item.Value)));
-        }
-
-        m_eval->Evaluate(stdInputs, stdOutputs);
-
-        auto enumerator = outputs->Keys->GetEnumerator();
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdOutputs.begin(), e = stdOutputs.end(); ii != e; ii++)
-        {
-            // Retreive the layer key
-            enumerator.MoveNext();
-            String^ key = enumerator.Current;
-
-            std::vector<ElemType> &refVector = *((*ii).second);
-            int index = 0;
-
-            // Copy output to CLI structure
-            for (std::vector<ElemType>::iterator ii = refVector.begin(), e = refVector.end(); ii != e; ii++)
+            for each (auto item in inputs)
             {
-                outputs[key][index++] = *ii;
+                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+                sharedInputVectors.push_back(ptr);
+                stdInputs.insert(MapEntry(key, ptr.get()));
+            }
+
+            for each (auto item in outputs)
+            {
+                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+                sharedOutputVectors.push_back(ptr);
+                stdOutputs.insert(MapEntry(key, ptr.get()));
+            }
+
+            m_eval->Evaluate(stdInputs, stdOutputs);
+
+            auto enumerator = outputs->Keys->GetEnumerator();
+            for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdOutputs.begin(), e = stdOutputs.end(); ii != e; ii++)
+            {
+                // Retrieve the layer key
+                enumerator.MoveNext();
+                String^ key = enumerator.Current;
+
+                std::vector<ElemType> &refVector = *((*ii).second);
+                int index = 0;
+
+                // Copy output to CLI structure
+                for (std::vector<ElemType>::iterator ii = refVector.begin(), e = refVector.end(); ii != e; ii++)
+                {
+                    outputs[key][index++] = *ii;
+                }
             }
         }
-
-        // Release the memory used
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdInputs.begin(), e = stdInputs.end(); ii != e; ii++)
+        catch (Exception^)
         {
-            delete (*ii).second;
-        }
-
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdOutputs.begin(), e = stdOutputs.end(); ii != e; ii++)
-        {
-            delete (*ii).second;
+            throw;
         }
     }
 
@@ -129,39 +147,38 @@ public:
     /// <returns>Results for specified layer</returns>
     List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
     {
-        std::map<std::wstring, std::vector<ElemType>*> stdInputs;
-        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
-
-        // Prepare input
-        for each (auto item in inputs)
+        List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+        for (int i = 0; i < outputSize; i++)
         {
-            pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-            stdInputs.insert(MapEntry(key, CopyList(item.Value)));
+            outputs->Add(*(gcnew ElemType));
         }
 
-        // Prepare output buffer
-        pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
-        stdOutputs.insert(MapEntry(key, new std::vector<ElemType>(outputSize)));
+        Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+        outputMap->Add(outputKey, outputs);
 
-        // Perform evaluation
-        m_eval->Evaluate(stdInputs, stdOutputs);
+        Evaluate(inputs, outputMap);
 
-        // Copy output to CLI structure
-        List<ElemType>^ output = gcnew List<ElemType>();
-        std::vector<ElemType>* vector = stdOutputs.begin()->second;
-        int count = 0;
-        for (std::vector<ElemType>::iterator ii = (*vector).begin(), e = (*vector).end(); ii != e && count < outputSize; ii++, count++)
+        return outputMap[outputKey];
+    }
+
+    ~IEvaluateModelManaged()
+    {
+        if (m_eval == nullptr)
         {
-            output->Add(*ii);
+            return;
         }
 
-        // Release the used memory
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator ii = stdInputs.begin(), e = stdInputs.end(); ii != e; ii++)
-        {
-            delete (*ii).second;
-        }
+        this->!IEvaluateModelManaged();
+    }
 
-        return output;
+protected:
+    !IEvaluateModelManaged()
+    {
+        if (m_eval != nullptr)
+        {
+            m_eval->Destroy();
+            m_eval = nullptr;
+        }
     }
 
 private:
@@ -171,14 +188,16 @@ private:
     /// <summary>Copies a list of element types from a CLI structure to a native structure
     /// <param name="list">The CLI list of items</param>
     /// <returns>A native vector of items</returns>
-    std::vector<ElemType>* CopyList(List<ElemType>^ list)
+    shared_ptr<std::vector<ElemType>> CopyList(List<ElemType>^ list)
     {
-        std::vector<ElemType>* lower = new std::vector<ElemType>();
-        for each (ElemType item in list)
+        shared_ptr<std::vector<ElemType>> lower(new std::vector<ElemType>());
+        if (list != nullptr)
         {
-            lower->push_back(item);
+            for each (ElemType item in list)
+            {
+                lower->push_back(item);
+            }
         }
-
         return lower;
     }
 };
@@ -207,7 +226,7 @@ public:
 
 // This method tricks the compiler into emitting the methods of the classes
 // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
-// explanation to this insanity
+// explanation to this behavior
 void emit()
 {
     IEvaluateModelManagedF f;
@@ -215,14 +234,14 @@ void emit()
     f.Evaluate(nullptr, nullptr);
     f.Evaluate(nullptr, "", 0);
     f.LoadModel("");
-    f.Destroy();
 
     IEvaluateModelManagedD d;
     d.Init("");
     d.Evaluate(nullptr, nullptr);
     d.Evaluate(nullptr, "", 0);
     d.LoadModel("");
-    d.Destroy();
+}
+}
 }
 }
 }
