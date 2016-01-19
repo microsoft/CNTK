@@ -15,41 +15,50 @@ namespace CSEvalClient
     {
         private static void Main(string[] args)
         {
-            Environment.CurrentDirectory = Path.Combine(Environment.CurrentDirectory, @"..\..\Examples\Image\MNIST\Data\");
-            Console.WriteLine("Current Directory: {0}", Environment.CurrentDirectory);
-
-            Console.WriteLine("Creating Model Evaluator...");
-            var model = new IEvaluateModelManagedF();
-
-            Console.WriteLine("Initializing Model Evaluator...");
-            string config = GetConfig();
-            model.Init(config);
-
-            Console.WriteLine("Loading Model...");
-            string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-            model.LoadModel(modelFilePath);
-
-            var inputs = GetDictionary("features", 28 * 28, 255);
-            var outputs = GetDictionary("ol.z", 10, 100);
-
-            Console.WriteLine("Press <Enter> to begin evaluating.");
-            Console.ReadLine();
-
-            List<float> outputList = null;
-            for (int i = 0; i < 10; i++)
+            try
             {
+                Environment.CurrentDirectory = Path.Combine(Environment.CurrentDirectory, @"..\..\Examples\Image\MNIST\Data\");
+                Console.WriteLine("Current Directory: {0}", Environment.CurrentDirectory);
+
+                Console.WriteLine("Creating Model Evaluator...");
+                var model = new IEvaluateModelManagedF();
+
+                Console.WriteLine("Initializing Model Evaluator...");
+                string config = GetConfig();
+                model.Init(config);
+
+                Console.WriteLine("Loading Model...");
+                string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
+                model.LoadModel(modelFilePath);
+
+                var inputs = GetDictionary("features", 28 * 28, 255);
+                var outputs = GetDictionary("ol.z", 10, 100);
+
+                Console.WriteLine("Press <Enter> to begin evaluating.");
+                Console.ReadLine();
+
                 Console.WriteLine("Evaluating Model...");
-                outputList = model.Evaluate(inputs, "ol.z", 10);  // return results
+                List<float> outputList = null;
+                outputList = model.Evaluate(inputs, "ol.z", 10);    // return results
                 model.Evaluate(inputs, outputs);                    // Pass result structure
+                
+                Console.WriteLine("Destroying Model...");
+                model.Destroy();
+                model = null;
+
+                Console.WriteLine("Output contents:");
+                foreach (var item in outputs)
+                {
+                    Console.WriteLine("Output layer: {0}", item.Key);
+                    foreach (var entry in item.Value)
+                    {
+                        Console.WriteLine(entry);
+                    }
+                }
             }
-
-            Console.WriteLine("Destroying Model...");
-            model.Destroy();
-
-            Console.WriteLine("Output contents:");
-            foreach (var item in outputs)
+            catch (Exception ex)
             {
-                Console.WriteLine(item);
+                Console.WriteLine("Error: {0}", ex);
             }
 
             Console.WriteLine("Press <Enter> to terminate.");
