@@ -17,7 +17,7 @@ Tutorial: [Microsoft Computational Network Toolkit (CNTK) @ NIPS 2015 Workshops]
 
 The figure below compares processing speed (frames processed per second) of CNTK to that of four other well-known toolkits. The configuration uses a fully connected 4-layer neural network (see our benchmark [scripts](https://github.com/Alexey-Kamenev/Benchmarks)) and an effective mini batch size (8192). All results were obtained on the same hardware with the respective latest public software versions as of Dec 3, 2015.
 
-![Performance chart](http://download-codeplex.sec.s-msft.com/Download?ProjectName=cntk&DownloadId=1526166)
+![Performance chart](Documentation/Documents/PerformanceChart.png)
 
 ## Citation
 
