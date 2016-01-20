@@ -411,6 +411,7 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
     if (m_maxMBSize > 0) {
         m_mbSize = min(m_mbSize, m_maxMBSize);
     }
+    fprintf(stderr, "mbsize set to: %u\n", m_mbSize);
 
     m_subsetNum = subsetNum;
     m_numSubsets = numSubsets;
