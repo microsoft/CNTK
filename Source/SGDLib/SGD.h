@@ -240,6 +240,13 @@ protected:
 
     // Parallel training related with MA
     size_t m_nFramesBetweenMASync;
+    bool   m_useBMUF; 
+    bool   m_useNesterovMomentumInBMUF; 
+    bool   m_resetSGDMomentum; 
+    double m_blockMomentum; 
+
+
+
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
@@ -258,6 +265,9 @@ protected:
 
 template <class ElemType>
 class IDistGradAggregator;
+
+template <class ElemType>
+class MASGD;
 
 // -----------------------------------------------------------------------
 // class SGD
@@ -432,8 +442,12 @@ protected:
 
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
 
-    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
-                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync);
+    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, 
+                                  const std::list<ComputationNodeBasePtr>& learnableNodes, 
+                                  std::list<Matrix<ElemType>>& smoothedGradient, 
+                                  size_t& nProcessedFrames,
+                                  float& SecondsSinceLastSyncFinished, 
+                                  float& SecondsSpentOnSync);
 
     size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes);
 
@@ -512,6 +526,8 @@ protected:
 
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
+
+    shared_ptr<MASGD<ElemType>>   m_MASGDhelper;
 
 private:
     int SGDTrace(FILE* __restrict __stream, const char* __restrict __format, ...);

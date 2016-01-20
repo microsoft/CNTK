@@ -5,6 +5,7 @@
 #include "Basics.h"
 #include "SGD.h"
 #include "DataReaderHelpers.h"
+#include "MASGD.h"
 
 #include "MatrixQuantizerImpl.h"
 
@@ -30,6 +31,9 @@ template SGD<float>::SGD(const ConfigParameters&);
 template SGD<double>::SGD(const ConfigParameters&);
 template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
+
+template class MASGD<float>; 
+template class MASGD<double>;
 
     // -----------------------------------------------------------------------
     // Train() -- perform a multi-epoch training end-to-end with checkpointing
@@ -735,8 +739,21 @@ template <class ElemType>
         // MA-related variables
         size_t nSamplesSinceLastModelSync = 0;
         size_t nSynced = 0; 
-    float nSecondsOnMASync = 0;
-    float nSecondsSinceLastMAPerfReport = 0;
+        float nSecondsOnMASync = 0;
+        float nSecondsSinceLastMAPerfReport = 0;
+        if (useParallelTrain)
+        {
+            if (!m_MASGDhelper && useModelAveraging)
+            {
+                m_MASGDhelper = std::make_shared<MASGD<ElemType>>(m_useNesterovMomentumInBMUF, m_blockMomentum, m_resetSGDMomentum);
+                m_MASGDhelper->Initialize(learnableNodes);
+            }
+            else
+            {
+                m_MASGDhelper->OnOneEpochStarted(learnableNodes);
+            }
+        }
+
 
         std::vector<Matrix<ElemType>*> learnParamsGradients;
         if (useGradientAggregation)
@@ -774,7 +791,7 @@ template <class ElemType>
         // Sub-minibatching is used if a single minibatch is too large to fit into GPU RAM.
         DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
         size_t numSubminibatchesNeeded = 0; 
-    if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1) // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
+        if (m_maxSamplesInRAM < SIZE_MAX || m_numSubminiBatches > 1) // user-specified maximum number of samples that fit into GPU RAM; or 0 if not enabled
         {
             if (m_maxSamplesInRAM < SIZE_MAX)
             {
@@ -782,7 +799,7 @@ template <class ElemType>
                 // TODO: The following calculation relies on the ill-devised definition of "minibatch" of the current truncated BPTT implementation. Adapt this once fixed.
                 size_t numParallelSequences = trainSetDataReader->GetNumParallelSequences();
                 size_t estimatedMBSize = tunedMBSize * numParallelSequences;
-            numSubminibatchesNeeded = (size_t) std::ceil((float) estimatedMBSize / m_maxSamplesInRAM);
+                numSubminibatchesNeeded = (size_t) std::ceil((float) estimatedMBSize / m_maxSamplesInRAM);
             }
             if (m_numSubminiBatches > 1)
             {
@@ -1036,8 +1053,8 @@ template <class ElemType>
                     size_t processedSamples = 0; 
                     float secondsSinceLastSyncFinished = 0; 
                     float secondsSpentOnSync = 0;
-                    if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
-                                                 secondsSinceLastSyncFinished, secondsSpentOnSync))
+                    if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, smoothedGradients, 
+                                                 processedSamples,secondsSinceLastSyncFinished, secondsSpentOnSync))
                     {
                         // if a sync happens, do some extra work
                         nSamplesSinceLastModelSync = 0; 
@@ -1180,13 +1197,14 @@ template <class ElemType>
     if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
             // may not be synced after epoch finished, so do the sync here 
-        int residualSampels = (int) nSamplesSinceLastModelSync;
+            int residualSampels = (int) nSamplesSinceLastModelSync;
             g_mpi->AllReduce(&residualSampels, 1);
             totalSamplesSeen += residualSampels; 
             totalEpochSamples += residualSampels;
             ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
             nSynced++;
             nSamplesSinceLastModelSync = 0;
+            m_MASGDhelper->OnOneEpochFinished(learnableNodes);
         }
 
         // compute final criterion values
@@ -1922,8 +1940,12 @@ template <class ElemType>
     }
 
 template <class ElemType>
-    bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
-                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
+    bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, 
+                                                 const std::list<ComputationNodeBasePtr>& learnableNodes, 
+                                                 std::list<Matrix<ElemType>>&       smoothedGradients, 
+                                                 size_t& nProcessedFrames,
+                                                 float& SecondsSinceLastSyncFinished, 
+                                                 float& SecondsSpentOnSync)
     {
         //////////////////////////////////////////////////////////////////////////
         // the current strategy is that after each minibatch, we will sync between processors 
@@ -1932,39 +1954,39 @@ template <class ElemType>
 
         // TODO: the way we handle timer is not very good 
         //////////////////////////////////////////////////////////////////////////
-    static bool first = true;
+        static bool first = true;
         static Timer MAtimer;
         if (first)
         {
-            MAtimer.Start(); 
-            first = false; 
+            MAtimer.Start();
+            first = false;
         }
-       
-    char bNeedToSync = (char) 0; // use char for bool
+
+        char bNeedToSync = (char)0; // use char for bool
         if (g_mpi->IsMainNode() && nSamplesSinceLastSync >= m_nFramesBetweenMASync)
         {
             // only the main node can decide whether a sync need to be performed 
-        bNeedToSync = (char) 1;
+            bNeedToSync = (char)1;
         }
         g_mpi->Bcast(&bNeedToSync, 1, g_mpi->MainNodeRank());
         if (bNeedToSync)
         {
             MAtimer.Stop();
-            double elapsedsec = MAtimer.ElapsedSeconds(); 
-        SecondsSinceLastSyncFinished = first ? 0 : (float) elapsedsec;
+            double elapsedsec = MAtimer.ElapsedSeconds();
+            SecondsSinceLastSyncFinished = first ? 0 : (float)elapsedsec;
             MAtimer.Start();
-        nProcessedFrames = ModelAveragingSync((int) nSamplesSinceLastSync, learnableNodes);
+            m_MASGDhelper->PerformModelAveragingUpdate(learnableNodes, smoothedGradients, nSamplesSinceLastSync, nProcessedFrames);
             MAtimer.Stop();
-        SecondsSpentOnSync = (float) MAtimer.ElapsedSeconds();
-            
+            SecondsSpentOnSync = (float)MAtimer.ElapsedSeconds();
+
             MAtimer.Start();
         }
         else
         {
-            nProcessedFrames = 0; 
+            nProcessedFrames = 0;
             return false;
         }
-        return true; 
+        return true;
     }
 
 template <class ElemType>
@@ -2718,10 +2740,21 @@ template <class ConfigRecordType>
                 }
             }
 
-        if (configParallelTrain.Exists(L"ModelAveragingSGD"))
+            if (configParallelTrain.Exists(L"ModelAveragingSGD"))
             {
-            const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-            m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t) 40000);
+                const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
+                m_nFramesBetweenMASync = configMASGD(L"syncFrequencyInFrames", (size_t)40000);
+                m_useBMUF = configMASGD(L"useBMUF", false);
+                m_resetSGDMomentum = configMASGD(L"resetSGDMomentum", false);
+                m_useNesterovMomentumInBMUF = configMASGD(L"useNesterovMomentumInMA", false);
+                m_blockMomentum = configMASGD(L"blockMomentum", 0.0);
+
+                // automatic decided if user does not specify it  
+                if (m_useBMUF && fabs(m_blockMomentum) < 1e-6 && g_mpi->NumNodesInUse() > 1)
+                {
+                    m_blockMomentum = 1.0 - 1.0 / g_mpi->NumNodesInUse();
+                }
+
             }
         }
     }

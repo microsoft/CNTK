@@ -183,6 +183,7 @@
     <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
+    <ClInclude Include="MASGD.h" />
     <ClInclude Include="MultiNetworksEvaluator.h" />
     <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
