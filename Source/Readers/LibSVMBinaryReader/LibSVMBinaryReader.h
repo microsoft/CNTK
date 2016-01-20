@@ -163,6 +163,7 @@ public:
     {
         return m_numBatches / (m_mbSize / m_microBatchSize);
     }
+    void SetMaxMBSize(size_t size) { m_maxMBSize = size; }
     void Shuffle();
     shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName, int deviceId);
     //shared_ptr<BinaryMatrix<ElemType>> CreateMatrix(std::wstring matName);
@@ -190,6 +191,7 @@ private:
 
     int32_t m_microBatchSize;
     size_t m_mbSize;
+    size_t m_maxMBSize;
 
     size_t m_startMB;
     size_t m_endMB;
@@ -204,7 +206,7 @@ private:
     bool m_randomize;
     size_t* m_readOrder; // array to shuffle to reorder the dataset
     size_t m_readOrderLength;
-    size_t m_maxMBSize;
+    size_t m_maxMBDiskSize;
 
     std::vector<std::wstring> m_features;
     std::vector<std::wstring> m_labels;

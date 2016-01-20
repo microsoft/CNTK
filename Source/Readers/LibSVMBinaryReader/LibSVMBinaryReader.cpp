@@ -408,6 +408,9 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
     m_nextMB = 0;
 
     m_mbSize = mbSize / numSubsets;
+    if (m_maxMBSize > 0) {
+        m_mbSize = min(m_mbSize, m_maxMBSize);
+    }
 
     m_subsetNum = subsetNum;
     m_numSubsets = numSubsets;
@@ -438,18 +441,18 @@ void SparseBinaryInput<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, s
 
     ReadOffsets(startMB, m_windowSize);
 
-    m_maxMBSize = 0;
+    m_maxMBDiskSize = 0;
     for (size_t c = 0; c < m_windowSize; c++)
     {
-        m_maxMBSize = max(m_maxMBSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
+        m_maxMBDiskSize = max(m_maxMBDiskSize, (size_t)(m_offsets[c + 1] - m_offsets[c]));
         //fprintf(stderr, "m_offsets[%lu] = %lu\n", c, m_offsets[c]);
     }
-    //fprintf(stderr, "max mb size: %ld\n", m_maxMBSize);
+    //fprintf(stderr, "max mb size: %ld\n", m_maxMBDiskSize);
     size_t maxMem = 1024 * 1024 * 1024; // 1GB
-    size_t maxPointers = maxMem / m_maxMBSize;
+    size_t maxPointers = maxMem / m_maxMBDiskSize;
     for (size_t c = 0; c < maxPointers; c++)
     {
-        void* dataBuffer = malloc(m_maxMBSize);
+        void* dataBuffer = malloc(m_maxMBDiskSize);
         m_dataToProduce.push(dataBuffer);
     }
 
@@ -690,12 +693,15 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
     m_dataInput = make_shared<SparseBinaryInput<ElemType>>(file);
     m_dataInput->Init(rename);
 
+    size_t maxMBSize = (size_t) readerConfig(L"maxMBSize", 0);
+	m_dataInput->SetMaxMBSize(maxMBSize);
+
     m_mbSize = (size_t) readerConfig(L"minibatch", 0);
     if (m_mbSize > 0)
     {
-        if (m_dataInput->GetMBSize() != m_mbSize)
+        if (m_dataInput->GetMBSize() > m_mbSize)
         {
-            RuntimeError("Data file and config file have mismatched minibatch sizes.\n");
+            RuntimeError("Data file's minibatch size is too big for requested minibatch sizes.\n");
             return;
         }
     }
@@ -737,7 +743,7 @@ void LibSVMBinaryReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, 
     reader_series = new marker_series(L"Base Reader");
     cur_read = 0;
 #endif
-    m_dataInput->StartDistributedMinibatchLoop(mbSize, subsetNum, numSubsets);
+    m_dataInput->StartDistributedMinibatchLoop(m_mbSize, subsetNum, numSubsets);
 }
 
 template <class ElemType>
