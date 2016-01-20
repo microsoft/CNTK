@@ -40,6 +40,15 @@ MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template<typename AllocatedElemType>
+AllocatedElemType* AllocateDeviceMemory(int deviceId, size_t numRows, size_t numCols);
+
+template<typename AllocatedElemType>
+AllocatedElemType* AllocateDeviceMemory(int deviceId, size_t numElements, bool disableTrace = false);
+
+template<typename AllocatedElemType>
+void FreeDeviceMemory(int deviceId, AllocatedElemType* bufferPtr);
+
 // -----------------------------------------------------------------------
 // ElementWiseOperator -- This enum represents which function to apply.
 // This is shared between all matrix types and tensors.

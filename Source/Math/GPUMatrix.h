@@ -46,6 +46,9 @@ typedef struct CUstream_st* cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
+void MATH_API SetTraceGPUMemoryAllocations(bool enableTracing);
+bool MATH_API IsGPUMemoryAllocationTraceEnabled();
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
