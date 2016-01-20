@@ -1,13 +1,10 @@
 # CNTK
-Microsoft Computational Network Toolkit (CNTK) is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph.
-
-Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on the kit, including how to set up CNTK on your machine, how to use CNTK, examples, etc.
-
-See [LICENSE.md](./LICENSE.md) in the root of this repository for the full license information.
-
-## Project Description
 
 CNTK, the Computational Network Toolkit by Microsoft Research, is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
+
+Wiki: Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on CNTK including setup, examples, etc.
+
+License: See [LICENSE.md](./LICENSE.md) in the root of this repository for the full license information.
 
 Blog:  [Microsoft Computational Network Toolkit offers most efficient distributed deep learning computational performance](http://blogs.technet.com/b/inside_microsoft_research/archive/2015/12/07/microsoft-computational-network-toolkit-offers-most-efficient-distributed-deep-learning-computational-performance.aspx)
 
