@@ -4976,9 +4976,16 @@ template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 
 template int* AllocateDeviceMemory<int>(int, size_t, bool);
 template size_t* AllocateDeviceMemory<size_t>(int, size_t, bool);
+template long* AllocateDeviceMemory<long>(int, size_t, bool);
+template char* AllocateDeviceMemory<char>(int, size_t, bool);
+template float* AllocateDeviceMemory<float>(int, size_t, bool);
+template double* AllocateDeviceMemory<double>(int, size_t, bool);
 
 template void FreeDeviceMemory<int>(int, int*);
 template void FreeDeviceMemory<size_t>(int, size_t*);
+template void FreeDeviceMemory<char>(int, char*);
+template void FreeDeviceMemory<float>(int, float*);
+template void FreeDeviceMemory<double>(int, double*);
 
 }
 }
