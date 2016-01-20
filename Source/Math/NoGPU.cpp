@@ -18,6 +18,8 @@
 #pragma warning(disable : 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning(disable : 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
 
+void MATH_API SetTraceGPUMemoryAllocations(bool /*enableTracing*/) { }
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // the reset below are dummy implementations
