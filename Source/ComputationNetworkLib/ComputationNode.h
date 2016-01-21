@@ -1859,6 +1859,8 @@ protected:                                                                      
     using Base::SetDims1;                                                                                                                                \
     using Base::GetSampleMatrixNumRows;                                                                                                                              \
     using Base::GetSampleMatrixNumCols;                                                                                                                              \
+    using Base::GetAsMatrixNumRows;                                                                                                                              \
+    using Base::GetAsMatrixNumCols;                                                                                                                              \
     using Base::GetTensorShape;                                                                                                                          \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::LoadValue;                                                                                                                               \
