@@ -155,6 +155,12 @@ public:
     size_t ReadMinibatch(void* data_buffer, std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
     //void GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     size_t FillMatrices(std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>>& matrices);
+
+    void SetSeed(size_t seed) {
+        m_randomize = seed;
+        m_randomEngine.seed((unsigned long)seed);
+    }
+
     size_t GetMBSize()
     {
         return m_mbSize;
@@ -203,7 +209,7 @@ private:
     size_t m_windowSize;
     size_t m_curWindowSize;
 
-    bool m_randomize;
+    size_t m_randomize;
     size_t* m_readOrder; // array to shuffle to reorder the dataset
     size_t m_readOrderLength;
     size_t m_maxMBDiskSize;
@@ -304,7 +310,7 @@ private:
 
     std::map<std::wstring, shared_ptr<BinaryMatrix<ElemType>>> m_dataMatrices;
 
-    unsigned long m_randomize; // randomization range
+    size_t m_randomize; // randomization range
 
     ElemType* DSSMLabels;
     size_t DSSMCols;

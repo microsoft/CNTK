@@ -228,7 +228,7 @@ void SparseBinaryMatrix<ElemType>::Fill(Matrix<ElemType>* matrix)
 
 template <class ElemType>
 SparseBinaryInput<ElemType>::SparseBinaryInput(std::wstring fileName)
-    : m_fileName(fileName), m_readOrder(nullptr), m_readOrderLength(0), m_randomize(false), m_tempValues(nullptr), m_tempValuesSize(0), m_offsets(nullptr), m_offsetsStart(0), m_startMB(0), m_endMB(0)
+    : m_fileName(fileName), m_readOrder(nullptr), m_readOrderLength(0), m_randomize(0), m_tempValues(nullptr), m_tempValuesSize(0), m_offsets(nullptr), m_offsetsStart(0), m_startMB(0), m_endMB(0)
 {
     std::string name = msra::strfun::utf8(m_fileName);
     m_inFile.open(name, ifstream::binary | ifstream::in);
@@ -342,14 +342,12 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
 template <class ElemType>
 bool SparseBinaryInput<ElemType>::Randomize()
 {
-    return false;
-    /*
-                if (m_randomize > 0)
-                {
-                    return true;
-                }
-                return false;
-                */
+	if (m_randomize > 0)
+	{
+        fprintf(stderr, "Randomization seed: %lu\n", m_randomize);
+		return true;
+	}
+	return false;
 }
 
 template <class ElemType>
@@ -693,6 +691,7 @@ void LibSVMBinaryReader<ElemType>::InitFromConfig(const ConfigRecordType& reader
 
     m_dataInput = make_shared<SparseBinaryInput<ElemType>>(file);
     m_dataInput->Init(rename);
+	m_dataInput->SetSeed(m_randomize);
 
     size_t maxMBSize = (size_t) readerConfig(L"maxMBSize", 0);
 	m_dataInput->SetMaxMBSize(maxMBSize);
@@ -736,6 +735,9 @@ void LibSVMBinaryReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, 
 {
     m_epoch = epoch;
     m_mbSize = mbSize;
+    if (m_randomize > 0) {
+        m_dataInput->SetSeed(epoch + m_randomize);
+    }
 #if DEBUG
     if (reader_series != NULL)
     {

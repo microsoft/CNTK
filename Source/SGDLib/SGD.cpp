@@ -483,6 +483,7 @@ template <class ElemType>
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
+					net->SetBatchNormlizationNodesBelowEvalMode(true, criterionNodes[0]);
                     SimpleEvaluator<ElemType> evalforvalidation(net);
                     vector<wstring> cvSetTrainAndEvalNodes;
                     if (criterionNodes.size() > 0)
@@ -513,6 +514,7 @@ template <class ElemType>
                             lrControlCriterion = vScore[0]; // the first one is the training criterion
                         }
                     }
+					net->SetBatchNormlizationNodesBelowEvalMode(false, criterionNodes[0]);
                 }
             }
 
