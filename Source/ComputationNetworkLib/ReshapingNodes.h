@@ -296,10 +296,9 @@ public:
     }
 #endif
 
-    // TODO: there seems to be semantic overlap between BeginForwardProp() and UpdateFunctionMBSize()
+    // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().
     virtual void /*IComputationNode::*/ BeginForwardProp() override
     {
-        Base::BeginForwardProp();
         // create the derived layout
         if (m_pMBLayout && factor() != 1)
         {
@@ -324,6 +323,8 @@ public:
                 // BUGBUG: In the future, NEW_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
             }
         }
+        // Call this at the end because this will resize Value(), but that requires the updated MBLayout. TODO: Clarify the sequence of events. Should we update the MBLayout in UpdateFunctionMBSize()?
+        Base::BeginForwardProp();
     }
 
     // notes:
@@ -597,7 +598,7 @@ public:
         }
 
         // that's it
-        SetDims(sampleLayout, 0); // BUGBUG: This is incorrect if we have no MBLayout, e.g. reshaping a bias vector into a different tensor dimension
+        SetDims(sampleLayout, HasMBLayout());
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override

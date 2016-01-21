@@ -412,7 +412,7 @@ class ComputationNodeBase : public IComputationNode,
         void SetDims(const TensorShape& sampleLayout, bool isMinibatch)
         {
             if (HasMBLayout() != isMinibatch)
-                LogicError("SetDims: MBLayout must be set first, before calling this function.");
+                LogicError("SetDims: MBLayout must be set first, before calling this function, for %ls %ls operation.", NodeName().c_str(), OperationName().c_str());
             m_sampleLayout = sampleLayout;
         }
         // copy dimensions (rows, cols, sample layout) from another node
