@@ -231,7 +231,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
         if (isSparse)
             ConvertToSparseMatrix();
 
-        SetDims(sampleLayout, 0);
+        SetDims(sampleLayout, HasMBLayout());   // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize(); // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
         m_parameterUpdateRequired = false;
         this->m_valueSharable = false;
