@@ -717,7 +717,7 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 // -----------------------------------------------------------------------
-// ClassBasedCrossEntropyWithSoftmaxNode (labels(.,t), input(.,t), inputweights, clsProbBeforeSoftmax(.,t))
+// ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
 //  - Input(0) [4 x T] label in dense matrix in
 //              (0,t) the first row is the word index
 //              (1,t) the second row is the class index
@@ -725,7 +725,7 @@ template class NoiseContrastiveEstimationNode<double>;
 //              (3,t) the last row is the first word index of the next class
 //  - Input(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
 //  - Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
-//  - Input(3) [nbr_cls x T] clsprob in dense matrix in. this input, if applied softmax on, is the posterior probabilty of class given observations
+//  - Input(3) [nbr_cls x T] clsprob in dense matrix in. This input, if applied softmax on, is the posterior probabilty of class given observations
 // -----------------------------------------------------------------------
 
 // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
@@ -740,6 +740,12 @@ class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /
         return L"ClassBasedCrossEntropyWithSoftmax";
     }
 
+    // our inputs
+    static const size_t LABELDATA = 0;
+    static const size_t INPUTDATA = 1;
+    static const size_t EMBEDDINGMATRIX = 2;
+    static const size_t CLASSPROBINDATA = 3;
+
 public:
     DeclareConstructorFromConfigWithNumInputs(ClassBasedCrossEntropyWithSoftmaxNode);
     ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -752,9 +758,7 @@ public:
     {
     }
 
-    /**
-        compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-        */
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // this should never be called for input[0], which is controlled through the needGradient flag
@@ -766,45 +770,44 @@ public:
         Matrix<ElemType> grd_t;
         Matrix<ElemType> grd_to_wgt_t;
 
-        const size_t nT = Input(0)->GetNumTimeSteps();
-        const size_t nS = Input(0)->GetNumParallelSequences();
+        const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+        const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
 
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps        --TODO: use FrameRange version of Is()
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
+                Matrix<ElemType> lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t c_t = (size_t) lbl_t(1, 0);
                 size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
                 size_t rgt_bnd = (size_t) lbl_t(3, 0); // and end of that range
                 size_t nbr_wrd = (rgt_bnd - lft_bnd);  // number of words in the class
 
                 // compute prb - 1 and prb
-                Matrix<ElemType> weightForClass = Input(2)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Input(1)->ValueFor(fr); // hidden activation vector for current word token
+                Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, fr, Input(3)->GetMBLayout());
+                Matrix<ElemType> grd_to_cls_prob = DataWithMBLayoutFor(m_clsLogSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout());
 
                 switch (inputIndex)
                 {
                 case 1:
                     // gradient to input
-                    grd_t = Input(1)->GradientFor(fr);
+                    grd_t = Input(INPUTDATA)->GradientFor(fr);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 case 2:
                     // gradient to input weight
-                    grd_to_wgt_t = Input(2)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                    grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 case 3:
-                    grd_t = Input(3)->GradientFor(fr);
-                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(3)->GetMBLayout()));
+                    grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
+                    grd_t.SetValue(DataWithMBLayoutFor(m_clsSoftmax, fr, Input(CLASSPROBINDATA)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
                 }
@@ -819,6 +822,7 @@ public:
     }
 
 private:
+
     void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
     {
         Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
@@ -832,19 +836,19 @@ private:
         {
             m_grdToSoftMaxInput.Resize(1, m_totalNbrWords); // buffer that contains a concatenation of class-conditional values
 
-            const size_t nT = Input(0)->GetNumTimeSteps();
-            const size_t nS = Input(0)->GetNumParallelSequences();
+            const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+            const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
             size_t sz = 0; // iterate over the packed concatenated class-conditioned prob vectors
             for (size_t s = 0; s < nS; s++)
                 for (size_t t = 0; t < nT; t++)
                 {
-                    FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
+                    FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
 
-                    //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                    if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                    //if (Input(LABELDATA)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                    if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                         continue;
 
-                    Matrix<ElemType> lbl_t = Input(0)->ValueFor(fr);
+                    Matrix<ElemType> lbl_t = Input(LABELDATA)->ValueFor(fr);
                     size_t y_t = (size_t) lbl_t(0, 0);     // word index
                     size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
                     size_t rgt_bnd = (size_t) lbl_t(3, 0); // and end of that range
@@ -865,43 +869,43 @@ private:
     }
 
 public:
+
     virtual void UpdateFunctionMBSize() override
     {
-        // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
+        // TODO: Resize temp matrices here (not doing so does not really fail since for full matrices, class Matrix will resize by itself)
     }
 
     // -sum(left_i * log(softmax_i(right)))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        if (Input(0)->Value().GetDeviceId() != CPUDEVICE)
+        if (Input(LABELDATA)->Value().GetDeviceId() != CPUDEVICE)
             LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+        // TODO: Get the label matrix into location=Both state.
 
-        // (the below is left-over from refactoring)
-        auto functionValues = Value();
+        auto & functionValues = Value();
 
-        const size_t hdSize = Input(1)->GetSampleMatrixNumRows(); // hdSize
-        assert(m_nbrCls == Input(3)->GetSampleMatrixNumRows());
+        const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows(); // hdSize
+        assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax = Input(3)->Value();
+        m_clsLogSoftmax = Input(CLASSPROBINDATA)->Value();
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
         // create a large workspace to contain all class-conditioned probs concatenated
         // 'sz' is the offset into that vector. We will iterate over these vectors at a few places. Always use this same boilerplate code.
         // TODO: should we pull this iteration into an iterator, to reduce the code dup?
-        const size_t nT = Input(0)->GetNumTimeSteps();
-        const size_t nS = Input(0)->GetNumParallelSequences();
+        const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
+        const size_t nS = Input(LABELDATA)->GetNumParallelSequences();
         size_t sz = 0;
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                const Matrix<ElemType>& lbl_t = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t lft_bnd = (size_t) lbl_t(2, 0);
                 size_t rgt_bnd = (size_t) lbl_t(3, 0);
                 size_t nbr_wrd = (rgt_bnd - lft_bnd); // number of words in the class
@@ -922,12 +926,11 @@ public:
         for (size_t s = 0; s < nS; s++)
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange fr = FrameRange(Input(0)->GetMBLayout(), t).Sequence(s);
-                //if (Input(0)->GetMBLayout()->IsGap(s, t))  // skip gaps
-                if (Input(0)->GetMBLayout()->IsGap(fr)) // skip gaps
+                FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
+                if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                     continue;
 
-                const Matrix<ElemType>& lbl_t = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& lbl_t = Input(LABELDATA)->ValueFor(fr);
                 size_t y_t = (size_t) lbl_t(0, 0);     // current word token index
                 size_t c_t = (size_t) lbl_t(1, 0);     // current word token's class index
                 size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
@@ -937,13 +940,13 @@ public:
                 // now get views of various arrays that correspond to the index range of words belonging to this class
 
                 // get hidden vectors for the words in this class
-                Matrix<ElemType> weightForClass = Input(2)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
+                Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
 
                 // buffer to hold the class-conditional distribution
-                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd);
+                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd);        // TODO: declare these outside of the loop to avoid the malloc
                 Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                Matrix<ElemType> obs = Input(1)->ValueFor(fr); // hidden activation vector for current word token
+                Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
 
                 // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
                 // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
@@ -983,21 +986,19 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
-        if (Input(0)->OperationName() != OperationNameOf(InputValue)) // TODO: but why could that label not be post-processed through another node?
-            LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
         if (isFinalValidationPass)
         {
-            if (Input(0)->GetSampleMatrixNumRows() != 4) // label needs to be 4 rows
-                LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-            if (Input(1)->GetSampleMatrixNumRows() != Input(2)->GetAsMatrixNumRows()) // input and matrix can be timed
-                LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || Input(0)->GetMBLayout() != Input(3)->GetMBLayout())
+            if (Input(LABELDATA)->GetSampleMatrixNumRows() != 4) // label data needs to have 4 rows
+                LogicError("The label data in the ClassBasedCrossEntropyWithSoftmax operation must have 4 rows.");
+            if (Input(INPUTDATA)->GetSampleMatrixNumRows() != Input(EMBEDDINGMATRIX)->GetAsMatrixNumRows()) // input and matrix can be timed
+                LogicError("The matrix dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmax operation does not match.");
+            if (Input(LABELDATA)->GetMBLayout() != Input(INPUTDATA)->GetMBLayout() || Input(LABELDATA)->GetMBLayout() != Input(CLASSPROBINDATA)->GetMBLayout())
                 InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
         }
 
         SetDims(TensorShape(1), false);
 
-        m_nbrCls = Input(3)->GetSampleMatrixNumRows();
+        m_nbrCls = Input(CLASSPROBINDATA)->GetSampleMatrixNumRows();
     }
 
 protected:

@@ -500,7 +500,7 @@ public:
         if (isFinalValidationPass && Input(1)->GetSampleMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
             InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols();
+        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols()/*note: can never be 0*/;
 
         // TODO: Should this add a tensor dimension?
         SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
