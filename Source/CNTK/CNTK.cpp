@@ -19,7 +19,7 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h"
+#include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
 #include "Config.h"
@@ -474,7 +474,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
-    SetTraceGPUMemoryAllocations(config(L"traceGPUMemoryAllocations", false));
+    TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     // logging
     wstring logpath = config(L"stderr", L"");
@@ -563,7 +563,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
-    SetTraceGPUMemoryAllocations(config(L"traceGPUMemoryAllocations", false));
+    TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     if (logpath != L"")
     {

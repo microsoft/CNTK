@@ -40,14 +40,31 @@ MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template<typename AllocatedElemType>
-AllocatedElemType* AllocateDeviceMemory(int deviceId, size_t numRows, size_t numCols);
+class MATH_API TracingGPUMemoryAllocator
+{
+private:
+    static int m_traceLevel;
 
-template<typename AllocatedElemType>
-AllocatedElemType* AllocateDeviceMemory(int deviceId, size_t numElements, bool disableTrace = false);
+public:
+    static void SetTraceLevel(int traceLevel);
+    static bool IsTraceEnabled();
 
-template<typename AllocatedElemType>
-void FreeDeviceMemory(int deviceId, AllocatedElemType* bufferPtr);
+    template<typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numRows, size_t numCols);
+
+    template<typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numElements);
+
+    template<typename AllocatedElemType>
+    static void Free(int deviceId, AllocatedElemType* bufferPtr);
+
+private:
+
+    template<typename AllocatedElemType>
+    static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
+
+    static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
+};
 
 // -----------------------------------------------------------------------
 // ElementWiseOperator -- This enum represents which function to apply.
