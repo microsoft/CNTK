@@ -8,6 +8,7 @@ CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
 FLAVORS="debug:release"
 TARGETS="cpu:gpu:1bitsgd"
+NUM_CPU=`cat /proc/cpuinfo | grep processor | wc -l`
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -205,7 +206,7 @@ if [[ $BUILD == 1 ]]; then
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
-                make -C $BUILD_DIR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
+                make -C $BUILD_DIR -j $NUM_CPU -f $MAKEFILE 1>&6 2>&7 || exit $?
 
             fi
             if [[ $QUIET_BUILD == 1 ]]; then
