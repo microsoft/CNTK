@@ -332,44 +332,113 @@ class ComputationNodeBase : public IComputationNode,
 
         // dimensions
 
-        size_t GetNumRows() const { return m_sampleLayout.GetNumElements(); }
-        size_t GetNumCols() const
+        // The value of a node is a tensor in one of two variants:
+        //
+        //  - single matrix, vector, tensor
+        //     - m_sampleLayout contains the shape. Accessed through GetSampleLayout().
+        //     - m_pMBLayout is null
+        //  - minibatch data
+        //     - consists of many samples which are all tensors of m_sampleLayout
+        //     - adds two additional tensor dimensions, time step and parallel sequence
+        //       These change for each minibatch and are unknown during validation.
+        //     - m_sampleLayout is the tensor shape of the samples
+        //     - m_pMBLayout defines the number of time steps and parallel sequences (="tensor shape" of the minibatch)
+        //       Accessed through GetMBLayout(); test for through HasMBLayout().
+        //
+        // The values can be accessed in three ways:
+        //
+        //  - as a tensor
+        //     - GetTensorShape() forms the joint tensor that incorporates both m_sampleLayout and, if present, m_pMBLayout
+        //        - Elementwise tensor operations operate on these.
+        //        - If no MBLayout is present in one of multiple elementwise operands, it will be interpreted as a one-sample minibatch that broadcasts to all samples.
+        //     - learnable parameters hold tensors that are not minibatches
+        //  - as a sample matrix
+        //     - many nodes do not care about the specific sample-tensor dimensions
+        //     - but may care about selecting a single time step out of a minibatch
+        //     - minibatch: each matrix column contains a sample tensor flattened, with one column per time step and parallel sequence
+        //     - tensor: one column containing the sample tensor flattened
+        //     - GetSampleMatrixNumRows(), GetSampleMatrixNumCols()
+        //     - this is how it is stored
+        //  - as a Matrix reference
+        //     - actual object is a 2D tensor without MB Layout
+        //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
+        //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
+
+        // interpretation as a set of samples
+        const TensorShape& GetSampleLayout() const { return m_sampleLayout; }
+        bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; }      // does it have a layout that is not just a vector?
+
+        // interpretation as sample matrix (each column is a sample, individual sample tensor dimensions do not matter for the operation)
+        size_t GetSampleMatrixNumRows() const
         {
-            if (HasMBLayout() && GetMBLayout()->GetNumCols() != m_numCols)
-                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols and MBLayout", NodeName().c_str(), OperationName().c_str());
-            return m_numCols;
+            return m_sampleLayout.GetNumElements();
         }
-        pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
-        // TODO: add an overload SetDims(TensorShape, cols)
-        // Currently called from:
-        //  - Validate()   --intended
-        //  - LearnableParameterNode (init, load)
-        //  - InputValue (init, load)
-        //  - DelayedValueNodeBase (Init())
-        // use a different name for these:
-        //  - various unit tests
-        // deprecated ones:
-        //  - TimeReverseNode (first step--deprecate and/or move to UpdateMB... function)
-        //  - StrideTimesNode
-        //  - PairNetworkNode
-        //  - LSTMNode
-        // set our dimensions (rows, cols, sample layout)
-        // TODO: Separate SetDims() into version with and without MBLayout.
-    void SetDims(const TensorShape& sampleLayout, size_t cols)
+        size_t GetSampleMatrixNumCols() const
         {
+            if (HasMBLayout())
+                return GetMBLayout()->GetNumCols();
+            else
+                return 1;   // no layout: treat as 1-sample minibatch that is meant to broadcast
+        }
+        // determine if we are the output of an op over 'other', whether that would be a reduction, so that we need to mask
+        bool ReducesInTimeWrt(const ComputationNodeBasePtr & other) const
+        {
+            return GetSampleMatrixNumCols() < other->GetSampleMatrixNumCols();
+        }
+
+        // interpretation as a Matrix reference
+    private:
+        void CheckTensorIsMatrix() const
+        {
+            if (HasMBLayout())
+                LogicError("CheckTensorIsMatrix: Minibatch data cannot be interpreted as a single 2D tensor.");
+            else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2)  // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
+                LogicError("CheckTensorIsMatrix: Sample is now a 2D tensor.");
+        }
+    public:
+        size_t GetAsMatrixNumRows() const
+        {
+            CheckTensorIsMatrix();
+            return m_sampleLayout[0];
+        }
+        size_t GetAsMatrixNumCols() const
+        {
+            CheckTensorIsMatrix();
+            return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1;    // a column vector is also a Matrix
+        }
+
+        // set dimensions of the node
+        // The MBLayout must be set first, and 'isMinibatch' will be checked against it.
+        void SetDims(const TensorShape& sampleLayout, bool isMinibatch)
+        {
+            if (HasMBLayout() != isMinibatch)
+                LogicError("SetDims: MBLayout must be set first, before calling this function.");
             m_sampleLayout = sampleLayout;
-            m_numCols = cols;
         }
         // copy dimensions (rows, cols, sample layout) from another node
-    void SetDims(const ComputationNodeBasePtr& node)
+        void SetDims(const ComputationNodeBasePtr& node)
         {
-            SetDims(node->GetSampleLayout(), node->GetNumCols());
+            SetDims(node->GetSampleLayout(), node->HasMBLayout());
         }
         // use this only for testing code. Everywhere else, be explicit on the TensorShape.
         void SetDims1(size_t rows, size_t cols)
         {
-            SetDims(TensorShape(rows), cols);
+            SetDims(TensorShape(rows, cols), false);
         }
+#if 0
+        // deprecated functions that did not distinguish the purpose
+        size_t GetNumRows() const { return GetSampleMatrixNumRows(); }
+        size_t GetNumCols() const
+        {
+            if (HasMBLayout() && GetNumMBCols() != m_numCols)
+                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and MBLayout (%d)", NodeName().c_str(), OperationName().c_str(), m_numCols, (int)GetNumMBCols());
+            else if (!HasMBLayout() && m_sampleLayout.GetRank() == 0 && m_numCols != 0)
+                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and sample layout (empty)", NodeName().c_str(), OperationName().c_str(), (int)m_numCols);
+            else if (!HasMBLayout() && m_sampleLayout.GetRank() > 0 && m_numCols != m_sampleLayout.GetDims().back())
+                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and last dim of sample layout [%s]", NodeName().c_str(), OperationName().c_str(), (int)m_numCols, string(m_sampleLayout).c_str());
+            return m_numCols;
+        }
+        size_t GetNumCols1() const { return m_numCols; }
         // update number of columns (in response to MB size)
         // TODO: this should go away, as m_numCols should be derived from MBLayout each time
         void SetNumCols(size_t cols)
@@ -382,34 +451,28 @@ class ComputationNodeBase : public IComputationNode,
             m_numCols = cols;
             // actual memory allocation happens elsewhere
         }
-    virtual void NotifyFunctionValuesMBSizeModified()
-    {
-    } // someone outside changed our m_value--update our internal dimensions
-        void VerifyDims(size_t rows, size_t cols)
+#endif
+        // get number of underlying matrix columns for test code only which does not create MBLayouts
+        size_t GetNumCols1() const { return m_numCols; }
+        virtual void NotifyFunctionValuesMBSizeModified() = 0;
+        void VerifyDims(const TensorShape & shape, bool isMinibatch)
         {
-            if (rows != GetNumRows() || cols != GetNumCols())
+            if (m_sampleLayout.GetDims() != shape.GetDims() || HasMBLayout() != isMinibatch)
             {
-                LogicError("VerifyDims: %ls %ls operation expected size %d x %d, but it is %d x %d",
+                LogicError("VerifyDims: %ls %ls operation expected a %s of [%s], but it is a %s of [%s]",
                            NodeName().c_str(), OperationName().c_str(),
-                       (int) rows, (int) cols, (int) GetNumRows(), (int) GetNumCols());
+                           isMinibatch ?   "minibatch" : "tensor", string(shape).c_str(),
+                           HasMBLayout() ? "minibatch" : "tensor", string(m_sampleLayout).c_str());
             }
         }
-    virtual void VerifyDims(ComputationNodeBasePtr node)
-    {
-        VerifyDims(node->GetNumRows(), node->GetNumCols());
-    }
-    virtual void VerifyDimsMatch() const = 0; // verify that m_value dimensions match ours
+        virtual void VerifyDims(ComputationNodeBasePtr node)
+        {
+            VerifyDims(node->GetSampleLayout(), node->HasMBLayout());
+        }
+        virtual void VerifyValueDims() const = 0; // verify that m_value dimensions match ours
 
-    const TensorShape& GetSampleLayout() const
-    {
-        return m_sampleLayout;
-    }
-    bool HasSampleLayout() const
-    {
-        return m_sampleLayout.GetRank() != 1;
-    }                                              // meaning does it have a layout that is not just a vector
     TensorShape GetTensorShape(size_t rank) const; // form the actual tensor that describes the full object
-    protected:
+protected:
     size_t DetermineElementwiseTensorRank() const;                          // determine tensor rank when considering all inputs with padding
     TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange
     public:
@@ -417,24 +480,21 @@ class ComputationNodeBase : public IComputationNode,
         virtual double Get00Element() const = 0;
 
         // validation
-        // This is overridden by every node. This base class just checks for unconnected and empty inputs.
-    virtual void Validate(bool isFinalValidationPass) // main base validation function
+        // This is overridden by every node. This base class just checks for unconnected and empty inputs. Overrides must call their base version first.
+        virtual void Validate(bool isFinalValidationPass) // main base validation function
         {
             // check for NULL pointers
             for (size_t i = 0; i < m_inputs.size(); i++)
             {
                 if (!m_inputs[i])
-                RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
+                    RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int) i, OperationName().c_str(), NodeName().c_str());
             }
             // check for empty inputs
             if (isFinalValidationPass)
             {
-            for (const auto& child : m_inputs)
-                {
-                    if (child->GetNumRows() == 0 || (!child->HasMBLayout() && child->GetNumCols() == 0))
-                        RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.",
-                                     NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
-                }
+                for (const auto& child : m_inputs)
+                    if (child->GetSampleMatrixNumRows() == 0)
+                        RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
             }
         }
         // helper functions for common cases
@@ -593,7 +653,7 @@ public:
         virtual void PrintSelf(bool printMatrices = false) const = 0;
 
         // called in validation loop right before Validate()
-    virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const
+        virtual void /*IComputationNode::*/ PrintSelfBeforeValidation() const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
 
@@ -612,27 +672,16 @@ public:
                         continue;
                     }
 
-                const char* mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
-                if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
-                        fprintf(stderr, "%ls[%lu [%s] {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(),
-                                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0], mbSizeMark, child->GetNumCols());
-                    //BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
-                else if (child->m_sampleLayout.GetRank() > 1) // tensor: output the tensor dimensions
-                        fprintf(stderr, "%ls[%lu [%s], %s%lu]", child->NodeName().c_str(), child->GetNumRows(), string(child->m_sampleLayout).c_str(), mbSizeMark, child->GetNumCols());
+                    const char* mbSizeMark = child->m_pMBLayout ? " x *" : "";
+                    if (child->m_sampleLayout.GetRank() == 3 && (child->m_sampleLayout[1] != 1 || child->m_sampleLayout[0] != 1)) // looks like an image: use WHC notation
+                        fprintf(stderr, "%ls[%s%s {W=%lu, H=%lu, C=%lu}]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark,
+                                child->m_sampleLayout[1], child->m_sampleLayout[2], child->m_sampleLayout[0]);
+                    // BUGBUG: This ^^ will print based on the old legacy layout, and we have no way of knowing here whether that is correct.
                     else
-                        fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
+                        fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->m_sampleLayout).c_str(), mbSizeMark);
                 }
                 fprintf(stderr, ")");
             }
-#if 0
-            else
-            {
-                if (m_pMBLayout)
-                    fprintf(stderr, "[%lu, MBSize]", GetNumRows());
-                else
-                    fprintf(stderr, "[%lu, %lu]", GetNumRows(), GetNumCols());
-            }
-#endif
         }
 
     const std::wstring& NodeName() const
@@ -735,7 +784,7 @@ public:
         }
 
     public:
-        virtual void ValidateInferInputDims(size_t i, size_t rows, size_t cols) = 0;
+        virtual void ValidateInferInputDimsFrom(const TensorShape &) = 0;
 
     protected:
     const TensorShape& GetInputSampleLayout(const size_t index) const
@@ -969,33 +1018,30 @@ template <class ElemType>
         // helper to load m_value from a stream
         // This function updates the dimensions to a 2D matrix.
         // If a different tensor layout is associated with this, it must be implanted afterwards.
+        // Nodes that call this never have an MB layout.
         void LoadValue(File& fstream)
         {
             CreateMatrixIfNull(m_value);
             fstream >> Value();
             // above reads dimensions, so we must update our own dimensions
-            SetDims(TensorShape(Value().GetNumRows()), Value().GetNumCols());
+            SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
         }
 
-        // reader updated m_functionValue--update our internal state, i.e. m_numCols
-        // This is meant for the case when a new minibatch was read. Hence, the only change that is allowed if for column dimension.
-        // TODO: Redundant with the MBLayout. Just verify here. Update comment above if this works.
+        // reader updated m_functionValue and MBLayout--ensure our internal state is consistent
         virtual void NotifyFunctionValuesMBSizeModified() override final
         {
             if (!HasMBLayout())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation does not have an MBLayout.", NodeName().c_str(), OperationName().c_str());
-            if (GetNumRows() != Value().GetNumRows())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)GetNumRows(), (int)Value().GetNumRows());
+                LogicError("NotifyFunctionValuesMBSizeModified: Must only be called on nodes with MBLayout.");
+            if (GetSampleMatrixNumRows() != Value().GetNumRows())
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int)GetSampleMatrixNumRows(), (int)Value().GetNumRows());
             if (GetMBLayout()->GetNumCols() != Value().GetNumCols())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, but different from MBLayout.", NodeName().c_str(), OperationName().c_str(), (int)GetNumCols(), (int)Value().GetNumCols());
-            m_numCols = Value().GetNumCols();
-            if (GetNumCols() != Value().GetNumCols())
-                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, MBLayout was not updated.", NodeName().c_str(), OperationName().c_str(), (int)GetNumCols(), (int)Value().GetNumCols());
+                LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, but different from MBLayout.", NodeName().c_str(), OperationName().c_str(), (int)GetMBLayout()->GetNumCols(), (int)Value().GetNumCols());
         }
-    virtual double Get00Element() const override final
-    {
-        return Value().Get00Element();
-    }
+        virtual double Get00Element() const override final
+        {
+            // TODO: Are all these meant to read out a scalar? Then rename and verify dimensions.
+            return Value().Get00Element();
+        }
 
         // recover a shared_ptr from ourselves if given a naked pointer
         ComputationNodePtr shared_from_this()
@@ -1108,61 +1154,40 @@ template <class ElemType>
         /*HasToString::*/ wstring ToString() const
         {
             // we format it like "name : type rows x cols ( args )"
-        wstring result = /*TidyName*/ (NodeName()) + L" : " + OperationName();
-        result.append(msra::strfun::wstrprintf(L" %d x %d", (int) GetNumRows(), (int) GetNumCols()));
-        if (m_inputs.empty())
-            result.append(L" ()");
+            wstring result = /*TidyName*/ (NodeName()) + L" : " + OperationName();
+            result.append(msra::strfun::wstrprintf(L" [%s%s]", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : ""));
+            if (m_inputs.empty())
+                result.append(L" ()");
             else
             {
                 wstring args;
                 bool first = true;
-            for (auto& child : m_inputs)
+                for (auto& child : m_inputs)
                 {
                     if (first)
                         first = false;
                     else
                         args.append(L"\n");
-                args.append(/*TidyName*/ (child->NodeName()));
+                    args.append(/*TidyName*/ (child->NodeName()));
                 }
                 result += L" " + NestString(args, L'(', true, ')');
             }
             return result;
         }
 
-        // update size (m_numCols) of node to match MBLayout (but does not do the actual Resize())
-        // This must be called right before ForwardProp() the first time for a given minibatch.
-        // Currently overridden by
-        //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
-        //  - LearnableParameters
-        //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
-        // Note: This only updates the dimensions but does not actually allocate anything.
-        // The actual allocation happens later, in BeginForwardProp().
-        // TODO: How is this function different from BeginForwardProp()?  --> answer: it will be called from there some day
-        virtual void UpdateFunctionMBSize() override
-        {
-            // TODO: just remove this
-            if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                SetNumCols(m_pMBLayout->GetNumCols());
-        }
-        virtual void VerifyDimsMatch() const override final
+        // update temporary variables of a node to match MBLayout
+        virtual void UpdateFunctionMBSize() override { }
+        virtual void VerifyValueDims() const override final
         {
             if (!m_value)
                 return;
-        auto f_numRows = m_value->GetNumRows(); // variables for easy inspection in debugger
+            auto f_numRows = m_value->GetNumRows(); // variables for easy inspection in debugger
             auto f_numCols = m_value->GetNumCols();
-            if (f_numRows != GetNumRows() || f_numCols != GetNumCols())
-                LogicError("VerifyDimsMatch: m_value out of sync with GetNumRows()/GetNumCols()");
-
-#ifdef SHOW_MATRIX_TYPE
-            fprintf(stderr, "MatrixType %ls: %ls(%ls  %ls)\n",
-                NodeName().c_str(),
-                OperationName().c_str(),
-                Value().GetMatrixType() == MatrixType::DENSE ? L"Dense" : L"Sparse",
-                Value().GetCurrentMatrixLocation() == GPU ? L"GPU" : Value().GetCurrentMatrixLocation() == CPU ? L"CPU" : L"BOTH");
-#endif        
+            if (f_numRows != GetSampleMatrixNumRows() || f_numCols != GetSampleMatrixNumCols())
+                LogicError("VerifyValueDims: m_value out of sync with GetSampleMatrixNumRows()/GetSampleMatrixNumCols()");
         }
 
-        void ValidateInferInputDims(size_t i, size_t rows, size_t cols) override final;
+        void ValidateInferInputDimsFrom(const TensorShape & otherShape);
 
     public:
     static void MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr& pMBLayout, const FrameRange& fr)
@@ -1197,7 +1222,7 @@ template <class ElemType>
         // for debugging purposes
     void /*ComputationNodeBase::*/ PrintSelf(bool printMatrices = false) const
         {
-            fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());           
+            fprintf(stderr, "\n%ls[%s%s] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "", OperationName().c_str());
 
             if (!IsLeaf())
             {
@@ -1206,7 +1231,7 @@ template <class ElemType>
                 {
                     if (i > 0)
                         fprintf(stderr, ", ");           
-                fprintf(stderr, "%ls[%lu, %lu]", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", m_inputs[i]->GetNumRows(), m_inputs[i]->GetNumCols());
+                    fprintf(stderr, "%ls[%s%s] = %ls", m_inputs[i] ? m_inputs[i]->NodeName().c_str() : L"NULL", string(m_inputs[i]->GetSampleLayout()).c_str(), m_inputs[i]->HasMBLayout() ? " x *" : "", OperationName().c_str());
                 }
                 fprintf(stderr, ")");           
             }
@@ -1270,20 +1295,38 @@ template <class ElemType>
     {
         return *m_gradient;
     }
+private:
+    // map a tensor to a matrix
+    // Tensors are stored as column vectors. This function reshapes that vector into a Matrix (ref) object.
+    Matrix<ElemType> TensorAsMatrix(Matrix<ElemType> & data)
+    {
+        return data.Reshaped(GetAsMatrixNumRows(), GetAsMatrixNumCols());
+    }
+public:
+    Matrix<ElemType> ValueAsMatrix()
+    {
+        return TensorAsMatrix(*m_value);
+    }
+    Matrix<ElemType> GradientAsMatrix()
+    {
+        return TensorAsMatrix(*m_gradient);
+    }
 
     public:
+#if 0   // only used for old implementation of PlusNode
         // Function to return the number of columns for whole batch or single frame
     size_t GetNumColsFor(const FrameRange& fr /*select frame or entire batch*/)
         {
             try
             {
-                return ColumnRangeWithMBLayoutFor(GetNumCols(), fr, m_pMBLayout).second;
+                return ColumnRangeWithMBLayoutFor(Value().GetNumCols(), fr, m_pMBLayout).second;
             }
         catch (const logic_error& e) // catch the error and rethrow it with the node name attached
             {
                 LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
             }
         }
+#endif
 
         // function to access any input and output, value and gradient, whole batch or single frame
         // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
@@ -1342,26 +1385,26 @@ template <class ElemType>
         // update the actual matrix allocation for m_value based on the node dimension
         void UpdateFunctionValuesSize()
         {
-            Value().Resize(GetNumRows(), GetNumCols());
+            Value().Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
         }
 
         // this is called before a node's ForwardProp() function is called (in loops: for the first time)
         // This is where we
         //  - update the node dimension based on actual MB size
         //  - (re-)allocate the m_value matrix, which may be shared across nodes and thus have changed dimensions
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+        virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
         {
             Base::BeginForwardProp();
 
-            // update m_numCols based on MB size
-            UpdateFunctionMBSize();
-
             // update the actual m_value allocation
-        if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+            if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
                 UpdateFunctionValuesSize();
 
+            // give nodes a chance to update their internal state that may also have to match MB size
+            UpdateFunctionMBSize();
+
             // and make sure dimensions are what we expect
-            VerifyDimsMatch();
+            VerifyValueDims();
         }
 
 #ifdef _DEBUG
@@ -1464,7 +1507,7 @@ template <class ElemType>
             if (m_gradientInitialized)
                 return;
 
-            Gradient().Resize(GetNumRows(), GetNumCols());
+            Gradient().Resize(Value().GetNumRows(), Value().GetNumCols());
             Gradient().SetValue(0);
 
             m_gradientInitialized = true;
@@ -1526,7 +1569,7 @@ template <class ElemType>
             matrixPool.Release<ElemType>(matrixPtr);
         }
 
-        //to be called by derived classed if that class needs to print node values
+        // print node values
         void PrintNodeValuesToFile(const bool printValues, File& fstream) const
         {
             if (printValues)
@@ -1687,7 +1730,7 @@ template <class ElemType>
     {
         NOT_IMPLEMENTED;
     }
-    virtual void VerifyDimsMatch() const override
+    virtual void VerifyValueDims() const override
     {
         NOT_IMPLEMENTED;
     }
@@ -1699,7 +1742,7 @@ template <class ElemType>
     {
         NOT_IMPLEMENTED;
     }
-    virtual void ValidateInferInputDims(size_t, size_t, size_t) override
+    virtual void ValidateInferInputDimsFrom(const TensorShape &) override
     {
         NOT_IMPLEMENTED;
     }
@@ -1727,6 +1770,7 @@ template <class ElemType>
     {
         NOT_IMPLEMENTED;
     }
+    virtual void NotifyFunctionValuesMBSizeModified(void) override { NOT_IMPLEMENTED; }
     virtual std::wstring ToString(void) const override
     {
         NOT_IMPLEMENTED;
@@ -1792,18 +1836,18 @@ struct IRecurrentNode
     virtual int GetRecurrenceSteppingDirection() const = 0;
 };
 
-    // =======================================================================
-    // helper macro to ease access to base members in presence of C++ two-phase name lookup
-    // =======================================================================
+// =======================================================================
+// helper macro to ease access to base members in presence of C++ two-phase name lookup
+// =======================================================================
 
-    // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;' at the start of each derived class
-    // (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
-    // This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
-    // Without this, one would have to use the name prefix, or alternatively this->, in front of all base member,
-    // because the standard does not allow the compiler to do that for you (as MSVC still kindly does).
-    // If you add new members to ComputationNode, please also add them here.
-    // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
-    // Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
+// Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;' at the start of each derived class
+// (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
+// This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
+// Without this, one would have to use the name prefix, or alternatively this->, in front of all base member,
+// because the standard does not allow the compiler to do that for you (as MSVC still kindly does).
+// If you add new members to ComputationNode, please also add them here.
+// This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
+// Note: Whoever invented that C++ insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain on unsuspecting programmers. [fseide]
 #define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue--TODO: This comment it out of date. */ \
     \
 protected:                                                                                                                                               \
@@ -1813,9 +1857,8 @@ protected:                                                                      
     using Base::GetDeviceId;                                                                                                                             \
     using Base::SetDims;                                                                                                                                 \
     using Base::SetDims1;                                                                                                                                \
-    using Base::SetNumCols;                                                                                                                              \
-    using Base::GetNumRows;                                                                                                                              \
-    using Base::GetNumCols;                                                                                                                              \
+    using Base::GetSampleMatrixNumRows;                                                                                                                              \
+    using Base::GetSampleMatrixNumCols;                                                                                                                              \
     using Base::GetTensorShape;                                                                                                                          \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::LoadValue;                                                                                                                               \
@@ -1829,7 +1872,7 @@ protected:                                                                      
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::DataFor;                                                                                                                                 \
     using Base::ValueFor;                                                                                                                                \
-    using Base::Gradient;                                                                                                                                \
+    using Base::GradientAsMatrix; using Base::Gradient;                                                                                                                                \
     using Base::GradientFor;                                                                                                                             \
     using Base::MaskedValueFor;                                                                                                                          \
     using Base::MaskedGradientFor;                                                                                                                       \
@@ -1881,21 +1924,21 @@ protected:                                                                      
     using Base::RequestMatricesBeforeBackprop;                                                                                                           \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
-    using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
+    using Base::OutputUsedInComputingInputNodesGradients; using Base::m_valueSharable;                                                                                              \
     using Base::Validate;                                                                                                                                \
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateBinaryZip;                                                                                                                       \
     using Base::ValidateUnaryReduce;                                                                                                                     \
     using Base::ValidateBinaryReduce;                                                                                                                    \
     using Base::ValidateInferBinaryInputDims;                                                                                                            \
-    using Base::ValidateInferInputDims;                                                                                                                  \
+    using Base::ValidateInferInputDimsFrom;                                                                                                                  \
     \
 public:                                                                                                                                                  \
     using Base::RequiresPreCompute;                                                                                                                      \
     using Base::AttachInputs;                                                                                                                            \
     using Base::CreateGradientMatrixIfNull;                                                                                                              \
     using Base::NodeName;                                                                                                                                \
-    using Base::Value;
+    using Base::ValueAsMatrix; using Base::Value;
 
 #define ComputationNodeBoilerplate                                                             \
     \

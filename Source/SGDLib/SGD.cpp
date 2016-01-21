@@ -230,8 +230,8 @@ template <class ElemType>
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-            smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(),
-                                                         node->GetNumCols(),
+            smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
+                                                         node->Value().GetNumCols(),
                                                          net->GetDeviceId()));
         }
 
@@ -1363,7 +1363,7 @@ template <class ElemType>
         fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+            auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
             fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
         }
 
@@ -1381,7 +1381,7 @@ template <class ElemType>
         // initialize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+            auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
         node->MarkComputed(false /*begin accumulating*/);
         }
         size_t actualMBSizeDummy;
@@ -1396,7 +1396,7 @@ template <class ElemType>
         // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+            auto node = static_pointer_cast<PreComputedNodeBase<ElemType>>(*nodeIter);
         node->MarkComputed(true /*done accumulating*/);
         }
         fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
@@ -2336,8 +2336,8 @@ template <class ElemType>
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
-                int irow = (int) fmod(rand(), node->GetNumRows() - 1);
-                int icol = (int) fmod(rand(), node->GetNumCols() - 1);
+                int irow = (int) fmod(rand(), node->Gradient().GetNumRows() - 1);
+                int icol = (int) fmod(rand(), node->Gradient().GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 
