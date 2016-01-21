@@ -388,8 +388,6 @@ public:
     // verify that this refers to a dense matrix (no strides)
     void VerifyIsDense() const
     {
-        if (m_offset != 0)
-            LogicError("TensorShape: A dense TensorShape expected. Offset %d not allowed.", (int) m_offset);
         for (size_t k = 0; k < m_dims.size(); k++) // (TODO: we can save one multiplication here)
         {
             ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;

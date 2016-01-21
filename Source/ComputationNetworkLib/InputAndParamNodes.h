@@ -130,21 +130,26 @@ public:
 
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
-            m_value->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+            Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+#if 1   // this more complex version is needed to repro test cases generated with an older version
+        auto value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
+#else
+        auto value = Value();
+#endif
         if (uniformInit)
         {
             // TODO: move these hidden extra factors out from here and into NDL, and make them visible in BS
             ElemType randRange = 0.05f * initValueScale;
-            Value().SetUniformRandomValue(-randRange, randRange, randomSeed);
+            value.SetUniformRandomValue(-randRange, randRange, randomSeed);
         }
         else
         {
             size_t inputSize = GetAsMatrixNumCols();
             ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-            Value().SetGaussianRandomValue(0, randInitstd, randomSeed);
+            value.SetGaussianRandomValue(0, randInitstd, randomSeed);
         }
         if (initOnCPUOnly)
-            m_value->TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+            Value().TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
     }
 
     // initialize by reading a matrix from a text file
@@ -492,10 +497,10 @@ public:
 
         if (isFinalValidationPass && !HasMBLayout())
             InvalidArgument("%ls %ls operation can only operate on minibatches.", NodeName().c_str(), OperationName().c_str());
-        if (isFinalValidationPass && Input(1)->GetAsMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
+        if (isFinalValidationPass && Input(1)->GetSampleMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
             InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-        int wordsInEachSample = Input(1)->GetAsMatrixNumRows() / Input(0)->GetAsMatrixNumCols();
+        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols();
 
         // TODO: Should this add a tensor dimension?
         SetDims(TensorShape(Input(0)->GetSampleMatrixNumRows() * wordsInEachSample), true);
