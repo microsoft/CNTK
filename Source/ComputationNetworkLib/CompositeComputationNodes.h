@@ -824,12 +824,6 @@ template <class ElemType>
             size_t nInput = 3;
             size_t nOutput = nInput;
 
-            /// backup
-            Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
-
-            f0 = Input(0)->Value();
-            func = Value();
-
             Input(0)->SetDims1(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
             Input(0)->Value().SetValue(0);

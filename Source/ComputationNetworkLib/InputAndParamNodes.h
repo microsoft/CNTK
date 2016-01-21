@@ -132,9 +132,9 @@ public:
         if (initOnCPUOnly)
             Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
 #if 1   // this more complex version is needed to repro test cases generated with an older version
-        auto value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
+        auto value = GetSampleLayout().GetRank() > 2 ? Value().AsReference() : ValueAsMatrix();
 #else
-        auto value = Value();
+        auto & value = Value();
 #endif
         if (uniformInit)
         {
