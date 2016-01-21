@@ -117,7 +117,8 @@ public:
                 sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
         }
         LoadValue(fstream);
-        SetDims(sampleLayout, false);  // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+        SetDims(sampleLayout, false);   // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+        ValueAsMatrix();                // verify that storage was allocated correctly by retrieving it as a matrix
     }
 
     // initialize with random numbers
@@ -132,7 +133,7 @@ public:
         if (initOnCPUOnly)
             Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
 #if 1   // this more complex version is needed to repro test cases generated with an older version
-        auto value = GetSampleLayout().GetRank() > 2 ? Value().AsReference() : ValueAsMatrix();
+        auto & value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
         auto & value = Value();
 #endif
@@ -439,7 +440,7 @@ public:
         }
     }
 
-    /*TODO: merge with call site*/ void BackpropToLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>/*&*/ inputGradientValues, Matrix<ElemType>& gradientValues)
+    /*TODO: merge with call site*/ void BackpropToLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)
     {
         size_t rows1 = inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
         size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
@@ -454,7 +455,7 @@ public:
         gradientValues.Reshape(rowsp, colsp);
     }
 
-    /*TODO: merge with call site*/ void BackpropToRight(Matrix<ElemType>/*&*/ inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)
+    /*TODO: merge with call site*/ void BackpropToRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)
     {
         size_t rows1 = inputGradientValues.GetNumRows(), cols1 = inputGradientValues.GetNumCols();
         size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
