@@ -139,10 +139,13 @@ AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numE
 }
 
 template<typename AllocatedElemType>
-void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr)
+void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode /*= false*/)
 {
     PrepareDevice(deviceId);
-    CUDA_CALL(cudaFree((void*)bufferPtr));
+    if (ignoreCUDARetCode)
+        cudaFree((void*)bufferPtr);
+    else
+        CUDA_CALL(cudaFree((void*)bufferPtr));
 
     if (IsTraceEnabled())
     {
@@ -604,7 +607,10 @@ void GPUMatrix<ElemType>::Clear()
     {
         if (m_computeDevice >= 0)
         {
-            TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
+            // BUG: We do not check the CUDA return code for cudaFree here since this may get called 
+            // during processExit when cudaFree will fail. The destruction of CUDA objects during 
+            // process exit must be avoided
+            TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true /*ignoreCUDARetCode*/);
             m_pArray = NULL;
             m_elemSizeAllocated = 0;
         }
@@ -4993,11 +4999,11 @@ template char* TracingGPUMemoryAllocator::Allocate<char>(int, size_t);
 template float* TracingGPUMemoryAllocator::Allocate<float>(int, size_t);
 template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t);
 
-template void TracingGPUMemoryAllocator::Free<int>(int, int*);
-template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*);
-template void TracingGPUMemoryAllocator::Free<char>(int, char*);
-template void TracingGPUMemoryAllocator::Free<float>(int, float*);
-template void TracingGPUMemoryAllocator::Free<double>(int, double*);
+template void TracingGPUMemoryAllocator::Free<int>(int, int*, bool);
+template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
+template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
+template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);
+template void TracingGPUMemoryAllocator::Free<double>(int, double*, bool);
 
 }
 }
