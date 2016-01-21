@@ -503,7 +503,7 @@ public:
         size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols();
 
         // TODO: Should this add a tensor dimension?
-        SetDims(TensorShape(Input(0)->GetSampleMatrixNumRows() * wordsInEachSample), true);
+        SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
     }
 
     bool UnitTest()
