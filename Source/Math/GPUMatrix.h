@@ -116,9 +116,13 @@ private:
     static cublasHandle_t s_cuHandle[MaxGpus];
     static void* s_curandGenerator;
 
-    // Have to use naked pointer to avoid issues with __declspec(dllexport) on Windows (C4251).
-    // Cannot use atomic for the same reason either.
-    mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace;
+    // Have to use disable the warning to avoid issues with __declspec(dllexport) on Windows (C4251).
+    // Also, NVCC FE corresponding warning has to be disabled, see MathCUDA.vcxproj.
+    // The only workaround is to use naked pointer.
+#pragma warning(push)
+#pragma warning(disable: 4251)
+    mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
+#pragma warning(pop)
 
 private:
     void performElementWiseFunction(const ElementWiseOperator kind, const ElemType* src);

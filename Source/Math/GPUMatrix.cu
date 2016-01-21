@@ -505,7 +505,6 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
     m_matrixName = NULL;
     m_format = matrixFormatDense;
     m_externalBuffer = false;
-    m_workspace = nullptr;
 }
 
 template <class ElemType>
@@ -608,7 +607,6 @@ template <class ElemType>
 GPUMatrix<ElemType>::~GPUMatrix(void)
 {
     Clear();
-    delete m_workspace;
 }
 
 template <class ElemType>
@@ -640,7 +638,7 @@ std::unique_ptr<GPUMatrix<ElemType>> GPUMatrix<ElemType>::GetOrCreateWorkspace()
 {
     // REVIEW alexeyk: not thread-safe, fine for now.
     if (m_workspace == nullptr)
-        m_workspace = new conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>();
+        m_workspace = std::make_unique<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>>();
     assert(m_workspace != nullptr);
     auto deviceId = m_computeDevice;
     return m_workspace->pop_or_create([deviceId]()
