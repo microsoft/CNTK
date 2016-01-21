@@ -435,7 +435,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     }
     else
     {
-        ElemType* d_dst = AllocateDeviceMemory<ElemType>(to_id, m_totalBufferSizeAllocated / sizeof(ElemType));
+        ElemType* d_dst = TracingGPUMemoryAllocator::Allocate<ElemType>(to_id, m_totalBufferSizeAllocated / sizeof(ElemType));
 
         // first try peer access
         int canAccessPeer = false;
@@ -462,7 +462,7 @@ void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
             CUDA_CALL(cudaFreeHost(h_dst));
         }
 
-        FreeDeviceMemory<ElemType>(m_computeDevice, m_pArray);
+        TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
         m_pArray = d_dst;
     }
 
@@ -500,7 +500,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     int numRows = (int) denseMatrix.GetNumRows(); //m
     int numCols = (int) denseMatrix.GetNumCols(); //n
 
-    int* nnzPerRowOrCol = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, ((matrixFormat & matrixFormatRowMajor) ? numRows : numCols));
+    int* nnzPerRowOrCol = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(m_computeDevice, ((matrixFormat & matrixFormatRowMajor) ? numRows : numCols));
     int nnzTotalDevHostPtr = -1;
 
     cudaEvent_t done = nullptr;
@@ -654,10 +654,10 @@ void GPUSparseMatrix<ElemType>::ReleaseMemory()
         delete[](byte*) m_tempHostBuffer;
         m_tempHostBuffer = nullptr;
 
-        FreeDeviceMemory<ElemType>(m_computeDevice, m_pArray);
+        TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
         m_pArray = nullptr;
 
-        FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
+        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
         m_rowToId = nullptr;
     }
 
@@ -697,7 +697,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, m_elemSizeAllocated, m_format);
 
-    ElemType* pArray = AllocateDeviceMemory<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
+    ElemType* pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
 
     if (m_pArray != nullptr)
     {
@@ -728,7 +728,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
         if (do_sync)
             CUDA_CALL(cudaEventDestroy(done));
 
-        FreeDeviceMemory<ElemType>(m_computeDevice, m_pArray);
+        TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
     }
 
     m_pArray = pArray;
@@ -738,9 +738,9 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 
     //following are generated dynamically and no need to save
     if (m_rowToId != nullptr)
-        FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
+        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
 
-    m_rowToId = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_elemSizeAllocated);
+    m_rowToId = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_elemSizeAllocated);
 }
 
 template <class ElemType>
@@ -765,7 +765,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 
     if (reallocate)
     {
-        ElemType* pArray = AllocateDeviceMemory<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
+        ElemType* pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, bufferSizeNeeded / sizeof(ElemType));
 
         if (m_pArray != nullptr)
         {
@@ -786,16 +786,16 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
             else
                 m_nz = 0;
 
-            FreeDeviceMemory<ElemType>(m_computeDevice, m_pArray);
+            TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray);
         }
 
         m_pArray = pArray;
 
         //following are generated dynamically and no need to save
         if (m_rowToId != nullptr)
-            FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
+            TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId);
 
-        m_rowToId = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, numNZElemToReserve);
+        m_rowToId = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(m_computeDevice, numNZElemToReserve);
 
         m_totalBufferSizeAllocated = bufferSizeNeeded;
         m_elemSizeAllocated = numNZElemToReserve;
@@ -1241,7 +1241,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         {
             c.Resize(m, n, 1, true, false); //reserve memory for BlockId2ColOrRow() and ColOrRow2BlockId()
 
-            size_t* blockSize = AllocateDeviceMemory<size_t>(lhs.GetComputeDeviceId(), 1);
+            size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
             CUDA_CALL(cudaMemset(blockSize, 0, sizeof(size_t)));
 
             CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
@@ -1264,7 +1264,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
                 CUDA_CALL(cudaEventSynchronize(done));
 
             CUDA_CALL(cudaMemcpy(&c.m_blockSize, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
-            FreeDeviceMemory<size_t>(lhs.GetComputeDeviceId(), blockSize);
+            TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
 
             size_t nnz = m * c.m_blockSize;
             c.Resize(m, n, nnz, true, true); //we need to keep the col2blockid and blockid2col info when resizing.
@@ -1679,7 +1679,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
     }
     else
     {
-        csrRowPtrC = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, rowBufferRequired / sizeof(GPUSPARSE_INDEX_TYPE));
+        csrRowPtrC = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(m_computeDevice, rowBufferRequired / sizeof(GPUSPARSE_INDEX_TYPE));
         allocatedBuffer = true;
     }
 
@@ -1694,7 +1694,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 
     // if we allocated the buffer, free it here
     if (allocatedBuffer)
-        FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(m_computeDevice, csrRowPtrC);
+        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, csrRowPtrC);
 }
 
 // Multiply - multiply one spares matrix by another sparse matrix
@@ -1968,9 +1968,9 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
 
     if (a.m_format == matrixFormatSparseCSR) //need to put a in ColumnMajor format
     {
-        cscValA = AllocateDeviceMemory<ElemType>(a.GetComputeDeviceId(), nnz);
-        cscRowIndA = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), nnz);
-        cscColPtrA = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), (n + 1));
+        cscValA = TracingGPUMemoryAllocator::Allocate<ElemType>(a.GetComputeDeviceId(), nnz);
+        cscRowIndA = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), nnz);
+        cscColPtrA = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), (n + 1));
 
         CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
         if (do_sync)
@@ -2001,7 +2001,7 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
         NOT_IMPLEMENTED;
     }
     //Given sparse matrix in column major format, calculate indices for corresponding sparse vector
-    GPUSPARSE_INDEX_TYPE* vectArray = AllocateDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), a.m_nz);
+    GPUSPARSE_INDEX_TYPE* vectArray = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), a.m_nz);
     CUDA_LONG M = n;
     CUDA_LONG N = m;
     //GPUSPARSE_INDEX_TYPE* h_vectArray= new int[a.m_nz];
@@ -2015,8 +2015,8 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
         CUDA_CALL(cudaEventSynchronize(done));
     if (do_sync)
         CUDA_CALL(cudaEventDestroy(done));
-    FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscRowIndA);
-    FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscColPtrA);
+    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscRowIndA);
+    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscColPtrA);
     //CUDA_CALL(cudaMemcpy(h_vectArray,vectArray,sizeof(GPUSPARSE_INDEX_TYPE)*a.m_nz,cudaMemcpyDeviceToHost));
 
     //Actual dot product
@@ -2033,8 +2033,8 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
                                     reinterpret_cast<double*>(b.BufferPointer()),
                                     reinterpret_cast<double*>(&res), idxBase));
     }
-    FreeDeviceMemory<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), vectArray);
-    FreeDeviceMemory<ElemType>(a.GetComputeDeviceId(), cscValA);
+    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), vectArray);
+    TracingGPUMemoryAllocator::Free<ElemType>(a.GetComputeDeviceId(), cscValA);
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
     return res;
 }
@@ -2058,7 +2058,7 @@ bool GPUSparseMatrix<ElemType>::IsValid() const
     res[1] = 0;
     res[2] = 0;
     res[3] = 0;
-    long* d_res = AllocateDeviceMemory<long>(m_computeDevice, 4);
+    long* d_res = TracingGPUMemoryAllocator::Allocate<long>(m_computeDevice, 4);
     CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 4, cudaMemcpyHostToDevice));
 
     cudaEvent_t done = nullptr;
@@ -2100,7 +2100,7 @@ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, con
     res[0] = 1;
     res[1] = 1;
     res[2] = 1;
-    long* d_res = AllocateDeviceMemory<long>(a.GetComputeDeviceId(), 3);
+    long* d_res = TracingGPUMemoryAllocator::Allocate<long>(a.GetComputeDeviceId(), 3);
     CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 3, cudaMemcpyHostToDevice));
 
     int blocksPerGrid = (int) ceil(1.0 * a.GetNumNZElements() / GridDim::maxThreadsPerBlock);
@@ -2487,12 +2487,12 @@ ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
     if (IsEmpty())
         LogicError("SumOfElements: Matrix is empty");
 
-    ElemType* d_sum = AllocateDeviceMemory<ElemType>(m_computeDevice, 1);
+    ElemType* d_sum = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, 1);
     ElemType h_sum;
     //WARNING: THIS kernel is not the most efficient way!
     _reductionSum<ElemType><<<1, 1024>>>(NzValues(), d_sum, (LONG64) GetNumNZElements());
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
-    FreeDeviceMemory<ElemType>(m_computeDevice, d_sum);
+    TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, d_sum);
 
     return h_sum;
 }
@@ -2503,12 +2503,12 @@ ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
     if (IsEmpty())
         LogicError("FrobeniusNorm: Matrix is empty.");
 
-    ElemType* d_sum = AllocateDeviceMemory<ElemType>(m_computeDevice, 1);
+    ElemType* d_sum = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, 1);
     ElemType h_sum = 0;
     //WARNING: THIS kernel is not the most efficient way!
     _reductionSum2<ElemType><<<1, 1024>>>(NzValues(), d_sum, (int) GetNumNZElements());
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
-    FreeDeviceMemory<ElemType>(m_computeDevice, d_sum);
+    TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, d_sum);
 
     if (sizeof(ElemType) == sizeof(float))
         return (ElemType) sqrtf((float) h_sum);
@@ -2522,12 +2522,12 @@ ElemType GPUSparseMatrix<ElemType>::MatrixNormInf() const
     if (IsEmpty())
         LogicError("MatrixNorm1: Matrix is empty.");
 
-    ElemType* d_maxAbs = AllocateDeviceMemory<ElemType>(m_computeDevice, 1);
+    ElemType* d_maxAbs = TracingGPUMemoryAllocator::Allocate<ElemType>(m_computeDevice, 1);
     ElemType h_maxAbs = 0;
     //WARNING: THIS kernel is not the most efficient way!
     _reductionMatrixNormInf<ElemType><<<1, 1024>>>(NzValues(), d_maxAbs, (int) GetNumNZElements());
     CUDA_CALL(cudaMemcpy(&h_maxAbs, d_maxAbs, sizeof(ElemType), cudaMemcpyDeviceToHost));
-    FreeDeviceMemory<ElemType>(m_computeDevice, d_maxAbs);
+    TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, d_maxAbs);
 
     if (sizeof(ElemType) == sizeof(float))
         return h_maxAbs;
