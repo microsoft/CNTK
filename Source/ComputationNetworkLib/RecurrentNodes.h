@@ -547,7 +547,7 @@ public:
         m_pMBLayout = Input(0)->GetMBLayout();
         if (isFinalValidationPass && !m_pMBLayout)
             InvalidArgument("%ls %ls operation must operate on data (must have an MB Layout).", NodeName().c_str(), OperationName().c_str());
-        if (isFinalValidationPass && !Input(1)->GetMBLayout() && Input(1)->GetNumCols() != 1)
+        if (isFinalValidationPass && !Input(1)->GetMBLayout() && Input(1)->GetSampleMatrixNumCols() != 1)
             InvalidArgument("%ls %ls operation requires the boundary node to have one column.", NodeName().c_str(), OperationName().c_str());
 
         // as is the sample layout
@@ -778,8 +778,8 @@ public:
         Base::Save(fstream);
 
         fstream << m_timeStep;
-            size_t colsDummy = 0;
-            fstream << GetNumRows() << colsDummy;
+        size_t colsDummy = 0;
+        fstream << GetSampleMatrixNumRows() << colsDummy;   // #rows saved for legacy file format
 
         fstream << m_initialActivationValue;
     }
@@ -911,8 +911,6 @@ public:
 
         // we forward prop from the previous frame to this frame
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
-
-        VerifyDims(Input(0));
 
         size_t T = GetNumTimeSteps();
         size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)

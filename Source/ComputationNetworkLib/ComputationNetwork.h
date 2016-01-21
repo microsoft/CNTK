@@ -287,13 +287,14 @@ public:
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
     // Note that if we have multiple slices, MB size != #frames.
+    // BUGBUG: This will break once we have inconsistent layouts.
     size_t DetermineActualMBSizeFromFeatures() const
     {
         size_t actualMBSize = 0;
 
         const auto& featureNodes = FeatureNodes(); // TODO: a getter; should be called GetFeatureNodes()
         for (auto& nodeIter : featureNodes)
-            actualMBSize = max(actualMBSize, nodeIter->GetNumCols());
+            actualMBSize = max(actualMBSize, nodeIter->GetMBLayout()->GetNumCols());
 
         return actualMBSize;
     }
@@ -463,45 +464,23 @@ public:
     }
 
     // these are specified as such by the user
-    inline std::vector<ComputationNodeBasePtr>& FeatureNodes()
-    {
-        return m_features;
-    }
-    inline const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
-    {
-        return m_features;
-    }
-    inline std::vector<ComputationNodeBasePtr>& LabelNodes()
-    {
-        return m_labels;
-    }
-    inline std::vector<ComputationNodeBasePtr>& FinalCriterionNodes()
-    {
-        return m_finalCriteria;
-    }
+    inline       std::vector<ComputationNodeBasePtr>& FeatureNodes()       { return m_features; }
+    inline const std::vector<ComputationNodeBasePtr>& FeatureNodes() const { return m_features; }
+    inline std::vector<ComputationNodeBasePtr>& LabelNodes()               { return m_labels; }
+    inline std::vector<ComputationNodeBasePtr>& FinalCriterionNodes()      { return m_finalCriteria; }
 
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
     {
         ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
         ValidateSubNetwork(node);
-        if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the criterionNodeName specified in the config file is not a valid training or eval criterion node.");
-        // TODO: test this, then remove this comment
-        return std::vector<ComputationNodeBasePtr>{node};
+        if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
+            InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
+        return std::vector<ComputationNodeBasePtr>{ node };
     }
 
-    inline std::vector<ComputationNodeBasePtr>& EvaluationNodes()
-    {
-        return m_evalNodes;
-    }
-    inline std::vector<ComputationNodeBasePtr>& OutputNodes()
-    {
-        return m_outputNodes;
-    }
-    inline std::vector<ComputationNodeBasePtr>& PairNodes()
-    {
-        return m_pairNodes;
-    }
+    inline std::vector<ComputationNodeBasePtr>& EvaluationNodes() { return m_evalNodes; }
+    inline std::vector<ComputationNodeBasePtr>& OutputNodes()     { return m_outputNodes; }
+    inline std::vector<ComputationNodeBasePtr>& PairNodes()       { return m_pairNodes; }
 
     // -----------------------------------------------------------------------
     // node access
@@ -685,9 +664,6 @@ public:
             node->ZeroGradientsOfInputs();
     }
 
-    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
-    void FixupInputMinibatchSize();
-
 private:
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode, const bool forwardCompute, const bool printMatrices = false);
@@ -833,10 +809,7 @@ protected:
         virtual void ForwardProp(const FrameRange&) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
-        {
-            NOT_IMPLEMENTED;
-        } // ugh, call Backprop() instead
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override { NOT_IMPLEMENTED; }
         virtual void EndBackprop() override;
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
