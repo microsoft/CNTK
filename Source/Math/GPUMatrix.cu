@@ -108,18 +108,6 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-int MATH_API TracingGPUMemoryAllocator::m_traceLevel = 0;
-
-void TracingGPUMemoryAllocator::SetTraceLevel(int traceLevel)
-{
-    m_traceLevel = traceLevel;
-}
-
-bool TracingGPUMemoryAllocator::IsTraceEnabled()
-{
-    return (m_traceLevel > 0);
-}
-
 template<typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
@@ -181,7 +169,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 
     size_t free, total;
     auto result = cudaMemGetInfo(&free, &total);
-    if (result != CUDA_SUCCESS)
+    if (result != cudaSuccess)
         return { size_t(0), size_t(0) };
     else
     {

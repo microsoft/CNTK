@@ -8,6 +8,7 @@
 
 #ifdef CPUONLY
 
+#include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"
@@ -2181,6 +2182,7 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE)
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+
 }
 }
 }
@@ -2203,10 +2205,6 @@ GPUWatcher::GPUWatcher(void)
 }
 
 GPUWatcher::~GPUWatcher(void)
-{
-}
-
-void TracingGPUMemoryAllocator::SetTraceLevel(int /*traceLevel*/)
 {
 }
 
