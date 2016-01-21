@@ -1120,7 +1120,7 @@ public:
             for (size_t i = 0; i < nS; i++) // process all sequences one by one
             {
                 FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
-                auto gradient = Input(2)->GradientAsMatrix();
+                auto & gradient = Input(2)->GradientAsMatrix();
                 TransGrdCompute(Input(0)->ValueFor(sequenceRange),
                                 DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
                                 DataWithMBLayoutFor(mBeta, sequenceRange, Input(0)->GetMBLayout()),

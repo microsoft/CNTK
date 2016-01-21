@@ -209,7 +209,7 @@ public:
             // this potentially computes inner products over time, so we use the Masked- variants
             auto sliceOutputGrad = MaskedGradientFor(fr);
             auto sliceInput1Value = Input(1)->MaskedValueFor(fr);
-            auto input0Grad = Input(0)->GradientAsMatrix();
+            auto & input0Grad = Input(0)->GradientAsMatrix();
 
             // currently we only support one combination when the input is sparse.
             if (sliceInput1Value.GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
@@ -245,7 +245,7 @@ public:
 #if DUMPOUTPUT
         Input(0)->ValueAsMatrix().Print("TimesNode - Input0");
 #endif
-        // BUGBUG: This uses incorrect Matrix dimensions when multiplying with a non-minibatch. To be fixed when we allow to apply TimesNode to a subset of tensor dimensions.
+        // BUGBUG: This uses correct Matrix dimensions when multiplying with a non-minibatch only by luck. To be fixed when we allow to apply TimesNode to a subset of tensor dimensions.
         sliceOutputValue.AssignProductOf(Input(0)->ValueAsMatrix(), m_transpose, sliceInput1Value, false);
 #if NANCHECK
         sliceOutputValue.HasNan("Times");
@@ -700,8 +700,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        auto inputGradientValues = Input(0)->GradientAsMatrix();
-        auto gradientValues = GradientAsMatrix();
+        auto & inputGradientValues = Input(0)->GradientAsMatrix();
+        auto & gradientValues = GradientAsMatrix();
 #if DUMPOUTPUT
         gradientValues.Print("Gradient-in");
         inputGradientValues.Print("child Gradient-in/out");
@@ -805,8 +805,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        auto value = ValueAsMatrix();
-        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(value);  // TODO: use tensor lib; this is a stride operation
+        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix());  // TODO: use tensor lib; this is a stride operation
 #if NANCHECK
         Value().HasNan("Diagonal");
 #endif
@@ -814,8 +813,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        auto inputGradientValues = Input(0)->GradientAsMatrix();
-        auto gradientValues = GradientAsMatrix();
+        auto & inputGradientValues = Input(0)->GradientAsMatrix();
+        auto & gradientValues = GradientAsMatrix();
 
         // BUGBUG: This should use the memshare mechanism.
         // TODO: use tensor lib, then this will be easy, no memsharing needed

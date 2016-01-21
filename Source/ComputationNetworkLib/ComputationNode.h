@@ -283,7 +283,7 @@ class ComputationNodeBase : public IComputationNode,
         typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_parameterUpdateRequired(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_numCols(0)
+        : m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_parameterUpdateRequired(false), m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
     }
     virtual ~ComputationNodeBase()
@@ -358,11 +358,17 @@ class ComputationNodeBase : public IComputationNode,
         //     - minibatch: each matrix column contains a sample tensor flattened, with one column per time step and parallel sequence
         //     - tensor: one column containing the sample tensor flattened
         //     - GetSampleMatrixNumRows(), GetSampleMatrixNumCols()
-        //     - this is how it is stored
         //  - as a Matrix reference
         //     - actual object is a 2D tensor without MB Layout
         //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
         //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
+        //
+        // How values are stored:
+        //
+        //  - minibatch: Matrix of columns, where each column is a sample
+        //  - tensor: Matrix where column dimension contains all but the first dimension
+        //     - This only matters for sparse matrices, which cannot easily be Reshaped().
+        //       For those, we keep the underlying storage identical to the semantic meaning.
 
         // interpretation as a set of samples
         const TensorShape& GetSampleLayout() const { return m_sampleLayout; }
@@ -453,7 +459,7 @@ class ComputationNodeBase : public IComputationNode,
         }
 #endif
         // get number of underlying matrix columns for test code only which does not create MBLayouts
-        size_t GetNumCols1() const { return m_numCols; }
+        size_t GetNumCols1() const { return GetSampleMatrixNumCols(); }    // dummy
         virtual void NotifyFunctionValuesMBSizeModified() = 0;
         void VerifyDims(const TensorShape & shape, bool isMinibatch)
         {
@@ -949,8 +955,7 @@ public:
         // a tensor (n-dimensional array) described by m_sampleLayout. The MBLayout describes the meaning
         // of the column index.
         // For nodes that do not carry data, the last tensor index of m_sampleLayout is the number of columns.
-    TensorShape m_sampleLayout; // sample layout
-    size_t m_numCols;           // #cols
+        TensorShape m_sampleLayout; // sample layout
         MBLayoutPtr m_pMBLayout;
 
         // flags related to gradient propagation
@@ -1297,17 +1302,21 @@ template <class ElemType>
     }
 private:
     // map a tensor to a matrix
-    // Tensors are stored as column vectors. This function reshapes that vector into a Matrix (ref) object.
-    Matrix<ElemType> TensorAsMatrix(Matrix<ElemType> & data)
+    // The leading dimension maps to rows, the rest to columns, for compat with sparse matrix lib.
+    Matrix<ElemType> & TensorAsMatrix(Matrix<ElemType> & data)
     {
-        return data.Reshaped(GetAsMatrixNumRows(), GetAsMatrixNumCols());
+        size_t numRows = GetAsMatrixNumRows();
+        size_t numCols = GetAsMatrixNumCols();
+        // We only get here if the tensor indeed describes an 1D or 2D object. In that case, just verify the dimensions.
+        data.VerifySize(numRows, numCols);
+        return data;
     }
 public:
-    Matrix<ElemType> ValueAsMatrix()
+    Matrix<ElemType> & ValueAsMatrix()
     {
         return TensorAsMatrix(*m_value);
     }
-    Matrix<ElemType> GradientAsMatrix()
+    Matrix<ElemType> & GradientAsMatrix()
     {
         return TensorAsMatrix(*m_gradient);
     }
@@ -1382,10 +1391,28 @@ public:
             return DataTensorFor(Gradient(), rank, fr);
         }
 
+    protected:
+
+        // set the size of the underlying Matrix object to match node dimensions
+        void UpdateDataSize(Matrix<ElemType>& m)
+        {
+            if (HasMBLayout())
+                m.Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
+            else
+            {
+                const auto & shape = GetSampleLayout();
+                size_t numRows = shape.GetRank() > 0 ? shape[0] : 0;
+                size_t numCols = numRows > 0 ? shape.GetNumElements() / numRows : 0;
+                m.Resize(numRows, numCols);
+            }
+        }
+
+    public:
+
         // update the actual matrix allocation for m_value based on the node dimension
         void UpdateFunctionValuesSize()
         {
-            Value().Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
+            UpdateDataSize(Value());
         }
 
         // this is called before a node's ForwardProp() function is called (in loops: for the first time)
@@ -1511,7 +1538,7 @@ public:
             if (m_gradientInitialized)
                 return;
 
-            Gradient().Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
+            UpdateDataSize(Gradient());
             Gradient().SetValue(0);
 
             m_gradientInitialized = true;
