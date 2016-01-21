@@ -1511,7 +1511,7 @@ public:
             if (m_gradientInitialized)
                 return;
 
-            Gradient().Resize(Value().GetNumRows(), Value().GetNumCols());
+            Gradient().Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
             Gradient().SetValue(0);
 
             m_gradientInitialized = true;

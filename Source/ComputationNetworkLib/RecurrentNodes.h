@@ -73,7 +73,6 @@ public:
         : Base(deviceId, name), m_fromOffset(fromOffset), m_boundaryMode(boundaryMode), m_shiftDimParam(shiftDimParam), m_shiftDim(SIZE_MAX), m_state(deviceId)
     {
         CreateMatrixIfNull(m_value);
-        SetDims(TensorShape(), 0); // empty for now
     }
     ShiftNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ShiftNode(deviceId, name, 1, BoundaryMode::reachAcross, -1)
@@ -734,7 +733,7 @@ private:
         m_initialActivationValue = initialActivationValue;
         m_timeStep = 1;
         CreateMatrixIfNull(m_value);
-        SetDims(sampleLayout, 0);
+        SetDims(sampleLayout, HasMBLayout()/*false at this point*/);
         m_value->SetValue(m_initialActivationValue); // is this needed?
     }
 
@@ -794,7 +793,7 @@ public:
             size_t rows, colsDummy;
             fstream >> rows >> colsDummy;
 
-        SetDims(TensorShape(rows), 0);  // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
+        SetDims(TensorShape(rows), HasMBLayout()/*may be true on reload (roll-back)*/);  // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
         m_delayedValue.Resize(rows, 0); // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
         if (modelVersion >= CNTK_MODEL_VERSION_2)
