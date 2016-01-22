@@ -125,7 +125,7 @@ public:
                     const ElemType initValueScale,
                     bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
     {
-        //fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
+        // fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
 
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)

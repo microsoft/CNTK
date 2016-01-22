@@ -89,14 +89,14 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_leftMinusRight, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -136,7 +136,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         // left input is scalar
-        if (inputIndex == 0) //left derivative
+        if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
             *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
@@ -182,7 +182,7 @@ public:
         m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override //-sum(left_i * log(softmax_i(right)))
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
         FrameRange fr(Input(0)->GetMBLayout());
         // first compute the softmax (column-wise)
@@ -219,7 +219,7 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -262,8 +262,8 @@ public:
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        //left Node must be a scalar
-        if (inputIndex == 0) //left derivative
+        // left Node must be a scalar
+        if (inputIndex == 0) // left derivative
         {
             BackpropToLeft(*m_logOfRight, Input(0)->GradientFor(fr), Gradient());
         }
@@ -300,7 +300,7 @@ public:
         m_leftDivRight->Resize(Input(1)->Value());
     }
 
-    //-sum(left_i * log(right_i))
+    // -sum(left_i * log(right_i))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
@@ -330,21 +330,21 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logOfRight, matrixPool);
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_leftDivRight, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -434,14 +434,14 @@ public:
         }
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_gradientOfL1Norm, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -593,14 +593,14 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         m_needRecomputeGradientToSoftmaxInput = false;
-        //gradient computation@yinggongzhao
-        //inputIndex should be 2 this time
+        // gradient computation@yinggongzhao
+        // inputIndex should be 2 this time
         if (m_evalMode != NCEEvalMode::None)
             LogicError("BackpropTo should only be called in training mode");
         if (inputIndex == 0)
             InvalidArgument("ComputeInput partial should not be called for label");
         //                                                                              samples+probs                   hidden                  embedding
-        //Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+        // Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
         if (inputIndex >= 2)
             Input(inputIndex)->Gradient().AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->ValueAsMatrix(), inputIndex);
         else
@@ -635,7 +635,7 @@ public:
         // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override //-sum(left_i * log(softmax_i(right)))
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
         FrameRange fr(Input(0)->GetMBLayout());
         if (Input(0)->HasMBLayout() && Input(0)->GetMBLayout()->HasGaps())
@@ -671,7 +671,7 @@ public:
         {
             // TODO: are we treating gaps correctly here?
             // training criterion uses NCE
-            //likelihood                                         samples+probs                        hidden                       embedding            bias
+            // likelihood                                         samples+probs                        hidden                       embedding            bias
             Value().AssignNoiseContrastiveEstimation(Input(0)->Value(), Input(1)->Value(), Input(2)->ValueAsMatrix(), Input(3)->Value(), m_ncePrediction);
         }
         m_needRecomputeGradientToSoftmaxInput = true;
@@ -840,7 +840,7 @@ private:
                 {
                     FrameRange fr = FrameRange(Input(LABELDATA)->GetMBLayout(), t).Sequence(s);
 
-                    //if (Input(LABELDATA)->GetMBLayout()->IsGap(s, t))  // skip gaps
+                    // if (Input(LABELDATA)->GetMBLayout()->IsGap(s, t))  // skip gaps
                     if (Input(LABELDATA)->GetMBLayout()->IsGap(fr)) // skip gaps
                         continue;
 
@@ -1096,7 +1096,7 @@ public:
         }
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+    virtual void BackpropToNonLooping(size_t inputIndex) override // scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
         FrameRange fr(Input(0)->GetMBLayout());
         // inputIndex 0 should not get us here, it should be prevented by the needGradient flag of input[0]
@@ -1283,7 +1283,7 @@ public:
             if (!(Input(1)->GetSampleMatrixNumRows() == Input(2)->GetAsMatrixNumRows() && // position dependent and pair scores have same number of labels
                   Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() &&
                   Input(0)->HasMBLayout() && Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
-                  //Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                  // Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
                   Input(2)->GetAsMatrixNumCols() == Input(2)->GetAsMatrixNumRows()))
             {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
@@ -1343,7 +1343,7 @@ public:
         if (inputIndex != 1)
             InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
 
-        //BackpropToRight(m_temp, Input(0)->Value(), Input(2)->Value(), Input(inputIndex)->Gradient(), Gradient(), m_classZeroLabels, m_result);
+        // BackpropToRight(m_temp, Input(0)->Value(), Input(2)->Value(), Input(inputIndex)->Gradient(), Gradient(), m_classZeroLabels, m_result);
         // Create vector with 1 for class 1, and -1 for class 0
         m_temp->AssignDifferenceOf(Input(0)->ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
 
@@ -1434,7 +1434,7 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -1443,7 +1443,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -1580,14 +1580,14 @@ public:
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maskOfDropout, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -1859,7 +1859,7 @@ public:
 private:
     struct VersionInfo
     {
-        //int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
+        // int32_t VerWrittenCur() const     { return 0x00010001; } // Initial
         int32_t VerWrittenCur() const
         {
             return 0x00010002;

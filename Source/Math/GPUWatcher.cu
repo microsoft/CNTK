@@ -41,7 +41,7 @@ size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
     {
         return 0;
     }
-    //get the amount of free memory on the graphics card
+    // get the amount of free memory on the graphics card
     size_t free = 0;
     size_t total = 0;
     result = cudaMemGetInfo(&free, &total);

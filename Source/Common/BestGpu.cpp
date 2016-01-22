@@ -41,7 +41,7 @@ int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warn
 #define PATH_DELIMITER '\\'
 #elif defined(__UNIX__)
 #define PATH_DELIMITER '/'
-#endif //__WINDOWS__
+#endif // __WINDOWS__
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>

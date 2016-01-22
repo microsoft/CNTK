@@ -148,7 +148,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
-    //config["deviceId"] = to_string(m_net->GetDeviceId());
+    // config["deviceId"] = to_string(m_net->GetDeviceId());
 
     // create the reader if necessary
     if (m_reader == nullptr)

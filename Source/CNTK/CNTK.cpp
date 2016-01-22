@@ -99,7 +99,7 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring outputFile = config(L"outputFile", defOutFilePath);
     bool printValues = config(L"printValues", true);
 
-    ComputationNetwork net(-1); //always use CPU
+    ComputationNetwork net(-1); // always use CPU
     net.Load<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
@@ -168,7 +168,7 @@ void DoCommands(const ConfigParameters& config)
     size_t fullTotalMaxEpochs = 0;
     for (int i = 0; i < command.size(); i++)
     {
-        //get the configuration parameters that match the command
+        // get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
@@ -202,7 +202,7 @@ void DoCommands(const ConfigParameters& config)
     // execute the commands
     for (int i = 0; i < command.size(); i++)
     {
-        //get the configuration parameters that match the command
+        // get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
 
@@ -472,7 +472,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     PrintBuiltInfo();
 
     // execute the actions
-    //std::string type = config(L"precision", "float");
+    // std::string type = config(L"precision", "float");
     int numCPUThreads = config(L"numCPUThreads", 0);
     numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
     if (numCPUThreads > 0)
@@ -564,7 +564,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
     PrintBuiltInfo(); // this one goes to log file
     std::string timestamp = TimeDateStamp();
 
-    //dump config info
+    // dump config info
     fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
     fprintf(stderr, "command line: \n");
     for (int i = 0; i < argc; i++)
@@ -596,7 +596,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[]) // called from wmain which is 
         fprintf(stderr, "%s ", command[i].c_str());
     }
 
-    //run commands
+    // run commands
     std::string type = config(L"precision", "float");
     // accept old precision key for backward compatibility
     if (config.Exists("type"))

@@ -87,11 +87,11 @@ NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
     m_name = copyMe.m_name;               // value on the left of the equals
     m_value = copyMe.m_value;             // value on the right of the equals (CN node name, or value)
     m_parent = copyMe.m_parent;           // parent script
-    m_type = copyMe.m_type;               //type of node
+    m_type = copyMe.m_type;               // type of node
     m_paramString = copyMe.m_paramString; // parameter of a function/array
     m_paramMacro = copyMe.m_paramMacro;   // parameter of a macro (the variables used in the macro definition)
     // don't copy over the parameters, they will be reparsed after the copy
-    //m_parameters = copyMe.m_parameters; // copy over the parameters straight
+    // m_parameters = copyMe.m_parameters; // copy over the parameters straight
 
     m_eval = nullptr; // pointer to an arbitrary eval structure
     // script for macro calls, need to expand the macro for each call

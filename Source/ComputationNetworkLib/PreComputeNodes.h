@@ -138,9 +138,9 @@ class MeanInvStdDevNodeBase : public PreComputedNodeBase<ElemType>, public NumIn
 {
     typedef PreComputedNodeBase<ElemType> Base;
     UsingPreComputedNodeMembers;
-    //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
+    // static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
 public:
-    //DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
+    // DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
     MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : PreComputedNodeBase<ElemType>(deviceId, name),
           m_numSamples(SIZE_MAX)
@@ -181,7 +181,7 @@ public:
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        //LogicError("Mean operation should not be involved in the gradient calculation.");
+        // LogicError("Mean operation should not be involved in the gradient calculation.");
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -541,7 +541,7 @@ public:
         InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
 
-    //(feature-mean).*InvStdDev
+    // (feature-mean).*InvStdDev
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         // only feature (input0) and output needs to be sliced
@@ -565,12 +565,12 @@ public:
         input1.HasNan("PerDimMeanVarDeNormalization-input1");
         input2.HasNan("PerDimMeanVarDeNormalization-input2");
 #endif
-        //functionValues.AssignDifferenceOf(input0, input1);
-        //functionValues.ColumnElementMultiplyWith(input2);
-        //functionValues.AssignDifferenceOf(input0, input0);
-        //functionValues += input2;
-        //functionValues.ElementInverse();
-        //functionValues.ElementMultiplyWith(input0);
+        // functionValues.AssignDifferenceOf(input0, input1);
+        // functionValues.ColumnElementMultiplyWith(input2);
+        // functionValues.AssignDifferenceOf(input0, input0);
+        // functionValues += input2;
+        // functionValues.ElementInverse();
+        // functionValues.ElementMultiplyWith(input0);
         functionValues.SetValue(input0);
         functionValues.ColumnElementDivideBy(input2);
         functionValues += input1;

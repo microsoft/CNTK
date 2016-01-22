@@ -139,14 +139,14 @@ public:
         size_t numSamples = posterior.GetNumCols();
         size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
 
-        temp.SetValue(normedDeviationVectors); //recall normedDeviationVectors <-- (x-u_c)/(stddev^2)
+        temp.SetValue(normedDeviationVectors); // recall normedDeviationVectors <-- (x-u_c)/(stddev^2)
         temp.Reshape(featureSize, numSamples * numComponent);
 
         posterior.Reshape(1, numSamples * numComponent);
-        temp.RowElementMultiplyWith(posterior); //temp <-- posterior * (x-u_c)/(stddev^2)
+        temp.RowElementMultiplyWith(posterior); // temp <-- posterior * (x-u_c)/(stddev^2)
 
-        posterior.Reshape(numComponent, numSamples);          //reshape back
-        temp.Reshape(featureSize * numComponent, numSamples); //reshape back
+        posterior.Reshape(numComponent, numSamples);          // reshape back
+        temp.Reshape(featureSize * numComponent, numSamples); // reshape back
 
         temp.RowElementMultiplyWith(gradientValues);
 
@@ -242,12 +242,12 @@ public:
             ForwardPropS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
                          slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
         }
-        else //should not reach the code since validation should fail already
+        else // should not reach the code since validation should fail already
             RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
     }
 
-    //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-    //If we want to speed up we need to replace following code with a several specialized GPU functions
+    // input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+    // If we want to speed up we need to replace following code with a several specialized GPU functions
     /*TODO: merge with call site*/ void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean, Matrix<ElemType>& logstddev,
                                                      const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
                                                      Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
@@ -256,12 +256,12 @@ public:
         size_t numSamples = feature.GetNumCols();
         size_t featureDim = feature.GetNumRows();
 
-        //compute prior which is softmax of unnormedPrior
-        prior.AssignLogSoftmaxOf(unnormedPrior, true); //log prior
+        // compute prior which is softmax of unnormedPrior
+        prior.AssignLogSoftmaxOf(unnormedPrior, true); // log prior
 
         prior.InplaceExp();
 
-        //compute stddev
+        // compute stddev
         stddev.AssignExpOf(logstddev);
 
 #if DUMPOUTPUT
@@ -273,43 +273,43 @@ public:
         stddev.Print("stddev", 0, min(5, stddev.GetNumRows() - 1), 0, min(10, stddev.GetNumCols() - 1));
 #endif
 
-        //compute normedDeviation <-- ||x-u_c||^2/(stddev^2)
+        // compute normedDeviation <-- ||x-u_c||^2/(stddev^2)
         normedDeviationVectors.AssignRepeatOf(feature, numComponent, 1);
-        normedDeviationVectors -= mean;                                        //each column of the mean has multiple mean components
-        normedDeviationVectors.Reshape(featureDim, numSamples * numComponent); //now each column is feature-mean_i
+        normedDeviationVectors -= mean;                                        // each column of the mean has multiple mean components
+        normedDeviationVectors.Reshape(featureDim, numSamples * numComponent); // now each column is feature-mean_i
 
         normedDeviation.AssignVectorNorm2Of(normedDeviationVectors, true);
         normedDeviation ^= 2;
-        temp.AssignRepeatOf(stddev, 1, numSamples / stddev.GetNumCols()); //stddev.GetNumCols() is either 1 or =numSamples
-        temp.Reshape(1, temp.GetNumElements());                           //one stddev value for each component for each sample
+        temp.AssignRepeatOf(stddev, 1, numSamples / stddev.GetNumCols()); // stddev.GetNumCols() is either 1 or =numSamples
+        temp.Reshape(1, temp.GetNumElements());                           // one stddev value for each component for each sample
         temp ^= 2;
-        normedDeviation.ElementDivideBy(temp); //normedDeviation and temp have same dim (1, numSamples* numComponent)
+        normedDeviation.ElementDivideBy(temp); // normedDeviation and temp have same dim (1, numSamples* numComponent)
 
-        //compute  normedDeviationVectors <-- (x-u_c)/(stddev^2)
-        normedDeviationVectors.RowElementDivideBy(temp);                       //divide twice
-        normedDeviationVectors.Reshape(featureDim * numComponent, numSamples); //reshape back
+        // compute  normedDeviationVectors <-- (x-u_c)/(stddev^2)
+        normedDeviationVectors.RowElementDivideBy(temp);                       // divide twice
+        normedDeviationVectors.Reshape(featureDim * numComponent, numSamples); // reshape back
 
-        //compute per-component likelihood
-        posterior.AssignProductOf(-0.5f, normedDeviation); //posterior  <-- -||x-u_c||^2/(stddev^2)/2 and in (1, numSamples* numComponent) dim
+        // compute per-component likelihood
+        posterior.AssignProductOf(-0.5f, normedDeviation); // posterior  <-- -||x-u_c||^2/(stddev^2)/2 and in (1, numSamples* numComponent) dim
         temp.InplaceLog();
-        temp *= ((ElemType) numComponent / 2.0f);                   //temp <-- stddev^c and in (1, numSamples* numComponent) dim
+        temp *= ((ElemType) numComponent / 2.0f);                   // temp <-- stddev^c and in (1, numSamples* numComponent) dim
         posterior -= temp;                                          // posterior  <-- exp[-||x-u_c||^2/(stddev^2)/2]/(stddev^c)
-        posterior -= (ElemType)(numComponent / 2.0f * log(TWO_PI)); //likelihood for each component and sample is now computed and stored in posterior
-        posterior.InplaceExp();                                     //posterior  <-- exp(-||x-u_c||^2/(stddev^2)/2)
+        posterior -= (ElemType)(numComponent / 2.0f * log(TWO_PI)); // likelihood for each component and sample is now computed and stored in posterior
+        posterior.InplaceExp();                                     // posterior  <-- exp(-||x-u_c||^2/(stddev^2)/2)
 
-        normedDeviation.Reshape(numComponent, numSamples); //reshape back
-        posterior.Reshape(numComponent, numSamples);       //reshape back
+        normedDeviation.Reshape(numComponent, numSamples); // reshape back
+        posterior.Reshape(numComponent, numSamples);       // reshape back
 
-        //compute posterior <-- prior_i * likelihood_i
-        if (unnormedPrior.GetNumCols() == numSamples) //each sample has different prior
+        // compute posterior <-- prior_i * likelihood_i
+        if (unnormedPrior.GetNumCols() == numSamples) // each sample has different prior
             posterior.ElementMultiplyWith(prior);
-        else //all samples share the same prior
+        else // all samples share the same prior
             posterior.ColumnElementMultiplyWith(prior);
 
-        //compute GMM log-likelihood
-        Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues); //functionValues <-- total likelihood
-        posterior.RowElementDivideBy(functionValues);                                                                             //posterior <-- per-comp likelihood / total likelihood
-        functionValues.InplaceLog();                                                                                              //log likelihood
+        // compute GMM log-likelihood
+        Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues); // functionValues <-- total likelihood
+        posterior.RowElementDivideBy(functionValues);                                                                             // posterior <-- per-comp likelihood / total likelihood
+        functionValues.InplaceLog();                                                                                              // log likelihood
 
 #if DUMPOUTPUT
         temp.Print("temp", 0, min(5, temp.GetNumRows() - 1), 0, min(10, temp.GetNumCols() - 1));
@@ -362,7 +362,7 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -374,7 +374,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -425,12 +425,12 @@ public:
     {
     }
 
-    //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        //auto t_start_time = Timer::MilliSecondElapsed();
-        //left Node must be a scalar
-        if (inputIndex == 0) //left derivative
+        // auto t_start_time = Timer::MilliSecondElapsed();
+        // left Node must be a scalar
+        if (inputIndex == 0) // left derivative
         {
             BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
         }
@@ -509,7 +509,7 @@ public:
             m_gammaCalculator.init(m_hmm, m_deviceId);
             m_gammaCalcInitialized = true;
         }
-        //softmax
+        // softmax
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
@@ -538,7 +538,7 @@ public:
             LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
         if (isFinalValidationPass)
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && //match size
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size
                   Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
                   Input(0)->HasMBLayout() &&
                   Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
@@ -570,7 +570,7 @@ public:
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -579,7 +579,7 @@ public:
         RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);

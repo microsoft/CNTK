@@ -61,7 +61,7 @@ private:
     std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
-    //for lattice uids and phoneboundaries
+    // for lattice uids and phoneboundaries
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_latticeBufferMultiUtt;
     std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
@@ -69,7 +69,7 @@ private:
     std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
 
-    //hmm
+    // hmm
     msra::asr::simplesenonehmm m_hset;
 
     std::map<std::wstring, size_t> m_featureNameToIdMap;

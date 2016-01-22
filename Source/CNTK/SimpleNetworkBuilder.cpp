@@ -71,7 +71,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
 {
 
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -144,9 +144,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
             prior = builder.Mean(label, L"Prior");
             input = builder.Log(prior, L"LogOfPrior");
 
-            //following two lines are needed only if true probability is needed
-            //output = builder.Softmax(output);
-            //output = builder.Log(output);
+            // following two lines are needed only if true probability is needed
+            // output = builder.Softmax(output);
+            // output = builder.Log(output);
 
             scaledLogLikelihood = builder.Minus(output, input, L"ScaledLogLikelihood");
             m_net->OutputNodes().push_back(scaledLogLikelihood);
@@ -156,9 +156,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
             m_net->OutputNodes().push_back(output);
         }
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
-        //m_net->OutputNodes().push_back(output);
+        // m_net->OutputNodes().push_back(output);
     }
 
     return m_net;
@@ -169,7 +169,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -194,7 +194,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
         int recur_idx = 0;
         if (numHiddenLayers > 0)
         {
-            //TODO: to figure out sparse matrix size
+            // TODO: to figure out sparse matrix size
             u = builder.CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
             m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -215,7 +215,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
             else
             {
                 output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), 0);
-                //output = builder.Times(u, input);
+                // output = builder.Times(u, input);
             }
 
             if (m_addDropoutNodes)
@@ -225,7 +225,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
 
             for (int i = 1; i < numHiddenLayers; i++)
             {
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
                 m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -278,7 +278,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -397,7 +397,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -488,7 +488,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
 
         m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
     }
 
@@ -499,7 +499,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -528,7 +528,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
             input = output;
         }
 
-        //used for lookuptable node unittest, will delete
+        // used for lookuptable node unittest, will delete
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
@@ -551,7 +551,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
                 builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], ik, msra::strfun::wstrprintf(L"pastValue%d", ik));
             pastValueXI->SetParameterUpdateRequired(false);
             pastValueXI->AttachInputs(input);
-            //TODO: to figure out sparse matrix size
+            // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
             m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -616,7 +616,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -659,19 +659,19 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFrom
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi2 = builder.CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi3 = builder.CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi4 = builder.CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi1 = builder.CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
-                //TODO: to figure out sparse matrix size
+                // TODO: to figure out sparse matrix size
                 Wxi = builder.CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
                 m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
@@ -731,7 +731,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFrom
             }
         }
 
-        //TODO: to figure out sparse matrix size
+        // TODO: to figure out sparse matrix size
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
         //                b = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
@@ -807,11 +807,11 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
     bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
     bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
-    //if (m_forgetGateInitVal > 0)
+    // if (m_forgetGateInitVal > 0)
     bf->Value().SetValue(m_forgetGateInitVal);
-    //if (m_inputGateInitVal > 0)
+    // if (m_inputGateInitVal > 0)
     bi->Value().SetValue(m_inputGateInitVal);
-    //if (m_outputGateInitVal > 0)
+    // if (m_outputGateInitVal > 0)
     bo->Value().SetValue(m_outputGateInitVal);
 
     Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
@@ -844,9 +844,9 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 
     if (m_constInputGateValue)
     {
-        //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        //it->SetParameterUpdateRequired(false);
-        //it->Value().SetValue(m_constInputGateValue);
+        // it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
+        // it->SetParameterUpdateRequired(false);
+        // it->Value().SetValue(m_constInputGateValue);
         it = nullptr;
     }
     else
@@ -951,7 +951,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         ULONG randomSeed = 1;
 
@@ -1050,7 +1050,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -1131,7 +1131,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
 
         m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
     }
 
@@ -1192,7 +1192,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         ULONG randomSeed = 1;
 
@@ -1248,7 +1248,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         if (numHiddenLayers > 0)
         {
 
-            //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+            // output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
             // previously used function. now uses LSTMNode which is correct and fast
             input = output;
@@ -1259,7 +1259,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
                 {
 
-                    //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    // output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                     output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                     // previously used function, now uses LSTMnode, which is fast and correct
 
@@ -1303,7 +1303,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         else
             m_net->OutputNodes().push_back(output);
 
-        //add softmax layer (if prob is needed or KL reg adaptation is needed)
+        // add softmax layer (if prob is needed or KL reg adaptation is needed)
         output = builder.Softmax(output, L"PosteriorProb");
     }
 
@@ -1360,11 +1360,11 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
     bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
     bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
-    //if (m_forgetGateInitVal > 0)
+    // if (m_forgetGateInitVal > 0)
     bf->Value().SetValue(m_forgetGateInitVal);
-    //if (m_inputGateInitVal > 0)
+    // if (m_inputGateInitVal > 0)
     bi->Value().SetValue(m_inputGateInitVal);
-    //if (m_outputGateInitVal > 0)
+    // if (m_outputGateInitVal > 0)
     bo->Value().SetValue(m_outputGateInitVal);
 
     Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
@@ -1397,9 +1397,9 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 
     if (m_constInputGateValue)
     {
-        //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        //it->SetParameterUpdateRequired(false);
-        //it->Value().SetValue(m_constInputGateValue);
+        // it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
+        // it->SetParameterUpdateRequired(false);
+        // it->Value().SetValue(m_constInputGateValue);
         it = nullptr;
     }
     else
@@ -1504,7 +1504,7 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
-    if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+    if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
     {
         unsigned long randomSeed = 1;
 
@@ -1597,8 +1597,8 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
 
         bias = builder.CreateLearnableParameter(L"BiasVector", 1, m_layerSizes[m_layerSizes.size() - 1]);
         bias->Value().SetValue((ElemType) -std::log(m_layerSizes[m_layerSizes.size() - 1]));
-        //m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
-        //clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
+        // m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
+        // clslogpostprob = builder.Times(clsweight, input, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeNCEBasedCrossEntropy", L"EvalNodeNCEBasedCrossEntrpy", bias);
 
@@ -1643,7 +1643,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     assert(globalMean.GetNumCols() == 1);
     assert(globalStdDev.GetNumCols() == 1);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = globalStdDev.GetDeviceId();
     globalStdDev.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     for (int i = 0; i < globalStdDev.GetNumRows(); i++)
@@ -1653,7 +1653,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     if (!CheckDbnTag(fstream, "BNET"))
         RuntimeError("Error reading DBN file - did not find expected tag BNET\n");
 
-    for (i = 0; i < numLayers; i++) //0th index is for input layer,
+    for (i = 0; i < numLayers; i++) // 0th index is for input layer,
     {
         fstream >> layerType;
 
@@ -1671,7 +1671,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
             Matrix<ElemType> contextMean(contextDim, 1, m_deviceId);
             Matrix<ElemType> contextStdDev(contextDim, 1, m_deviceId);
 
-            //move to CPU since element-wise operation is expensive and can go wrong in GPU
+            // move to CPU since element-wise operation is expensive and can go wrong in GPU
             contextMean.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
             contextStdDev.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
             for (size_t j = 0; j < frameDim; j++)
@@ -1736,7 +1736,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
 
     if (!CheckDbnTag(fstream, "ENET"))
         RuntimeError("Error reading DBN file - did not find expected tag ENET\n");
-    //size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
+    // size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
 
     label = builder.CreateInputNode(L"labels", m_outputLayerSize);
 
@@ -1793,9 +1793,9 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     {
         input = builder.Log(prior, L"LogOfPrior");
 
-        //following two lines is needed only if true probability is needed
-        //output = builder.Softmax(output);
-        //output = builder.Log(output);
+        // following two lines is needed only if true probability is needed
+        // output = builder.Softmax(output);
+        // output = builder.Log(output);
 
         scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
         scaledLogLikelihood->AttachInputs(output, input);
@@ -1831,7 +1831,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonli
         output = builder.Tanh(input, nodeName);
     else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")
     {
-        output = input; //linear layer
+        output = input; // linear layer
         if (nodeName != L"")
             m_net->RenameNode(output, nodeName);
     }
@@ -1881,7 +1881,7 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         break;
     case TrainingCriterion::NCECrossEntropyWithSoftmax:
         output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-        //output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
+        // output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
         break;
     default:
         LogicError("Unsupported training criterion.");
@@ -1900,11 +1900,11 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         case EvalCriterion::CrossEntropyWithSoftmax:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
+            // output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
             output = builder.CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
             break;
         case EvalCriterion::ClassCrossEntropyWithSoftmax:
-            //output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
+            // output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
             output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
             break;
         case EvalCriterion::NCECrossEntropyWithSoftmax:
@@ -1913,13 +1913,13 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
         case EvalCriterion::SquareError:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+            // output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
             output = builder.SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
             break;
         case EvalCriterion::Logistic:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+            // output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
             output = builder.Logistic(label, tinput, (evalNodeName == L"") ? L"Logistic" : evalNodeName);
             break;
         case EvalCriterion::ErrorPrediction:

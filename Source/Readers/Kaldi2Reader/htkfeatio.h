@@ -48,7 +48,7 @@ public:
 
         feature_reader = new kaldi::RandomAccessBaseFloatMatrixReader(rx);
 
-        //std::wcout << "Kaldi2Reader: created feature reader " << feature_reader << " [" << rx.c_str() << "]" << std::endl;
+        // std::wcout << "Kaldi2Reader: created feature reader " << feature_reader << " [" << rx.c_str() << "]" << std::endl;
 
         if (this->feature_transform == "NO_FEATURE_TRANSFORM")
         {
@@ -90,7 +90,7 @@ public:
 
     ~FeatureSection()
     {
-        //std::wcout << "Kaldi2Reader: deleted feature reader " << feature_reader << std::endl;
+        // std::wcout << "Kaldi2Reader: deleted feature reader " << feature_reader << std::endl;
 
         delete feature_reader;
     }
@@ -161,7 +161,7 @@ public:
     template <class MATRIX>
     static void write(const wstring &path, const string &kindstr, unsigned int period, const MATRIX &feat)
     {
-        //std::wcout << __FILE__ << ":" << __FUNCTION__ << " not implemented" << std::endl;
+        // std::wcout << __FILE__ << ":" << __FUNCTION__ << " not implemented" << std::endl;
         exit(1);
     }
     template <class T>
@@ -202,7 +202,7 @@ public:
         os.put('\0');
         os.put('B');
         std::string my_token = (precision == 4 ? "FM" : "DM");
-        //WriteToken(os, binary, my_token);
+        // WriteToken(os, binary, my_token);
         os << my_token << " ";
         {
             int32 rows = numframes;
@@ -261,7 +261,7 @@ class htkfeatreader : protected htkfeatio
 {
     // information on current file
     // File handle and feature type information is stored in the underlying htkfeatio object.
-    //TODO make this nicer
+    // TODO make this nicer
 
 public:
     // parser for complex a=b[s,e] syntax
@@ -400,7 +400,7 @@ struct htkmlfentry
 {
     unsigned int firstframe; // range [firstframe,firstframe+numframes)
     unsigned short numframes;
-    //unsigned short classid;     // numeric state id
+    // unsigned short classid;     // numeric state id
     unsigned int classid; // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
 
 public:

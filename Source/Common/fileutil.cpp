@@ -699,7 +699,7 @@ bool funicode(FILE* f)
         (int) testCode == 0xFEFF)
         return true;
     fseek(f, 0, SEEK_SET);
-    //rewind (f);
+    // rewind (f);
     return false;
 }
 
@@ -933,13 +933,13 @@ wstring fgetwstring(FILE* f)
     wstring res;
     for (;;)
     {
-        //
+        // 
         // there is a known vc++ runtime bug: Microsoft Connect 768113
         // fgetwc can skip a byte in certain condition
         // this is already fixed in update release to VS 2012
         // for now the workaround is to use fgetc twice to simulate fgetwc
-        //
-        //wint_t c = fgetwc (f);
+        // 
+        // wint_t c = fgetwc (f);
         int c1 = fgetc(f);
         int c2 = fgetc(f);
 
@@ -1620,12 +1620,12 @@ void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
     }
     else if (wavhd.nChannels == 2)
     {
-        //read raw data        
+        // read raw data        
         std::vector<short> buf;
         buf.resize(numSamples * 2);
         fgetwavraw(f, buf, wavhd);
         
-        //map to mono
+        // map to mono
         wav.resize (numSamples);
         const short * p = &buf[0];
         for (int i = 0; i < (int) numSamples; i++)
@@ -1746,14 +1746,14 @@ void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels
     f;wav;sampleRate;nChannels;
     // construct WAVEFORMATEX
     WAVEFORMATEX wfx;
-    wfx.cbSize = 16 + 2;  //fmt data + extra data
-    wfx.nAvgBytesPerSec = (DWORD)(sampleRate * nChannels * 2); //short: 2 bytes per sample
-    wfx.nBlockAlign = (WORD)nChannels * 2; //short: 2bytes per sample
+    wfx.cbSize = 16 + 2;  // fmt data + extra data
+    wfx.nAvgBytesPerSec = (DWORD)(sampleRate * nChannels * 2); // short: 2 bytes per sample
+    wfx.nBlockAlign = (WORD)nChannels * 2; // short: 2bytes per sample
     wfx.nChannels = (WORD)nChannels;
     wfx.nSamplesPerSec = sampleRate;
     wfx.wBitsPerSample = 16;
     wfx.wFormatTag = WAVE_FORMAT_PCM;
-    //putwfx
+    // putwfx
     fputwfx (f, wfx, (unsigned int) wav.size());
     // wrtie the data
     fwriteOrDie (&wav[0], sizeof(wav[0]), wav.size(), f);
@@ -2070,7 +2070,7 @@ static BOOL ExpandWildcards(wstring path, vector<wstring>& paths)
         path.erase(last);
 
     // convert root to long filename convention
-    //if (path.find (L"\\\\?\\") != 0)
+    // if (path.find (L"\\\\?\\") != 0)
     //    path = L"\\\\?\\" + root;
 
     // split off everything after first wildcard
@@ -2289,7 +2289,7 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     size_t len = p.length();
     vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     fill(buf.begin(), buf.end(), (wchar_t) 0);
-    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }

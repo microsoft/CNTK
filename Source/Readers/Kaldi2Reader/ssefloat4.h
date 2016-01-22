@@ -74,7 +74,7 @@ public:
         : v(_mm_load1_ps(&f))
     {
     }
-    //float4 (float f) : v (_mm_set_ss (f)) {}  // code seems more complex than _mm_load1_ps()
+    // float4 (float f) : v (_mm_set_ss (f)) {}  // code seems more complex than _mm_load1_ps()
 
     // basic math
     float4 operator-() const
@@ -181,7 +181,7 @@ public:
     // save a float4 to RAM bypassing the cache ('without polluting the cache')
     void storewithoutcache(float4& r4) const
     {
-        //_mm_stream_ps ((float*) &r4, v);
+        // _mm_stream_ps ((float*) &r4, v);
         r4 = v;
     }
 
@@ -189,7 +189,7 @@ public:
     // save a float4 to RAM bypassing the cache ('without polluting the cache')
     void storewithoutcache (float4 * p4) const
     {
-        //_mm_stream_ps ((float*) p4, v);
+        // _mm_stream_ps ((float*) p4, v);
         *p4 = v;
     }
 

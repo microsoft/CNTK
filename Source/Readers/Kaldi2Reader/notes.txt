@@ -110,6 +110,6 @@ GetMinibatchToWrite
   const auto path = reader.parse(m_inputFilesMultiIO[i][m_inputFileIndex]);
   reader.read (path, featkind, sampperiod, feat);
 
-  m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);   //sampPeriods not used, featkind not used
+  m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);   // sampPeriods not used, featkind not used
   m_fileEvalSource->CreateEvalMinibatch();
   m_fileEvalSource->ChunkOfFrames(id);

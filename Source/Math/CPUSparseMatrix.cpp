@@ -45,7 +45,7 @@
 //    return 42;
 //}
 
-#ifndef USE_MKL //MKL has one additional parameter for different matrix order
+#ifndef USE_MKL // MKL has one additional parameter for different matrix order
 #define BLAS_COLMAJOR
 #else
 #define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
@@ -78,8 +78,8 @@ enum class SymMatrixType : char
 {
     Up = 'U',          // symmetric matrix is stored in the upper part
     Low = 'L',         // symmetric matrix is stored in thelower part
-    Full = 'F',        //full populated
-    NotSymmetric = 'N' //not a symmetric matrix
+    Full = 'F',        // full populated
+    NotSymmetric = 'N' // not a symmetric matrix
 };
 
 enum class MatrixOpSide : char
@@ -104,14 +104,14 @@ void CPUSparseMatrix<ElemType>::ZeroInit()
     m_nz = 0;
     m_matrixName = NULL;
 
-    //if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
+    // if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
     {
         m_colIdx = -1;
         m_pArray = NULL;
         m_unCompIndex = NULL;
         m_compIndex = NULL;
     }
-    //else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
+    // else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
     {
         m_blockSize = 0;
         m_blockIdShift = 0;
@@ -193,7 +193,7 @@ CPUSparseMatrix<ElemType>::CPUSparseMatrix(CPUSparseMatrix<ElemType>&& moveFrom)
     m_blockIdShift = moveFrom.m_blockIdShift;
     m_blockIds = moveFrom.m_blockIds;
 
-    //release the pointer from the source object so that the destructor won't release it twice
+    // release the pointer from the source object so that the destructor won't release it twice
     moveFrom.ZeroInit();
 }
 
@@ -204,7 +204,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
     if (this != &moveFrom)
     {
         if (OwnBuffer())
-            ReleaseMemory(); //always delete the data pointer since we will use the pointer from moveFrom
+            ReleaseMemory(); // always delete the data pointer since we will use the pointer from moveFrom
 
         m_format = moveFrom.m_format;
         m_numRows = moveFrom.m_numRows;
@@ -226,7 +226,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
         m_blockIdShift = moveFrom.m_blockIdShift;
         m_blockIds = moveFrom.m_blockIds;
 
-        //release the pointer from the source object so that the destructor won't release it twice
+        // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroInit();
     }
     return *this;
@@ -288,9 +288,9 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
     }
 
-    if (m_elemSizeAllocated < m_nz + 1) //automatic resize
+    if (m_elemSizeAllocated < m_nz + 1) // automatic resize
     {
-        Resize(m_numRows, m_numCols, m_nz + 100, true, true); //allocate 100 more elelemnts and keep existing values
+        Resize(m_numRows, m_numCols, m_nz + 100, true, true); // allocate 100 more elelemnts and keep existing values
     }
 
     if (row < 0 || row >= m_numRows)
@@ -309,7 +309,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
     m_pArray[m_nz] = v;
     m_unCompIndex[m_nz] = (CPUSPARSE_INDEX_TYPE) r;
 
-    //consistency check
+    // consistency check
     if (m_nz > 0)
     {
         if (c == m_colIdx && r <= m_unCompIndex[m_nz - 1])
@@ -361,7 +361,7 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*
     if (this->GetFormat() != matrixFormatSparseCSC && this->GetFormat() != matrixFormatSparseCSR)
     {
         return;
-        //NOT_IMPLEMENTED;
+        // NOT_IMPLEMENTED;
     }
 
     fprintf(stderr, "%s\n", matrixName);
@@ -399,7 +399,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     if (m_format == MatrixFormat::matrixFormatSparseCSC)
     {
         slice.m_pArray = m_pArray;
-        slice.m_nzValues = m_pArray + m_compIndex[startColumn]; //note: m_compIndex is always against  m_pArray
+        slice.m_nzValues = m_pArray + m_compIndex[startColumn]; // note: m_compIndex is always against  m_pArray
         slice.m_unCompIndex = m_unCompIndex;
         slice.m_compIndex = m_compIndex + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
         slice.m_externalBuffer = true;
@@ -415,7 +415,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
         {
             if (j > 0)
             {
-                assert(m_blockIds[j] > m_blockIds[j - 1]); //assume ids are increasing.Is this valid?
+                assert(m_blockIds[j] > m_blockIds[j - 1]); // assume ids are increasing.Is this valid?
             }
 
             if (!foundStart && (long long) m_blockIds[j] - (long long) m_blockIdShift >= (long long) startColumn) // start column with values
@@ -423,7 +423,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
                 startColBlock = j;
                 foundStart = true;
             }
-            else if ((long long) m_blockIds[j] - (long long) m_blockIdShift >= (long long) (startColumn + numCols)) //end column with values
+            else if ((long long) m_blockIds[j] - (long long) m_blockIdShift >= (long long) (startColumn + numCols)) // end column with values
             {
                 endColBlock = j;
                 foundEnd = true;
@@ -441,7 +441,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 
         slice.m_pArray = m_pArray + startColBlock * m_numRows;
         slice.m_nzValues = slice.m_pArray;
-        slice.m_blockIds = m_blockIds + startColBlock; //the value stored in the block id is based on the original column numbers
+        slice.m_blockIds = m_blockIds + startColBlock; // the value stored in the block id is based on the original column numbers
         slice.m_blockSize = (size_t) max((long long) 0, endColBlock - startColBlock);
         slice.m_blockIdShift = m_blockIdShift + startColumn;
         slice.m_externalBuffer = true;
@@ -454,7 +454,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 template <class ElemType>
 CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
 {
-    //if (numCols == 0)
+    // if (numCols == 0)
     //    LogicError("The slice cannot have 0 columns.");
 
     if (startColumn + numCols > m_numCols)
@@ -635,7 +635,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows();
     int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
 
-    assert(m > 0 && k > 0 && l > 0 && n > 0); //converting from size_t to int may cause overflow
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
     assert(k == l);
     if (k != l)
     {
@@ -667,11 +667,11 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     {
         for (size_t j = 0; j < rhs.GetNumCols(); j++)
         {
-            size_t start = rhs.m_compIndex[j]; //ColLocation
+            size_t start = rhs.m_compIndex[j]; // ColLocation
             size_t end = rhs.m_compIndex[j + 1];
             for (size_t p = start; p < end; p++)
             {
-                size_t i = rhs.m_unCompIndex[p]; //RowLocation
+                size_t i = rhs.m_unCompIndex[p]; // RowLocation
                 ElemType val = rhs.m_pArray[p];
 
                 for (size_t h = 0; h < lhs.GetNumRows(); h++)
@@ -727,7 +727,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
 
     assert(m > 0 && k > 0 && l > 0 && n > 0);
     m;
-    n; //converting from size_t to int may cause overflow
+    n; // converting from size_t to int may cause overflow
     assert(k == l);
     if (k != l)
     {
@@ -745,7 +745,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
         if (rhs.GetFormat() != matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
 
-        //allocate enough memory
+        // allocate enough memory
         c.SetFormat(matrixFormatSparseBlockCol);
         c.Resize(m, n, m * min(n, rhs.m_nz), true, false);
 
@@ -757,8 +757,8 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
 
             for (size_t p = start; p < end; p++)
             {
-                size_t i = rhs.m_unCompIndex[p]; //i ranges over words
-                ElemType val = rhs.m_pArray[p];  //1 for(i, j)
+                size_t i = rhs.m_unCompIndex[p]; // i ranges over words
+                ElemType val = rhs.m_pArray[p];  // 1 for(i, j)
 
                 bool first = true;
                 if (w2Id.find(i) == w2Id.end())
@@ -793,7 +793,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
         {
             LogicError("sparse matrix out of range.");
         }
-        //c.SetFormat(matrixFormatSparseBlockCol);
+        // c.SetFormat(matrixFormatSparseBlockCol);
     }
     else if (transposeA && !transposeB)
     {
@@ -993,7 +993,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
     ElemType* nzValues = NzValues();
 
 #pragma omp parallel for
-    for (long i = 0; i < (m & ~3); i += 4) //four-way unrolling
+    for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > threshold)
             nzValues[i] = threshold;
@@ -1007,7 +1007,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
         if (nzValues[i + 3] > threshold)
             nzValues[i + 3] = threshold;
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         if (nzValues[i] > threshold)
@@ -1027,7 +1027,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
     ElemType* nzValues = NzValues();
 
 #pragma omp parallel for
-    for (long i = 0; i < (m & ~3); i += 4) //four-way unrolling
+    for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] < threshold)
             nzValues[i] = threshold;
@@ -1041,7 +1041,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
         if (nzValues[i + 3] < threshold)
             nzValues[i + 3] = threshold;
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         if (nzValues[i] < threshold)
@@ -1064,7 +1064,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
     ElemType* nzValues = NzValues();
 
 #pragma omp parallel for
-    for (long i = 0; i < (m & ~3); i += 4) //four-way unrolling
+    for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > locThresholdPos)
             nzValues[i] = locThresholdPos;
@@ -1086,7 +1086,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
         else if (nzValues[i + 3] < locTHresholdNeg)
             nzValues[i + 3] = locTHresholdNeg;
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         if (nzValues[i] > locThresholdPos)
@@ -1108,7 +1108,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
     ElemType* nzValues = NzValues();
 
 #pragma omp parallel for
-    for (long i = 0; i < (m & ~3); i += 4) //four-way unrolling
+    for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > threshold)
             nzValues[i] -= threshold;
@@ -1138,7 +1138,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
         else
             nzValues[i + 3] = 0;
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         if (nzValues[i] > threshold)
@@ -1168,7 +1168,7 @@ ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
     {
         v += nzValues[i] * nzValues[i] + nzValues[i + 1] * nzValues[i + 1] + nzValues[i + 2] * nzValues[i + 2] + nzValues[i + 3] * nzValues[i + 3];
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         v += nzValues[i] * nzValues[i];
@@ -1221,7 +1221,7 @@ ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     {
         sum += nzValues[i] + nzValues[i + 1] + nzValues[i + 2] + nzValues[i + 3];
     }
-    //handle remaining stuffs
+    // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
         sum += nzValues[i];

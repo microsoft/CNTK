@@ -517,7 +517,7 @@ void ComputationNetwork::DetermineSetOfAllRoots()
 #ifdef _DEBUG
                 PrintComputationTree(node, false);
 #endif
-                //SetActualMiniBatchSizeFromFeatures();
+                // SetActualMiniBatchSizeFromFeatures();
                 ValidateSubNetwork(node);
             }
         }
@@ -626,9 +626,9 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
     if (!nonDefaultNodes.empty())
     {
         fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int) nonDefaultNodes.size(), (int) nodes.size());
-        //for (auto node : nonDefaultNodes)
+        // for (auto node : nonDefaultNodes)
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
-        //fprintf(stderr, "\n\n");
+        // fprintf(stderr, "\n\n");
     }
 }
 
@@ -884,8 +884,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         else
         {
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-            //we only release matrices for the children since the root node's informatioin will be used and should not be shared
-            //with others
+            // we only release matrices for the children since the root node's informatioin will be used and should not be shared
+            // with others
             ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
         }
     }
@@ -894,7 +894,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     {
         std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
 
-        //now, simulate the gradient computation order to determine how to allocate matrices
+        // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
 
         // we need to call it here since we always compute gradients for children and root node is not children of other node

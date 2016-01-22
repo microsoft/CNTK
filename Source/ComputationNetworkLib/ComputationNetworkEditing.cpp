@@ -110,10 +110,10 @@ void ComputationNetwork::RenameNode(const std::wstring& nodeNameOrig, const std:
     ComputationNodeBasePtr nodeToRename = GetNodeFromName(nodeNameOrig);
 
     auto iter = m_nameToNodeMap.find(nodeNameNew);
-    if (iter != m_nameToNodeMap.end()) //found
+    if (iter != m_nameToNodeMap.end()) // found
         RuntimeError("RenameNode: Target name already exists.");
 
-    //rename the node and update the mapping table
+    // rename the node and update the mapping table
     nodeToRename->SetNodeName(nodeNameNew);
     m_nameToNodeMap.erase(nodeNameOrig);
     m_nameToNodeMap[nodeNameNew] = nodeToRename;
@@ -133,7 +133,7 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 
     ComputationNodeBasePtr nodeToDelete = GetNodeFromName(nodeName);
 
-    //first delete links, if this node is involved, the whole connection will be removed
+    // first delete links, if this node is involved, the whole connection will be removed
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -141,7 +141,7 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
         {
             ComputationNodeBasePtr child = node->GetInputs()[i];
 
-            //nodeToDelete is a child
+            // nodeToDelete is a child
             if (child == nodeToDelete)
             {
                 // this used to call DetatchInputs(), but it's better for MEL to retain other inputs
@@ -164,7 +164,7 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 
     // Note: the necessary update of m_allSEQNodes is hanlded by the InvalidateCompiledNetwork() call above
 
-    //delete the node itself
+    // delete the node itself
     m_nameToNodeMap.erase(nodeName); // this will deref the node and possibly deallocate it
 }
 
@@ -178,7 +178,7 @@ void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr new
     if (oldNode->OperationName() != newNode->OperationName())
         InvalidArgument("newNode must have the same type as the old node.");
 
-    //change children
+    // change children
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
         ComputationNodeBasePtr node = nodeIter->second;
@@ -187,12 +187,12 @@ void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr new
                 node->SetInput(i, newNode);
     }
 
-    //change name map
+    // change name map
     m_nameToNodeMap[nodeName] = newNode;
     for (int i = 0; i < oldNode->GetNumInputs(); i++)
         newNode->SetInput(i, oldNode->GetInputs()[i]);
 
-    //change other maps
+    // change other maps
     for (auto groupIter : GetAllNodeGroups())
     {
         auto& group = *groupIter;
@@ -222,7 +222,7 @@ void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBas
 
     // now the old node becomes a orphan node , remove it
     DeleteNode(oldNodeName);
-    //RemoveOrphanNode(oldNode);
+    // RemoveOrphanNode(oldNode);
 }
 
 void ComputationNetwork::ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode)

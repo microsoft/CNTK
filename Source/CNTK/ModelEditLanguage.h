@@ -221,7 +221,7 @@ public:
         wstring name = msra::strfun::utf16(search);
         vector<ComputationNodeBasePtr> nodes = netNdlIn->cn->GetNodesFromName(name);
 
-        if (!nodes.size()) //found
+        if (!nodes.size()) // found
             RuntimeError("GenerateNames: Node name does not exist %ls.", name.c_str());
 
         size_t firstStartOut, firstCountOut, secondStartOut, secondCountOut;
@@ -399,7 +399,7 @@ public:
             found->second.Clear();
         }
 
-        m_mapNameToNetNdl[modelName] = NetNdl<ElemType>(cn); //newly loaded model will be the new default if none has been set yet
+        m_mapNameToNetNdl[modelName] = NetNdl<ElemType>(cn); // newly loaded model will be the new default if none has been set yet
         if (m_netNdlDefault == nullptr)
         {
             m_netNdlDefault = &m_mapNameToNetNdl[modelName];
@@ -439,7 +439,7 @@ public:
     }
     wstring GetOptionalModelFormat(const ConfigParamList& params, const size_t numFixedParams)
     {
-        wstring modelFormat = L"cntk"; //default
+        wstring modelFormat = L"cntk"; // default
         for (size_t paramNumber = params.size(); paramNumber > numFixedParams; paramNumber--)
         {
             // process optional parameter if it exists
@@ -498,7 +498,7 @@ public:
 
     CopyNodeFlags GetOptionalCopyNodeFlags(const ConfigParamList& params, const size_t numFixedParams)
     {
-        CopyNodeFlags copyFlags = CopyNodeFlags::copyNodeAll; //by default copy both values and link structure
+        CopyNodeFlags copyFlags = CopyNodeFlags::copyNodeAll; // by default copy both values and link structure
 
         for (size_t paramNumber = params.size(); paramNumber > numFixedParams; paramNumber--)
         {
@@ -655,7 +655,7 @@ public:
                     RuntimeError("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
                 HandleNDLInline(stringParse, tokenStart, tokenEnd);
             }
-            else //createModel, loadModel, or loadNDL
+            else // createModel, loadModel, or loadNDL
             {
                 // model1=[...] - Embedded NDL script
                 if (0 == foundBrace)

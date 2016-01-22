@@ -327,7 +327,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             // if we have three parameters the second is columns
             // ignore legacy size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
-            //bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
+            // bool needGradient = node->GetOptionalParameter("needGradient", "false");  // TODO: what's this for?
             float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1"); // TODO: parameter should be called 'defaultHiddenActivation'
 
             // for backward compatibility we check 'timeStep' first
@@ -340,7 +340,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             else
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
 
-            //nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
+            // nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
         }
     }
     else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -479,7 +479,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     {
         std::vector<void*> inputs = EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
 
-        if (cnNodeType == OperationNameOf(RowStackNode)) //support variable length inputs
+        if (cnNodeType == OperationNameOf(RowStackNode)) // support variable length inputs
         {
             std::vector<ComputationNodeBasePtr> inputNodes;
             inputNodes.resize(inputs.size());

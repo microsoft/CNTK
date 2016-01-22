@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     seqRange);
             }
 
-            //m_NetInputMatrixPtr = decimatedMatrices;
+            // m_NetInputMatrixPtr = decimatedMatrices;
             for (auto& x : decimatedMatrices)
             {
                 wstring name = x.first;
@@ -570,14 +570,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // also revert net.m_MBLayoutPtr
             m_NetMBLayoutPtr->CopyFrom(m_MBLayoutCache);
 
-            //m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
+            // m_NetCriterionNodes[0]->Value().SetValue((ElemType)0);
             Matrix<ElemType>::AddElementToElement(*m_NetCriterionAccumulator, 0, 0,
                                                   m_NetCriterionNodes[0]->Value(), 0, 0);
             m_NetCriterionAccumulator->SetValue((ElemType) 0);
 
             for (size_t i = 0; i < m_NetEvaluationNodes.size(); i++)
             {
-                //m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
+                // m_NetEvaluationNodes[i]->Value().SetValue((ElemType)0);
                 Matrix<ElemType>::AddElementToElement(*m_NetEvaluationAccumulator, 0, i,
                                                       m_NetEvaluationNodes[i]->Value(), 0, 0);
             }

@@ -93,7 +93,7 @@ DataReader<ElemType>::DataReader(const ConfigRecordType& config)
     }
 
     // now pass that to concurrent reader so we can read ahead
-    //m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
+    // m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
     // NOW we can init
     // TODO: merge with the code above, but we first need to get the nbrUttPerMinibatch initialized inside each reader
     for (const auto& ioName : m_ioNames)

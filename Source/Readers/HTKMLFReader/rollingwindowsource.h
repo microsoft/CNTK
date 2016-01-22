@@ -506,8 +506,8 @@ public:
         // for single input/output set size to be 1 and run old getbatch
         feat.resize(1);
         uids.resize(1);
-        //transcripts.resize(1);
-        //latticepairs.resize(1);
+        // transcripts.resize(1);
+        // latticepairs.resize(1);
         sentendmark.resize(1);
         phoneboundaries.resize(1);
         return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
@@ -548,7 +548,7 @@ class minibatchframesourcemulti : public minibatchsource
     size_t featdim;
     size_t maxvdim;
     // cache
-    //std::vector<biggrowablevectorarray> frames;
+    // std::vector<biggrowablevectorarray> frames;
     std::vector<unique_ptr<biggrowablevectorarray>> pframes; // [t][i] all features concatenated
     std::vector<char> boundaryflags;                         // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
     std::vector<std::vector<CLASSIDTYPE>> classids;          // [t] the state that the frame belongs to

@@ -352,7 +352,7 @@ public:
 class mgram_map
 {
     typedef unsigned int index_t; // (-> size_t when we really need it)
-    //typedef size_t index_t;                   // (tested once, seems to work)
+    // typedef size_t index_t;                   // (tested once, seems to work)
     static const index_t nindex; // invalid index
     // entry [m][i] is first index of children in level m+1, entry[m][i+1] the end.
     int M;                                    // order, e.g. M=3 for trigram
@@ -677,7 +677,7 @@ public:
         {
             int w = k[n - 1]; // may be -1 for unknown word
             int id = map(w);  // may still be -1
-            //const char * sym = idToSymbol (id); sym;   // (debugging)
+            // const char * sym = idToSymbol (id); sym;   // (debugging)
             i = find_child(n - 1, i, id);
             if (i == nindex)           // unknown history: fall back
                 return foundcoord(-1); // indicates failure
@@ -2144,7 +2144,7 @@ protected:
         // Establish w->id mapping -- mapping is identical (w=id) during estimation.
         std::vector<int> w2id (mmap.maxid() +1);
         foreach_index (i, w2id) w2id[i] = i;
-        //std::vector<int> w2id (mmap.identical_map());
+        // std::vector<int> w2id (mmap.identical_map());
 
         // close down creation of new tokens, so we can random-access
         mmap.created (w2id);
@@ -2335,13 +2335,13 @@ public:
         dropWord.push_back (true);  // filtering but no <UNK>: 
         assert (!filterVocabulary || unkId != -1 || dropWord[dropId]);
 
-        //std::vector<unsigned int> minObs (2, 0);
-        //std::vector<unsigned int> iMinObs (3, 0);
-        //iMinObs[1] = 3;  // remove singleton 2+-grams
-        //iMinObs[2] = 3;  // remove singleton 3+-grams
+        // std::vector<unsigned int> minObs (2, 0);
+        // std::vector<unsigned int> iMinObs (3, 0);
+        // iMinObs[1] = 3;  // remove singleton 2+-grams
+        // iMinObs[2] = 3;  // remove singleton 3+-grams
 
-        //// set prune value to 0 3 3
-        //setMinObs (iMinObs);
+        // // set prune value to 0 3 3
+        // setMinObs (iMinObs);
 
         // TODO: Re-enable when MESSAGE definition is provided (printf?)
         // for (size_t i = 0; i < minObs.size(); i++)
@@ -2385,7 +2385,7 @@ public:
         // Establish w->id mapping -- mapping is identical (w=id) during estimation.
         std::vector<int> w2id (map.maxid() +1);
         foreach_index (i, w2id) w2id[i] = i;
-        //std::vector<int> w2id (map.identical_map());
+        // std::vector<int> w2id (map.identical_map());
 
         // close down creation of new tokens, so we can random-access
         map.created (w2id);
@@ -2488,7 +2488,7 @@ public:
             {
                 if (n1[m] == 0) RuntimeError(msra::strfun::strprintf ("estimate: error estimating discounting values: n1[%d] == 0", m));
                 if (n2[m] == 0) RuntimeError(msra::strfun::strprintf ("estimate: error estimating discounting values: n2[%d] == 0", m));
-                //if (n3[m] == 0) RuntimeError ("estimate: error estimating discounting values: n3[%d] == 0", m);
+                // if (n3[m] == 0) RuntimeError ("estimate: error estimating discounting values: n3[%d] == 0", m);
                 double Y = n1[m] / (n1[m] + 2.0 * n2[m]);
                 if (n3[m] ==0 || n4[m] == 0)
                 {
@@ -2556,7 +2556,7 @@ public:
                 mgram_map::coord j = histCoord[m-1];    // parent
                 if (counts[j] == 0)
                     RuntimeError ("estimate: invalid pruning: a parent m-gram got pruned away");
-                    //RuntimeError("estimate: invalid pruning: a parent m-gram got pruned away");
+                    // RuntimeError("estimate: invalid pruning: a parent m-gram got pruned away");
                 numMGrams[m]++;
             }
         }
@@ -2617,7 +2617,7 @@ public:
                 // get history's count
                 const mgram_map::coord j = histCoord[m-1];  // index of parent entry
                 double histCount = counts[j];               // parent count --before pruning
-                //double histCount = succCount[j];        // parent count --actuals after pruning
+                // double histCount = succCount[j];        // parent count --actuals after pruning
 
                 // estimate probability for this M-gram
                 unsigned int count = counts[iter];
@@ -2715,7 +2715,7 @@ skippruned:;    // m-gram was pruned
         // the only items used below are P and Pmap.
         w2id.resize (Pmap.maxid() +1);
         foreach_index (i, w2id) w2id[i] = i;
-        //std::vector<int> w2id (Pmap.identical_map());
+        // std::vector<int> w2id (Pmap.identical_map());
         Pmap.created (w2id);    // finalize and establish mapping for read access
         map.swap (Pmap);        // install the new map in our m-gram
         Pmap.clear();           // no longer using the old one

@@ -80,7 +80,7 @@ protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
 private:
-    SimpleNetworkBuilder() //disable default constructor from being called
+    SimpleNetworkBuilder() // disable default constructor from being called
     {
     }
 
@@ -226,7 +226,7 @@ public:
         m_cls2index = config("cls2index", "");
         m_vocabSize = (int) config("vocabSize", "-1");
         m_nbrCls = (int) config("nbrClass", "-1");
-        nce_noises = (int) config("noise_number", "-1"); //nce noise
+        nce_noises = (int) config("noise_number", "-1"); // nce noise
 
         Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
              nonlinearFunctions, addDropoutNodes,
@@ -275,7 +275,7 @@ protected:
 
     ComputationNetworkPtr BuildNCELSTMNetworkFromDescription();
 
-    //layer is 0 based
+    // layer is 0 based
     ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
     ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr);
 
@@ -294,7 +294,7 @@ protected:
         std::string name;
         if (!CheckDbnTag(fstream, "BMAT"))
             RuntimeError("Error reading DBN file - did not find expected tag BMAT\n");
-        //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
+        // fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
         fstream >> name >> numRows >> numCols;
         if (name != expectedName)
         {
@@ -311,18 +311,18 @@ protected:
         Matrix<ElemType> mat(numRows, numCols, m_deviceId);
 
         // dbn operates on row vectors not column vectors. x*W + b, so need to read in as W'
-        //ElemType* d_array = new ElemType[numRows*numCols];
+        // ElemType* d_array = new ElemType[numRows*numCols];
         float tmp;
         for (long i = 0; i < numRows; i++)
             for (long j = 0; j < numCols; j++)
             {
                 fstream >> tmp;
                 mat(i, j) = tmp;
-                //d_array[i] = (ElemType)tmp;
+                // d_array[i] = (ElemType)tmp;
             }
         if (!CheckDbnTag(fstream, "EMAT"))
             RuntimeError("Error reading DBN file - did not find expected tag EMAT\n");
-        //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
+        // fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
 
         return mat;
     }
