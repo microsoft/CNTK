@@ -18,7 +18,7 @@
         <PropertyValue name="ShowVerticalScrollBar">true</PropertyValue>
         <PropertyValue name="InsertTabs">false</PropertyValue>
         <PropertyValue name="WordWrapGlyphs">true</PropertyValue>
-        <PropertyValue name="EnableLeftClickForURLs">true</PropertyValue>
+        <PropertyValue name="EnableLeftClickForURLs">false</PropertyValue>
         <PropertyValue name="ShowErrors">true</PropertyValue>
         <PropertyValue name="OverviewWidth">58</PropertyValue>
         <PropertyValue name="ShowLineNumbers">false</PropertyValue>
@@ -35,21 +35,21 @@
         <PropertyValue name="NewlineFunctionBrace">0</PropertyValue>
         <PropertyValue name="IndentBlockContents">true</PropertyValue>
         <PropertyValue name="DisableAggressiveMemberList">false</PropertyValue>
-        <PropertyValue name="MaximumCachedTranslationUnits">7</PropertyValue>
+        <PropertyValue name="MaximumCachedTranslationUnits">15</PropertyValue>
         <PropertyValue name="SpaceBeforeInitListBrace">false</PropertyValue>
         <PropertyValue name="SpaceWithinCastParentheses">false</PropertyValue>
         <PropertyValue name="NewlineInitListBrace">0</PropertyValue>
         <PropertyValue name="IndentCaseContents">true</PropertyValue>
         <PropertyValue name="RecreateDatabase">false</PropertyValue>
         <PropertyValue name="SpaceAroundConditionalOperator">2</PropertyValue>
-        <PropertyValue name="SpaceWithinInitListBraces">true</PropertyValue>
+        <PropertyValue name="SpaceWithinInitListBraces">false</PropertyValue>
         <PropertyValue name="SpaceBeforeLambdaParenthesis">false</PropertyValue>
-        <PropertyValue name="NewlineEmptyFunctionCloseBrace">true</PropertyValue>
+        <PropertyValue name="NewlineEmptyFunctionCloseBrace">false</PropertyValue>
         <PropertyValue name="DisablePreLoadNavigateToCache">false</PropertyValue>
         <PropertyValue name="EnterOutliningModeWhenFilesOpen">true</PropertyValue>
-        <PropertyValue name="PreserveBlock">1</PropertyValue>
+        <PropertyValue name="PreserveBlock">0</PropertyValue>
         <PropertyValue name="SpaceBeforeConstructorColon">true</PropertyValue>
-        <PropertyValue name="NewlineKeywordWhile">false</PropertyValue>
+        <PropertyValue name="NewlineKeywordWhile">true</PropertyValue>
         <PropertyValue name="NewlineLambdaBrace">0</PropertyValue>
         <PropertyValue name="DisableSharedIntelliSense">false</PropertyValue>
         <PropertyValue name="AddSemicolonForClassTypes">true</PropertyValue>
@@ -58,7 +58,7 @@
         <PropertyValue name="DoNotWarnIfFallbackLocationUsed">false</PropertyValue>
         <PropertyValue name="DisableDatabaseImplicitAutoCleanup">false</PropertyValue>
         <PropertyValue name="SpaceBeforeFunctionParenthesis">false</PropertyValue>
-        <PropertyValue name="NewlineNamespaceBrace">0</PropertyValue>
+        <PropertyValue name="NewlineNamespaceBrace">1</PropertyValue>
         <PropertyValue name="AutoFormatOnSemicolon">true</PropertyValue>
         <PropertyValue name="AutoTuneMaximumCachedTranslationUnits">true</PropertyValue>
         <PropertyValue name="UseForwardSlashForIncludeAutoComplete">false</PropertyValue>
@@ -67,7 +67,7 @@
         <PropertyValue name="DisableDatabaseUpdates">false</PropertyValue>
         <PropertyValue name="DisableIntelliSenseUpdating">false</PropertyValue>
         <PropertyValue name="NewlineControlBlockBrace">0</PropertyValue>
-        <PropertyValue name="IndentNamespaceContents">true</PropertyValue>
+        <PropertyValue name="IndentNamespaceContents">false</PropertyValue>
         <PropertyValue name="CompleteSlashStar">true</PropertyValue>
         <PropertyValue name="FallbackLocation"/>
         <PropertyValue name="DisableErrorReporting">false</PropertyValue>
@@ -106,7 +106,7 @@
         <PropertyValue name="DisableSquiggles">false</PropertyValue>
         <PropertyValue name="EnableQuickInfoToolTips">true</PropertyValue>
         <PropertyValue name="IndentCaseBraces">false</PropertyValue>
-        <PropertyValue name="AlignParameters">false</PropertyValue>
+        <PropertyValue name="AlignParameters">true</PropertyValue>
         <PropertyValue name="AutoFormatOnBraceCompletion">true</PropertyValue>
         <PropertyValue name="AutoFormatOnClosingBrace">true</PropertyValue>
         <PropertyValue name="CompleteParensInRawString">true</PropertyValue>
@@ -134,7 +134,7 @@
         <PropertyValue name="DisableDatabase">false</PropertyValue>
         <PropertyValue name="SpaceBeforeBracket">false</PropertyValue>
         <PropertyValue name="SpaceWithinFunctionParentheses">false</PropertyValue>
-        <PropertyValue name="NewlineEmptyTypeCloseBrace">true</PropertyValue>
+        <PropertyValue name="NewlineEmptyTypeCloseBrace">false</PropertyValue>
         <PropertyValue name="DisableIncludeAutoComplete">false</PropertyValue>
         <PropertyValue name="EnableLogging">false</PropertyValue>
       </ToolsOptionsSubCategory>
