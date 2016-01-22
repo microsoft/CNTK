@@ -1384,6 +1384,9 @@ template <class ElemType>
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
         node->MarkComputed(false /*begin accumulating*/);
         }
+
+        const size_t numIterationsBeforePrintingProgress = 100;
+        size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSizeDummy;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
@@ -1392,7 +1395,19 @@ template <class ElemType>
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
             net->ForwardProp(nodes);
+
+            if (ProgressTracing::IsEnabled())
+            {
+                numItersSinceLastPrintOfProgress++;
+                if (numItersSinceLastPrintOfProgress >= numIterationsBeforePrintingProgress)
+                {
+                    // TODO: For now just print 0.0 instead of calculating actual progress
+                    printf("PROGRESS: %.2f%%\n", 0.0f);
+                    numItersSinceLastPrintOfProgress = 0;
+                }
+            }
         }
+
         // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
