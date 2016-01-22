@@ -73,7 +73,6 @@ public:
         : Base(deviceId, name), m_fromOffset(fromOffset), m_boundaryMode(boundaryMode), m_shiftDimParam(shiftDimParam), m_shiftDim(SIZE_MAX), m_state(deviceId)
     {
         CreateMatrixIfNull(m_value);
-        SetDims(TensorShape(), 0); // empty for now
     }
     ShiftNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ShiftNode(deviceId, name, 1, BoundaryMode::reachAcross, -1)
@@ -547,7 +546,7 @@ public:
         m_pMBLayout = Input(0)->GetMBLayout();
         if (isFinalValidationPass && !m_pMBLayout)
             InvalidArgument("%ls %ls operation must operate on data (must have an MB Layout).", NodeName().c_str(), OperationName().c_str());
-        if (isFinalValidationPass && !Input(1)->GetMBLayout() && Input(1)->GetNumCols() != 1)
+        if (isFinalValidationPass && !Input(1)->GetMBLayout() && Input(1)->GetSampleMatrixNumCols() != 1)
             InvalidArgument("%ls %ls operation requires the boundary node to have one column.", NodeName().c_str(), OperationName().c_str());
 
         // as is the sample layout
@@ -734,7 +733,7 @@ private:
         m_initialActivationValue = initialActivationValue;
         m_timeStep = 1;
         CreateMatrixIfNull(m_value);
-        SetDims(sampleLayout, 0);
+        SetDims(sampleLayout, HasMBLayout()/*false at this point*/);
         m_value->SetValue(m_initialActivationValue); // is this needed?
     }
 
@@ -778,8 +777,8 @@ public:
         Base::Save(fstream);
 
         fstream << m_timeStep;
-            size_t colsDummy = 0;
-            fstream << GetNumRows() << colsDummy;
+        size_t colsDummy = 0;
+        fstream << GetSampleMatrixNumRows() << colsDummy;   // #rows saved for legacy file format
 
         fstream << m_initialActivationValue;
     }
@@ -794,7 +793,7 @@ public:
             size_t rows, colsDummy;
             fstream >> rows >> colsDummy;
 
-        SetDims(TensorShape(rows), 0);  // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
+        SetDims(TensorShape(rows), HasMBLayout()/*may be true on reload (roll-back)*/);  // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
         m_delayedValue.Resize(rows, 0); // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
         if (modelVersion >= CNTK_MODEL_VERSION_2)
@@ -911,8 +910,6 @@ public:
 
         // we forward prop from the previous frame to this frame
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
-
-        VerifyDims(Input(0));
 
         size_t T = GetNumTimeSteps();
         size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)

@@ -92,7 +92,7 @@ public:
           m_imageLayoutKind(imageLayoutKind)
     {
         SetDims(ImageDimensions::AsTensorShape(1, 1, m_outputChannels, m_imageLayoutKind), 0); // TODO: necessary?
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+        m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
@@ -150,8 +150,8 @@ public:
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        auto sliceOutputGrad = GradientFor(fr);
+        auto sliceInput1Value = Input(1)->ValueFor(fr);
 
         size_t batchSize = sliceInput1Value.GetNumCols();
         m_inT->setN(batchSize);
@@ -159,13 +159,13 @@ public:
         assert(m_convEng != nullptr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
-            Matrix<ElemType>& grad = Input(0)->Gradient();
+            auto & grad = Input(0)->GradientAsMatrix();
             m_convEng->BackwardFilter(*m_outT, sliceOutputGrad, *m_inT, sliceInput1Value, *m_convDesc, *m_filterT, grad, fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
-            const Matrix<ElemType>& input0 = Input(0)->Value();
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
+            auto & input0 = Input(0)->ValueAsMatrix();
+            auto sliceInput1Grad = Input(1)->GradientFor(fr);
             m_convEng->BackwardData(*m_outT, sliceOutputGrad, *m_filterT, input0, *m_convDesc, *m_inT, sliceInput1Grad, *m_tempMatrix);
         }
     }
@@ -179,7 +179,7 @@ public:
 
     void ForwardProp(const FrameRange& fr) override
     {
-        const Matrix<ElemType>& input0 = Input(0)->Value();
+        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
@@ -234,22 +234,14 @@ public:
         size_t weightCols = m_kernelWidth * m_kernelHeight * inDims.m_numChannels;
 
         // check/infer input [0] (weights)
-        if (Input(0)->Value().HasNoElements())
-            ValidateInferInputDims(0, m_outputChannels, weightCols);
+        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
+        Input(0)->ValidateInferInputDimsFrom(TensorShape(m_outputChannels, weightCols));
 
-        if (isFinalValidationPass && (Input(0)->GetNumCols() != weightCols || Input(0)->GetNumRows() != m_outputChannels))
+        if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != m_outputChannels))
             LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", Input(0)->NodeName().c_str(), (int) m_outputChannels, (int) weightCols);
 
-        // check/infer input [1] (data)
-        size_t inputDim = inDims.m_width * inDims.m_height * inDims.m_numChannels;
-        if (Input(1)->GetNumRows() == 0)
-            ValidateInferInputDims(1, inputDim, Input(1)->GetNumCols());
-
-        if (isFinalValidationPass && Input(1)->GetNumRows() != inputDim)
-            LogicError("Each column of inDims to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels.", NodeName().c_str(), (int) inputDim);
-
         // that's our dimension
-        SetDims(outDims.AsTensorShape(m_imageLayoutKind), Input(1)->GetNumCols());
+        SetDims(outDims.AsTensorShape(m_imageLayoutKind), true);
 
         if (isFinalValidationPass)
         {
@@ -366,7 +358,7 @@ public:
           m_verticalSubsample(verticalSubsample),
           m_imageLayoutKind(imageLayoutKind)
     {
-        m_factory = ConvolutionEngineFactory<ElemType>::Create(GetDeviceId(), ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
+        m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
     }
     PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
         : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
@@ -461,13 +453,7 @@ public:
 
         m_inputSizePerSample = inDims.m_width * inDims.m_height * inDims.m_numChannels;
 
-        if (Input(0)->GetNumRows() == 0)
-            ValidateInferInputDims(0, m_inputSizePerSample, Input(0)->GetNumCols()); // TODO: We should infer a tensor dimension for the input instead.
-
-        if (isFinalValidationPass && Input(0)->GetNumRows() != m_inputSizePerSample) // TODO: Can be removed once tensor shape and numRows are perfectly in sync.
-            LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), (int) m_inputSizePerSample);
-
-        SetDims(outDims.AsTensorShape(m_imageLayoutKind), Input(0)->GetNumCols());
+        SetDims(outDims.AsTensorShape(m_imageLayoutKind), true);
 
         if (isFinalValidationPass)
         {
@@ -612,6 +598,10 @@ public:
 template class AveragePoolingNode<float>;
 template class AveragePoolingNode<double>;
 
+// -----------------------------------------------------------------------
+// BatchNormalizationNode (...)  --TODO: document inputs
+// -----------------------------------------------------------------------
+
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
 // http://arxiv.org/abs/1502.03167
@@ -703,8 +693,8 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-            Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+            auto sliceOutputGrad = GradientFor(fr);
+            auto sliceInputValue = Input(0)->ValueFor(fr);
             const Matrix<ElemType>& scale = Input(1)->Value();
             const Matrix<ElemType>& bias = Input(2)->Value();
 
@@ -712,9 +702,9 @@ public:
             m_inT->setN(batchSize);
             assert(m_convEng != nullptr);
 
-            Matrix<ElemType> sliceInputGrad = Input(0)->GradientFor(fr);
-            m_dScale->Resize(scale.GetNumRows(), scale.GetNumCols());
-            m_dBias->Resize(bias.GetNumRows(), bias.GetNumCols());
+            auto sliceInputGrad = Input(0)->GradientFor(fr);
+            m_dScale->Resize(scale);
+            m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             m_convEng->BackwardNormalizeBatch(*m_inT, sliceInputValue, sliceOutputGrad, sliceInputGrad, *m_scaleBiasT, scale, m_spatial,
                                               *m_saveMean, *m_saveInvStdDev, *m_dScale, *m_dBias);

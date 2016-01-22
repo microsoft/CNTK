@@ -256,11 +256,13 @@ public:
             learnableNodes.push_back(*nodeIter);
 
         std::list<Matrix<ElemType>> smoothedGradients;
+#if 0   // No longer functional due to lack of GetNumCols().
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Value().GetDeviceId()));
         }
+#endif
 
         vector<double> epochCriterion;
         double avgCriterion, prevCriterion;
@@ -554,11 +556,13 @@ public:
         }
 
         std::list<Matrix<ElemType>> smoothedGradients;
+#if 0   // No longer functional due to lack of GetNumCols().
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->Value().GetDeviceId()));
         }
+#endif
 
         double epochCriterion, avgCriterion, prevCriterion;
         epochCriterion = std::numeric_limits<double>::infinity();
@@ -1029,8 +1033,8 @@ public:
                 for (size_t itry = 0; itry < min((size_t) 10, node->Value().GetNumElements()); itry++)
                 {
 
-                    int irow = (int) fmod(rand(), node->GetNumRows() - 1);
-                    int icol = (int) fmod(rand(), node->GetNumCols() - 1);
+                    int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
+                    int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
                     irow = max(0, irow);
                     icol = max(0, icol);
 

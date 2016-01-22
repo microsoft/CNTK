@@ -311,7 +311,7 @@ public:
             for (auto ptr = decoderEvaluationNodes.begin(); ptr != decoderEvaluationNodes.end(); ptr++, i++)
             {
                 decoderNet->ForwardProp(*ptr);
-                if ((*ptr)->GetNumRows() != 1 || (*ptr)->GetNumCols() != 1)
+                if ((*ptr)->GetSampleLayout().GetNumElements() != 1)
                     LogicError("EvaluateEncoderDecoderWithHiddenStates: decoder evaluation should return a scalar value");
 
                 evalResults += (double) (*ptr)->Get00Element();
@@ -597,7 +597,7 @@ public:
         {
             ComputationNodeBasePtr node = *nodeIter;
             node->ForwardProp(FrameRange(node->GetMBLayout(), atTime));
-            if (node->GetNumCols() != node->GetNumParallelSequences())
+            if (node->GetSampleMatrixNumCols() != node->GetNumParallelSequences())
                 RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
         }
     }
@@ -650,7 +650,9 @@ public:
         size_t bSize = best_path.size();
         for (int i = 0; i < outputNodes.size(); i++)
         {
+#if 0       // This call no longer exists. This must be updated to make it functional again.
             outputNodes[i]->SetNumCols(bSize);
+#endif
             dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateFunctionValuesSize();
             dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value().SetValue(0);
             for (int k = 0; k < bSize; k++)
@@ -781,8 +783,10 @@ public:
 
         /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
         /// is the begining of sentence
+#if 0       // This call no longer exists. This must be updated to make it functional again.
         for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
             (*ptr)->SetNumCols(1);
+#endif
         // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
         //evalnet->SetActualMiniBatchSizeFromFeatures();
 
