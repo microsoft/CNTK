@@ -1753,7 +1753,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildUnidirectionalLSTMNet
                 input = output;
             }
 
-            size_t idim = input->GetNumRows();
+            size_t idim = input->GetSampleMatrixNumRows();
             assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
 
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
@@ -2069,7 +2069,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildBiDirectionalLSTMNetw
                 input = output;
             }
 
-            size_t idim = input->GetNumRows();
+            size_t idim = input->GetSampleMatrixNumRows();
             assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
 
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
@@ -2295,7 +2295,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     unsigned long randomSeed = 1;
 
     ComputationNodePtr input, w, b, output, label, prior, scaledLogLikelihood;
-    shared_ptr<PreComputedNode<ElemType>> pcNodePtr;
+    shared_ptr<PreComputedNodeBase<ElemType>> pcNodePtr;
 
     File fstream(dbnModelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
@@ -2354,11 +2354,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
             contextStdDev.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
 
             w = builder.Mean(input, L"MeanOfFeatures");
-            static_pointer_cast<PreComputedNode<ElemType>>(w)->SideLoadFromMatrix(contextMean);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(w)->SideLoadFromMatrix(contextMean);
             w->SetParameterUpdateRequired(false);
 
             b = builder.InvStdDev(input, L"InvStdOfFeatures");
-            static_pointer_cast<PreComputedNode<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(b)->SideLoadFromMatrix(contextStdDev);
             b->SetParameterUpdateRequired(false);
 
             output = builder.PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
@@ -2418,7 +2418,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
 
         prior = builder.Mean(label, L"Prior");
-        static_pointer_cast<PreComputedNode<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
+        static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->SideLoadFromMatrix(priorVals);
         prior->SetParameterUpdateRequired(false);
     }
     else // pretrained network - need to add output layer, initalize
@@ -2431,7 +2431,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         else
             std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
 
-        size_t penultimateSize = input->GetNumRows();
+        size_t penultimateSize = input->GetSampleMatrixNumRows();
 
         wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
         wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);
@@ -2450,7 +2450,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         {
             Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
             prior = builder.Mean(label, L"Prior");
-            static_pointer_cast<PreComputedNode<ElemType>>(prior)->MarkComputed(false);
+            static_pointer_cast<PreComputedNodeBase<ElemType>>(prior)->MarkComputed(false);
             prior->Value().SetValue(zeros);
         }
     }

@@ -56,8 +56,7 @@ public:
                 const auto& node = m_net->GetNodeFromName(evalNodeNames[i]);
                 if (!criteriaLogged.insert(node).second)
                     continue;
-                //m_net->BuildAndValidateSubNetwork(node);
-                if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
+                if (node->GetSampleLayout().GetNumElements() != 1)
                     InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
                 evalNodes.push_back(node);
             }

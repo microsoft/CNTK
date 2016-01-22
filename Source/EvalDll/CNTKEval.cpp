@@ -103,7 +103,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         for (auto& node : nodes)
         {
             std::wstring name = node->NodeName();
-            size_t size = node->GetNumRows();
+            size_t size = node->GetSampleMatrixNumRows();
             dimensions[name] = size;
         }
         break;
@@ -114,7 +114,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         for (auto& node : nodes)
         {
             std::wstring name = node->NodeName();
-            size_t size = node->GetNumRows();
+            size_t size = node->GetSampleMatrixNumRows();
             dimensions[name] = size;
         }
         break;
@@ -123,7 +123,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
         {
             auto node = m_net->GetNodeFromName(iter->first);
-            iter->second = node->GetNumRows();
+            iter->second = node->GetSampleMatrixNumRows();
         }
         break;
     }
