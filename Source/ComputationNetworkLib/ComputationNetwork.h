@@ -228,7 +228,7 @@ public:
         }
 
         if (rootNode)
-            m_evalOrders[rootNode] = rootNode->EnumerateNodes(true /*skipPairNetwork, deprecated*/);
+            m_evalOrders[rootNode] = rootNode->EnumerateNodes();
         else
             m_evalOrders[rootNode] = ComputationNodeBase::EnumerateNodes(m_allRoots);
     }

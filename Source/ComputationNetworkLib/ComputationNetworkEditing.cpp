@@ -335,7 +335,7 @@ void ComputationNetwork::SetBatchNormlizationNodesBelowEvalMode(const bool evalM
     }
     else
     {
-        auto allnodes = rootNode->EnumerateNodes(true);
+        auto allnodes = rootNode->EnumerateNodes();
         for (auto node : allnodes)
             nodes.push_back(node);
     }

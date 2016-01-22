@@ -119,9 +119,8 @@ protected:
 };
 
 // =======================================================================
-//  This provide a interface for stateful node (e.g., DelayNodeBase) and definition of state
-//  This interface allows to Export and Import state from elsewhere
-//  It is needed when doing sub-minibatch implementation
+//  Interface for stateful node (e.g., DelayNodeBase) and definition of state
+//  This interface allows to Export and Import state from elsewhere, e.g. for sub-minibatching.
 // =======================================================================
 
 class INodeState : public std::enable_shared_from_this<INodeState>
@@ -309,11 +308,7 @@ public:
 
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
 
-    // TODO: make sure this does not get implemented in any of the base classes
-    DEVICEID_TYPE GetDeviceId() const
-    {
-        return m_deviceId;
-    } // TODO: remove, only used from copy constructor which will go away
+    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
     virtual void Save(File& fstream) const
     {
@@ -367,14 +362,8 @@ public:
     //       For those, we keep the underlying storage identical to the semantic meaning.
 
     // interpretation as a set of samples
-    const TensorShape& GetSampleLayout() const
-    {
-        return m_sampleLayout;
-    }
-    bool HasSampleLayout() const
-    {
-        return m_sampleLayout.GetRank() != 1;
-    } // does it have a layout that is not just a vector?
+    const TensorShape& GetSampleLayout() const { return m_sampleLayout; }
+    bool HasSampleLayout() const { return m_sampleLayout.GetRank() != 1; } // does it have a layout that is not just a vector?
 
     // interpretation as sample matrix (each column is a sample, individual sample tensor dimensions do not matter for the operation)
     size_t GetSampleMatrixNumRows() const
@@ -429,43 +418,11 @@ public:
     {
         SetDims(node->GetSampleLayout(), node->HasMBLayout());
     }
-    // use this only for testing code. Everywhere else, be explicit on the TensorShape.
-    void SetDims1(size_t rows, size_t cols)
-    {
-        SetDims(TensorShape(rows, cols), false);
-    }
-#if 0
-        // deprecated functions that did not distinguish the purpose
-        size_t GetNumRows() const { return GetSampleMatrixNumRows(); }
-        size_t GetNumCols() const
-        {
-            if (HasMBLayout() && GetNumMBCols() != m_numCols)
-                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and MBLayout (%d)", NodeName().c_str(), OperationName().c_str(), m_numCols, (int)GetNumMBCols());
-            else if (!HasMBLayout() && m_sampleLayout.GetRank() == 0 && m_numCols != 0)
-                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and sample layout (empty)", NodeName().c_str(), OperationName().c_str(), (int)m_numCols);
-            else if (!HasMBLayout() && m_sampleLayout.GetRank() > 0 && m_numCols != m_sampleLayout.GetDims().back())
-                LogicError("GetNumCols: %ls %ls operation: Inconsistency between m_numCols (%d) and last dim of sample layout [%s]", NodeName().c_str(), OperationName().c_str(), (int)m_numCols, string(m_sampleLayout).c_str());
-            return m_numCols;
-        }
-        size_t GetNumCols1() const { return m_numCols; }
-        // update number of columns (in response to MB size)
-        // TODO: this should go away, as m_numCols should be derived from MBLayout each time
-        void SetNumCols(size_t cols)
-        {
-            if (!HasMBLayout())
-                LogicError("SetNumCols: %ls %ls operation has no MBLayout.", NodeName().c_str(), OperationName().c_str());
-            if (cols != m_pMBLayout->GetNumCols())
-                LogicError("SetNumCols: %ls %ls operation: SetNumCols() is redundant with MBLayout %d, but got differing value %d.", NodeName().c_str(), OperationName().c_str(), (int)m_pMBLayout->GetNumCols(), (int)cols);
-            // TODO: replace by a check
-            m_numCols = cols;
-            // actual memory allocation happens elsewhere
-        }
-#endif
-    // get number of underlying matrix columns for test code only which does not create MBLayouts
-    size_t GetNumCols1() const
-    {
-        return GetSampleMatrixNumCols();
-    } // dummy
+
+    // the following two are only for legacy testing code; don't use this
+    void SetDims1(size_t rows, size_t cols) { SetDims(TensorShape(rows, cols), false); }
+    size_t GetNumCols1() const { return GetSampleMatrixNumCols(); } // dummy
+
     virtual void NotifyFunctionValuesMBSizeModified() = 0;
     void VerifyDims(const TensorShape& shape, bool isMinibatch)
     {
@@ -483,10 +440,14 @@ public:
     }
 
     TensorShape GetTensorShape(size_t rank) const; // form the actual tensor that describes the full object
+
 protected:
+
     size_t DetermineElementwiseTensorRank() const;                          // determine tensor rank when considering all inputs with padding
     TensorShape GetTensorSliceFor(size_t rank, const FrameRange& fr) const; // form tensor shape of the slice referenced by FrameRange
+
 public:
+
     // access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
 
@@ -508,8 +469,10 @@ public:
                     RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
     }
-    // helper functions for common cases
+
 protected:
+
+    // helper functions for common cases
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
@@ -517,10 +480,8 @@ protected:
     void ValidateBinaryReduce(bool isFinalValidationPass);
 
 public:
-    virtual bool UnitTest()
-    {
-        return true;
-    }
+
+    virtual bool UnitTest() { return true; }
 
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
     // convenience versions that take individual arguments
@@ -577,20 +538,12 @@ public:
         return inputs;
     }
 
-    const std::vector<ComputationNodeBasePtr>& GetInputs() const
-    {
-        return m_inputs;
-    }
-    const ComputationNodeBasePtr& Input(size_t index) const
-    {
-        return m_inputs[index];
-    }
+    const std::vector<ComputationNodeBasePtr>& GetInputs() const { return m_inputs; }
 
-    //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-    virtual bool /*IComputationNode::*/ RequiresPreCompute() const
-    {
-        return false;
-    }
+    const ComputationNodeBasePtr& Input(size_t index) const { return m_inputs[index]; }
+
+    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+    virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
 
     // casting helpers
     template <typename N>
@@ -617,29 +570,14 @@ public:
     {
         m_pMBLayout = pMBLayout;
     }
-    const MBLayoutPtr& GetMBLayout() const
-    {
-        return m_pMBLayout;
-    }
-    bool HasMBLayout() const
-    {
-        return !!m_pMBLayout;
-    }
+    const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
+    bool HasMBLayout() const { return !!m_pMBLayout; }
 
-    std::wstring GetName() const
-    {
-        return m_nodeName;
-    }
-
-    // temporary function that is called to verify stuff is called as I think it is. Delete if this does not fire for a while.
-    void VerifyNumParallelSequences(size_t bsz)
-    {
-        if (bsz != m_pMBLayout->GetNumParallelSequences())
-            LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
-    }
+    std::wstring GetName() const { return m_nodeName; }
 
 protected:
 public: // ...the following should be protected, but nodes inquire about their children, requiring public access
+
     size_t GetNumParallelSequences() const
     {
 #if 1
@@ -659,6 +597,7 @@ public: // ...the following should be protected, but nodes inquire about their c
     }
 
 public:
+
     // implemented by ComputationNode<ElemType>
     // for debugging purpose
     virtual void PrintSelf(bool printMatrices = false) const = 0;
@@ -695,36 +634,13 @@ public:
         }
     }
 
-    const std::wstring& NodeName() const
-    {
-        return m_nodeName;
-    }
-    void SetNodeName(const std::wstring& nodeName)
-    {
-        m_nodeName = nodeName;
-    }
+    const std::wstring& NodeName() const { return m_nodeName; }
+    void SetNodeName(const std::wstring& nodeName) { m_nodeName = nodeName; }
 
-    bool IsLeaf() const
-    {
-        return GetNumInputs() == 0;
-    }
-    bool& NeedGradient()
-    {
-        return m_needsGradient;
-    }
-    const bool& NeedGradient() const
-    {
-        return m_needsGradient;
-    }
+    bool& NeedGradient() { return m_needsGradient; }
 
-    void SetParameterUpdateRequired(bool f)
-    {
-        m_parameterUpdateRequired = f;
-    }
-    bool IsParameterUpdateRequired() const
-    {
-        return m_parameterUpdateRequired;
-    }
+    void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
+    bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
 
     void SetOutputNeededDuringBackprop(bool f)
     {
@@ -735,10 +651,8 @@ public:
         return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop;
     }
 
-    const size_t GetNumInputs() const
-    {
-        return m_inputs.size();
-    }
+    const size_t GetNumInputs() const { return m_inputs.size(); }
+    bool IsLeaf() const { return GetNumInputs() == 0; }
 
     virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
@@ -827,42 +741,36 @@ public:
     // determine enumeration order for everything needed to evaluate this node (and its children)
     // This creates a list such that children are evaluated before their parents.
     // If !forForwardProp then the order will be reversed, suitable for backprop.
-    // The 'recurrent' version is only called from FormRecurrentLoops().
     // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-    static std::list<ComputationNodeBasePtr> EnumerateNodes(const std::vector<ComputationNodeBasePtr>& allRoots, bool skipPairNetwork = false /*legacy*/)
+    static std::list<ComputationNodeBasePtr> EnumerateNodes(const std::vector<ComputationNodeBasePtr>& allRoots)
     {
         std::list<ComputationNodeBasePtr> nodes;
         std::unordered_set<ComputationNodeBasePtr> visited;
 
         for (const auto& root : allRoots)
-            root->EnumerateNodesRec(visited, nodes, skipPairNetwork); // call into the recursive portion of this function below
+            root->EnumerateNodesRec(visited, nodes); // call into the recursive portion of this function below
 
         return nodes;
     }
 
     // and a version that does it for only one root 'this'
-    std::list<ComputationNodeBasePtr> EnumerateNodes(bool skipPairNetwork) /*const*/
+    std::list<ComputationNodeBasePtr> EnumerateNodes() /*const*/
     {
-        return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()}, skipPairNetwork);
+        return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
 
 private:
     // Recursive part of EnumerateNodes().
-    void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork) /*const*/ // const not working due to shared_from_this()
+    void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result) /*const*/ // const not working due to shared_from_this()
     {
         if (visited.find(shared_from_this()) == visited.end()) // do not include a node twice
         {
             visited.insert(shared_from_this()); // have visited tagged here to avoid infinite loop over children, children's children, etc
 
             // children first for function evaluation
-            if (OperationName() != L"PairNetwork" || !skipPairNetwork) // (don't step through network-pair boundary if called from FormRecurrentLoops())
-            {
-                for (int i = 0; i < m_inputs.size(); i++)
-                {
-                    if (m_inputs[i])
-                        m_inputs[i]->EnumerateNodesRec(visited, result, skipPairNetwork);
-                }
-            }
+            for (int i = 0; i < m_inputs.size(); i++)
+                if (m_inputs[i])
+                    m_inputs[i]->EnumerateNodesRec(visited, result);
 
             // now that all children are in list before us, put ourselves
             result.push_back(shared_from_this());

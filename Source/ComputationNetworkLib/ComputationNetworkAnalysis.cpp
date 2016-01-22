@@ -216,20 +216,17 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     sccStack.push_back(cur);
     cur->m_inStack = true;
 
-    if (cur->OperationName() != L"PairNetwork") // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
+    // set m_minIndex to min over m_lowLinks of children
+    for (int i = 0; i < cur->GetNumInputs(); i++)
     {
-        // set m_minIndex to min over m_lowLinks of children
-        for (int i = 0; i < cur->GetNumInputs(); i++)
+        if (!cur->Input(i)->m_visited)
         {
-            if (!cur->Input(i)->m_visited)
-            {
-                DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
-                cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
-            }
-            else if (cur->Input(i)->m_inStack)
-            {
-                cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
-            }
+            DetermineSCCsR(cur->Input(i), sccStack, index, loopId);
+            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
+        }
+        else if (cur->Input(i)->m_inStack)
+        {
+            cur->m_minIndex = min(cur->m_minIndex, cur->Input(i)->m_minIndex);
         }
     }
 
@@ -238,13 +235,8 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
     {
         // gather the list of all nodes in this loop
         vector<ComputationNodeBasePtr> nestedNodes;
-// TODO: build array first in a local array. Only if succeeds, then construct the node off it.
-#if 1
+        // TODO: build array first in a local array. Only if succeeds, then construct the node off it.
         SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size() /*loopId*/, cur);
-// Note: Don't fix anything here, latest master has changes here already except needs to add 'size_t loopId = m_allSEQNodes.size()'
-#else // BUGBUG: loopId must be shared across multiple invocations of this from different roots. The above accomplishes this.
-        SEQTraversalFlowControlNode rInfo(loopId, cur);
-#endif
         for (;;)
         {
             ComputationNodeBasePtr w = sccStack.back();
@@ -415,4 +407,5 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
     // BUGBUG: Multiple recurrence dimensions not yet supported beyond this point.
     return steppingDirection;
 }
+
 } } }
