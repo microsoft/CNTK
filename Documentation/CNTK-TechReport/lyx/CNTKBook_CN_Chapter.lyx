@@ -6776,6 +6776,12 @@ and
 \begin_layout Itemize
 
 \emph on
+\begin_inset Note Comment
+status open
+
+\begin_layout Itemize
+
+\emph on
 TimeReverse 
 \emph default
 
@@ -6795,7 +6801,7 @@ TimeReverse
 .
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset Formula 
 \begin{eqnarray}
 \mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,1:T\right) & \leftarrow & \mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,T:-1:1\right)\\
@@ -6807,7 +6813,7 @@ TimeReverse
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 
 \family roman
 \series medium
@@ -6826,6 +6832,11 @@ The time reverse node is usually used for bi-directional model.
  Then, do process on the processed input.
  Finally, use another TimeReverse node on the output of the processed data.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
@@ -8839,6 +8850,12 @@ v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & += & \mathbf{C_{t}}\mathbf{\circ 
 \begin_layout Itemize
 
 \emph on
+\begin_inset Note Comment
+status open
+
+\begin_layout Itemize
+
+\emph on
 CRF
 \emph default
 
@@ -9151,7 +9168,7 @@ L
 : 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset Formula 
 \begin{eqnarray}
 \alpha_{t}\left(i\right) & \leftarrow & h_{it}+LogAdd{k}\left(\delta_{t-1}(k)+\eta a_{ki}\right)\\
@@ -9166,10 +9183,15 @@ L
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Notice that the gradient to the transition weights need to be summed over
  the whole observation sequence, which is the current minibatch.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection

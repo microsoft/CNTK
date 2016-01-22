@@ -4960,6 +4960,10 @@ minibatchSize
  – the minibatch size to use when creating the label mapping file.
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Comment
+status open
+
 \begin_layout Subsection
 DoEncoderDecoder Command
 \begin_inset Index idx
@@ -4974,7 +4978,7 @@ DoEncoderDecoder Command
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Neural networks can be used to form a chain of networks.
  The first several networks can work as encoders and the following networks
  can serve as decoders.
@@ -5003,6 +5007,11 @@ section
 encoderNetworkBuilder and decoderNetworkBuilder: These specify the simple
  network builder to used.
  
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -5482,7 +5491,7 @@ traceLevel
 \end_layout
 
 \begin_layout Standard
-The traceLevel parameter is uniformly used by the code in CNTK to specify
+The traceLevel parameter is usually used by the code in CNTK to specify
  how much extra output (verbosity) is desired as in
 \end_layout
 
@@ -5502,6 +5511,47 @@ The default value is 0 and specifies minimal output.
  The higher the number the more output can be expected.
  Currently 0 (limited output), 1 (medium ouput) and 2 (verbose output) are
  the only values supported.
+\end_layout
+
+\begin_layout Subsection
+ShareNodeValueMatrices
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ShareNodeValueMatrices
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The ShareNodeValueMatrices parameter is used to indicate whether to turn
+ on the sharing of forward computation result matrices to further reduce
+ memory usage.
+ To turn it on, use
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ShareNodeValueMatrices=true
+\end_layout
+
+\end_inset
+
+The default value is false, which means the memory sharing only happens
+ during the backward phase.
+ You should decide whether to turn it on by running the same setup with
+ this flag on and off.
+ If the results are the same, you are safe to turn it on.
+ In the future, we will make it on by default after more extensive test.
 \end_layout
 
 \begin_layout Section

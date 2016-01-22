@@ -669,7 +669,7 @@ status open
 
 \begin_layout Plain Layout
 
-FeatureNodes=(features)
+FeatureNodes=(features1, features2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -733,7 +733,7 @@ Comments
 
 \end_inset
 
-:
+
 \end_layout
 
 \begin_layout Standard
@@ -2569,6 +2569,10 @@ m1 and m2 must have same dimension in ElementTimes.
  vcol must have same number of rows in ColumnElementTimes.
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Comment
+status open
+
 \begin_layout Subsubsection
 KhatriRaoProduct
 \begin_inset Index idx
@@ -2593,7 +2597,7 @@ ColumnwiseCrossProduct
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Compute the cross product of each column of two input matrices.
  These two functions mean the same thing but ColumnwiseCrossProduct is easier
  to understand for most people.
@@ -2601,7 +2605,7 @@ Compute the cross product of each column of two input matrices.
  The syntax is
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset listings
 inline false
 status open
@@ -2650,7 +2654,7 @@ GMMLL
 
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Compute the Gaussian mixture model log likelihood of feature values given
  the unnormalized Gaussian mixture weights (i.e., priors), Gaussian means
  and log standard deviation.
@@ -2660,7 +2664,7 @@ Compute the Gaussian mixture model log likelihood of feature values given
  The syntax is
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 \begin_inset listings
 inline false
 status open
@@ -2706,9 +2710,14 @@ FeatureValues - the feature values on which to compute the log likelihood.
  
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Note, UnnormedPrior, Means and LogStddev should have the same number of
  columns which should be either 1 or the same as the columns in FeatureValues.
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsubsection
@@ -3517,7 +3526,7 @@ Convolution(w, image, kernelWidth, kernelHeight,
 
 \begin_layout Plain Layout
 
-            maxTempMemSizeInSamples=0])
+            maxTempMemSizeInSamples=0, imageLayout="HWC"|cudnn"])
 \end_layout
 
 \begin_layout Plain Layout
@@ -3537,7 +3546,7 @@ Convolve(w, image, kernelWidth, kernelHeight,
 
 \begin_layout Plain Layout
 
-            maxTempMemSizeInSamples=0]) #deprecated
+            maxTempMemSizeInSamples=0, imageLayout="HWC"|cudnn"]) #deprecated
 \end_layout
 
 \end_inset
@@ -3592,6 +3601,22 @@ maxTempMemSizeInSamples - [named optional] maximum amount of memory (in
  Default is 0 which means the same as the input samples.
 \end_layout
 
+\begin_layout Itemize
+imageLayout - [named optional] the storage format of each image.
+ By default it's 
+\begin_inset Quotes eld
+\end_inset
+
+HWC
+\begin_inset Quotes erd
+\end_inset
+
+, which means each image is stored as [channel, width, height] in column
+ major.
+ If you use cuDNN to speed up training, you should set it to cudnn, which
+ means each image is stored as [width, height, channel].
+\end_layout
+
 \begin_layout Subsubsection
 MaxPooling
 \begin_inset Index idx
@@ -3631,12 +3656,13 @@ status open
 
 \begin_layout Plain Layout
 
-MaxPooling(m, windowWidth, windowHeight, stepW, stepH)
+MaxPooling(m, windowWidth, windowHeight, stepW, stepH, imageLayout="HWC"|cudnn")
 \end_layout
 
 \begin_layout Plain Layout
 
-AveragePooling(m, windowWidth, windowHeight, stepW, stepH)
+AveragePooling(m, windowWidth, windowHeight, stepW, stepH, imageLayout="HWC"|cud
+nn")
 \end_layout
 
 \end_inset
@@ -3662,6 +3688,22 @@ stepW - step (or stride) used in the width direction
 
 \begin_layout Itemize
 stepH - step (or stride) used in the height direction
+\end_layout
+
+\begin_layout Itemize
+imageLayout - [named optional] the storage format of each image.
+ By default it's 
+\begin_inset Quotes eld
+\end_inset
+
+HWC
+\begin_inset Quotes erd
+\end_inset
+
+, which means each image is stored as [channel, width, height] in column
+ major.
+ If you use cuDNN to speed up training, you should set it to cudnn, which
+ means each image is stored as [width, height, channel].
 \end_layout
 
 \begin_layout Subsubsection
@@ -3806,6 +3848,15 @@ key "DNN-SWB-seide+2011,FeatEngInDNN-Seide+2011"
 
  on DNNs by building shallow networks first and then inserting new layers
  one on top of another.
+ To use MEL, you need to use the 
+\begin_inset Quotes eld
+\end_inset
+
+edit
+\begin_inset Quotes erd
+\end_inset
+
+ command in the config file.
 \end_layout
 
 \begin_layout Standard
