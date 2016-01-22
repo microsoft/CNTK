@@ -466,9 +466,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         {
             pageFilePath = (const wstring&) readerConfig(L"pageFilePath");
 
+#ifdef _WIN32
             // replace any '/' with '\' for compat with default path
             std::replace(pageFilePath.begin(), pageFilePath.end(), '/', '\\');
-#ifdef _WIN32
+
             // verify path exists
             DWORD attrib = GetFileAttributes(pageFilePath.c_str());
             if (attrib == INVALID_FILE_ATTRIBUTES || !(attrib & FILE_ATTRIBUTE_DIRECTORY))
