@@ -176,7 +176,7 @@ public:
     static void DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, int& stt, int& stp)
     {
         if (stt != -1 && stp != -1)
-            return; /// have computed before
+            return; // have computed before
 
         int iNumPos = lbls.GetNumCols();
 
@@ -214,7 +214,7 @@ public:
         return false;
     }
 
-    /// compute posterior probability of label y at position t
+    // compute posterior probability of label y at position t
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         DecideStartEndingOutputLab(Input(0)->Value(), mStartLab, mEndLab);
@@ -225,27 +225,27 @@ public:
     // compute forward backward algorithm
     void ForwardPropS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
     {
-        /// to-do, each slice is for one sentence
-        /// to-do, number of slices correspond to number of frames
-        /// this implementation only supports one sentence per minibatch
+        // to-do, each slice is for one sentence
+        // to-do, number of slices correspond to number of frames
+        // this implementation only supports one sentence per minibatch
 
-        /// change to other values so can support multiple sentences in each minibatch
+        // change to other values so can support multiple sentences in each minibatch
         ForwardCompute(alpha, backtrace, pos_scores, pair_scores, stt);
         BackwardCompute(functionValues, backtrace, stp);
     };
 
-    /// compute forward backward algorithm
+    // compute forward backward algorithm
     static void ForwardCompute(Matrix<ElemType>& alpha,
                                Matrix<ElemType>& backtrace,
                                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores,
                                const size_t stt)
     {
-        /// to-do, shift more than 1 to support muliple sentences per minibatch
+        // to-do, shift more than 1 to support muliple sentences per minibatch
         int iNumPos = pos_scores.GetNumCols();
         int iNumLab = pos_scores.GetNumRows();
         size_t iTmp = 0;
 
-        /// need to have
+        // need to have
         alpha.Resize(iNumLab, iNumPos);
         backtrace.Resize(iNumLab, iNumPos);
 
@@ -265,11 +265,11 @@ public:
                             iTmp = j;
                         }
                     }
-                    fTmp += pos_scores(k, t); /// include position dependent score
+                    fTmp += pos_scores(k, t); // include position dependent score
                 }
                 else
                 {
-                    /// with constrain that the first word is labeled as a given symbol
+                    // with constrain that the first word is labeled as a given symbol
                     iTmp = stt;
                     fTmp = 0;
                     if (t == 1)
@@ -289,7 +289,7 @@ public:
         }
     };
 
-    /// compute backward algorithm
+    // compute backward algorithm
     static void BackwardCompute(
         Matrix<ElemType>& decodedpath,
         const Matrix<ElemType>& backtrace, const size_t stp)
@@ -310,8 +310,8 @@ public:
         }
     };
 
-    /// need to feed in pseudo label data, which tells the decoder what is the beginning
-    /// and ending output symbol. these symbols will constrain the search space
+    // need to feed in pseudo label data, which tells the decoder what is the beginning
+    // and ending output symbol. these symbols will constrain the search space
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);

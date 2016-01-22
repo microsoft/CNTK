@@ -657,7 +657,7 @@ void UCIFastReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_
     m_subsetNum = subsetNum;
     m_numSubsets = numSubsets;
     if (mOneLinePerFile)
-        mbSize = mRequestedNumParallelSequences; /// each file has only one observation, therefore the number of data to read is the number of files
+        mbSize = mRequestedNumParallelSequences; // each file has only one observation, therefore the number of data to read is the number of files
 
     // if we aren't currently caching, see if we can use a cache
     if (!m_cachingReader && !m_cachingWriter)

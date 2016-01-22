@@ -157,7 +157,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
             bSentenceStart = true;
 
             // loop through the labels for this entry
-            while (label < spos.labelPos) /// need to minus one since
+            while (label < spos.labelPos) // need to minus one since
             {
 
                 // labelIn should be a category label
@@ -184,7 +184,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     }
 
                     if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
-                        continue; /// ignore sentence ending
+                        continue; // ignore sentence ending
                 }
 
                 // to-do, should ignore <s>, check the sentence ending is </s>
@@ -265,7 +265,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     RuntimeError("cannot find sentence begining label");
 
                 if (m_labelIdData[jEnd] != index)
-                    /// for language model, the first word/letter has to be <s>
+                    // for language model, the first word/letter has to be <s>
                     RuntimeError("SequenceReader: the last letter/word of a batch has to be the sentence ending symbol");
             }
         }
@@ -560,7 +560,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
-    /// read unk sybol
+    // read unk sybol
     mUnk = readerConfig(L"unk", "<unk>");
 }
 
@@ -662,7 +662,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring& vocfile, int& class_
         counts[p.first] = (double) p.second;
     m_noiseSampler = noiseSampler<long>(counts);
 
-    /// check if unk is the same used in vocabulary file
+    // check if unk is the same used in vocabulary file
     if (word4idx.find(mUnk.c_str()) == word4idx.end())
     {
         LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
@@ -916,9 +916,9 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
     else if (m_labelInfo[labelInfoOut].type != labelNone)
         m_labelData.reserve(epochSize);
     m_sequence.reserve(m_seqIndex); // clear out the sequence array
-    /// this is too complicated for LM
+    // this is too complicated for LM
     // SetupEpoch();
-    /// use the LMSetupEpoch() instead
+    // use the LMSetupEpoch() instead
     LMSetupEpoch();
 
     m_clsinfoRead = false;
@@ -1034,9 +1034,9 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
             if (class_size > 0)
             {
                 labels->SetValue(1, j, (ElemType) clsidx);
-                /// save the [begining ending_indx) of the class
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+                // save the [begining ending_indx) of the class
+                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
     }
@@ -1130,7 +1130,7 @@ void SequenceReader<ElemType>::GetClassInfo()
         }
         else if (prvcls > clsidx)
         {
-            /// nwords is larger than the actual number of words
+            // nwords is larger than the actual number of words
             LogicError("LMSequenceReader::GetClassInfo probably the number of words specified is larger than the actual number of words. Check network builder and data reader. ");
         }
     }
@@ -1414,7 +1414,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     else
         LogicError("unsupported format %ls", mode.c_str());
 
-    /// read unk sybol
+    // read unk sybol
     this->mUnk = msra::strfun::utf8(readerConfig(L"unk", L"<unk>"));
 
     class_size = 0;
@@ -1660,9 +1660,9 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     else if (m_labelInfo[labelInfoOut].type != labelNone)
         m_labelData.reserve(epochSize);
     m_sequence.reserve(m_seqIndex); // clear out the sequence array
-    /// this is too complicated for LM
+    // this is too complicated for LM
     // SetupEpoch();
-    /// use the LMSetupEpoch() instead
+    // use the LMSetupEpoch() instead
     LMSetupEpoch();
 
     m_clsinfoRead = false;
@@ -1772,7 +1772,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         sLn = FindNextSentences(mNumRead);
     }
 
-    /// add one minibatch
+    // add one minibatch
     firstPosInSentence = mLastPosInSentence;
     size_t i = mLastPosInSentence;
     size_t j = 0;
@@ -2105,7 +2105,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 
                     labels->SetValue(1, j, (ElemType) clsidx);
 
-                    /// save the [begining ending_indx) of the class
+                    // save the [begining ending_indx) of the class
                     size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
                     size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
                     if (wrd < lft || lft > rgt || wrd >= rgt)
@@ -2113,8 +2113,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                         LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
                                    (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
                     }
-                    labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
-                    labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+                    labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                    labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
                 }
             }
             else if (readerMode == ReaderMode::Softmax)

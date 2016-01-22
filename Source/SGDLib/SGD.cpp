@@ -2350,7 +2350,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
 
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
-            /// no support to sparse matrix yet
+            // no support to sparse matrix yet
             int irow = (int) fmod(rand(), node->Gradient().GetNumRows() - 1);
             int icol = (int) fmod(rand(), node->Gradient().GetNumCols() - 1);
             irow = max(0, irow);
@@ -2584,8 +2584,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
     m_L1RegWeight = configSGD(L"L1RegWeight", 0.0);
 
-    /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
-    /// useAdagrad=true
+    // for backward support. future setup should use gradUpdateType=AdaGrad, instead of
+    // useAdagrad=true
     bool useAdagrad = configSGD(L"useAdagrad", false);
     if (useAdagrad)
     {
@@ -2596,7 +2596,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_adaptationRegType = ParseAdaptationRegType(configSGD(L"adaptationRegType", L"None"));
     m_adaptationRegWeight = configSGD(L"adaptationRegWeight", 0.0);
 
-    /// gradient check setup
+    // gradient check setup
     m_doGradientCheck = configSGD(L"gradientcheck", false);
     m_gradientCheckSigDigit = configSGD(L"sigFigs", 6.0); // TODO: why is this a double?
 

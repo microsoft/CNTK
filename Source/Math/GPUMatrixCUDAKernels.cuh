@@ -1345,7 +1345,7 @@ template <class ElemType>
 __global__ void _hasElement(
     const ElemType* a,
     const CUDA_LONG N,
-    ElemType* d_res /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
+    ElemType* d_res // [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
     )
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -4594,15 +4594,15 @@ __global__ void _minusOneAt(
 template <class ElemType>
 __global__ void _rcrfBackwardCompute(
     const size_t iNumPos,
-    const ElemType* galpha, /// column slice at current time t
-    ElemType* gbeta,        /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, // column slice at current time t
+    ElemType* gbeta,        // column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab, const int shift)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
-    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
+    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType* pair_scores = alpha + iNumPos * iNumLab;
@@ -4611,7 +4611,7 @@ __global__ void _rcrfBackwardCompute(
     if (id < 0 || id >= iNumLab)
         return;
 
-    /// copy global memory to shared memory to save time
+    // copy global memory to shared memory to save time
     for (int t = iNumPos - 1; t >= 0; t--)
     {
         alpha[IDX2C(id, t, iNumLab)] = galpha[IDX2C(id, t, iNumLab)];
@@ -4654,7 +4654,7 @@ __global__ void _rcrfBackwardCompute(
         __syncthreads();
     }
 
-    /// copy from shared memory to global memory to pass values
+    // copy from shared memory to global memory to pass values
     for (int t = iNumPos - 1; t >= 0; t--)
     {
         gbeta[IDX2C(id, t, iNumLab)] = beta[IDX2C(id, t, iNumLab)];
@@ -4666,18 +4666,18 @@ __global__ void _rcrfBackwardCompute(
 /// assume a column slice of input and output
 template <class ElemType>
 __global__ void _rcrfBackwardCompute(
-    const size_t t, /// time position
+    const size_t t, // time position
     const size_t iNumPos,
-    const ElemType* galpha,       /// column slice at current time t
-    ElemType* gbeta,              /// column slices with [row, 2] at current time t for [
-    const ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
-    const ElemType* gpair_scores, /// column slice at current time t
+    const ElemType* galpha,       // column slice at current time t
+    ElemType* gbeta,              // column slices with [row, 2] at current time t for [
+    const ElemType* gzeta,        // column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores, // column slice at current time t
     const size_t iNumLab, const int shift)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
-    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
+    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType* beta_t1 = (ElemType*) (alpha + iNumLab);
@@ -4687,7 +4687,7 @@ __global__ void _rcrfBackwardCompute(
     if (id < 0 || id >= iNumLab)
         return;
 
-    /// copy global memory to shared memory to save time
+    // copy global memory to shared memory to save time
     alpha[id] = galpha[IDX2C(id, t, iNumLab)];
     if (t < iNumPos - 1)
         beta_t1[id] = gbeta[IDX2C(id, t + 1, iNumLab)];
@@ -4717,17 +4717,17 @@ __global__ void _rcrfBackwardCompute(
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
 template <class ElemType>
 __global__ void _rcrfBackwardComputeZeta(
-    const size_t t, /// time position
+    const size_t t, // time position
     const size_t iNumPos,
-    const ElemType* galpha, /// column slice at current time t
-    ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, // column slice at current time t
+    ElemType* gzeta,        // column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab, const int shift)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
-    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
+    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType pair_scores[1024];
@@ -4735,7 +4735,7 @@ __global__ void _rcrfBackwardComputeZeta(
     if (id < 0 || id >= iNumLab)
         return;
 
-    /// copy global memory to shared memory to save time
+    // copy global memory to shared memory to save time
     alpha[id] = galpha[IDX2C(id, t, iNumLab)];
 
     __syncthreads();
@@ -4758,10 +4758,10 @@ __global__ void _rcrfBackwardComputeZeta(
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
 template <class ElemType>
 __global__ void _rcrfTransGrdComputeZeta(
-    const int t, /// time position
+    const int t, // time position
     const size_t iNumPos,
-    const ElemType* galpha, /// column slice at current time t
-    ElemType* gzeta,        /// column slices with [row, 2] at current time t for [
+    const ElemType* galpha, // column slice at current time t
+    ElemType* gzeta,        // column slices with [row, 2] at current time t for [
     const ElemType* gpair_scores,
     const size_t iNumLab,
     const size_t start_lbl,
@@ -4769,8 +4769,8 @@ __global__ void _rcrfTransGrdComputeZeta(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
-    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
+    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType pair_scores[1024];
@@ -4778,7 +4778,7 @@ __global__ void _rcrfTransGrdComputeZeta(
     if (id < 0 || id >= iNumLab)
         return;
 
-    /// copy global memory to shared memory to save time
+    // copy global memory to shared memory to save time
     if (t >= 0)
         alpha[id] = galpha[IDX2C(id, t, iNumLab)];
 
@@ -4823,8 +4823,8 @@ __global__ void _rcrfTransGrdCompute(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
-    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
+    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType* beta = (ElemType*) (alpha + iNumLab);
@@ -4834,7 +4834,7 @@ __global__ void _rcrfTransGrdCompute(
     if (id < 0 || id >= iNumLab)
         return;
 
-    /// copy global memory to shared memory to save time
+    // copy global memory to shared memory to save time
     if (t > 0)
         alpha[id] = galpha[IDX2C(id, t - 1, iNumLab)];
     beta[id] = gbeta[IDX2C(id, t, iNumLab)];
@@ -4897,7 +4897,7 @@ __global__ void _reductionLogAddSum(
 
     __syncthreads();
 
-    /// do reduction on the shared memory
+    // do reduction on the shared memory
     size_t start_width = ceil((N + 0.0) / 2.0);
     for (size_t s = start_width; s > 0; s >>= 1)
     {

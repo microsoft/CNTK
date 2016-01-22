@@ -28,7 +28,7 @@ private:
     map<wstring, map<int, size_t>> idx4cnt;
     int nwords;
 
-    map<wstring, string> mUnk; /// unk symbol
+    map<wstring, string> mUnk; // unk symbol
 
     int noise_sample_size;
     noiseSampler<long> m_noiseSampler;

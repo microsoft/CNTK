@@ -271,7 +271,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     }
     std::unordered_map<string, double> v_count;
 
-    /// get line
+    // get line
     string str;
     vector<string> vstr;
     long long prevClsIdx = -1;
@@ -422,7 +422,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
-            cls2idx(clsIdx, 0) = (ElemType) i; /// the left boundary of clsIdx
+            cls2idx(clsIdx, 0) = (ElemType) i; // the left boundary of clsIdx
             prevClsIdx = m_class[i];
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
@@ -431,7 +431,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     ofvocab.close();
     if (nbrCls > 0)
     {
-        /// write the outputs
+        // write the outputs
         msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
         ofstream ofp(outputWord2Cls.c_str());
         if (!ofp)

@@ -51,7 +51,7 @@ void DataReader<ElemType>::InitFromConfig(const ConfigRecordType& /*config*/)
 template <class ElemType>
 void DataReader<ElemType>::Destroy()
 {
-    /// newer code that explicitly place multiple streams for inputs
+    // newer code that explicitly place multiple streams for inputs
     foreach_index (i, m_ioNames) // inputNames should map to node names
     {
         m_dataReaders[m_ioNames[i]]->Destroy();

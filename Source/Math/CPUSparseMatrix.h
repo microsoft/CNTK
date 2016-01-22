@@ -97,7 +97,7 @@ public:
 
     static bool AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
-    /// sum(vec(a).*vec(b))
+    // sum(vec(a).*vec(b))
     static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/)
     {
         NOT_IMPLEMENTED;
