@@ -6,7 +6,7 @@
 #include "DataReader.h"
 #include "ComputationNetwork.h"
 #include "MPIWrapper.h"
-#include "TrainingCriterionNodes.h"
+#include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include <string>
 #include <map>
 #include <set>

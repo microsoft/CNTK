@@ -15,9 +15,9 @@
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
+#include "PreComputeNodes.h"
 #include "EvaluationCriterionNodes.h"
-#include "EsotericNodes.h"
+#include "SpecialPurposeNodes.h"
 #include "MPIWrapper.h" // TODO: does not belong here
 #include <string>
 #include <vector>

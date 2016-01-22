@@ -31,6 +31,10 @@
     TypeName(TypeName&&) = delete;                 \
     TypeName& operator=(TypeName&&) = delete
 
+#ifndef let
+#define let const auto  // let x = ... ; let & r = ...
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;

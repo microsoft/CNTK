@@ -18,9 +18,9 @@
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
+#include "PreComputeNodes.h"
 #include "EvaluationCriterionNodes.h"
-#include "EsotericNodes.h"
+#include "SpecialPurposeNodes.h"
 
 #include <string>
 

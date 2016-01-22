@@ -19,7 +19,8 @@
 #include <stdexcept>
 
 #ifdef _WIN32
-#include <windows.h> // for timer
+#define NOMINMAX
+#include "Windows.h" // for timer
 #endif
 
 #if __unix__

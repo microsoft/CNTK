@@ -4,14 +4,14 @@
 
 #include "Basics.h"
 #include "SGD.h"
+#include "NonlinearityNodes.h"          // for DropoutNode
+#include "PreComputeNodes.h"            // for PrecomputeNode
+#include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
-
 #include "MatrixQuantizerImpl.h"
-
 #ifdef QUANTIZED_GRADIENT_AGGREGATION
 #include "AllReduceDistGradAggregator.h"
 #endif
-
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 

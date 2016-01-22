@@ -726,7 +726,7 @@ SectionHeader* Section::GetSectionHeader(size_t filePosition, MappingType& mappi
         if (filePosition < sectionOwner->GetFilePosition())
             RuntimeError("invalid fileposition, cannot be earlier in the file than mapping parent");
         size_t offset = filePosition - sectionOwner->GetFilePosition();
-        size_t totalSize = offset + max(size, sectionHeaderMin);
+        size_t totalSize = offset + max(size, (size_t) sectionHeaderMin);
 
         // make sure we can at least get to the header
         if (sectionOwner->GetMappedSize() < totalSize)

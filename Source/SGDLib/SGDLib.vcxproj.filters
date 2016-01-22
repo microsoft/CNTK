@@ -66,9 +66,6 @@
     <ClInclude Include="..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h">
-      <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
@@ -137,6 +134,9 @@
     </ClInclude>
     <ClInclude Include="SimpleDistGradAggregator.h">
       <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h">
+      <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

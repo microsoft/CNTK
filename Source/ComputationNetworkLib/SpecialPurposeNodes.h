@@ -11,11 +11,662 @@
 #include <list>
 #include <memory>
 #include "ComputationNode.h"
+#include "gammacalculation.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This header collects special-purpose nodes.
-// It is likely that these are no longer functional.
+
+// -----------------------------------------------------------------------
+// GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
+// calculates the log likelihood of a feature given parameters of a Gaussian mixture model (GMM) with shared diagonal variance
+//  - unnormedPrior: mix weights, #rows = #mixture components
+//  - means: means, all mix means concatenated  (i.e. dim = feature dim x prior dim)
+//  - logStdDevs: std deviations, pooled across mix (i.e. same dim as features)
+// UnnormedPrior, means, and logStdDevs can be either a single column or one per sample, e.g.
+// when parameters are computed by other nodes.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"GMMLogLikelihood";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(GMMLogLikelihoodNode);
+    GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : ComputationNode<ElemType>(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // get the right slice
+        const size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
+
+        Matrix<ElemType> sliceGradientValue = DataFor(*m_gradient, fr);
+        Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
+
+        switch (inputIndex)
+        {
+        case 0:
+        {
+            if (colsPrior == 1)
+                BackpropToUnnormedPrior(Input(0)->Gradient(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
+            else
+            {
+                Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
+                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr); // TODO: use the right MBLayout, then we won't need the special case
+                BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
+            }
+        }
+        break;
+        case 1:
+        {
+            Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+            if (colsPrior == 1)
+                BackpropToMean(Input(1)->Gradient(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+            else
+            {
+                Matrix<ElemType> sliceMeanGradient = Input(1)->GradientFor(fr);
+                BackpropToMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+            }
+        }
+        break;
+        case 2:
+        {
+            Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
+            if (colsPrior == 1)
+                BackpropToLogStddev(Input(2)->Gradient(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
+            else
+            {
+                Matrix<ElemType> sliceLotStddevGradient = Input(2)->GradientFor(fr);
+                BackpropToLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
+            }
+        }
+        break;
+        case 3:
+        {
+            Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+            Matrix<ElemType> sliceFeatureGradient = Input(3)->GradientFor(fr);
+            BackpropToFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
+        }
+        break;
+        default:
+            InvalidArgument("GMMLogLikelihoodNode criterion only takes four inputs.");
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        // The GMMLogLikelihoodNode does not require its output value for computing
+        // the gradients of its input nodes
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        // The GMMLogLikelihoodNode does not require any of it's input's values for computing
+        // the gradients of its input nodes
+        UNREFERENCED_PARAMETER(childIndex);
+        return false;
+    }
+
+    void BackpropToUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
+                                 const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    {
+        temp.AssignDifferenceOf(posterior, prior);
+        temp.RowElementMultiplyWith(gradientValues);
+        if (prior.GetNumCols() == posterior.GetNumCols())
+            unnormedPriorGradientValues += temp;
+        else if (prior.GetNumCols() == 1)
+            Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(posterior.GetNumCols(), 1, unnormedPriorGradientValues.GetDeviceId()), false, unnormedPriorGradientValues);
+        else
+            RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
+    }
+
+    void BackpropToMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+                        Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    {
+        size_t numComponent = posterior.GetNumRows();
+        size_t numSamples = posterior.GetNumCols();
+        size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
+
+        temp.SetValue(normedDeviationVectors); //recall normedDeviationVectors <-- (x-u_c)/(stddev^2)
+        temp.Reshape(featureSize, numSamples * numComponent);
+
+        posterior.Reshape(1, numSamples * numComponent);
+        temp.RowElementMultiplyWith(posterior); //temp <-- posterior * (x-u_c)/(stddev^2)
+
+        posterior.Reshape(numComponent, numSamples);          //reshape back
+        temp.Reshape(featureSize * numComponent, numSamples); //reshape back
+
+        temp.RowElementMultiplyWith(gradientValues);
+
+        if (numSamples == meanGradientValues.GetNumCols())
+            meanGradientValues += temp;
+        else if (meanGradientValues.GetNumCols() == 1)
+            Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, meanGradientValues.GetDeviceId()), false, meanGradientValues);
+        else
+            RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
+    }
+
+    void BackpropToLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
+                             const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    {
+        size_t numComponent = posterior.GetNumRows();
+        size_t numSamples = posterior.GetNumCols();
+
+        temp.AssignDifferenceOf(normedDeviation, (ElemType) numComponent);
+        temp.ElementMultiplyWith(posterior);
+        temp.RowElementMultiplyWith(gradientValues);
+        if (logStddevGradientValues.GetNumCols() == numSamples)
+            logStddevGradientValues += temp;
+        else if (logStddevGradientValues.GetNumCols() == 1)
+            Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, logStddevGradientValues.GetDeviceId()), false, logStddevGradientValues);
+        else
+            RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
+    }
+
+    void BackpropToFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+                           Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    {
+        size_t numComponent = posterior.GetNumRows();
+        size_t numSamples = posterior.GetNumCols();
+        size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
+
+        temp.SetValue(normedDeviationVectors);
+        temp *= -1;
+        temp.Reshape(featureSize, numSamples * numComponent);
+        posterior.Reshape(1, numSamples * numComponent);
+        temp.RowElementMultiplyWith(posterior);
+
+        posterior.Reshape(numComponent, numSamples);
+        temp.Reshape(featureSize * numComponent, numSamples);
+        temp.RowElementMultiplyWith(gradientValues);
+
+        for (int i = 0; i < numComponent; i++)
+            featureGradientValues.AddWithRowSliceValuesOf(temp, i * featureSize, featureSize);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        size_t numCols = Input(3)->GetSampleMatrixNumCols();
+        size_t numComponents = Input(0)->GetSampleMatrixNumRows();
+        size_t colsPrior = Input(0)->GetSampleMatrixNumCols(); // may be 1
+        size_t featureSize = Input(3)->GetSampleMatrixNumRows();
+
+        m_prior->Resize(numComponents, colsPrior);
+        m_stddev->Resize(numComponents, colsPrior);
+        m_normedDeviation->Resize(numComponents, numCols);
+        m_normedDeviationVectors->Resize(numComponents * featureSize, numCols);
+        m_posterior->Resize(numComponents, numCols);
+    }
+
+    // input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
+        size_t numSamples = Input(3)->GetSampleMatrixNumCols();
+
+        // get the right slice
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        Matrix<ElemType> sliceFeature = Input(3)->ValueFor(fr);
+        Matrix<ElemType> sliceNormedDeviation = DataFor(*m_normedDeviation, fr);
+        Matrix<ElemType> sliceNormedDeviationVectors = DataFor(*m_normedDeviationVectors, fr);
+        Matrix<ElemType> slicePosterior = DataFor(*m_posterior, fr);
+
+        if (colsPrior == 1)
+        {
+            ForwardPropS(sliceOutputValue, Input(0)->Value(), Input(1)->Value(), Input(2)->Value(), sliceFeature,
+                         *m_prior, *m_stddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
+        }
+        else if (colsPrior == numSamples)
+        {
+            Matrix<ElemType> sliceUnnormedPrior = Input(0)->ValueFor(fr);
+            Matrix<ElemType> sliceMean = Input(1)->ValueFor(fr);
+            Matrix<ElemType> sliceLogstddev = Input(2)->ValueFor(fr);
+
+            Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);
+            Matrix<ElemType> sliceStddev = DataFor(*m_stddev, fr);
+
+            ForwardPropS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
+                         slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
+        }
+        else //should not reach the code since validation should fail already
+            RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
+    }
+
+    //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+    //If we want to speed up we need to replace following code with a several specialized GPU functions
+    /*TODO: merge with call site*/ void ForwardPropS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean, Matrix<ElemType>& logstddev,
+                                                     const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
+                                                     Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+    {
+        int numComponent = unnormedPrior.GetNumRows();
+        size_t numSamples = feature.GetNumCols();
+        size_t featureDim = feature.GetNumRows();
+
+        //compute prior which is softmax of unnormedPrior
+        prior.AssignLogSoftmaxOf(unnormedPrior, true); //log prior
+
+        prior.InplaceExp();
+
+        //compute stddev
+        stddev.AssignExpOf(logstddev);
+
+#if DUMPOUTPUT
+        unnormedPrior.Print("unnormedPrior", 0, min(5, unnormedPrior.GetNumRows() - 1), 0, min(10, unnormedPrior.GetNumCols() - 1));
+        mean.Print("mean", 0, min(5, mean.GetNumRows() - 1), 0, min(10, mean.GetNumCols() - 1));
+        logstddev.Print("logstddev", 0, min(5, logstddev.GetNumRows() - 1), 0, min(10, logstddev.GetNumCols() - 1));
+
+        prior.Print("prior", 0, min(5, prior.GetNumRows() - 1), 0, min(10, prior.GetNumCols() - 1));
+        stddev.Print("stddev", 0, min(5, stddev.GetNumRows() - 1), 0, min(10, stddev.GetNumCols() - 1));
+#endif
+
+        //compute normedDeviation <-- ||x-u_c||^2/(stddev^2)
+        normedDeviationVectors.AssignRepeatOf(feature, numComponent, 1);
+        normedDeviationVectors -= mean;                                        //each column of the mean has multiple mean components
+        normedDeviationVectors.Reshape(featureDim, numSamples * numComponent); //now each column is feature-mean_i
+
+        normedDeviation.AssignVectorNorm2Of(normedDeviationVectors, true);
+        normedDeviation ^= 2;
+        temp.AssignRepeatOf(stddev, 1, numSamples / stddev.GetNumCols()); //stddev.GetNumCols() is either 1 or =numSamples
+        temp.Reshape(1, temp.GetNumElements());                           //one stddev value for each component for each sample
+        temp ^= 2;
+        normedDeviation.ElementDivideBy(temp); //normedDeviation and temp have same dim (1, numSamples* numComponent)
+
+        //compute  normedDeviationVectors <-- (x-u_c)/(stddev^2)
+        normedDeviationVectors.RowElementDivideBy(temp);                       //divide twice
+        normedDeviationVectors.Reshape(featureDim * numComponent, numSamples); //reshape back
+
+        //compute per-component likelihood
+        posterior.AssignProductOf(-0.5f, normedDeviation); //posterior  <-- -||x-u_c||^2/(stddev^2)/2 and in (1, numSamples* numComponent) dim
+        temp.InplaceLog();
+        temp *= ((ElemType) numComponent / 2.0f);                   //temp <-- stddev^c and in (1, numSamples* numComponent) dim
+        posterior -= temp;                                          // posterior  <-- exp[-||x-u_c||^2/(stddev^2)/2]/(stddev^c)
+        posterior -= (ElemType)(numComponent / 2.0f * log(TWO_PI)); //likelihood for each component and sample is now computed and stored in posterior
+        posterior.InplaceExp();                                     //posterior  <-- exp(-||x-u_c||^2/(stddev^2)/2)
+
+        normedDeviation.Reshape(numComponent, numSamples); //reshape back
+        posterior.Reshape(numComponent, numSamples);       //reshape back
+
+        //compute posterior <-- prior_i * likelihood_i
+        if (unnormedPrior.GetNumCols() == numSamples) //each sample has different prior
+            posterior.ElementMultiplyWith(prior);
+        else //all samples share the same prior
+            posterior.ColumnElementMultiplyWith(prior);
+
+        //compute GMM log-likelihood
+        Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues); //functionValues <-- total likelihood
+        posterior.RowElementDivideBy(functionValues);                                                                             //posterior <-- per-comp likelihood / total likelihood
+        functionValues.InplaceLog();                                                                                              //log likelihood
+
+#if DUMPOUTPUT
+        temp.Print("temp", 0, min(5, temp.GetNumRows() - 1), 0, min(10, temp.GetNumCols() - 1));
+        normedDeviation.Print("normedDeviation", 0, min(5, normedDeviation.GetNumRows() - 1), 0, min(10, normedDeviation.GetNumCols() - 1));
+
+        posterior.Print("posterior", 0, min(5, posterior.GetNumRows() - 1), 0, min(10, posterior.GetNumCols() - 1));
+        functionValues.Print("functionValues", 0, min(5, functionValues.GetNumRows() - 1), 0, min(10, functionValues.GetNumCols() - 1));
+
+        functionValues.Print("GMMLogLikelihoodNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase();
+
+        size_t rows[4];
+        for (int i = 0; i < 4; i++)
+            rows[i] = Input(i)->GetSampleMatrixNumRows();
+
+        if (isFinalValidationPass)
+        {
+            if (!Input(3)->HasMBLayout())
+                InvalidArgument("GMMLogLikelihoodNode: Features must be a minibatch.");
+            if (Input(0)->GetMBLayout() != Input(1)->GetMBLayout() || Input(0)->GetMBLayout() != Input(2)->GetMBLayout())
+                InvalidArgument("GMMLogLikelihoodNode: First three arguments must have the same MBLayout (which may be none).");
+
+            if (rows[0] != rows[2])
+                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
+
+            if (rows[1] != rows[0] * rows[3])
+                LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+        }
+
+        SetDims(TensorShape(1), true);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<GMMLogLikelihoodNode<ElemType>>(nodeP);
+            *node->m_prior = *m_prior;
+            *node->m_normedDeviation = *m_normedDeviation;
+            *node->m_normedDeviationVectors = *m_normedDeviationVectors;
+            *node->m_stddev = *m_stddev;
+            *node->m_posterior = *m_posterior;
+        }
+    }
+
+    //request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_prior, matrixPool);
+        RequestMatrixFromPool(m_normedDeviation, matrixPool);
+        RequestMatrixFromPool(m_normedDeviationVectors, matrixPool);
+        RequestMatrixFromPool(m_stddev, matrixPool);
+        RequestMatrixFromPool(m_posterior, matrixPool);
+        RequestMatrixFromPool(m_temp, matrixPool);
+    }
+
+    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_prior, matrixPool);
+        ReleaseMatrixToPool(m_normedDeviation, matrixPool);
+        ReleaseMatrixToPool(m_normedDeviationVectors, matrixPool);
+        ReleaseMatrixToPool(m_stddev, matrixPool);
+        ReleaseMatrixToPool(m_posterior, matrixPool);
+        ReleaseMatrixToPool(m_temp, matrixPool);
+    }
+
+protected:
+    shared_ptr<Matrix<ElemType>> m_prior;
+    shared_ptr<Matrix<ElemType>> m_normedDeviation;
+    shared_ptr<Matrix<ElemType>> m_normedDeviationVectors;
+    shared_ptr<Matrix<ElemType>> m_stddev;
+    shared_ptr<Matrix<ElemType>> m_posterior;
+    shared_ptr<Matrix<ElemType>> m_temp;
+};
+
+template class GMMLogLikelihoodNode<float>;
+template class GMMLogLikelihoodNode<double>;
+
+
+// -----------------------------------------------------------------------
+/// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
+// word-lattice based sequence training criterion, using a Microsoft-proprietary lattice format
+//
+// This node is likely not very useful for external use since it uses an MS-proprietary lattice-archive format
+// that requires Frank's DBN.exe tool to create. The inner C++ code for converting HTK lattices
+// into this format is in this repo (latticearchive.h), but not the outer main program.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SequenceWithSoftmax";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
+    SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_gammaCalcInitialized(false)
+    {
+    }
+
+    //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        //auto t_start_time = Timer::MilliSecondElapsed();
+        //left Node must be a scalar
+        if (inputIndex == 0) //left derivative
+        {
+            BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
+        }
+        else if (inputIndex == 1)
+        {
+            FrameRange fr(Input(0)->GetMBLayout());
+            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+
+#ifdef _DEBUG
+            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
+#endif
+        }
+        else if (inputIndex == 2)
+        {
+#if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
+            ; // gradient does not flow here
+#else
+            Input(inputIndex)->SetParameterUpdateRequired(false);
+            Input(inputIndex)->Gradient().SetValue(0.0);
+#endif
+        }
+        else
+            RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
+    }
+
+    static void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+    {
+#if DUMPOUTPUT
+        logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
+#endif
+
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
+#if DUMPOUTPUT
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
+#endif
+    }
+
+    static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+                                       Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+    {
+#if DUMPOUTPUT
+        softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("SequenceWithSoftmaxNode Partial-inputFunctionValues");
+        gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
+#endif
+
+        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
+#if DUMPOUTPUT
+        inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
+#endif
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    // -sum(left_i * log(softmax_i(right)))
+    virtual void ForwardPropNonLooping()
+    {
+        // Initialize m_gammaCalculator
+        // TODO: Would this lend itself to a unique_ptr instead of the init flag?
+        if (!m_gammaCalcInitialized)
+        {
+            if (m_hmm.hmms.size() == 0)
+            {
+                LogicError("SequenceWithSoftmaxNode criterion evaluation requires HMM states to be set.");
+            }
+            m_gammaCalculator.init(m_hmm, m_deviceId);
+            m_gammaCalcInitialized = true;
+        }
+        //softmax
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->InplaceExp();
+
+        m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+        m_gammaFromLattice->Resize(*m_softmaxOfRight);
+        m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
+                                        Input(0)->Value() /*labels*/, *m_gammaFromLattice,
+                                        m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+                                        Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+
+#if NANCHECK
+        Value().HasNan("SequenceWithSoftmaxNode");
+#endif
+#if DUMPOUTPUT
+        Value().Print("SequenceWithSoftmaxNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
+            LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
+
+        if (isFinalValidationPass)
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && //match size
+                  Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
+                  Input(0)->HasMBLayout() &&
+                  Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
+                  Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
+            }
+
+        SetDims(TensorShape(1), false);
+
+        m_gammatime = 0;
+        m_partialtime = 0;
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
+
+            *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
+            *node->m_softmaxOfRight = *m_softmaxOfRight;
+            *node->m_gammaFromLattice = *m_gammaFromLattice;
+            node->m_fsSmoothingWeight = m_fsSmoothingWeight;
+            node->m_frameDropThreshold = m_frameDropThreshold;
+            node->m_doReferenceAlignment = m_doReferenceAlignment;
+        }
+    }
+
+    //request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+    }
+
+    //request matrices needed to do node function value evaluation
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+    }
+
+    // TODO: method names should be CamelCase
+    std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr()
+    {
+        return &m_lattices;
+    }
+
+    std::vector<size_t>* getuidprt()
+    {
+        return &m_uids;
+    }
+
+    std::vector<size_t>* getboundaryprt()
+    {
+        return &m_boundaries;
+    }
+    std::vector<size_t>* getextrauttmap()
+    {
+        return &m_extraUttMap;
+    }
+    msra::asr::simplesenonehmm* gethmm()
+    {
+        return &m_hmm;
+    }
+
+    void SetSmoothWeight(double fsSmoothingWeight)
+    {
+        m_fsSmoothingWeight = fsSmoothingWeight;
+    }
+    void SetFrameDropThresh(double frameDropThresh)
+    {
+        m_frameDropThreshold = frameDropThresh;
+    }
+
+    void SetReferenceAlign(const bool doreferencealign)
+    {
+        m_doReferenceAlignment = doreferencealign;
+    }
+
+    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+    {
+        msra::lattices::SeqGammarCalParam param;
+        param.amf = amf;
+        param.lmf = lmf;
+        param.wp = wp;
+        param.bMMIfactor = bMMIfactor;
+        param.sMBRmode = sMBR;
+        m_gammaCalculator.SetGammarCalculationParams(param);
+    }
+
+    void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
+    {
+        gammatime = m_gammatime;
+        partialtime = m_partialtime;
+    }
+
+protected:
+    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    double m_frameDropThreshold;
+    double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+    double m_seqGammarAMF;
+    double m_seqGammarLMF;
+    double m_seqGammarWP;
+    double m_seqGammarbMMIFactor;
+    double m_seqGammarUsesMBR;
+    bool m_doReferenceAlignment;
+    std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
+    msra::asr::simplesenonehmm m_hmm;
+    msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
+    bool m_gammaCalcInitialized;
+    std::vector<size_t> m_uids;
+    std::vector<size_t> m_boundaries;
+    std::vector<size_t> m_extraUttMap;
+
+    unsigned long long m_gammatime; // TODO: what are these? Not even the context can be guessed from these names.
+    unsigned long long m_partialtime;
+};
+
+template class SequenceWithSoftmaxNode<float>;
+template class SequenceWithSoftmaxNode<double>;
 
 #if 0 //def ENABLE_TENSORVIEW
 // -----------------------------------------------------------------------
@@ -1034,6 +1685,7 @@ template class CosineNode<double>;
 // This node is useful in sequence training for speech recognition, so that
 // we can separate lattice computation (which may rely other softwares, such
 // as Kaldi) with the neural network training.
+
 template <class ElemType>
 class DummyCriterionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
@@ -2962,4 +3614,259 @@ public:
 
 template class LSTMNode<float>;
 template class LSTMNode<double>;
+
+
+// -----------------------------------------------------------------------
+// BatchModeNode
+// -----------------------------------------------------------------------
+
+/**
+    BatchModeNode is a derivative of ComputationNode.
+    It additionally check if needs to process data in batch before processing its parent
+    This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
+    It differs from PreComputeNode in that precompute done is done before the entire corpus.
+    This is done before forward computation of all nodes.
+    */
+template <class ElemType>
+class BatchModeNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+{
+    // all nodes require precomputation should derive from this class
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembers;
+
+public:
+    //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+    //DeclareConstructorFromConfigWithNumInputs(BatchModeNode);
+    BatchModeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name),
+          m_memory(deviceId)
+    {
+    }
+
+    virtual bool HasComputed() const = 0;
+    virtual void MarkComputed(const bool hasComputed) = 0;
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_hasComputed;
+        fstream << Value();
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_hasComputed;
+        LoadValue(fstream);
+    }
+
+    virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
+    {
+        Base::DumpNodeInfo(printValues, fstream);
+
+        const size_t BUFLEN = 4096;
+        WCHAR str[BUFLEN];
+        swprintf(str, BUFLEN, L"[%s%s]  ", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
+        fstream << wstring(str);
+        swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
+        fstream << wstring(str);
+
+        PrintNodeValuesToFile(printValues, fstream);
+    }
+
+protected:
+    Matrix<ElemType> m_memory; // the memory of input or output
+    bool m_hasComputed;
+};
+
+// add this at the start of each derived class, to get access to the members of ComputationNode
+// See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+#define UsingBatchModeNodeMembers           \
+    UsingComputationNodeMembersBoilerplate; \
+    \
+protected:                                  \
+    using Base::m_memory;                   \
+    using Base::m_hasComputed;              \
+    \
+public:                                     \
+    using Base::HasComputed;                \
+    using Base::MarkComputed
+
+// -----------------------------------------------------------------------
+// TimeReverseNode (input)
+// BUGBUG: This must actually implement reversing the layout.
+// Challenge: This reverses the layout. If we time-reverse back, we'd reverse the layout again.
+// We will get the original layout. Unfortunately, it is not the same layout pointer.
+// To turn it back to the same layout pointer, insert a ReconcileMBLayout node.
+// -----------------------------------------------------------------------
+
+/**
+    Developed by Kaisheng Yao.
+    This node is used in the following work
+    K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
+    */
+template <class ElemType>
+class TimeReverseNode : public BatchModeNode<ElemType>, public NumInputs<1>
+{
+    typedef BatchModeNode<ElemType> Base;
+    UsingBatchModeNodeMembers;
+    static const std::wstring TypeName()
+    {
+        return L"TimeReverse";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(TimeReverseNode);
+    TimeReverseNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : BatchModeNode<ElemType>(deviceId, name)
+    {
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
+            // TODO: m_memory is never used inside this class, just assigned. Can it not be assigned?
+            node->m_memory = m_memory;
+        }
+    }
+
+    virtual bool HasComputed() const
+    {
+        return m_hasComputed;
+    }
+    virtual void MarkComputed(const bool hasComputed)
+    {
+        m_hasComputed = hasComputed;
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        assert(inputIndex == 0);
+        inputIndex;
+        VerifyDims(Input(0));
+
+        size_t nT = GetNumTimeSteps();
+        for (size_t t = 0; t < nT; t++)
+        {
+            Matrix<ElemType> g = GradientFor(FrameRange(GetMBLayout(), t));
+            Matrix<ElemType> ig = Input(0)->GradientFor(FrameRange(Input(0)->GetMBLayout(), nT - 1 - t));
+            ig += g;
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        // The TimeReverseNode does not require its output value for computing
+        // the gradients of its input nodes
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        // The TimeReverseNode does not require any of it's input's values for computing
+        // the gradients of its input nodes
+        UNREFERENCED_PARAMETER(childIndex);
+        return false;
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        // BUGBUG: We must flip the layout, too.
+        if (GetNumParallelSequences() != 1)
+            LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.", NodeName().c_str(), OperationName().c_str());
+        if (!m_hasComputed)
+        {
+            // this assumes this reverse node is called once, so it can set, instead add to, the function values
+            SetDims(Input(0));
+            UpdateFunctionValuesSize();
+
+            size_t nT = GetNumTimeSteps();
+            for (size_t t = 0; t < nT; t++)
+            {
+                Matrix<ElemType> v = Input(0)->ValueFor(FrameRange(Input(0)->GetMBLayout(), t));
+                ValueFor(FrameRange(GetMBLayout(), nT - 1 - t)).SetValue(v);
+            }
+
+#if NANCHECK
+            Value().HasNan("TimeReverse");
+#endif
+#if DUMPOUTPUT
+            Value().Print("TimeReverseNode");
+#endif
+
+            m_memory.SetValue(Value());
+        }
+        // TODO: don't need to set m_hasCompute? Or what is it for?
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase();
+        if (isFinalValidationPass && !m_pMBLayout)
+            RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
+
+        SetDims(Input(0));
+    }
+
+public:
+    bool UnitTest()
+    {
+        size_t nT = 3;
+        size_t nInput = 3;
+        size_t nOutput = nInput;
+
+        Input(0)->SetDims1(nInput, nT);
+        Input(0)->UpdateFunctionValuesSize();
+        Input(0)->Value().SetValue(0);
+        Input(0)->Value()(0, 0) = 1;
+        Input(0)->Value()(0, 1) = 2;
+        Input(0)->Value()(0, 2) = 3;
+        SetDims1(nOutput, nT);
+        UpdateFunctionValuesSize();
+        Input(0)->Value().TransferToDeviceIfNotThere(m_deviceId, true);
+        ForwardProp(FrameRange(m_pMBLayout));
+
+        /// check with expected values
+        if (!ISCLOSE(Value()(0, 0), 3, EPSILON) ||
+            !ISCLOSE(Value()(0, 1), 2, EPSILON) ||
+            !ISCLOSE(Value()(0, 2), 1, EPSILON))
+        {
+            return false;
+        }
+
+        Value().TransferToDeviceIfNotThere(m_deviceId, true);
+
+        Input(0)->Gradient().Resize(nOutput, nT);
+        Input(0)->Gradient().SetValue(1.0);
+        Gradient().Resize(nOutput, nT);
+        Gradient().SetValue(0);
+        Gradient()(0, 0) = 1;
+        Gradient()(0, 1) = 2;
+        Gradient()(0, 2) = 3;
+        Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
+
+        BackpropTo(0, FrameRange(m_pMBLayout));
+
+        /// check with expected values
+        if (!ISCLOSE(Input(0)->Gradient()(0, 0), 4, EPSILON) ||
+            !ISCLOSE(Input(0)->Gradient()(0, 1), 3, EPSILON) ||
+            !ISCLOSE(Input(0)->Gradient()(0, 2), 2, EPSILON))
+        {
+            return false;
+        }
+
+        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
+        Gradient().TransferToDeviceIfNotThere(m_deviceId, true);
+
+        return true;
+    }
+};
+
+template class TimeReverseNode<float>;
+template class TimeReverseNode<double>;
+
 } } }
