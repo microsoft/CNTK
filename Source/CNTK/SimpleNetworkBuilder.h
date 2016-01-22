@@ -30,19 +30,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define MAX_DEPTH 20
 
-enum RNNTYPE
+// the standard network kinds that can be built with SimpleNetworkBuilder
+enum StandardNetworkKind
 {
-    SIMPLENET = 0, // no recurrent connections
-    SIMPLERNN = 1,
-    LSTM = 2,
-    DEEPRNN = 4,
-    CLASSLM = 8,
-    LBLM = 16,
-    NPLM = 32,
-    CLASSLSTM = 64,
-    NCELSTM = 128,
-    CLSTM = 256,
-    RCRF = 512
+    // basic
+    FFDNNKind                  = 0,     // basic feed-forward
+    RNNKind                    = 1,     // basic RNN
+    LSTMKind                   = 2,     // basic LSTM
+    // class-based
+    ClassEntropyRNNKind        = 8,     // class-based RNN
+    ClassLSTMNetworkKind       = 64,    // class-based LSTM
+    // advanced
+    LogBilinearNetworkKind     = 16,    // log-bilinear model for language modeling
+    DNNLMNetworkKind           = 32,    // DNN-based LM
+    NCELSTMNetworkKind         = 128,   // NCE LSTM
+    ConditionalLSTMNetworkKind = 256,   // conditional LM for text generation
+    CRFLSTMNetworkKind         = 512,   // sequential LSTM
 };
 
 enum class TrainingCriterion : int // TODO: camel-case these
@@ -165,27 +168,25 @@ public:
 
         stringargvector strType = str_rnnType;
         if (std::find(strType.begin(), strType.end(), L"SIMPLENET") != strType.end())
-            m_rnnType = SIMPLENET;
+            m_standardNetworkKind = FFDNNKind;
         else if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
-            m_rnnType = SIMPLERNN;
+            m_standardNetworkKind = RNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LSTM") != strType.end())
-            m_rnnType = LSTM;
-        else if (std::find(strType.begin(), strType.end(), L"DEEPRNN") != strType.end())
-            m_rnnType = DEEPRNN;
+            m_standardNetworkKind = LSTMKind;
         else if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end())
-            m_rnnType = CLASSLM;
+            m_standardNetworkKind = ClassEntropyRNNKind;
         else if (std::find(strType.begin(), strType.end(), L"LBLM") != strType.end())
-            m_rnnType = LBLM;
+            m_standardNetworkKind = LogBilinearNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NPLM") != strType.end())
-            m_rnnType = NPLM;
+            m_standardNetworkKind = DNNLMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
-            m_rnnType = CLASSLSTM;
+            m_standardNetworkKind = ClassLSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
-            m_rnnType = NCELSTM;
+            m_standardNetworkKind = NCELSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CLSTM") != strType.end())
-            m_rnnType = CLSTM;
+            m_standardNetworkKind = ConditionalLSTMNetworkKind;
         else if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
-            m_rnnType = RCRF;
+            m_standardNetworkKind = CRFLSTMNetworkKind;
         else
             InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
     }
@@ -241,21 +242,16 @@ public:
 
     ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName); // legacy support for fseide's Microsoft-internal tool "DBN.exe"
 
-    RNNTYPE RnnType()
-    {
-        return m_rnnType;
-    }
-
 protected:
 
-    ComputationNetworkPtr BuildSimpleDNNFromDescription();
-    ComputationNetworkPtr BuildSimpleRNNFromDescription();
-    ComputationNetworkPtr BuildClassEntropyNetworkFromDescription();
+    ComputationNetworkPtr BuildFFDNNFromDescription();
+    ComputationNetworkPtr BuildRNNFromDescription();
+    ComputationNetworkPtr BuildClassEntropyRNNFromDescription();
     ComputationNetworkPtr BuildLogBilinearNetworkFromDescription();
-    ComputationNetworkPtr BuildNeuralProbNetworkFromDescription();
+    ComputationNetworkPtr BuildDNNLMNetworkFromDescription();
     ComputationNetworkPtr BuildLSTMNetworkFromDescription();
 #ifdef COMING_SOON
-    ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
+    ComputationNetworkPtr BuildCRFLSTMNetworkFromDescription();
 #endif
     ComputationNetworkPtr BuildClassLSTMNetworkFromDescription();
     ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription();
@@ -343,7 +339,7 @@ protected:
     // recurrent network
     intargvector m_recurrentLayers;
     float m_defaultHiddenActivity;
-    RNNTYPE m_rnnType;
+    StandardNetworkKind m_standardNetworkKind;
     int m_maOrder; // MA model order
 
     bool m_constForgetGateValue;

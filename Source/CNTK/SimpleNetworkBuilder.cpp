@@ -24,42 +24,42 @@ template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription()
 {
     ComputationNetworkPtr net;
-    switch (m_rnnType)
+    switch (m_standardNetworkKind)
     {
-    case SIMPLENET:
-        net = BuildSimpleDNNFromDescription();
+    case FFDNNKind:
+        net = BuildFFDNNFromDescription();
         break;
-    case SIMPLERNN:
-        net = BuildSimpleRNNFromDescription();
+    case RNNKind:
+        net = BuildRNNFromDescription();
         break;
-    case LSTM:
+    case LSTMKind:
         net = BuildLSTMNetworkFromDescription();
         break;
-    case CLASSLSTM:
+    case ClassLSTMNetworkKind:
         net = BuildClassLSTMNetworkFromDescription();
         break;
-    case NCELSTM:
+    case NCELSTMNetworkKind:
         net = BuildNCELSTMNetworkFromDescription();
         break;
-    case CLASSLM:
-        net = BuildClassEntropyNetworkFromDescription();
+    case ClassEntropyRNNKind:
+        net = BuildClassEntropyRNNFromDescription();
         break;
-    case LBLM:
+    case LogBilinearNetworkKind:
         net = BuildLogBilinearNetworkFromDescription();
         break;
-    case NPLM:
-        net = BuildNeuralProbNetworkFromDescription();
+    case DNNLMNetworkKind:
+        net = BuildDNNLMNetworkFromDescription();
         break;
-    case CLSTM:
+    case ConditionalLSTMNetworkKind:
         net = BuildConditionalLSTMNetworkFromDescription();
         break;
 #ifdef COMING_SOON
-    case RCRF:
-        net = BuildSeqTrnLSTMNetworkFromDescription();
+    case CRFLSTMNetworkKind:
+        net = BuildCRFLSTMNetworkFromDescription();
         break;
 #endif
     default:
-        LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int) m_rnnType);
+        LogicError("BuildNetworkFromDescription: invalid m_standardNetworkKind %d", (int) m_standardNetworkKind);
     }
 
     // post-process the network
@@ -69,7 +69,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescriptio
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNNFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription()
 {
 
     ComputationNetworkBuilder<ElemType> builder(*m_net);
@@ -168,7 +168,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNNFromDescript
 
 // Note: while ComputationNode and CompuationNetwork are (supposed to be) independent of ElemType, it is OK to keep this class dependent.
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNNFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
     if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
@@ -276,7 +276,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNNFromDescript
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
@@ -292,7 +292,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetworkFr
         ComputationNodePtr wrd2cls, cls2idx, clslogpostprob, clsweight;
 
         if (m_vocabSize != m_layerSizes[numHiddenLayers + 1])
-            RuntimeError("BuildClassEntropyNetworkFromDescription : vocabulary size should be the same as the output layer size");
+            RuntimeError("BuildClassEntropyRNNFromDescription : vocabulary size should be the same as the output layer size");
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
         m_net->FeatureNodes().push_back(input);
@@ -615,7 +615,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
     if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
@@ -952,7 +952,7 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 #ifdef COMING_SOON
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
     if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
