@@ -174,8 +174,6 @@
     <ClInclude Include="..\ComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\MatrixPool.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
-    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h" />
-    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />
     <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />
     <ClInclude Include="..\SGDLib\SimpleOutputWriter.h" />
