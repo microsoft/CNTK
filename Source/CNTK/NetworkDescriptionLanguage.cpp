@@ -20,6 +20,8 @@
 #include "PreComputeNodes.h"
 #include "EvaluationNodes.h"
 
+using namespace std;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // DuplicateNode - Duplicate a node in a macro as needed (it might already exist)
@@ -146,11 +148,12 @@ NDLPass& operator++(NDLPass& ndlPass)
 template <typename ElemType>
 bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 {
-    std::wstring nodeType = msra::strfun::utf16(p_nodeType);
-    bool ret = false;
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
-    if      (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
+
+    wstring nodeType = msra::strfun::utf16(p_nodeType);
+    bool ret = false;
+    if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
@@ -168,7 +171,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;
+#ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(GMMLogLikelihoodNode), L"GMMLL")) ret = true;
+#endif
     else if (EqualInsensitive(nodeType, OperationNameOf(HardmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(InputValue), L"Input")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode))) ret = true;
@@ -193,7 +198,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowSliceNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
+#ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
+#endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
@@ -203,7 +210,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
+#ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeNode))) ret = true;
+#endif
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
     else if (EqualInsensitive(nodeType, L"ColumnElementTimes")) ret = true;
     else if (EqualInsensitive(nodeType, L"Constant", L"Const")) ret = true;
