@@ -313,7 +313,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
              cnNodeType == OperationNameOf(FutureValueNode))
     {
         if (parameter.size() < 2 || parameter.size() > 3) // we allow 3 for legacy (cols parameter which is now unused)
-            RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, input, [timeStep=1, defaultPastValue=0.1]).");
+            RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, input, [timeStep=1, defaultHiddenActivity=0.1]).");
         // TODO: allow a tensor descriptor. Or allow 0 (inference). Maybe already supported--check this.
 
         nodeParamCount = 1;                            // number of inputs
@@ -346,7 +346,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(ConvolutionNode))
     {
         if (parameter.size() != 7)
-            RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
+            RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 2;
@@ -378,7 +378,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(MaxPoolingNode))
     {
         if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
+            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = \"HWC\"|\"cudnn\"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 1;
@@ -406,7 +406,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
     else if (cnNodeType == OperationNameOf(AveragePoolingNode))
     {
         if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = "HWC"|"cudnn"].", cnNodeType.c_str());
+            RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout = \"HWC\"|\"cudnn\"].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 1;
