@@ -899,7 +899,7 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
         size_t* startRowIndeces = new size_t[inputMatrices.size()+1];
         ElemType ** bufferPointersInInputMatrices = new ElemType*[inputMatrices.size()];
 
-        startRowIndeces[0] = 0;       
+        startRowIndeces[0] = 0;
 
         for (int i = 0; i < inputMatrices.size(); i++)
         {
@@ -3302,7 +3302,7 @@ void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<E
         _vectorMaxMinReduce<ElemType, false><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(us.m_pArray, minIndexes.m_pArray, minValues.m_pArray, m, n);
 
         /*
-            int blocksPerGrid=(int)ceil(1.0*n/GridDim::maxThreadsPerBlock);  
+            int blocksPerGrid=(int)ceil(1.0*n/GridDim::maxThreadsPerBlock);
             _vectorMin<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n,isColWise);*/
     }
     else

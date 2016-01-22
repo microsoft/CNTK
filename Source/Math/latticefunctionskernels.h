@@ -351,7 +351,7 @@ struct latticefunctionskernels
     // zhaorui
     static inline __device__ float getlogtransp(lr3transP transP, int from, int to)
     {
-        /*if (from < -1 || from >= transP.MAXSTATES || to > transP.MAXSTATES) 
+        /*if (from < -1 || from >= transP.MAXSTATES || to > transP.MAXSTATES)
         {
             // printf("from: %d to: %d\n", from, to);
             return LOGZERO;
@@ -420,13 +420,13 @@ struct latticefunctionskernels
             {
                 /*    if (isSil)                                                              // for sil, -1 to 2 and -1 to 0 is permitted
                 {
-                    pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts); 
-                    pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);      
+                    pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts);
+                    pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);
                 }
                 else                                                                    // for others, only -1 to 0 is permitted
                 {
-                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);                                
-                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);                                
+                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
+                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
 
                 }*/
                 pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);

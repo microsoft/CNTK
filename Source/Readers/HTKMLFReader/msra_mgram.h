@@ -2332,7 +2332,7 @@ public:
 
         // estimate
         vector<bool> dropWord (userSymMap.size(), false);
-        dropWord.push_back (true);  // filtering but no <UNK>: 
+        dropWord.push_back (true);  // filtering but no <UNK>:
         assert (!filterVocabulary || unkId != -1 || dropWord[dropId]);
 
         // std::vector<unsigned int> minObs (2, 0);

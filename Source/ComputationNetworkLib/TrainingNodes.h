@@ -1027,17 +1027,17 @@ template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
 // -----------------------------------------------------------------------
 
 /**
-        CRF training criterion 
-        It uses forward-backward algorithm within a minibatch to compute statistics for sequence level optimization 
+        CRF training criterion
+        It uses forward-backward algorithm within a minibatch to compute statistics for sequence level optimization
         This node can serve a base class for other sequence level optimization
 
         Developed by Kaisheng Yao
         This node is for replicating results of the following work
         K. Yao, B. Peng, G. Zweig, D. Yu, X. Li and F. Gao, "Recurrent Conditional Random Fields", NIPS Deep Learning Workshop 2014
-        K. Yao, B. Peng, G. Zweig, D. Yu, X. Li and F. Gao, "Recurrent Conditional Random Fields for Language Understanding", ICASSP 2014 
+        K. Yao, B. Peng, G. Zweig, D. Yu, X. Li and F. Gao, "Recurrent Conditional Random Fields for Language Understanding", ICASSP 2014
         http://research.microsoft.com/pubs/210167/rcrf_v9.pdf
 
-        The forward-backward algorithm follows the derivation in 
+        The forward-backward algorithm follows the derivation in
         http://jmlr.org/papers/volume12/collobert11a/collobert11a.pdf
 
     */

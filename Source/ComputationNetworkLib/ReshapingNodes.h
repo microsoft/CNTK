@@ -49,7 +49,7 @@ public:
         //  input: T=2, D=2, K=3, S=2 (abcdef and uvwxyz)
         //   abc def
         //   ABC DEF
-        // 
+        //
         //   uvw xyz
         //   UVW XYZ
         //  target:
@@ -59,7 +59,7 @@ public:
         //   B E
         //   c f
         //   C F
-        // 
+        //
         //   u x
         //   U X
         //   v y
