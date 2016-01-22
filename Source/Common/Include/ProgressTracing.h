@@ -44,6 +44,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     } // wrap static state in an accessor, so we won't need a CPP file
 
 public:
+
+    static bool IsEnabled()
+    {
+        return GetStaticInstance().m_enabled;
+    }
+
     // call TraceTotalNumberOfSteps() to set the total number of steps
     // Calling this with totalNumberOfSteps>0 will enable progress tracing.
     static void TraceTotalNumberOfSteps(size_t totalNumberOfSteps)
