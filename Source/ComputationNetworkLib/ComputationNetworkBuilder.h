@@ -7,7 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
-#include "TrainingCriterionNodes.h" // for NCEEvalMode
+#include "TrainingNodes.h" // for NCEEvalMode
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
 #include <string>

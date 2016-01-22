@@ -6,6 +6,7 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
+#include "InputAndParamNodes.h"
 #include "Matrix.h"
 
 #include <map>

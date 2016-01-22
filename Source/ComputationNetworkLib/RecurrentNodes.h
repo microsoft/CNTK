@@ -19,9 +19,6 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
-#include <atomic>
-#include <sstream>
-#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

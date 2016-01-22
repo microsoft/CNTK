@@ -169,7 +169,9 @@
     <ClInclude Include="..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
+    <ClInclude Include="..\ComputationNetworkLib\EvaluationNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\PreComputeNodes.h" />
+    <ClInclude Include="..\ComputationNetworkLib\TrainingNodes.h" />
     <ClInclude Include="..\Math\CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="..\Math\QuantizedMatrix.h" />
@@ -179,7 +181,6 @@
     <ClInclude Include="DataReaderHelpers.h" />
     <ClInclude Include="DistGradHeader.h" />
     <ClInclude Include="IDistGradAggregator.h" />
-    <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
@@ -190,7 +191,6 @@
     <ClInclude Include="SGD.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="..\ComputationNetworkLib\TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\Config.cpp">
