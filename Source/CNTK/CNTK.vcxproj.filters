@@ -175,9 +175,6 @@
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h">
       <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\SGDLib\IComputationNetBuilder.h">
-      <Filter>from ComputationNetworkLib\Network</Filter>
-    </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
     </ClInclude>
@@ -186,9 +183,6 @@
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\SGDLib\MultiNetworksSGD.h">
-      <Filter>from ComputationNetworkLib\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h">
       <Filter>from ComputationNetworkLib\Nodes</Filter>

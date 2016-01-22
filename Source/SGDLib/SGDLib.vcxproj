@@ -178,13 +178,10 @@
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
     <ClInclude Include="DataReaderHelpers.h" />
     <ClInclude Include="DistGradHeader.h" />
-    <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="..\ComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\LinearAlgebraNodes.h" />
-    <ClInclude Include="MultiNetworksEvaluator.h" />
-    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="..\ComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="SimpleDistGradAggregator.h" />

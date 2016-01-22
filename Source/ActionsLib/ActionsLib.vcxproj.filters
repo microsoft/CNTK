@@ -13,13 +13,13 @@
     <ClCompile Include="TrainActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
-    <ClCompile Include="EsotericActions.cpp">
-      <Filter>Actions</Filter>
-    </ClCompile>
     <ClCompile Include="EvalActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
     <ClCompile Include="OtherActions.cpp">
+      <Filter>Actions</Filter>
+    </ClCompile>
+    <ClCompile Include="EsotericActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
   </ItemGroup>
