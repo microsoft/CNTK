@@ -4575,7 +4575,7 @@ __global__ void _assignElementProductOfWithShift(
     us[id] = a[id] * b[tmpidb];
 }
 
-/// minus 1 at a specific position
+// minus 1 at a specific position
 template <class ElemType>
 __global__ void _minusOneAt(
     ElemType* c,
@@ -4589,8 +4589,8 @@ __global__ void _minusOneAt(
         c[id] = c[id] - 1.0;
 }
 
-/// the kernel function for RCRF  backward computation
-/// assume a column slice of input and output
+// the kernel function for RCRF backward computation
+// assume a column slice of input and output
 template <class ElemType>
 __global__ void _rcrfBackwardCompute(
     const size_t iNumPos,
@@ -4662,7 +4662,7 @@ __global__ void _rcrfBackwardCompute(
     //    __syncthreads();
 }
 
-/// the kernel function for RCRF  backward computation
+/// the kernel function for CRFLSTMNetwork  backward computation
 /// assume a column slice of input and output
 template <class ElemType>
 __global__ void _rcrfBackwardCompute(
