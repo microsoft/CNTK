@@ -113,12 +113,12 @@ public:
         else
         {
             sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
-            if (cols > 1)   // in some legacy format, last tensor dimension was split off as an explicit column dimension
+            if (cols > 1) // in some legacy format, last tensor dimension was split off as an explicit column dimension
                 sampleLayout.AppendInPlace(sampleLayout.GetRank(), cols);
         }
         LoadValue(fstream);
-        SetDims(sampleLayout, false);   // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
-        VerifyDataSize(Value());        // sanity check
+        SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+        VerifyDataSize(Value());      // sanity check
     }
 
     // initialize with random numbers
@@ -132,10 +132,10 @@ public:
         // the random seed offset is set via the "randomSeedOffset" parameter in config
         if (initOnCPUOnly)
             Value().TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
-#if 1   // this more complex version is needed to repro test cases generated with an older version
-        auto & value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
+#if 1 // this more complex version is needed to repro test cases generated with an older version
+        auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
-        auto & value = Value();
+        auto& value = Value();
 #endif
         if (uniformInit)
         {
@@ -232,8 +232,8 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>
         if (isSparse)
             ConvertToSparseMatrix();
 
-        SetDims(sampleLayout, HasMBLayout());   // also called when reloading a file. Then we have an MBLayout, otherwise not yet
-        UpdateFunctionValuesSize(); // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
+        SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
+        UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
         m_parameterUpdateRequired = false;
         this->m_valueSharable = false;
     }
@@ -267,7 +267,7 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        size_t rowsDummy = 0;               // compat with old file format
+        size_t rowsDummy = 0; // compat with old file format
         size_t colsDummy = 0;
         fstream << rowsDummy << colsDummy;
         m_sampleLayout.Save(fstream);
@@ -282,7 +282,7 @@ public:
         TensorShape sampleLayout;
         sampleLayout.Load(fstream, /*acceptLegacyFormat=*/true);
         // some older files may have inconsistent tensor information
-        if (rows != 0/*old file*/ && rows != sampleLayout.GetNumElements()/*even older file*/)
+        if (rows != 0 /*old file*/ && rows != sampleLayout.GetNumElements() /*even older file*/)
         {
             fprintf(stderr, "WARNING: %ls InputValue has inconsistent serialized sample layout %s vs. number of rows %d. Resetting sample layout to vector.\n",
                     NodeName().c_str(), string(sampleLayout).c_str(), (int) rows);
@@ -501,7 +501,7 @@ public:
         if (isFinalValidationPass && Input(1)->GetSampleMatrixNumRows() % Input(0)->GetAsMatrixNumCols() != 0)
             InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols()/*note: can never be 0*/;
+        size_t wordsInEachSample = Input(1)->GetSampleMatrixNumRows() / Input(0)->GetAsMatrixNumCols() /*note: can never be 0*/;
 
         // TODO: Should this add a tensor dimension?
         SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);

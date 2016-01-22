@@ -509,9 +509,9 @@ public:
                     (*ptr)->ForwardProp(*ptr2);
             }
 
-            /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                //decoderNet->ResizeAllFeatureNodes(actualMBSize);  // BUGBUG: Function was deleted, but this may be necessary.
-#if 0           // What this ^^ used to be:
+/// not the sentence begining, because the initial hidden layer activity is from the encoder network
+//decoderNet->ResizeAllFeatureNodes(actualMBSize);  // BUGBUG: Function was deleted, but this may be necessary.
+#if 0 // What this ^^ used to be:
                 // only called from MultiNetworksEvaluator
                 // a helper function for some places that like to hack the features directly
                 // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
@@ -650,7 +650,7 @@ public:
         size_t bSize = best_path.size();
         for (int i = 0; i < outputNodes.size(); i++)
         {
-#if 0       // This call no longer exists. This must be updated to make it functional again.
+#if 0 // This call no longer exists. This must be updated to make it functional again.
             outputNodes[i]->SetNumCols(bSize);
 #endif
             dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->UpdateFunctionValuesSize();
@@ -781,9 +781,9 @@ public:
         ResetPreCompute();
         EvaluateBatchModeNodes(*evalnet, featureNodes);
 
-        /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
-        /// is the begining of sentence
-#if 0       // This call no longer exists. This must be updated to make it functional again.
+/// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
+/// is the begining of sentence
+#if 0 // This call no longer exists. This must be updated to make it functional again.
         for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
             (*ptr)->SetNumCols(1);
 #endif
@@ -925,7 +925,7 @@ public:
         size_t mbSize = inputLength;
         /// use reader to initialize evalnet's sentence start information to let it know that this
         /// is the beginning of sentence
-            //evalnet->ResizeAllFeatureNodes(mbSize);    // BUGBUG: Function was deleted, but this may be necessary.
+        //evalnet->ResizeAllFeatureNodes(mbSize);    // BUGBUG: Function was deleted, but this may be necessary.
         //evalnet->SetActualMiniBatchSizeFromFeatures();
         // TODO: not setting MBLayout?
         evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
@@ -957,7 +957,7 @@ public:
         /// is the begining of sentence
         // BUGBUG: This is almost certainly wrong; slice != MB size
         //evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
-            //evalnet->ResizeAllFeatureNodes(1);    // BUGBUG: Function was deleted, but this may be necessary.
+        //evalnet->ResizeAllFeatureNodes(1);    // BUGBUG: Function was deleted, but this may be necessary.
         //evalnet->SetActualMiniBatchSizeFromFeatures();
 
         double best_score = -numeric_limits<double>::infinity();

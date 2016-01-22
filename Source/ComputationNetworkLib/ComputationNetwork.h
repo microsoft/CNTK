@@ -44,8 +44,8 @@ public:
 
     ComputationNetwork()
         : m_randomSeedOffset(0),
-        m_isCompiled(false),
-        m_pMBLayout(make_shared<MBLayout>())
+          m_isCompiled(false),
+          m_pMBLayout(make_shared<MBLayout>())
     {
     }
     ComputationNetwork(DEVICEID_TYPE deviceId)
@@ -402,7 +402,7 @@ public:
         {
             if (NodeNameExists(name))
                 nodes.push_back(GetNodeFromName(name));
-            }
+        }
         else
         {
             std::wstring head = name.substr(0, found);
@@ -416,8 +416,8 @@ public:
                 bool tailMatch = tail.empty() || nodeName.rfind(tail) == nodeName.size() - tail.size();
                 if (headMatch && tailMatch)
                     nodes.push_back(nodeIter->second);
-                }
             }
+        }
         return nodes;
     }
 
@@ -429,10 +429,10 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, unsigned long& dropOutSeed);
 
     template <class ElemType>
-    static void SetSeqParam(ComputationNetworkPtr net, 
-                            const ComputationNodeBasePtr criterionNode, 
+    static void SetSeqParam(ComputationNetworkPtr net,
+                            const ComputationNodeBasePtr criterionNode,
                             const double& hsmoothingWeight,
-                            const double& frameDropThresh, 
+                            const double& frameDropThresh,
                             const bool& doreferencealign,
                             const double& amf = 14.0f,
                             const double& lmf = 14.0f,
@@ -464,10 +464,22 @@ public:
     }
 
     // these are specified as such by the user
-    inline       std::vector<ComputationNodeBasePtr>& FeatureNodes()       { return m_features; }
-    inline const std::vector<ComputationNodeBasePtr>& FeatureNodes() const { return m_features; }
-    inline std::vector<ComputationNodeBasePtr>& LabelNodes()               { return m_labels; }
-    inline std::vector<ComputationNodeBasePtr>& FinalCriterionNodes()      { return m_finalCriteria; }
+    inline std::vector<ComputationNodeBasePtr>& FeatureNodes()
+    {
+        return m_features;
+    }
+    inline const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
+    {
+        return m_features;
+    }
+    inline std::vector<ComputationNodeBasePtr>& LabelNodes()
+    {
+        return m_labels;
+    }
+    inline std::vector<ComputationNodeBasePtr>& FinalCriterionNodes()
+    {
+        return m_finalCriteria;
+    }
 
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
     {
@@ -475,12 +487,21 @@ public:
         ValidateSubNetwork(node);
         if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
             InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
-        return std::vector<ComputationNodeBasePtr>{ node };
+        return std::vector<ComputationNodeBasePtr>{node};
     }
 
-    inline std::vector<ComputationNodeBasePtr>& EvaluationNodes() { return m_evalNodes; }
-    inline std::vector<ComputationNodeBasePtr>& OutputNodes()     { return m_outputNodes; }
-    inline std::vector<ComputationNodeBasePtr>& PairNodes()       { return m_pairNodes; }
+    inline std::vector<ComputationNodeBasePtr>& EvaluationNodes()
+    {
+        return m_evalNodes;
+    }
+    inline std::vector<ComputationNodeBasePtr>& OutputNodes()
+    {
+        return m_outputNodes;
+    }
+    inline std::vector<ComputationNodeBasePtr>& PairNodes()
+    {
+        return m_pairNodes;
+    }
 
     // -----------------------------------------------------------------------
     // node access
@@ -595,11 +616,11 @@ public:
     };
 
 protected:
-    // -----------------------------------------------------------------------
-    // construction
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// construction
+// -----------------------------------------------------------------------
 
-    // Copy constructor, should never be called.
+// Copy constructor, should never be called.
 #pragma warning(push)
 #pragma warning(disable : 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)
@@ -691,7 +712,7 @@ public:
             else //node name is not found, dump all nodes
             {
                 fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
-                    nodeName.c_str());
+                        nodeName.c_str());
                 DumpAllNodesToFile(printValues, outputFile);
             }
         }
@@ -809,7 +830,10 @@ protected:
         virtual void ForwardProp(const FrameRange&) override;
         virtual void EndForwardProp() override;
         virtual void BeginBackprop() override;
-        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override { NOT_IMPLEMENTED; }
+        virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
+        {
+            NOT_IMPLEMENTED;
+        }
         virtual void EndBackprop() override;
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
@@ -827,7 +851,7 @@ protected:
 
         SEQTraversalFlowControlNode(int loopId, ComputationNodeBasePtr cur)
             : m_loopId(loopId),
-            m_sourceNode(cur)
+              m_sourceNode(cur)
         {
             SetNodeName(L"Loop_" + m_sourceNode->NodeName());
         }
@@ -919,7 +943,7 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes};
     }
 
-    // used for sentence boundary information passed from reader to reset RNN state 
+    // used for sentence boundary information passed from reader to reset RNN state
     // specify how the minibatch is packed for each sample
     // TODO: This will change once we allow for multiple inconsistent layouts.
     MBLayoutPtr m_pMBLayout; // note that this must be installed before doing anything that needs it (default leaves a nullptr)

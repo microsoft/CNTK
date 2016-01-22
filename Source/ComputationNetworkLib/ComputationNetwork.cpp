@@ -1012,7 +1012,6 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redU.RowElementMultiplyWith(redS.Transpose());
             redVT.ColumnElementMultiplyWith(redS);
 
-
             // Step 2. create two new Parameter nodes and one Times node
             wstring leftChildName = name + L"-U";
             wstring rightChildName = name + L"-V";

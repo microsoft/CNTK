@@ -686,6 +686,4 @@ size_t RoundUp(size_t value, size_t size);
 // HIGH and LOW DWORD functions
 DWORD HIDWORD(size_t size);
 DWORD LODWORD(size_t size);
-}
-}
-}
+} } }
