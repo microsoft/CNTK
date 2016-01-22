@@ -1599,7 +1599,7 @@ inline shared_ptr<C> New(_Types&&... _Args)
 
 // =======================================================================
 // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
-// Such as CRFNode, LSTMNode, ParallelNode, SequenceDecoderNode, TimeReverseNode (BatchModeNode), and TransposeNode.
+// Such as CRFNode, SequenceDecoderNode, and training criteria.
 // =======================================================================
 
 // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.

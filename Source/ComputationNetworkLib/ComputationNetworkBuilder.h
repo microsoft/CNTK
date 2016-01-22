@@ -73,7 +73,9 @@ public:
     ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                       const std::wstring nodeName = L"");
+#ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"");
     ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

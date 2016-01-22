@@ -155,7 +155,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     bool ret = false;
     if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
+#ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
+#endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;

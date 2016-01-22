@@ -464,10 +464,6 @@ typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
 // -----------------------------------------------------------------------
 
-// TODO: We should also have a FrameRange that selects all frames of a single sequence. Currently now possible since that would require Matrix::RowSlice()
-//  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-// BUGBUG: These nodes are currently broken and will need to be fixed:
-//  - CRFNode does not support > 1 parallel sequence
 class FrameRange
 {
 public:                       // TODO: make private (currently used from masking and DataFor) ; TODO: rename all members with m_ prefix

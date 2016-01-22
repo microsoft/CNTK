@@ -981,10 +981,5 @@ typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, ForwardProp() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
-//  - finish the job:
-//     - everywhere complete folding ForwardPropS() into ForwardProp(FrameRange()), same for partial
-//     - revise node constructors, merge by means of default parameters
-//  - known issues that need actual test cases to be fixed:
-//     - CRFNode::BackpropTo() fails for >1 parallel sequence due to DataFor() not being able to return whole sequences
-//     - implement reading of MB Layout in Binary, DSSM, and LivbSVM readers    --is DSSM already done?
+
 } } }
