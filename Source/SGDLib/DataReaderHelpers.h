@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Note: This will go away with the redesigned reader interface.
         // TODO: callers of this often do ComputationNetwork::BumpEvalTimeStamp(featureNodes) and also for labels; we should eliminate the need for this.
-    template <class ElemType>
+        template <class ElemType>
         static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
             ComputationNetworkPtr net,
             ComputationNodeBasePtr criterionNode,
@@ -41,26 +41,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
-        bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
+            bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
             // If this returns false, the matrices may contain garbage or not sized to 0 columns.
             // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
 
-        if (wasDataRead)
-        {
-            trainSetDataReader.CopyMBLayoutTo(pMBLayout); // get layout meta-data
-
-            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-            // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
-            std::set<Matrix<ElemType>*> matrices;
-            for (const auto & iter : inputMatrices)
-                matrices.insert(iter.second);
-            for (auto & node : net->FeatureNodes())
-                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
-                    node->NotifyFunctionValuesMBSizeModified();
-            for (auto & node : net->LabelNodes())
-                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
-                    node->NotifyFunctionValuesMBSizeModified();
-        }
+            // if no data read then we are done
+            if (!wasDataRead)
+                return false;
 
             // get some additional information when doing sequence training
             // TODO: This should not need to be called in case of wasDataRead == false, since in that case, returned values are invalid.
@@ -75,19 +62,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
             }
 
-            // if no data read then we are done
-            if (!wasDataRead)
-                return false;
+            // get layout meta-data
+            trainSetDataReader.CopyMBLayoutTo(pMBLayout);
 
             // decimate if needed. Decimation happens in-place.
             if (!useDistributedMBReading && useParallelTrain)
-            {
                 DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net->GetMBLayoutPtr());
-            net->NotifyInputNodesFunctionValuesMBSizeModified(); // #matrix columns changes
-            }
+
+            // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+            // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+            std::set<Matrix<ElemType>*> matrices;
+            for (const auto & iter : inputMatrices)
+                matrices.insert(iter.second);
+            for (auto & node : net->FeatureNodes())
+                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                    node->NotifyFunctionValuesMBSizeModified();
+            for (auto & node : net->LabelNodes())
+                if (matrices.find(&node->As<ComputationNode<ElemType>>()->Value()) != matrices.end())
+                    node->NotifyFunctionValuesMBSizeModified();
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
+            // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
             actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
             return true;
@@ -97,19 +93,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // DecimateMinibatch - decimate minibatch for parallelization
         // -------------------------------------------------------------------
         // non-inplace decimation , to be used in subminibatch implementation 
-        // return [st, en) parallel sequence which has been selected after decimation 
-    template <class ElemType>
-    static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,     // input matrices
-                                                  std::map<std::wstring, Matrix<ElemType>*>& decimatedMB, // output decimated matrices.
-                                                  MBLayoutPtr pMBLayout,                                  // input MBLayout
-                                                  MBLayoutPtr& pDecimateMBLayout,                         // output decimated MBLayout (note: cannot work in-place)
-                                      int numWorker, int rank)
+        // returns a subset of parallel sequences
+        template <class ElemType>
+        static pair<size_t, size_t> DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,     // input matrices
+                                                      std::map<std::wstring, Matrix<ElemType>*>& decimatedMB, // output decimated matrices.
+                                                      MBLayoutPtr pMBLayout,                                  // input MBLayout
+                                                      MBLayoutPtr& pDecimateMBLayout,                         // output decimated MBLayout (note: cannot work in-place)
+                                                      int numWorker, int rank)
         {
             size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
             size_t nT = pMBLayout->GetNumTimeSteps();
 
             // decide start column and end column 
-        size_t st = numParallelSequences * (size_t) rank / numWorker;
+            size_t st = numParallelSequences * (size_t)rank / numWorker;
             size_t en = numParallelSequences * (size_t)(rank + 1) / numWorker;
             en = en > numParallelSequences ? numParallelSequences : en; // TODO: why are these two tests necessary?
             en = (rank == numWorker - 1) ? numParallelSequences : en;
@@ -143,8 +139,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             pDecimateMBLayout = make_shared<MBLayout>(numNewParallelSequence, nT);
 #if 1
             // now copy over all sequence info records that are inside the range, with adjusted 's'
-        const auto& sequences = pMBLayout->GetAllSequences();
-        for (const auto& seq : sequences)
+            const auto& sequences = pMBLayout->GetAllSequences();
+            for (const auto& seq : sequences)
             {
                 if (seq.s >= st && seq.s < en)
                 {
@@ -163,11 +159,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // in-place decimation, for use with data-parallel processing
-       // return [st, en) parallell sequence which has been selected after decimation 
-    template <class ElemType>
-    static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*>& mb, // matrix to be decimated
-                                                  int numprocs, int rank,                        // rank info
-                                                  MBLayoutPtr pMBLayout)                         // get decimated as well
+        // returns a subset of parallel sequences
+        template <class ElemType>
+        static pair<size_t, size_t> DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*>& mb, // matrix to be decimated
+                                                      int numprocs, int rank,                        // rank info
+                                                      MBLayoutPtr pMBLayout)                         // get decimated as well
         {
             if (numprocs == 1)
                 return pair<size_t, size_t>(0, pMBLayout->GetNumParallelSequences());
@@ -177,7 +173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MBLayoutPtr pDecimatedMB = make_shared<MBLayout>();
             std::map<wstring, Matrix<ElemType>*> decimatedMB;
             // call in-place decimation 
-        pair<size_t, size_t> selected = DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
+            pair<size_t, size_t> selected = DecimateMinibatch(mb, decimatedMB, pMBLayout, pDecimatedMB, numprocs, rank);
             // move the data 
             for (auto k : mb)
             {
@@ -211,8 +207,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        }
 
     template <class ElemType>
-        class SubminibatchDispatcher
-        {
+    class SubminibatchDispatcher
+    {
         private:
         typedef std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> Lattice;
         typedef std::vector<size_t> Uid;
