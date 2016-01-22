@@ -183,7 +183,6 @@ static int DetermineLoopDirection(const std::vector<ComputationNodeBasePtr>& nes
 // This sets index, lowLink, m_visited, and m_inStack.
 void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
 {
-    // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
     list<ComputationNodeBasePtr> sccStack;
     size_t index = 0;
     size_t loopId = 0; // BUGBUG: I think this is currently buggy in an edge case, and not needed (use m_allSEQNodes.size() instead).

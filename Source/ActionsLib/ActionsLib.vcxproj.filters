@@ -19,7 +19,7 @@
     <ClCompile Include="OtherActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
-    <ClCompile Include="EsotericActions.cpp">
+    <ClCompile Include="SpecialPurposeActions.cpp">
       <Filter>Actions</Filter>
     </ClCompile>
   </ItemGroup>

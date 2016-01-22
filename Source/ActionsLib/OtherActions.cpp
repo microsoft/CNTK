@@ -12,22 +12,9 @@
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
-#include "DataReader.h"
-#include "DataWriter.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
-#include "ModelEditLanguage.h"
-#include "SGD.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
-#include "SimpleEvaluator.h"
-#include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
-#include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
 
 #include <string>
 #include <chrono>

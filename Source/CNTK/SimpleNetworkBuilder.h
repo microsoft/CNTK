@@ -38,16 +38,13 @@ enum RNNTYPE
     DEEPRNN = 4,
     CLASSLM = 8,
     LBLM = 16,
-    LSTMENCODER = 18,
     NPLM = 32,
     CLASSLSTM = 64,
     NCELSTM = 128,
     CLSTM = 256,
     RCRF = 512,
     UNIDIRECTIONALLSTM = 19,
-    BIDIRECTIONALLSTM = 20,
-    ALIGNMENTSIMILARITYGENERATOR = 21,
-    ALIGNMENTSIMILARITYGFORWARDDECODER = 22
+    BIDIRECTIONALLSTM = 20
 };
 
 enum class TrainingCriterion : int // TODO: camel-case these
@@ -191,18 +188,12 @@ public:
             m_rnnType = CLSTM;
         else if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
             m_rnnType = RCRF;
-        else if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
-            m_rnnType = LSTMENCODER;
         else if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
                  std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
             m_rnnType = UNIDIRECTIONALLSTM;
         else if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
                  std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
             m_rnnType = BIDIRECTIONALLSTM;
-        else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
-            m_rnnType = ALIGNMENTSIMILARITYGENERATOR;
-        else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGFORWARDDECODER") != strType.end())
-            m_rnnType = ALIGNMENTSIMILARITYGFORWARDDECODER;
         else
             InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
     }
@@ -255,7 +246,6 @@ public:
     }
 
     ComputationNetworkPtr BuildNetworkFromDescription();
-    ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* encoderNet); // legacy support of deprecated sequence-to-sequence implementation
 
     ComputationNetworkPtr BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName); // legacy support for fseide's Microsoft-internal tool "DBN.exe"
 
@@ -287,8 +277,6 @@ protected:
 
     ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
 
-    ComputationNetworkPtr BuildLSTMEncoderNetworkFromDescription();
-
     ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription();
 
     ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription();
@@ -298,10 +286,6 @@ protected:
     ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription();
 
     ComputationNetworkPtr BuildNCELSTMNetworkFromDescription();
-
-    ComputationNetworkPtr BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
-
-    ComputationNetworkPtr BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet);
 
     //layer is 0 based
     ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
