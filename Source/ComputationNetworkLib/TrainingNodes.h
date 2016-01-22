@@ -1016,6 +1016,8 @@ protected:
 template class ClassBasedCrossEntropyWithSoftmaxNode<float>;
 template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
 
+#ifdef COMING_SOON
+
 // -----------------------------------------------------------------------
 // CRFNode (labels, position_dependent_scores, transition_scores)
 //  - labels: output label vector of [0:T-1]
@@ -1314,6 +1316,8 @@ private:
     int mStartLbl;
     int mEndLbl;
 };
+
+#endif
 
 // -----------------------------------------------------------------------
 // LogisticNode (labels, prediction, weight)

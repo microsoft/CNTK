@@ -1688,10 +1688,12 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
             tinput = builder.Times(matrix, input);
         output = builder.Logistic(label, tinput, (trainNodeName == L"") ? L"Logistic" : trainNodeName);
         break;
+#ifdef COMING_SOON
     case TrainingCriterion::CRF:
         assert(trans != nullptr);
         output = builder.CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
         break;
+#endif
     case TrainingCriterion::ClassCrossEntropyWithSoftmax:
         output = builder.ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : trainNodeName);
         break;
@@ -1743,12 +1745,14 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
                 tinput = builder.Times(matrix, input);
             output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
             break;
+#ifdef COMING_SOON
         case EvalCriterion::CRF:
             assert(trans != nullptr);
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
             output = builder.CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
             break;
+#endif
         default:
             LogicError("Unsupported training criterion.");
         }
@@ -1769,14 +1773,10 @@ template class SimpleNetworkBuilder<double>;
 
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
-    if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
-        return TrainingCriterion::CrossEntropyWithSoftmax;
-    if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
-        return TrainingCriterion::SequenceWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"squareError"))
-        return TrainingCriterion::SquareError;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))
-        return TrainingCriterion::Logistic;
+         if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))  return TrainingCriterion::CrossEntropyWithSoftmax;
+    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))      return TrainingCriterion::SequenceWithSoftmax;
+    else if (!_wcsicmp(s.c_str(), L"squareError"))              return TrainingCriterion::SquareError;
+    else if (!_wcsicmp(s.c_str(), L"logistic"))                 return TrainingCriterion::Logistic;
     else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
         return TrainingCriterion::NCECrossEntropyWithSoftmax;
     else if (!!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
@@ -1786,20 +1786,16 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    if (!_wcsicmp(s.c_str(), L"errorPrediction"))
-        return EvalCriterion::ErrorPrediction;
-    else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))
-        return EvalCriterion::CrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))
-        return EvalCriterion::SequenceWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax"))
-        return EvalCriterion::ClassCrossEntropyWithSoftmax;
+         if (!_wcsicmp(s.c_str(), L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    else if (!_wcsicmp(s.c_str(), L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
+    else if (!_wcsicmp(s.c_str(), L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
+    else if (!_wcsicmp(s.c_str(), L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
+    else if (!_wcsicmp(s.c_str(), L"logistic"))                     return EvalCriterion::Logistic;
     else if (!_wcsicmp(s.c_str(), L"noiseContrastiveEstimation") || !_wcsicmp(s.c_str(), L"noiseContrastiveEstimationNode" /*spelling error, deprecated*/))
         return EvalCriterion::NCECrossEntropyWithSoftmax;
-    else if (!_wcsicmp(s.c_str(), L"logistic"))
-        return EvalCriterion::Logistic;
     else if (!!_wcsicmp(s.c_str(), L"squareError"))
         LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
     return EvalCriterion::SquareError;
 }
+
 } } }
