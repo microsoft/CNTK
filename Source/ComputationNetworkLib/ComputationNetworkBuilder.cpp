@@ -33,135 +33,67 @@ template <class ElemType, class... _Types>
 static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstring& nodeType, _Types&&... _Args)
 {
     // please keep this table sorted
-    if (nodeType == OperationNameOf(CRFNode))
-        return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))
-        return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CosDistanceNode))
-        return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))
-        return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CosineNode))
-        return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CrossEntropyNode))
-        return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))
-        return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))
-        return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(DiagonalNode))
-        return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(DiagTimesNode))
-        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(DropoutNode))
-        return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(DummyCriterionNode))
-        return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ElementTimesNode))
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ErrorPredictionNode))
-        return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ExpNode))
-        return New<ExpNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(FutureValueNode))
-        return New<FutureValueNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))
-        return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(HardmaxNode))
-        return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(InvStdDevNode))
-        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(KhatriRaoProductNode))
-        return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LSTMNode))
-        return New<LSTMNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LogNode))
-        return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LogSoftmaxNode))
-        return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LookupTableNode))
-        return New<LookupTableNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MatrixL1RegNode))
-        return New<MatrixL1RegNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MatrixL2RegNode))
-        return New<MatrixL2RegNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MeanNode))
-        return New<MeanNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MinusNode))
-        return New<MinusNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(NegateNode))
-        return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(NoiseContrastiveEstimationNode))
-        return New<NoiseContrastiveEstimationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ParallelNode))
-        return New<ParallelNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PastValueNode))
-        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))
-        return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))
-        return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PlusNode))
-        return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))
-        return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RectifiedLinearNode))
-        return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ReshapeNode))
-        return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RowRepeatNode))
-        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RowSliceNode))
-        return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RowStackNode))
-        return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SequenceDecoderNode))
-        return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ShiftNode))
-        return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SigmoidNode))
-        return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SoftmaxNode))
-        return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SquareErrorNode))
-        return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LogisticNode))
-        return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(StrideTimesNode))
-        return New<StrideTimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SumColumnElementsNode))
-        return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SumElementsNode))
-        return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TanhNode))
-        return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TimeReverseNode))
-        return New<TimeReverseNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TimesNode))
-        return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TransposeNode))
-        return New<TransposeNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(TransposeTimesNode))
-        return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    if (nodeType == OperationNameOf(CRFNode))                              return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CosineNode))                           return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ErrorPredictionNode))                  return New<ErrorPredictionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ExpNode))                              return New<ExpNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(FutureValueNode))                      return New<FutureValueNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GMMLogLikelihoodNode))                 return New<GMMLogLikelihoodNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(HardmaxNode))                          return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LogSoftmaxNode))                       return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LookupTableNode))                      return New<LookupTableNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MatrixL1RegNode))                      return New<MatrixL1RegNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MatrixL2RegNode))                      return New<MatrixL2RegNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MeanNode))                             return New<MeanNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MinusNode))                            return New<MinusNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(NegateNode))                           return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(NoiseContrastiveEstimationNode))       return New<NoiseContrastiveEstimationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PastValueNode))                        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))       return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))                return New<ReconcileMBLayoutNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RowSliceNode))                         return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ShiftNode))                            return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TanhNode))                             return New<TanhNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TransposeNode))                        return New<TransposeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
     // old names we also support
-    else if (nodeType == L"ColumnElementTimes")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"Delay")
-        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"PerDimMeanVarNormalizationNode")
-        return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"PerDimMeanVarDeNormalizationNode")
-        return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"RowElementTimes")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"Scale")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"Delay")                                              return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"PerDimMeanVarNormalizationNode")                     return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"PerDimMeanVarDeNormalizationNode")                   return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"RowElementTimes")                                    return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"Scale")                                              return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #if 1
-    else if (nodeType == OperationNameOf(DeprecatedReshapeNode))
-        return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DeprecatedReshapeNode))                return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
-    else
-        InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
+    else InvalidArgument("Attempted to instantiate undefined operation %ls.", nodeType.c_str());
 }
 
 // create a new node of a type given as a string, with var args so that this can be used at multiple places
@@ -170,23 +102,14 @@ template <class ElemType, class... _Types>
 static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& nodeType, _Types&&... _Args)
 {
     // check more types
-    if (nodeType == OperationNameOf(AveragePoolingNode))
-        return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(BatchNormalizationNode))
-        return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ConvolutionNode))
-        return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SparseInputValue))
-        return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(InputValue))
-        return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LearnableParameter))
-        return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(MaxPoolingNode))
-        return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
-    //else if (nodeType == OperationNameOf(SparseLearnableParameter)) return New<SparseLearnableParameter<ElemType>>(forward<_Types>(_Args)...);
-    else
-        return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
+    if      (nodeType == OperationNameOf(AveragePoolingNode))       return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MaxPoolingNode))           return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
+    else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 
 // this function is called from SimpleNetworkBuilder and old NDL
@@ -243,14 +166,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 {
     return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
 }
-
-#if 0 // not functional at present
-    //sparse matrix size is optionally specified
-    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size)
-    {
-        return net.AddNodeToNetWithElemType(New<SparseLearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols, size));
-    }
-#endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring& inputName, const size_t rows)
@@ -328,7 +243,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
                                                                           maxTempMemSizeInSamples),
-                                           weight, inputValues);
+                                                                          weight, inputValues);
 }
 
 template <class ElemType>
@@ -336,9 +251,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MaxPo
                                                                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                                                                       const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                         windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
-                                           inputValues);
+    return net.AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), inputValues);
 }
 
 template <class ElemType>
@@ -346,9 +259,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Avera
                                                                                           const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                                                                           const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                             windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind),
-                                           inputValues);
+    return net.AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(net.GetDeviceId(), nodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind), inputValues);
 }
 
 template <class ElemType>
@@ -438,17 +349,6 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<DummyCriterionNode<ElemType>>(net.GetDeviceId(), nodeName), objectives, derivatives, prediction);
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LSTM(const ComputationNodePtr obs,
-                                                                                const ComputationNodePtr inputGate,
-                                                                                const ComputationNodePtr forgetGate,
-                                                                                const ComputationNodePtr outputGate,
-                                                                                const ComputationNodePtr memoryCellWgt,
-                                                                                const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<LSTMNode<ElemType>>(net.GetDeviceId(), nodeName), obs, inputGate, forgetGate, outputGate, memoryCellWgt);
 }
 
 template <class ElemType>
@@ -572,12 +472,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Eleme
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<StrideTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b, c);
-}
-
-template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<DiagTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
@@ -656,12 +550,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Futur
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<ParallelNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
-}
-
-template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(net.GetDeviceId(), nodeName, start_index, num_rows), a);
@@ -684,12 +572,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GMMLo
                                                                                             const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<GMMLogLikelihoodNode<ElemType>>(net.GetDeviceId(), nodeName), unnormedPrior, mean, logStddev, feature);
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TimeReverse(const ComputationNodePtr input, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<TimeReverseNode<ElemType>>(net.GetDeviceId(), nodeName), input);
 }
 
 template <class ElemType>

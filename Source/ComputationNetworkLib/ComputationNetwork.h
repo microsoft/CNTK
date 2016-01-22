@@ -563,10 +563,8 @@ private:
     void GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed);
 
 public:
-    //return list of nodes that require precomputation and not precomputed yet.
+    // return list of nodes that require precomputation and not precomputed yet
     std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
-    //return list of nodes that require precomputation and not precomputed yet.
-    std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // unit testing
