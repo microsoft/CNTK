@@ -614,7 +614,7 @@ void Matrix<ElemType>::Read(File& stream)
         }
     }
     else
-        LogicError("wrong matrix type!");
+        LogicError("Read: Input file corrupt (invalid matrix type field 0x%02d, should be 'f' or 'd').", type);
 }
 
 template <class ElemType>
@@ -3807,8 +3807,6 @@ void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool
 template <class ElemType>
 void Matrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
 {
-    if (IsEmpty())
-        LogicError("Print: Matrix is empty.");
     DEVICEID_TYPE orgdevice = GetDeviceId();
 
     DISPATCH_MATRIX_ON_FLAG(this,

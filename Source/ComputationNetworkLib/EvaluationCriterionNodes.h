@@ -75,8 +75,8 @@ public:
         // TODO: Make topK a constructor parameter
         if (m_inputs.size() == 3)
         {
-            if (Input(2)->GetNumRows() != 1 || Input(2)->GetNumCols() != 1)
-                throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
+            if (Input(2)->GetSampleLayout().GetNumElements() != 1)
+                InvalidArgument("%ls %ls operation requires TopK to be a scalar value.", NodeName().c_str(), OperationName().c_str());
             m_topK = static_cast<int>(Input(2)->Get00Element());
         }
     }
@@ -86,7 +86,7 @@ public:
         Base::UpdateFunctionMBSize();
 
         // resize the temporaries to their proper size
-        size_t cols = Input(0)->GetNumCols();
+        size_t cols = Input(0)->Value().GetNumCols();
         m_maxIndexes0->Resize(m_topK, cols);
         m_maxIndexes1->Resize(m_topK, cols);
         m_maxValues->Resize(m_topK, cols);
@@ -130,4 +130,5 @@ private:
 
 template class ErrorPredictionNode<float>;
 template class ErrorPredictionNode<double>;
+
 } } }

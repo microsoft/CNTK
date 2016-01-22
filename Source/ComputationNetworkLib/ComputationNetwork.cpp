@@ -367,7 +367,7 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
 // node construction
 // -----------------------------------------------------------------------
 
-#if 0 // This function is not used. Is there value to keep it?
+#if 0 // This function is not used. Is there value to keep it? Maybe a librarified CNTK could use this to poke into InputValues?
     ComputationNodeBasePtr ComputationNetwork::SetNodeValue(const wstring & nodeName, const double value)
     {
         ComputationNodeBasePtr pNode = GetNodeFromName(nodeName);
@@ -379,15 +379,15 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
             AsNodePtr<LearnableParameter<double>>(pNode)->Value().SetValue((double)value);
         else if (pNode->RequiresPreCompute())
         {
-            if (IsNodePtr<PreComputedNode<float>>(pNode))
+            if (IsNodePtr<PreComputedNodeBase<float>>(pNode))
             {
-                auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
+                auto preComputedNode = AsNodePtr<PreComputedNodeBase<float>>(pNode);
                 preComputedNode->Value().SetValue((float)value);
                 preComputedNode->MarkComputed(true);
             }
             else
             {
-                auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
+                auto preComputedNode = AsNodePtr<PreComputedNodeBase<double>>(pNode);
                 preComputedNode->Value().SetValue((double)value);
                 preComputedNode->MarkComputed(true);
             }
@@ -406,30 +406,6 @@ void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& n
 {
     auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
     learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
-}
-
-// FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
-void ComputationNetwork::FixupInputMinibatchSize()
-{
-    list<ComputationNodeBasePtr> inputs = GetNodesWithType(OperationNameOf(InputValue));
-    int minibatchMax = 0;
-    bool minibatchDifferent = false; // flag to see if all the values are already the same
-    for (ComputationNodeBasePtr node : inputs)
-    {
-        size_t cols = node->GetNumCols();
-        if (cols != minibatchMax)
-        {
-            if (minibatchMax != 0)
-                minibatchDifferent = true;
-            if (minibatchMax < cols)
-                minibatchMax = cols;
-        }
-    }
-    if (minibatchDifferent)
-    {
-        for (ComputationNodeBasePtr node : inputs)
-            node->SetNumCols(minibatchMax);
-    }
 }
 
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
@@ -485,8 +461,8 @@ void ComputationNetwork::GetNodesRequiringX(list<ComputationNodeBasePtr>& nodesR
 list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
 {
     list<ComputationNodeBasePtr> nodesRequiringX;
-    GetNodesRequiringX<PreComputedNode<float>>(nodesRequiringX, rootNode, checkComputed);
-    GetNodesRequiringX<PreComputedNode<double>>(nodesRequiringX, rootNode, checkComputed);
+    GetNodesRequiringX<PreComputedNodeBase<float>>(nodesRequiringX, rootNode, checkComputed);
+    GetNodesRequiringX<PreComputedNodeBase<double>>(nodesRequiringX, rootNode, checkComputed);
     return nodesRequiringX;
 }
 
@@ -511,11 +487,8 @@ void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNod
     list<ComputationNodeBasePtr> inputs;
     for (const auto& node : nodes)
     {
-        if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
-            node->OperationName() == OperationNameOf(SparseInputValue) /*L"SparseInputValue"*/)
-        {
+        if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
             inputs.push_back(node);
-        }
     }
     m_inputValues[rootNode] = inputs;
 
@@ -524,13 +497,10 @@ void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNod
     for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
     {
         ComputationNodeBasePtr node = *nodeIter;
-        if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
-            //|| (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired())
-            )
-        {
+        if (node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
             learnableParameterNames.push_back(node->NodeName());
-        }
     }
+
     // sort names so that we get consistent order when load it from saved file
     learnableParameterNames.sort();
 
@@ -794,10 +764,8 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     for (const auto& x : allnodes)
     {
         line.clear();
-        size_t nrows = x->GetNumRows();
-        size_t ncols = x->GetNumCols();
-        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%d,%d]\\n%ls\" ] ;\n",
-                                        x->GetName().c_str(), x->GetName().c_str(), nrows, ncols,
+        line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%s%s]\\n%ls\" ] ;\n",
+                                        x->GetName().c_str(), x->GetName().c_str(), string(x->GetSampleLayout()).c_str(), x->HasMBLayout() ? " x *" : "",
                                         x->OperationName().c_str());
         fstream << line;
     }
@@ -970,10 +938,9 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             }
 
             shared_ptr<ComputationNode<ElemType>> pNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(m_nameToNodeMap[name]);
-            //========================================
+
             // Step 1. do SVD decomposition
-            //========================================
-            Matrix<ElemType> A = pNode->Value();
+            Matrix<ElemType> A = pNode->ValueAsMatrix();
 
             // it is a vector, no need to do it
             if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
@@ -992,7 +959,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             // VT \in R^{nXn}
             // S \in R^{min(m,n),1}
             // S is in descending order
-            //
+
             ElemType totalenergy = 0.0f;
             for (size_t i = 0; i < S.GetNumRows(); i++)
                 totalenergy += S(i, 0);
@@ -1045,22 +1012,19 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             redU.RowElementMultiplyWith(redS.Transpose());
             redVT.ColumnElementMultiplyWith(redS);
 
-            //========================================
+
             // Step 2. create two new Parameter nodes and one Times node
-            //========================================
             wstring leftChildName = name + L"-U";
             wstring rightChildName = name + L"-V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
 
-            pLeft->Value() = redU;
-            pRight->Value() = redVT;
+            pLeft->ValueAsMatrix() = redU;
+            pRight->ValueAsMatrix() = redVT;
 
             shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"), pLeft, pRight);
 
-            //========================================
             // Step 3. remove old node
-            //========================================
             ReplaceLeafNode(name, pTimes);
         }
     }

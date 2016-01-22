@@ -19,34 +19,28 @@
 //composite nodes can save memory, computation, or both
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // -----------------------------------------------------------------------
-    // PreComputedNode
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// PreComputedNodeBase
+// base class for nodes requiring pre-computation
+// -----------------------------------------------------------------------
 
-    //this is a noninstantiable virtual class, all nodes require precomputation should derive from it
 template <class ElemType>
-class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
-    {
+class PreComputedNodeBase : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+{
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembers;
     using Base::OperationName;
 
     public:
-        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        //DeclareConstructorFromConfigWithNumInputs(PreComputedNode);
-    PreComputedNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-            m_hasComputed(false)
-    {
-    }
+        PreComputedNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
+            : Base(deviceId, name), m_hasComputed(false)
+        {
+        }
 
         // interface through which this node is operated on are these two functions
 
         // check whether node has already undergone precomputation
-    virtual bool HasComputed() const
-    {
-        return m_hasComputed;
-    }
+        virtual bool HasComputed() const { return m_hasComputed; }
 
         // call this with 'false' at start and with 'true' at end
         // This is used for resetting and updating from accumulators.
@@ -56,16 +50,13 @@ class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<Ele
             CreateMatrixIfNull(m_value);
         }
 
-    virtual bool RequiresPreCompute() const override
-    {
-        return true;
-    }
+        virtual bool RequiresPreCompute() const override { return true; }
 
         virtual void Save(File& fstream) const override
         {
             Base::Save(fstream);
             fstream << m_hasComputed;
-        fstream << Value(); // TODO: why serialize if not yet computed?
+            fstream << Value();
         }
 
         virtual void Load(File& fstream, size_t modelVersion) override
@@ -81,25 +72,25 @@ class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<Ele
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
+            sprintf(str, "[%s]  ", string(GetSampleLayout()).c_str());
             fstream << string(str);
-        sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
+            sprintf(str, "HasComputed=%ls", HasComputed() ? L"true" : L"false");
             fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
         }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+        virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
             if (!Input(0)->HasMBLayout())
                 InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
-        m_pMBLayout = nullptr; // this node does not hold mini-batch data
+            m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
-                SetDims(Input(0)->GetSampleLayout(), 1);
-            else
-                VerifyDims(Input(0)->GetNumRows(), 1);
+                SetDims(Input(0)->GetSampleLayout(), false);
+            else if (!GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
+                InvalidArgument("%ls %ls operation: Precomputed parameter does not match input dimensions.", NodeName().c_str(), OperationName().c_str());
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -107,7 +98,7 @@ class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<Ele
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<PreComputedNode<ElemType>>(nodeP);
+                auto node = dynamic_pointer_cast<PreComputedNodeBase<ElemType>>(nodeP);
                 node->m_hasComputed = m_hasComputed;
             }
         }
@@ -115,10 +106,12 @@ class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<Ele
         // this is for the special case: convertDBN needs this; because we initialize values directly from another well-trained model
         virtual void SideLoadFromMatrix(const Matrix<ElemType>& value)
         {
+            if (value.GetNumCols() != 1)
+                InvalidArgument("SideLoadFromMatrix: Side-loading is only supported for column vectors.");
             CreateMatrixIfNull(m_value);
             m_value->SetValue(value);
             m_hasComputed = true; 
-            SetDims(TensorShape(value.GetNumRows()), value.GetNumCols());
+            SetDims(TensorShape(value.GetNumRows()), false);
         }
 
     public:
@@ -135,15 +128,15 @@ class PreComputedNode : public ComputationNodeNonLooping /*ComputationNode*/<Ele
     // -----------------------------------------------------------------------
 
 template <class ElemType>
-    class MeanInvStdDevNodeBase : public PreComputedNode<ElemType>, public NumInputs<1>
-    {
-    typedef PreComputedNode<ElemType> Base;
+class MeanInvStdDevNodeBase : public PreComputedNodeBase<ElemType>, public NumInputs<1>
+{
+    typedef PreComputedNodeBase<ElemType> Base;
     UsingPreComputedNodeMembers;
         //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
     public:
         //DeclareConstructorFromConfigWithNumInputs(MeanInvStdDevNodeBase);
     MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : PreComputedNode<ElemType>(deviceId, name),
+        : PreComputedNodeBase<ElemType>(deviceId, name),
             m_numSamples(SIZE_MAX)
     {
     }
@@ -161,7 +154,7 @@ template <class ElemType>
             m_numSamples = SIZE_MAX;
         }
 
-    virtual void /*PreComputedNode::*/ MarkComputed(const bool hasComputed, size_t numSamples = 0)
+    virtual void /*PreComputedNodeBase::*/ MarkComputed(const bool hasComputed, size_t numSamples = 0)
         {
             Base::MarkComputed(hasComputed);
         if (!m_hasComputed) // initialize
@@ -236,7 +229,7 @@ template <class ElemType>
         : Base(deviceId, name)
     {
         }
-    virtual void /*PreComputedNode::*/ MarkComputed(const bool hasComputed)
+    virtual void /*PreComputedNodeBase::*/ MarkComputed(const bool hasComputed)
         {
             Base::MarkComputed(hasComputed);
         if (!m_hasComputed) // initialize accumulation
@@ -270,7 +263,7 @@ template <class ElemType>
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
-                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     ConstOnes(Input(0)->Value().GetNumCols(), 1, samples.GetDeviceId()),
                                                  false, (ElemType) m_numSamples / totalNumSamples, avg);
 #if NANCHECK
             avg.HasNan("Mean-avg");
@@ -308,14 +301,14 @@ template <class ElemType>
     {
     }
 
-    virtual void /*PreComputedNode::*/ MarkComputed(const bool hasComputed) override
+    virtual void /*PreComputedNodeBase::*/ MarkComputed(const bool hasComputed) override
         {
             Base::MarkComputed(hasComputed);
 
             if (!m_hasComputed) // initialize
             {
                 // reset accumulators
-                size_t inputDim = Input(0)->GetNumRows();
+                size_t inputDim = Input(0)->GetSampleMatrixNumRows();
                 m_mean.Resize(inputDim, 1);
                 m_var.Resize(inputDim, 1);
                 m_mean.SetValue(0);
@@ -366,7 +359,7 @@ template <class ElemType>
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
-                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     ConstOnes(Input(0)->Value().GetNumCols(), 1, samples.GetDeviceId()),
                                                  false, (ElemType) m_numSamples / totalNumSamples, m_mean);
 
             m_temp -= m_mean;
@@ -377,14 +370,18 @@ template <class ElemType>
             m_temp.AssignElementPowerOf(m_temp, 2);
 
             Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, m_temp, false,
-                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     ConstOnes(Input(0)->Value().GetNumCols(), 1, samples.GetDeviceId()),
                                                  false, (ElemType) m_numSamples / totalNumSamples, m_var);
 
 #if NANCHECK
             m_var.HasNan("InvStdDev-m_var");
 #endif
 
-            m_numSamples += samples.GetNumCols();
+#if 0       // BUGBUG: This is the correct version, but it will break test cases, so do this later. MeanNode does it right already.
+            m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
+#else
+            m_numSamples += Input(0)->Value().GetNumCols();  // BUGBUG: Should be -> GetActualNumSamples().
+#endif
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -436,9 +433,9 @@ template <class ElemType>
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
         {
-            //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            // only feature (input0) and output needs to be sliced
+            auto sliceInput0Value = Input(0)->ValueFor(fr);
+            auto sliceOutputValue = ValueFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value(), Input(2)->Value());
         }
@@ -490,32 +487,20 @@ template <class ElemType>
                     "type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            {
-                size_t rows = (Input(1)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
-                ValidateInferInputDims(1, rows, 1);
-            }
-
-            {
-                size_t rows = (Input(2)->GetNumRows() == 0) ? Input(0)->GetNumRows() : Input(2)->GetNumRows();
-                ValidateInferInputDims(2, rows, 1);
-            }
+            Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
+            Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
 
             if (isFinalValidationPass)
             {
-                //match rows
-                if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() &&
-                    Input(2)->GetNumRows() == Input(1)->GetNumRows()))
-                {
-                    LogicError("PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
-                }
-
-                if (!(Input(1)->GetNumCols() == 1 && Input(2)->GetNumCols() == 1))
-                    LogicError("PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                if (!Input(0)->HasMBLayout() || Input(1)->HasMBLayout() || Input(2)->HasMBLayout())
+                    InvalidArgument("PerDimMeanVarNormalizationNode: Inputs must be data, while mean and InvStdDev must be column vectors.");
+                if (!Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) || !Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(2)->GetSampleLayout()))
+                    InvalidArgument("PerDimMeanVarNormalizationNode: All inputs should have same sample layout.");
             }
 
             // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
-            Input(1)->SetParameterUpdateRequired(false);
-        Input(2)->SetParameterUpdateRequired(false); //prevent learning
+            Input(1)->SetParameterUpdateRequired(false); // prevent learning
+            Input(2)->SetParameterUpdateRequired(false);
 
             SetDims(Input(0));
         }
@@ -553,9 +538,9 @@ template <class ElemType>
         //(feature-mean).*InvStdDev
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
         {
-            //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            // only feature (input0) and output needs to be sliced
+            auto sliceInput0Value = Input(0)->ValueFor(fr);
+            auto sliceOutputValue = ValueFor(fr);
 
             ForwardPropS(sliceOutputValue, sliceInput0Value, Input(1)->Value(), Input(2)->Value());
         }
@@ -614,33 +599,19 @@ template <class ElemType>
                     "LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            {
-                size_t rows = Input(1)->GetNumRows() == 0 ? Input(0)->GetNumRows() : Input(1)->GetNumRows();
-                ValidateInferInputDims(1, rows, 1);
-            }
-
-            {
-            size_t rows = Input(2)->GetNumRows() == 0 ? Input(0)->GetNumRows() : Input(2)->GetNumRows();
-                ValidateInferInputDims(2, rows, 1);
-            }
+            Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
+            Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
 
             if (isFinalValidationPass)
             {
-            if (!(Input(0)->GetNumRows() == Input(1)->GetNumRows() && //match rows
-                    Input(2)->GetNumRows() == Input(1)->GetNumRows()))
-                {
-                    LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
-                }
-
-                if (!(Input(1)->GetNumCols() == 1 && Input(2)->GetNumCols() == 1))
-                {
-                    LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
-                }
+                if (!Input(0)->HasMBLayout() || Input(1)->HasMBLayout() || Input(2)->HasMBLayout())
+                    InvalidArgument("PerDimMeanVarDeNormalizationNode: Inputs must be data, while mean and InvStdDev must be column vectors.");
+                if (!Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) || !Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(2)->GetSampleLayout()))
+                    InvalidArgument("PerDimMeanVarDeNormalizationNode: All inputs should have same sample layout.");
             }
 
-            //prevent learning
-            // TODO: Is this correct? Why not just skip propagating a gradient into these?
-            Input(1)->SetParameterUpdateRequired(false);
+            // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
+            Input(1)->SetParameterUpdateRequired(false); // prevent learning
             Input(2)->SetParameterUpdateRequired(false);
 
             SetDims(Input(0));
@@ -700,7 +671,7 @@ class BatchModeNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemT
 
             const size_t BUFLEN = 4096;
             WCHAR str[BUFLEN];
-            swprintf(str, BUFLEN, L"[%lu,%lu]  ", GetNumRows(), GetNumCols());
+            swprintf(str, BUFLEN, L"[%s%s]  ", string(GetSampleLayout()).c_str(), HasMBLayout() ? " x *" : "");
             fstream << wstring(str);
             swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
             fstream << wstring(str);
@@ -852,12 +823,6 @@ template <class ElemType>
             size_t nT = 3;
             size_t nInput = 3;
             size_t nOutput = nInput;
-
-            /// backup
-            Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
-
-            f0 = Input(0)->Value();
-            func = Value();
 
             Input(0)->SetDims1(nInput, nT);
             Input(0)->UpdateFunctionValuesSize();
