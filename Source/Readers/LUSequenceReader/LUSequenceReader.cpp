@@ -511,7 +511,7 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
 
     Reset();
 
-    m_parser.ParseReset(); /// restart from the corpus beginning
+    m_parser.ParseReset(); // restart from the corpus beginning
 }
 
 template <class ElemType>
@@ -585,7 +585,7 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
                     mToProcess.push_back(seq);
                     mMaxSentenceLength = max((int) mMaxSentenceLength, ln);
                     if (previousLn == -1)
-                        mLastProcessedSentenceId = seq + 1; /// update index for the next retrieval
+                        mLastProcessedSentenceId = seq + 1; // update index for the next retrieval
                     previousLn = ln;
                 }
             }
@@ -952,8 +952,8 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             ElemType rgt = (*labelInfo.m_classInfoLocal)(1, clsidx);
             if (rgt <= lft)
                 LogicError("LUSequenceReader : right is equal or smaller than the left, which is wrong.");
-            labels->SetValue(2, j, lft); /// beginning index of the class
-            labels->SetValue(3, j, rgt); /// end index of the class
+            labels->SetValue(2, j, lft); // beginning index of the class
+            labels->SetValue(3, j, rgt); // end index of the class
         }
         else
             LogicError("LUSequenceReader: reader mode is not set to Plain. Or in the case of setting it to Class, the class number is 0. ");
@@ -1094,7 +1094,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
             {
                 int cxt = m_wordContext[jj];
 
-                /// assert that wordContext is organized as descending order
+                // assert that wordContext is organized as descending order
                 assert((jj == m_wordContext.size() - 1) ? true : cxt > m_wordContext[jj + 1]);
 
                 size_t hidx;
@@ -1134,7 +1134,7 @@ void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType
 {
     if (m_labelInfo[labelInfoIn].isproposal)
     {
-        /// no need to save info for labelInfoIn since it is in mProposals
+        // no need to save info for labelInfoIn since it is in mProposals
         if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
             mMatrices[m_labelsName[labelInfoOut]].SetValue(*(pMat[m_labelsName[labelInfoOut]]));
     }
@@ -1184,7 +1184,7 @@ template class BatchLUSequenceReader<float>;
 template <class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    /// on first iteration, need to check if all requested data matrices are available
+    // on first iteration, need to check if all requested data matrices are available
     std::map<std::wstring, size_t>::iterator iter;
     if (mCheckDictionaryKeys)
     {
@@ -1207,14 +1207,14 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
         mCheckDictionaryKeys = false;
     }
 
-    /// set the same random seed
+    // set the same random seed
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         p->second->SetRandomSeed(this->m_seed);
     }
     this->m_seed++;
 
-    /// run for each reader
+    // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         if ((p->second)->GetMinibatch(matrices) == false)
@@ -1242,7 +1242,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordTy
     vector<wstring> ioNames = readerConfig(L"ioNodeNames", ConfigRecordType::Array(stringargvector()));
     if (ioNames.size() > 0)
     {
-        /// newer code that explicitly place multiple streams for inputs
+        // newer code that explicitly place multiple streams for inputs
         foreach_index (i, ioNames) // inputNames should map to node names
         {
             const ConfigRecordType& thisIO = readerConfig(ioNames[i]);
@@ -1257,7 +1257,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordTy
     }
     else
     {
-        /// older code that assumes only one stream of feature
+        // older code that assumes only one stream of feature
         BatchLUSequenceReader<ElemType>* thisReader = new BatchLUSequenceReader<ElemType>();
 
         thisReader->Init(readerConfig);
@@ -1271,7 +1271,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordTy
 template <class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-    /// run for each reader
+    // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
@@ -1281,7 +1281,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 template <class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    /// run for each reader
+    // run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
     for (const auto& p : mReader)
@@ -1332,7 +1332,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 template <class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
 {
-    /// run for each reader
+    // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         if ((p->second)->GetFrame(matrices, tidx, history) == false)
@@ -1348,7 +1348,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstrin
 template <class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    /// run for each reader
+    // run for each reader
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->InitProposals(matrices);

@@ -370,7 +370,7 @@ public:
     static CPUMatrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     static CPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
-    /// return true if v is an element in matrix c
+    // return true if v is an element in matrix c
     static bool HasElement(const CPUMatrix<ElemType>& a, const ElemType v = 0.0);
 
 public:
@@ -426,7 +426,7 @@ public:
     ElemType LogAddSumOfElements() const;
 
 public:
-    /// for RCRF
+    // for RCRF
     static void RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
                                     const CPUMatrix<ElemType>& lbls,
                                     const CPUMatrix<ElemType>& pair_scores);
@@ -446,7 +446,7 @@ public:
                                      const CPUMatrix<ElemType>& beta,
                                      const CPUMatrix<ElemType>& pair_scores,
                                      CPUMatrix<ElemType>& grd,
-                                     const size_t tPos /// position
+                                     const size_t tPos // position
                                      );
 
 protected:

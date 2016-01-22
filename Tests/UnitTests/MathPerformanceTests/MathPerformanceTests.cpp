@@ -26,11 +26,11 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 
     assert(nStream == sentenceBegin.GetNumRows());
 
-    /// only set state to init state value for segmentation = 0, and -1
-    /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0
+    // only set state to init state value for segmentation = 0, and -1
+    // e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0
 
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
-    colPos.SetValue(sentenceBegin);                                                     /// -1 0 1
+    colPos.SetValue(sentenceBegin);                                                     // -1 0 1
     colPos.InplaceTruncateBottom(1 << 0 /*(int)MinibatchPackingFlags::SequenceStart*/); // TODO: these flags no longer exist, this test probably no longer applies
     Matrix<ElemType>::Scale((ElemType) -1.0, colPos);
     colPos += 0; // (int)MinibatchPackingFlags::None; // TODO: these flags no longer exist, this test probably no longer applies
@@ -38,8 +38,8 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
     Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
     ones.Resize(nStateRow, nStream);
     ones.SetValue((ElemType) 1);
-    /// add default state value if it is for reset
-    Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate); /// += [0 initStateValue 0 ]
+    // add default state value if it is for reset
+    Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate); // += [0 initStateValue 0 ]
 }
 
 template <class ElemType>
@@ -107,7 +107,7 @@ void oldRNNForwardPropSRP(const size_t timeIdxInSeq, const int delay, const bool
     int d = iPastIndex;
     if (d < 0)
         d = (int) functionValues.Mod((float) iPastIndex, (float) pastActivity.GetNumCols());
-    /// this can point to the past activity of the previous mninibatch
+    // this can point to the past activity of the previous mninibatch
 
     Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
     Matrix<ElemType> inp((DEVICEID_TYPE) functionValues.GetDeviceId());

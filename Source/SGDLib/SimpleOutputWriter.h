@@ -101,8 +101,8 @@ public:
 
             totalEpochSamples += actualMBSize;
 
-            /// call DataEnd function in dataReader to do
-            /// reader specific process if sentence ending is reached
+            // call DataEnd function in dataReader to do
+            // reader specific process if sentence ending is reached
             dataReader.DataEnd(endDataSentence);
         }
 

@@ -160,10 +160,10 @@ private:
 public:
     MBLayoutPtr m_pMBLayout;
 
-    /// by default it is false
-    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
-    /// set to true so that a current minibatch can uses state activities from the previous minibatch.
-    /// default will have truncated BPTT, which only does BPTT inside a minibatch
+    // by default it is false
+    // if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
+    // set to true so that a current minibatch can uses state activities from the previous minibatch.
+    // default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
     HTKMLFReader()
         : m_pMBLayout(make_shared<MBLayout>())

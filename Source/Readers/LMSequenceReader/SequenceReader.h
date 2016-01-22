@@ -141,7 +141,7 @@ public:
     ReaderMode readerMode;
     int eos_idx, unk_idx;
 
-    string mUnk; /// unk symbol
+    string mUnk; // unk symbol
 
 public:
     //    typedef std::string LabelType;
@@ -158,7 +158,7 @@ protected:
     size_t m_totalSamples;     // number of samples in the dataset
     size_t m_featureDim;       // feature dimensions for extra features
     size_t m_featureCount;     // total number of non-zero features (in labelsDim + extra features dim)
-    /// for language modeling, the m_featureCount = 1, since there is only one nonzero element
+    // for language modeling, the m_featureCount = 1, since there is only one nonzero element
     size_t m_readNextSampleLine; // next sample to read Line
     size_t m_readNextSample;     // next sample to read
     size_t m_seqIndex;           // index into the m_sequence array
@@ -413,7 +413,7 @@ public:
     }
     void Reset();
 
-    /// return length of sentences size
+    // return length of sentences size
     size_t FindNextSentences(size_t numSentences);
     bool DataEnd(EndDataType endDataType);
     void SetSentenceEnd(int wrd, int pos, int actualMbSize);

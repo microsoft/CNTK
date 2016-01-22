@@ -57,7 +57,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
     long orgRecordCount = (long) labels->size();
     long lineCount = 0;
     long tokenCount = 0;
-    bool bAtEOS = false; /// whether the reader is at the end of sentence position
+    bool bAtEOS = false; // whether the reader is at the end of sentence position
     SequencePosition sequencePositionLast(0, 0, 0);
 
     wstring ch;
@@ -70,7 +70,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         {
             if (canMultiplePassData)
             {
-                ParseReset(); /// restart from the corpus begining
+                ParseReset(); // restart from the corpus begining
                 continue;
             }
             else
@@ -118,7 +118,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
             labels->push_back(outputlabel2id.find(vstr[vstr.size() - 1])->second);
         input->push_back(vtmp);
         if ((vstr[vstr.size() - 1] == m_endSequenceOut ||
-             /// below is for backward support
+             // below is for backward support
              vstr[0] == m_endTag) &&
             input->size() > 0 && labels->size() > 0)
         {

@@ -548,7 +548,7 @@ public:
                                     const Matrix<ElemType>& beta,
                                     const Matrix<ElemType>& pair_scores,
                                     Matrix<ElemType>& grd,
-                                    const int startLbl, /// the time 0 start symbol in the output layer
+                                    const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
     template <typename T>

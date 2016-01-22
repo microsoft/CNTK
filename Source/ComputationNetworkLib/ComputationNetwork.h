@@ -935,7 +935,7 @@ protected:
     std::vector<ComputationNodeBasePtr> m_finalCriteria;
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
-    std::vector<ComputationNodeBasePtr> m_pairNodes;                /// nodes for the children network to pair
+    std::vector<ComputationNodeBasePtr> m_pairNodes;                // nodes for the children network to pair
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes};

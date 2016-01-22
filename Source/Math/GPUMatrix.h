@@ -419,7 +419,7 @@ public:
 
     static void AddElementToElement(const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
 
-    /// minus one at a specific position
+    // minus one at a specific position
     static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);
 
     static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
@@ -478,7 +478,7 @@ public:
                                     const GPUMatrix<ElemType>& beta,
                                     const GPUMatrix<ElemType>& pair_scores,
                                     GPUMatrix<ElemType>& grd,
-                                    const int startLbl, /// the time 0 start symbol in the output layer
+                                    const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
 public:

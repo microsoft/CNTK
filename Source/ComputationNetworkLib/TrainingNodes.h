@@ -1003,9 +1003,9 @@ protected:
     Matrix<ElemType> m_clsLogSoftmax;
     Matrix<ElemType> m_clsSoftmax;
 
-    /// gradient of cross entropy with respect to the input of softmax
-    /// a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
-    /// one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
+    // gradient of cross entropy with respect to the input of softmax
+    // a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
+    // one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
     Matrix<ElemType> m_grdToSoftMaxInput;
     bool m_needRecomputeGradientToSoftmaxInput;
 
@@ -1061,7 +1061,7 @@ public:
     {
     }
 
-    /// compute posterior probability of label y at position t
+    // compute posterior probability of label y at position t
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
@@ -1136,13 +1136,13 @@ public:
     // compute forward backward algorithm
     /*TODO: merge with call site*/ void ForwardPropS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
     {
-        /// to-do, each slice is for one sentence
-        /// to-do, number of slices correspond to number of frames
-        /// this implementation only supports one sentence per minibatch
+        // to-do, each slice is for one sentence
+        // to-do, number of slices correspond to number of frames
+        // this implementation only supports one sentence per minibatch
 
         int nObs = lbls.GetNumCols();
 
-        /// change to other values so can support multiple sentences in each minibatch
+        // change to other values so can support multiple sentences in each minibatch
         assert(iStep == 1);
         ForwardCompute(alpha, lbls, pos_scores, pair_scores);
         BackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, iStep);
@@ -1170,7 +1170,7 @@ public:
         ElemType fAlpha;
         fAlpha = a.LogAddSumOfElements();
 
-        /// transition score
+        // transition score
         ElemType tscore = 0;
         for (int t = 0; t < nObs - 1; t++)
         {
@@ -1190,19 +1190,19 @@ public:
                 }
             tscore += pair_scores(j, i);
         }
-        tscore += functionValues.Get00Element(); /// correct path score
-        tscore -= fAlpha;                        /// reduced by the scores from all paths
+        tscore += functionValues.Get00Element(); // correct path score
+        tscore -= fAlpha;                        // reduced by the scores from all paths
         functionValues.SetValue(tscore);
 
         functionValues *= (-1);
     }
 
-    /// compute forward backward algorithm
+    // compute forward backward algorithm
     static void ForwardCompute(Matrix<ElemType>& alpha,
                                const Matrix<ElemType>& lbls,
                                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores)
     {
-        /// to-do, shift more than 1 to support muliple sentences per minibatch
+        // to-do, shift more than 1 to support muliple sentences per minibatch
         int iNumPos = lbls.GetNumCols();
         int iNumLab = lbls.GetNumRows();
 
@@ -1214,7 +1214,7 @@ public:
                 break;
             }
 
-        /// need to have
+        // need to have
         alpha.Resize(iNumLab, iNumPos);
 
         for (int t = 0; t < iNumPos; t++)
@@ -1229,13 +1229,13 @@ public:
                         fAlpha = alpha(j, t - 1);
                     fTmp = alpha.LogAdd(fTmp, fAlpha + pair_scores(k, j));
                 }
-                fTmp += pos_scores(k, t); /// include position dependent score
+                fTmp += pos_scores(k, t); // include position dependent score
                 alpha(k, t) = fTmp;
             }
         }
     }
 
-    /// compute backward algorithm
+    // compute backward algorithm
     static void BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
                                 Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
                                 const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift = 1)
@@ -1263,7 +1263,7 @@ public:
                                   startLbl, shift);
     }
 
-    /// compute forward backward algorithm
+    // compute forward backward algorithm
     static void PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta)
     {
         int iNumPos = alpha.GetNumCols();

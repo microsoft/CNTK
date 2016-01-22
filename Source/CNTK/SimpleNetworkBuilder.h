@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum RNNTYPE
 {
-    SIMPLENET = 0, /// no recurrent connections
+    SIMPLENET = 0, // no recurrent connections
     SIMPLERNN = 1,
     LSTM = 2,
     DEEPRNN = 4,
@@ -147,9 +147,9 @@ public:
 
         ConfigArray sSizes = config("streamSizes", "");
         m_streamSizes = sSizes;
-        sSizes = config("lookupTableOrderSizes", ""); /// this allows having a multiple streams of inputs with
-        /// different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
-        /// support.
+        sSizes = config("lookupTableOrderSizes", ""); // this allows having a multiple streams of inputs with
+        // different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
+        // support.
         m_lookupTabelOrderSizes = sSizes;
 
         m_labelEmbeddingSize = config("labelEmbeddingSize", "10");
@@ -346,14 +346,14 @@ protected:
     TrainingCriterion m_trainCriterion;
     EvalCriterion m_evalCriterion;
 
-    intargvector m_directConnect; /// connect those layers directly in a sequence order
-    /// for example: 1:2:3 will connect 1 to 2 and then 2 to 3
+    intargvector m_directConnect; // connect those layers directly in a sequence order
+    // for example: 1:2:3 will connect 1 to 2 and then 2 to 3
 
-    /// recurrent network
+    // recurrent network
     intargvector m_recurrentLayers;
     float m_defaultHiddenActivity;
     RNNTYPE m_rnnType;
-    int m_maOrder; /// MA model order
+    int m_maOrder; // MA model order
 
     bool m_constForgetGateValue;
     bool m_constInputGateValue;
@@ -363,18 +363,18 @@ protected:
     ElemType m_inputGateInitVal;
     ElemType m_outputGateInitVal;
 
-    intargvector m_streamSizes;           /// for multiple stream data
-    intargvector m_lookupTabelOrderSizes; /// each stream has its own projection, so need to provide with the lookup table order size for each stream
+    intargvector m_streamSizes;           // for multiple stream data
+    intargvector m_lookupTabelOrderSizes; // each stream has its own projection, so need to provide with the lookup table order size for each stream
 
     int m_lookupTableOrder;
     int m_labelEmbeddingSize;
 
-    /// these are the file names for word 2 class mapping and class to word index mapping
-    /// these are used for class-based language modeling
+    // these are the file names for word 2 class mapping and class to word index mapping
+    // these are used for class-based language modeling
     string m_cls2index;
     string m_word2class;
-    int m_nbrCls;    /// number of classes
-    int m_vocabSize; /// vocabulary size
+    int m_nbrCls;    // number of classes
+    int m_vocabSize; // vocabulary size
     int nce_noises;
 
     bool m_sparse_input;

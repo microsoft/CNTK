@@ -5359,7 +5359,7 @@ void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
             _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos);
         }
 
-        /// transition score
+        // transition score
         int i = -1;
         if (tPos == 0)
             i = firstLbl;
@@ -5394,7 +5394,7 @@ void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
                                                const CPUMatrix<ElemType>& beta,
                                                const CPUMatrix<ElemType>& pair_scores,
                                                CPUMatrix<ElemType>& grd,
-                                               const size_t tPos /// position
+                                               const size_t tPos // position
                                                )
 {
     int iNumLab = (int) alpha.GetNumRows();

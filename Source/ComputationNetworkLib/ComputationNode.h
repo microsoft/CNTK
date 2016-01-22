@@ -1576,7 +1576,7 @@ public:
     {
     }
 
-    /// these two are used to pass gradients from future minibatch
+    // these two are used to pass gradients from future minibatch
     virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&)
     {
     }
