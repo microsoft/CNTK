@@ -2686,7 +2686,7 @@ __global__ void _assignNumOfDiff(
 }
 
 /*template<class ElemType>
-__global__ void _assignNumOfDiff( 
+__global__ void _assignNumOfDiff(
 ElemType *a,
 ElemType *b,
 ElemType *c,
@@ -4430,11 +4430,11 @@ ElemType* d_tmp)
 {
 if (sizeof(ElemType)==sizeof(float))
 {
-d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrtf(d_tmp[1]))/max((ElemType)1.0e-10,sqrtf(d_tmp[2])));            
+d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrtf(d_tmp[1]))/max((ElemType)1.0e-10,sqrtf(d_tmp[2])));
 }
 else
 {
-d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((ElemType)1.0e-10,sqrt(d_tmp[2])));            
+d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((ElemType)1.0e-10,sqrt(d_tmp[2])));
 }
 }
 */

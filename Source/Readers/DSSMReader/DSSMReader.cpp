@@ -381,7 +381,7 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     featuresQ.TransferFromDeviceToDevice(featuresQ.GetDeviceId(), -1);
     featuresQ.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
     featuresQ.Print("featuresQ");
-    
+
     featuresD.TransferFromDeviceToDevice(featuresD.GetDeviceId(), -1);
     featuresD.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
     featuresD.Print("featuresD");

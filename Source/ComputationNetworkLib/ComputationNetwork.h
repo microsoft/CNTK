@@ -805,7 +805,7 @@ protected:
 
     // -----------------------------------------------------------------------
     // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
-    // 
+    //
     // This is to implement recurrent loops. All nodes inside a loop are listed
     // inside this node. This node's ForwardProp() function will execute
     // them inside a loop over all time steps of the recurrence.
@@ -857,12 +857,12 @@ protected:
 
     // -----------------------------------------------------------------------
     // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
-    // 
+    //
     // This node contains a list of nodes in a (sub-)network. This node's
     // ForwardProp() method will execute all those nodes once in PAR mode,
     // that is, by passing a FrameRange object that represents to operate
     // on all frames in the node simultaneously.
-    // 
+    //
     // The outermost network level is also represented by this node for execution.
     // -----------------------------------------------------------------------
 

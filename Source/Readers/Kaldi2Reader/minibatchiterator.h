@@ -34,7 +34,7 @@ public:
     //  - lattices are returned as a shared_ptr
     // Thus, getbatch() can be called in a thread-safe fashion, allowing for a 'minibatchsource' implementation that wraps another with a read-ahead thread.
     // Return value is 'true' if it did read anything from disk, and 'false' if data came only from RAM cache. This is used for controlling the read-ahead thread.
-    // 
+    //
     // This version introduces <utteranceinfo>, which contains the utterance ID
     // information for each frame in the minibatch. Ideally we would like to
     // call it as <uids>, but that is already taken by the labels... If the

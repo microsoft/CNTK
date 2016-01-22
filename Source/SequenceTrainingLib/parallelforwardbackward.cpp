@@ -890,8 +890,8 @@ void lattice::parallelsMBRerrorsignal(parallelstate& parallelstate, const edgeal
                                       const double logEframescorrecttotal, msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg) const
 {
     /*  time measurement for CUDA
-            cudaerrorcopyto:        3.058592 ms 
-            cudaerrorsignalsync:    0.356998 ms 
+            cudaerrorcopyto:        3.058592 ms
+            cudaerrorsignalsync:    0.356998 ms
             cudaerrorcopyback:      8.983703 ms  */
 
     /*  time measurement for emulation

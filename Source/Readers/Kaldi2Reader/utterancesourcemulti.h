@@ -723,7 +723,7 @@ private:
             throw std::runtime_error ("randomshuffle: too large set: need to change to different random generator!");
         }
         srand ((unsigned int) randomseed);
-        
+
         foreach_index (i, v[0])
         {
            // pick a random location
@@ -1197,8 +1197,8 @@ public:
     // We specify the utterance by its global start time (in a space of a infinitely repeated training set).
     // This is efficient since getbatch() is called with sequential 'globalts' except at epoch start.
     // Note that the start of an epoch does not necessarily fall onto an utterance boundary. The caller must use firstvalidglobalts() to find the first valid globalts at or after a given time.
-    // 
-    // 
+    //
+    //
     /*implement*/ bool getbatch(const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> &feat,
                                 std::vector<std::vector<size_t>> &uids, std::vector<std::pair<wstring, size_t>> &utteranceinfo,
                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,

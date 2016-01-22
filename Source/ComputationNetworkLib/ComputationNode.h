@@ -324,7 +324,7 @@ public:
     // dimensions
 
     // The value of a node is a tensor in one of two variants:
-    // 
+    //
     //  - single matrix, vector, tensor
     //     - m_sampleLayout contains the shape. Accessed through GetSampleLayout().
     //     - m_pMBLayout is null
@@ -335,9 +335,9 @@ public:
     //     - m_sampleLayout is the tensor shape of the samples
     //     - m_pMBLayout defines the number of time steps and parallel sequences (="tensor shape" of the minibatch)
     //       Accessed through GetMBLayout(); test for through HasMBLayout().
-    // 
+    //
     // The values can be accessed in three ways:
-    // 
+    //
     //  - as a tensor
     //     - GetTensorShape() forms the joint tensor that incorporates both m_sampleLayout and, if present, m_pMBLayout
     //        - Elementwise tensor operations operate on these.
@@ -353,9 +353,9 @@ public:
     //     - actual object is a 2D tensor without MB Layout
     //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
     //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
-    // 
+    //
     // How values are stored:
-    // 
+    //
     //  - minibatch: Matrix of columns, where each column is a sample
     //  - tensor: Matrix where column dimension contains all but the first dimension
     //     - This only matters for sparse matrices, which cannot easily be Reshaped().

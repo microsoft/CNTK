@@ -933,12 +933,12 @@ wstring fgetwstring(FILE* f)
     wstring res;
     for (;;)
     {
-        // 
+        //
         // there is a known vc++ runtime bug: Microsoft Connect 768113
         // fgetwc can skip a byte in certain condition
         // this is already fixed in update release to VS 2012
         // for now the workaround is to use fgetc twice to simulate fgetwc
-        // 
+        //
         // wint_t c = fgetwc (f);
         int c1 = fgetc(f);
         int c2 = fgetc(f);
@@ -1566,7 +1566,7 @@ static short toolULawToLinear(unsigned char p_ucULawByte)
     nExponent=(p_ucULawByte >> 4) & 0x07;
     nMantissa=p_ucULawByte & 0x0F;
     nSample=anExpLut[nExponent]+(nMantissa<<(nExponent+3));
-    if(nSign != 0) 
+    if(nSign != 0)
         nSample = -nSample;
 
     return nSample;
@@ -1620,11 +1620,11 @@ void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
     }
     else if (wavhd.nChannels == 2)
     {
-        // read raw data        
+        // read raw data
         std::vector<short> buf;
         buf.resize(numSamples * 2);
         fgetwavraw(f, buf, wavhd);
-        
+
         // map to mono
         wav.resize (numSamples);
         const short * p = &buf[0];
@@ -1652,8 +1652,8 @@ void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate)
 // ... TODO:
 //  - rename this function!!
 //  - also change to read header itself and return sample rate and channels
-// fgetraw(): read data of multi-channel .wav file, and separate data of multiple channels. 
-//            For example, data[i][j]: i is channel index, 0 means the first 
+// fgetraw(): read data of multi-channel .wav file, and separate data of multiple channels.
+//            For example, data[i][j]: i is channel index, 0 means the first
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
 
@@ -1716,7 +1716,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
     (DataLength / wfx.nBlockAlign == numSamples)
         || RuntimeError ("fputwfx: data size exceeds WAV header 32-bit range");
     unsigned int RiffLength = 36 + DataLength;
-    unsigned int FmtLength  = 16; 
+    unsigned int FmtLength  = 16;
     // file header
     assert (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
     fputTag (f, "RIFF");

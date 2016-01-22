@@ -86,7 +86,7 @@ struct SectionHeader
     WORD writtenID;         // unique ID so files written at the same time can be identified
     WORD unusedWords[5];
     size_t elementsCount; // number of total elements stored
-    // * section specific data goes below here * // 
+    // * section specific data goes below here * //
     WORD labelKind;                                                    // kind of label (LabelKind type)
     WORD labelDim;                                                     // number of possible states for labels (category type)
     char unused[descriptionSize - 18 * sizeof(WORD) - sizeof(size_t)]; // space for future expansion (zero out in current versions)
@@ -560,7 +560,7 @@ private:
     vector<SectionFile*> m_secFiles;
     std::map<std::wstring, Section*, nocase_compare> m_sections;
 
-    /** 
+    /**
     for reading one line per file, i.e., a file has only one line of data
     */
     bool mOneLinePerFile;

@@ -213,7 +213,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     // this has to be an even number, a pair of index and value
                     if  ((spos.numberPos&1) != 0)
                         RuntimeError("Features must be specified in pairs (index:value). Invalid features for label '%s'\n", labelValue);
-                
+
                     while (feature < spos.numberPos)
                     {
                         int index = (int)featureTemp[feature++];

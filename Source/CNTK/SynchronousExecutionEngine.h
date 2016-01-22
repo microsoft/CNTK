@@ -67,7 +67,7 @@ public:
                 //      A=MacroCall3(...)
                 //      D=Times(A.B,X.B)}
                 // }
-                // 
+                //
 
                 // In this example, in the call D=Times(A.B,X.B), we need to resolve A.B and X.B appropriately.
                 // Specifically, "A.B" must be resolved to the fully qualified name "C.A.B", whereas "X.B" must be resolved to the fully qualified name "P.B".

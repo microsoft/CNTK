@@ -1248,7 +1248,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // Initializes the model from original model.
         // TODO: Comment what this does!
         auto origNet = make_shared<ComputationNetwork>(deviceId);
-        ComputationNetworkPtr sequenceNet = 
+        ComputationNetworkPtr sequenceNet =
             (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : origNet;
         std::vector<ComputationNodeBasePtr> addedFeatureNodes;
         std::vector<ComputationNodeBasePtr> replacedCriterionNodes;

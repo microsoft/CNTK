@@ -62,9 +62,9 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
                 fclose(ftry);
         }
 
-        /* 
-                code below to cycle through a-z appended to file name is no longer necessary 
-                since caller guarantees unique file names via HTKMLFReader 
+        /*
+                code below to cycle through a-z appended to file name is no longer necessary
+                since caller guarantees unique file names via HTKMLFReader
                 and we want the pagepath logged to the user to be the actual one used by the code
 
             // try to open the pagepath from a to z

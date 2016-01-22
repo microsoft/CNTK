@@ -41,9 +41,9 @@ void TestBing(const ConfigParameters& config)
     DataReader<ElemType> dataReader(vdim, udim, filepaths, config);
     ConfigArray layerSizes(config("networkDescription"));
     SimpleNetworkBuilder<ElemType> netBuilder(layerSizes, TrainingCriterion::SquareError, EvalCriterion::SquareError, L"Sigmoid", true, false, false, &dataReader);
-    
 
-    ConfigArray learnRatesPerMB(config("learnRatesPerMB"));  
+
+    ConfigArray learnRatesPerMB(config("learnRatesPerMB"));
     ConfigArray mbSize(config("mbSize"));
     size_t epochSize = config("epochSize");
     size_t maxEpochs = config("maxEpochs");
@@ -52,16 +52,16 @@ void TestBing(const ConfigParameters& config)
     wstring modelPath = wstring(msra::strfun::utf16(outDir)).append(L"\\bingranknet.dnn");
 
     SimpleSGD<ElemType> sgd(learnRatesPerMB, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB);
-    sgd.Train(netBuilder, dataReader, true);    
+    sgd.Train(netBuilder, dataReader, true);
 
     std::cout<<std::endl<<std::endl<<std::endl<<std::endl<<"Testing ..... "<<std::endl;
 
     // test
     vector<wstring> testfilepaths;
-    testfilepaths.push_back( config("test.set")); 
+    testfilepaths.push_back( config("test.set"));
     size_t testSize = config("test.set.size");
     DataReader<ElemType> testDataReader(vdim, udim, testfilepaths, config);
-    
+
     wstring finalNetPath = modelPath.append(L".").append(to_wstring(maxEpochs-1));
 
     SimpleEvaluator<ElemType> eval(netBuilder.LoadNetworkFromFile(finalNetPath, false));
@@ -433,7 +433,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     wstr = (std::wstring) unicodeTests("nothere", L"defWstring");
     //    wstringQuotes="東京に行きましょう． 明日"
     std::wstring wstrQuotes = unicodeTests("wstringQuotes");
-    // 
+    //
     //    #array tests
     //    arrayEmpty={}
     ConfigArray arrayEmpty = arrayTests("arrayEmpty");
@@ -474,7 +474,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     ConfigArray array3 = arrayNested[2];
     name = array3.Name();
     ConfigArray array4 = arrayNested[3];
-    // 
+    //
     //    #dictionary tests
     //    dictEmpty=[]
     ConfigParameters dictEmpty(dictTests("dictEmpty"));
@@ -498,7 +498,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     arrayQuotedStrings = dictQuotedStrings("files");
     const char* mapping = dictQuotedStrings("mapping");
     mapping;
-    // 
+    //
     //    #super nesting
     //    dictNested=[
     //        array={

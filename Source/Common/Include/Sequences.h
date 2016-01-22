@@ -396,7 +396,7 @@ private:
     // Lookup tables for determining whether any sequence at time t is a boundary or gap.
     // An optional time delay can be given, then the test is whether going from t to (t + time delay) crosses a boundary.
     // The purpose is for knowing when to reset state of a recurrent node.
-    // 
+    //
     // For every (s,t), we store the distance to the corresponding sequence begin and end.
     // We also store for every [t] an aggregate to know the nearest boundary.
     // For example, two sentences used in parallel, one with 5 and one with 3 time steps, in one minibatch, both starting at step 0

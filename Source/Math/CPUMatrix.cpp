@@ -555,7 +555,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
 
         auto& us = *this;
 
-#pragma omp parallel for     
+#pragma omp parallel for
         for (long j = 0; j<sliceNumCols; j++)
         {
             for (int i = 0; i < inputMatrices.size(); i++)
@@ -563,7 +563,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
                 memcpy(&us(startRowIndeces[i], j), &(*inputMatrices[i])(0, sliceStartCol+j), inputMatrices[i]->GetNumRows() * sizeof(ElemType));
             }
         }
-        
+
         delete [] startRowIndeces;
 
         return *this;
@@ -4127,7 +4127,7 @@ void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMat
             c(i, j) = b(i, j) * f + c(i, j) * beta;
 }
 
-/* compute singular value decomposition as 
+/* compute singular value decomposition as
     A = U*SIGMA*VT
     W is used as temp working memory
     */

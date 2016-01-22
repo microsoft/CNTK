@@ -186,7 +186,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
                 wstring initString = node->GetOptionalParameter("init", "uniform");
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
-                
+
                 if (!_wcsicmp(initString.c_str(), L"fixedValue"))
                     nodePtr->Value().SetValue(value);
                 else if (!_wcsicmp(initString.c_str(), L"uniform"))
