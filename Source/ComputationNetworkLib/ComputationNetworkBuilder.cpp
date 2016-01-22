@@ -37,13 +37,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
         return New<CRFNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))
         return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
-    else if (nodeType == L"ColumnElementTimes")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-#else
-    else if (nodeType == OperationNameOf(ColumnElementTimesNode))
-        return New<ColumnElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-#endif
     else if (nodeType == OperationNameOf(CosDistanceNode))
         return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))
@@ -116,26 +109,12 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
         return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))
         return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
-    else if (nodeType == L"RowElementTimes")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-#else
-    else if (nodeType == OperationNameOf(RowElementTimesNode))
-        return New<RowElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-#endif
     else if (nodeType == OperationNameOf(RowRepeatNode))
         return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowSliceNode))
         return New<RowSliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))
         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
-#ifdef ENABLE_BROADCASTING_ELEMENTTIMES
-    else if (nodeType == L"Scale")
-        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
-#else
-    else if (nodeType == OperationNameOf(ScaleNode))
-        return New<ScaleNode<ElemType>>(forward<_Types>(_Args)...);
-#endif
     else if (nodeType == OperationNameOf(SequenceDecoderNode))
         return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ShiftNode))
@@ -165,12 +144,18 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TransposeTimesNode))
         return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
     // old names we also support
+    else if (nodeType == L"ColumnElementTimes")
+        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"Delay")
         return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"PerDimMeanVarNormalizationNode")
         return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == L"PerDimMeanVarNormalizationNode")
-        return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"PerDimMeanVarDeNormalizationNode")
+        return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"RowElementTimes")
+        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == L"Scale")
+        return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
 #if 1
     else if (nodeType == OperationNameOf(DeprecatedReshapeNode))
         return New<DeprecatedReshapeNode<ElemType>>(forward<_Types>(_Args)...);
@@ -562,14 +547,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sum(c
     return net.AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(net.GetDeviceId(), nodeName), a);
 }
 
-#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<ScaleNode<ElemType>>(net.GetDeviceId(), nodeName), scalar, matrix);
-}
-#endif
-
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Transpose(const ComputationNodePtr matrix, const std::wstring nodeName)
 {
@@ -593,20 +570,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Eleme
 {
     return net.AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
 }
-
-#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<RowElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ColumnElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<ColumnElementTimesNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
-}
-#endif
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)

@@ -26,8 +26,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#ifdef ENABLE_TENSORVIEW
-
 // -----------------------------------------------------------------------
 // PlusNode (summand1, summand2)
 // -----------------------------------------------------------------------
@@ -51,7 +49,6 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUSBP#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -114,7 +111,6 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr,"#MINUS#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -125,8 +121,6 @@ public:
 
 template class MinusNode<float>;
 template class MinusNode<double>;
-
-#endif // ENABLE_TENSORVIEW
 
 // -----------------------------------------------------------------------
 // NegateNode (input)
@@ -364,8 +358,6 @@ public:
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
 
-#ifdef ENABLE_TENSORVIEW
-
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
 //
@@ -412,7 +404,6 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr,"#ETIMES#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -423,8 +414,6 @@ public:
 
 template class ElementTimesNode<float>;
 template class ElementTimesNode<double>;
-
-#endif // ENABLE_TENSORVIEW
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)

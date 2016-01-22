@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // This header collects special-purpose nodes.
 // It is likely that these are no longer functional.
 
-#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
+#if 0 //def ENABLE_TENSORVIEW
 // -----------------------------------------------------------------------
 // PlusNode (summand1, summand2)
 // -----------------------------------------------------------------------
@@ -345,7 +345,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-#ifdef ENABLE_TENSORVIEW // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
+#if 1 //def ENABLE_TENSORVIEW // This takes a big perf hit since our reduction uses only a single thread in this case. Needs to be fixed.
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
@@ -381,7 +381,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-#ifdef ENABLE_TENSORVIEW
+#if 1 //def ENABLE_TENSORVIEW
         static int c = 0;
         if (c++ == 0)
         {
