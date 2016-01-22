@@ -118,7 +118,7 @@ public:
         }
         LoadValue(fstream);
         SetDims(sampleLayout, false);   // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
-        ValueAsMatrix();                // verify that storage was allocated correctly by retrieving it as a matrix
+        VerifyDataSize(Value());        // sanity check
     }
 
     // initialize with random numbers

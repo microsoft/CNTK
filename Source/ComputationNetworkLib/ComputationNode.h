@@ -1391,20 +1391,39 @@ public:
             return DataTensorFor(Gradient(), rank, fr);
         }
 
+    private:
+
+        // determine the size that we should set our Matrix storage to
+        void DetermineDataSize(size_t & rows, size_t & cols) const
+        {
+            if (HasMBLayout())
+            {
+                rows = GetSampleMatrixNumRows();
+                cols = GetSampleMatrixNumCols();
+            }
+            else
+            {
+                const auto & shape = GetSampleLayout();
+                rows = shape.GetRank() > 0 ? shape[0] : 0;
+                cols = rows > 0 ? shape.GetNumElements() / rows : 0;
+            }
+        }
+
     protected:
 
         // set the size of the underlying Matrix object to match node dimensions
         void UpdateDataSize(Matrix<ElemType>& m)
         {
-            if (HasMBLayout())
-                m.Resize(GetSampleMatrixNumRows(), GetSampleMatrixNumCols());
-            else
-            {
-                const auto & shape = GetSampleLayout();
-                size_t numRows = shape.GetRank() > 0 ? shape[0] : 0;
-                size_t numCols = numRows > 0 ? shape.GetNumElements() / numRows : 0;
-                m.Resize(numRows, numCols);
-            }
+            size_t rows, cols;
+            DetermineDataSize(rows, cols);
+            m.Resize(rows, cols);
+        }
+        // and verify the condition that UpdateDataSize() creates (used for sanity checking after loading parameters)
+        void VerifyDataSize(Matrix<ElemType>& m)
+        {
+            size_t rows, cols;
+            DetermineDataSize(rows, cols);
+            m.VerifySize(rows, cols);
         }
 
     public:
