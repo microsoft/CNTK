@@ -435,7 +435,7 @@ public:
     bool HasNan(const char* name) const;
     size_t CountNanInf() const;
 
-    void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
+    void Print(const char* matrixName, size_t rowFirst, size_t rowLast, size_t colFirst, size_t colLast) const;
     void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
 
     Matrix<ElemType>& AssignPackedConvolutionInput(const Matrix<ElemType>& inputSubBatch,

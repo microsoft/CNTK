@@ -3614,28 +3614,37 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemTy
 #pragma region Other helper Functions
 
 template <class ElemType>
-void CPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
+void CPUMatrix<ElemType>::Print(const char* matrixName, size_t rowFirst, size_t rowLast, size_t colFirst, size_t colLast) const
 {
-    if (IsEmpty())
-        LogicError("Print: Matrix is empty.");
+    if (matrixName != nullptr)
+        fprintf(stderr, "\n###### %s (%lu, %lu) ######\n\n", matrixName, GetNumRows(), GetNumCols());
+    else
+        fprintf(stderr, "\n###### (%lu, %lu) ######\n\n", GetNumRows(), GetNumCols());
 
-    if (rowEnd >= GetNumRows() || colEnd >= GetNumCols())
+    if (IsEmpty())
+        fprintf(stderr, "(empty)\n");
+    else if (rowLast >= GetNumRows() || colLast >= GetNumCols())
         InvalidArgument("Index out of range.");
 
-    if (matrixName != nullptr)
-        fprintf(stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, GetNumRows(), GetNumCols());
-    else
-        fprintf(stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", GetNumRows(), GetNumCols());
+    if (rowFirst > 0 || colFirst > 0)
+        fprintf(stderr, "------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowFirst, rowLast, colFirst, colLast);
 
-    fprintf(stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
-
+    // TODO: extend this to take negative ranges, and allow to specify first=-3, last=3 which will print the first 3 and last 3 rows/cols. Also clip bounds to avoid having to test that outside.
     const auto& us = *this;
-    for (size_t i = rowStart; i <= rowEnd; i++)
+    if (rowFirst > 0)
+        fprintf(stderr, "...\n");
+    for (size_t i = rowFirst; i <= rowLast; i++)
     {
-        for (size_t j = colStart; j <= colEnd; j++)
+        if (colFirst > 0)
+            fprintf(stderr, "...\t");
+        for (size_t j = colFirst; j <= colLast; j++)
             fprintf(stderr, "%.10f\t", us(i, j));
+        if (colLast < GetNumCols()-1)
+            fprintf(stderr, "...\t");
         fprintf(stderr, "\n");
     }
+    if (rowLast < GetNumRows()-1)
+        fprintf(stderr, "...\n");
 }
 
 template <class ElemType>

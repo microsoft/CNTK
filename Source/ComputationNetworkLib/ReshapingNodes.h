@@ -224,7 +224,7 @@ public:
             if (!child)
                 fprintf(stderr, "NULL");
             else
-                fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
+                fprintf(stderr, "%ls[%s%s]", child->NodeName().c_str(), string(child->GetSampleLayout()).c_str(), child->HasMBLayout() ? " x *" : "");
         }
         fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numTargetRows, m_targetImageLayout[1], m_targetImageLayout[2], m_targetImageLayout[0]);
         // BUGBUG: This interpretaion as image dims is only correct for the 'legacy format, not for cudnn.
@@ -243,38 +243,44 @@ public:
         else
             assert(!m_pMBLayout); // reshaping non-mini-batch data
 
-        size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
-        // Note: During initial validation, cols may not be a multiple. E.g. cols may be 1 or 3. So we cannot check here whether the integer-multiple conditions are fulfilled.
-        size_t newCols = cols * rows / m_numTargetRows;
-        if (isFinalValidationPass)
+        size_t newCols = 1; // dummy
+        if (!m_pMBLayout)
         {
-            if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) || // grouping columns
-                (m_numTargetRows < rows && rows % m_numTargetRows != 0))   // splitting columns
-                InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int) m_numTargetRows, (int) rows);
-            if (!m_pMBLayout && rows * cols != m_numTargetRows * newCols) // sadly, cannot verify here if we have a layout, since current #cols may be bogus
-                LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
+            size_t rows = Input(0)->GetAsMatrixNumRows(), cols = Input(0)->GetAsMatrixNumCols();
+            newCols = cols * rows / m_numTargetRows;
+            if (isFinalValidationPass)
+            {
+                if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) || // grouping columns
+                    (m_numTargetRows < rows && rows % m_numTargetRows != 0))   // splitting columns
+                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int)m_numTargetRows, (int)rows);
+                if (rows * cols != m_numTargetRows * newCols)
+                    LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
+            }
         }
 
         // patch up m_targetImageLayout, which was originally a construction parameter
         InferTargetSampleLayout();
 
         // setting any dimension to 0 means lose the tensor, flatten to vector
-        // TODO: We can use 0 to indicate "infer". One value can be 0. It will be filled in to match row dim.
-        if (m_targetImageLayout[1] == 0 || m_targetImageLayout[2] == 0 || m_targetImageLayout[0] == 0)
+        if (m_targetImageLayout.GetNumElements() == 0)
         {
             if (Input(0)->HasSampleLayout())
                 fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
             // TODO: We need to decide what reshaping means in presence of a tensor.
-            SetDims(TensorShape(m_numTargetRows), newCols);
+            if (HasMBLayout())
+                SetDims(TensorShape(m_numTargetRows), true);
+            else
+                SetDims(TensorShape(m_numTargetRows, newCols), false);
         }
         else
         {
             if (m_numTargetRows != m_targetImageLayout.GetNumElements())
                 LogicError("DeprecatedReshapeNode: InferTargetSampleLayout() computed a sample layout [%s] that mismatches m_numTargetRows %d.", string(m_targetImageLayout).c_str(), (int) m_numTargetRows);
-            SetDims(m_targetImageLayout, newCols);
+            SetDims(m_targetImageLayout, HasMBLayout());
         }
     }
 
+#if 0
     virtual void UpdateFunctionMBSize() override
     {
         size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
@@ -288,11 +294,11 @@ public:
         else
             SetNumCols(newCols);
     }
+#endif
 
-    // TODO: there seems to be semantic overlap between BeginForwardProp() and UpdateFunctionMBSize()
+    // TODO: Clarify/resolve the semantic overlap between BeginForwardProp() and UpdateFunctionMBSize().
     virtual void /*IComputationNode::*/ BeginForwardProp() override
     {
-        Base::BeginForwardProp();
         // create the derived layout
         if (m_pMBLayout && factor() != 1)
         {
@@ -301,7 +307,7 @@ public:
             if (weStack())
             {
                 // going from many samples to one: layout entry will get no flags
-                if (Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows != 1)
+                if (Input(0)->GetMBLayout()->GetNumTimeSteps() * Input(0)->GetSampleMatrixNumRows() / m_numTargetRows != 1)
                     LogicError("DeprecatedReshapeNode::BeginForwardProp() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
                 // we are in frame mode now
                 m_pMBLayout->InitAsFrameMode(Input(0)->GetNumParallelSequences());
@@ -311,12 +317,14 @@ public:
                 // going from one sample to many: layout will get SentenceStart/SentenceEnd flags for the sequence we expand into
                 if (Input(0)->GetMBLayout()->GetNumTimeSteps() != 1)
                     LogicError("DeprecatedReshapeNode::BeginForwardProp() faking to add a nested time dimension only works when coming from a single frame per sequence.");
-                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetNumTimeSteps() * Input(0)->GetNumRows() / m_numTargetRows);
+                m_pMBLayout->Init(Input(0)->GetNumParallelSequences(), Input(0)->GetMBLayout()->GetNumTimeSteps() * Input(0)->GetSampleMatrixNumRows() / m_numTargetRows);
                 for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
-                    m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, m_pMBLayout->GetNumTimeSteps());
+                    m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, s, 0, GetMBLayout()->GetNumTimeSteps());
                 // BUGBUG: In the future, NEW_SEQUENCE_ID will be incorrect here; need an iterator over sequences in there.
             }
         }
+        // Call this at the end because this will resize Value(), but that requires the updated MBLayout. TODO: Clarify the sequence of events. Should we update the MBLayout in UpdateFunctionMBSize()?
+        Base::BeginForwardProp();
     }
 
     // notes:
@@ -324,10 +332,10 @@ public:
     //  - fr refers to *functionValues*, not the inputs
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
+        size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
         size_t newCols = cols * rows / m_numTargetRows;
         assert(newCols * m_numTargetRows == cols * rows); // follows from above check
-        VerifyDims(m_numTargetRows, newCols);
+        Value().VerifySize(m_numTargetRows, newCols);
 
         // no layout case: this is indeed just a reshape. Same for canonical case
         // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
@@ -351,7 +359,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        size_t rows = Input(0)->GetNumRows(), cols = Input(0)->GetNumCols();
+        size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
         size_t newCols = cols * rows / m_numTargetRows;
 
         // no layout case: this is indeed just a reshape. Same for canonical case
@@ -388,11 +396,11 @@ private:
     size_t m_numTargetRows;
     bool weStack() const
     {
-        return m_numTargetRows > Input(0)->GetNumRows();
+        return m_numTargetRows > Input(0)->GetSampleMatrixNumRows();
     } // do we stack (multiple frames into one)
     size_t factor() const
     {
-        return m_numTargetRows > Input(0)->GetNumRows() ? m_numTargetRows / Input(0)->GetNumRows() : Input(0)->GetNumRows() / m_numTargetRows;
+        return m_numTargetRows > Input(0)->GetSampleMatrixNumRows() ? m_numTargetRows / Input(0)->GetSampleMatrixNumRows() : Input(0)->GetSampleMatrixNumRows() / m_numTargetRows;
     } // factor by which we stack or unstack
     TensorShape m_targetImageLayout;
 
@@ -400,7 +408,6 @@ private:
     // Users are allowed to provide 2 (out of 3) image dimensions.
     // One missing dimension can be inferred. If two dimensions are
     // unspecified it throws a runtime error.
-    // TODO: Generalize this to any number of dimensions.
     void InferTargetSampleLayout()
     {
         // BUGBUG: Below is the result of refactoring and only works for rank-3 tensors. Generalize.
@@ -591,7 +598,7 @@ public:
         }
 
         // that's it
-        SetDims(sampleLayout, 0); // BUGBUG: This is incorrect if we have no MBLayout, e.g. reshaping a bias vector into a different tensor dimension
+        SetDims(sampleLayout, HasMBLayout());
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -772,15 +779,16 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        if (isFinalValidationPass && Input(0)->GetNumRows() < m_startIndex + m_sliceHeight)
+        if (isFinalValidationPass && Input(0)->GetSampleMatrixNumRows() < m_startIndex + m_sliceHeight)
             RuntimeError("%ls %ls operation: m_startIndex + m_sliceHeight exceeds number of rows in the input.", NodeName().c_str(), OperationName().c_str());
 
         // RowSlice cannot slice tensors.
         // TODO: Create a TensorSlice operation, or just Slice.
-        if (isFinalValidationPass && Input(0)->HasSampleLayout() && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
+        if (isFinalValidationPass && Input(0)->HasSampleLayout()
+            && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
             )
             RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
-        SetDims(TensorShape(m_sliceHeight), Input(0)->GetNumCols());
+        SetDims(TensorShape(m_sliceHeight), HasMBLayout());
     }
 
 private:
@@ -824,7 +832,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+        Input(inputIndex)->GradientFor(fr).AddWithRowSliceValuesOf(GradientFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetSampleMatrixNumRows());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -845,7 +853,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
-            ValueFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->ValueFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetNumRows());
+            ValueFor(fr).AssignToRowSliceValuesOf(Input(inputIndex)->ValueFor(fr), m_startRowIndices[inputIndex], Input(inputIndex)->GetSampleMatrixNumRows());
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -853,13 +861,11 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        size_t numCols = Input(0)->GetNumCols();
-
         // we must fuse all tensor shapes
-        // All dimensions but the last must be the same.
-        // Note that trailing ones may be stripped, so we must first pad.
+        // All dimensions but the last must be the same. (In a future version, we should be able to stack along any given dimension.)
+        // Note that trailing ones may be stripped/broadcasting, so we must first pad.
         SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
-        size_t maxRank = 0;
+        size_t maxRank = 0; // TODO: very similar to DetermineElementwiseTensorRank() except that that one also includes the output
         for (int i = 0; i < GetNumInputs(); i++)
             if (maxRank < GetInputSampleLayout(i).GetRank())
                 maxRank = GetInputSampleLayout(i).GetRank();
@@ -871,11 +877,8 @@ public:
         size_t totalTrailingDim = 0; // last tensor dimension is what gets stacked up
         for (int i = 0; i < GetNumInputs(); i++)
         {
-            if (isFinalValidationPass && !HasMBLayout() && Input(i)->GetNumCols() != numCols)
-                LogicError("RowStack operation: the input node %ls has different number of columns.", Input(i)->NodeName().c_str());
-
             m_startRowIndices[i] = totalRows;
-            totalRows += Input(i)->GetNumRows();
+            totalRows += Input(i)->GetSampleMatrixNumRows();
             SmallVector<size_t> thisDims = Input(i)->GetSampleLayout().GetDims();
             thisDims.resize(maxRank, 1);         // pad and/or strip trailing dimension
             totalTrailingDim += thisDims.back(); // count total trailing dimensions (that's what we have after stacking)
@@ -891,9 +894,9 @@ public:
             fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
 
         dims.push_back(totalTrailingDim);
-        SetDims(TensorShape(dims), numCols);
+        SetDims(TensorShape(dims), HasMBLayout());
 
-        if (totalRows != GetNumRows())
+        if (totalRows != GetSampleMatrixNumRows())
             LogicError("%ls RowStack operation: Tensor shapes of inputs were not compatible after all?", NodeName().c_str());
     }
 
@@ -952,34 +955,10 @@ public:
         fstream >> m_numRepeat;
     }
 
-    virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+    virtual void PrintSelfBeforeValidation() const override
     {
-        fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-
-        if (!IsLeaf())
-        {
-            fprintf(stderr, "(");
-            for (size_t i = 0; i < GetNumInputs(); i++)
-            {
-                ComputationNodePtr child = Input(i);
-                if (i > 0)
-                    fprintf(stderr, ", ");
-
-                if (child == nullptr)
-                {
-                    if (allowNulls)
-                    {
-                        fprintf(stderr, "NULL");
-                        continue;
-                    }
-                    RuntimeError("One of the children is missing.");
-                }
-
-                fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
-            }
-
-            fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
-        }
+        Base::PrintSelfBeforeValidation();
+        fprintf(stderr, ", numRepeats=%lu", m_numRepeat);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -992,7 +971,7 @@ public:
         SmallVector<size_t> dims = GetInputSampleLayout(0).GetDims();
         dims.back() *= m_numRepeat;
 
-        SetDims(TensorShape(dims), Input(0)->GetNumCols());
+        SetDims(TensorShape(dims), HasMBLayout());
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
