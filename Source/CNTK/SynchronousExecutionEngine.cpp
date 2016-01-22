@@ -305,7 +305,7 @@ void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const
             size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
             bool needGradient = node->GetOptionalParameter("needGradient", "false");
-            nodePtr = builder.DeprecatedReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
+            nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, ImageLayoutKind::HWC /*legacy*/), name); // BUGBUG: use a tensor descriptor instead
             nodePtr->SetParameterUpdateRequired(needGradient);
         }
     }

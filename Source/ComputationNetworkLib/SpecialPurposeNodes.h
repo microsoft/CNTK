@@ -19,6 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This header collects special-purpose nodes.
 
+#ifdef COMING_SOON
+
 // -----------------------------------------------------------------------
 // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
 // calculates the log likelihood of a feature given parameters of a Gaussian mixture model (GMM) with shared diagonal variance
@@ -398,9 +400,10 @@ protected:
 template class GMMLogLikelihoodNode<float>;
 template class GMMLogLikelihoodNode<double>;
 
+#endif
 
 // -----------------------------------------------------------------------
-/// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
+// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
 // word-lattice based sequence training criterion, using a Microsoft-proprietary lattice format
 //
 // This node is likely not very useful for external use since it uses an MS-proprietary lattice-archive format
@@ -589,42 +592,15 @@ public:
     }
 
     // TODO: method names should be CamelCase
-    std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr()
-    {
-        return &m_lattices;
-    }
+    std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr() { return &m_lattices; }
+    std::vector<size_t>* getuidprt() { return &m_uids; }
+    std::vector<size_t>* getboundaryprt() { return &m_boundaries; }
+    std::vector<size_t>* getextrauttmap() { return &m_extraUttMap; }
+    msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
 
-    std::vector<size_t>* getuidprt()
-    {
-        return &m_uids;
-    }
-
-    std::vector<size_t>* getboundaryprt()
-    {
-        return &m_boundaries;
-    }
-    std::vector<size_t>* getextrauttmap()
-    {
-        return &m_extraUttMap;
-    }
-    msra::asr::simplesenonehmm* gethmm()
-    {
-        return &m_hmm;
-    }
-
-    void SetSmoothWeight(double fsSmoothingWeight)
-    {
-        m_fsSmoothingWeight = fsSmoothingWeight;
-    }
-    void SetFrameDropThresh(double frameDropThresh)
-    {
-        m_frameDropThreshold = frameDropThresh;
-    }
-
-    void SetReferenceAlign(const bool doreferencealign)
-    {
-        m_doReferenceAlignment = doreferencealign;
-    }
+    void SetSmoothWeight(double fsSmoothingWeight) { m_fsSmoothingWeight = fsSmoothingWeight; }
+    void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
+    void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
     void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
     {

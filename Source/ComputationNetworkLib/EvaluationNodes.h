@@ -133,6 +133,8 @@ private:
 template class ErrorPredictionNode<float>;
 template class ErrorPredictionNode<double>;
 
+#ifdef COMING_SOON
+
 // -----------------------------------------------------------------------
 // SequenceDecoderNode (label, position_dependent_score, transition_score)
 // Decoder that matches CRF training.
@@ -332,5 +334,7 @@ public:
 
 template class SequenceDecoderNode<float>;
 template class SequenceDecoderNode<double>;
+
+#endif
 
 } } }

@@ -87,7 +87,9 @@ public:
     ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");
+#ifdef COMING_SOON
     ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
@@ -111,7 +113,9 @@ public:
     ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
     ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"");
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
+#ifdef COMING_SOON
     ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
@@ -119,10 +123,12 @@ public:
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+#ifdef COMING_SOON
     ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
 #if 1 // legacy
-    ComputationNodePtr DeprecatedReshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape& imageLayout, const std::wstring nodeName = L"");
+    ComputationNodePtr LegacyReshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape& imageLayout, const std::wstring nodeName = L"");
 #endif
 };
 

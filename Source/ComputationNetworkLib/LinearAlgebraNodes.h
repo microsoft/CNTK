@@ -331,7 +331,6 @@ template class TimesNode<double>;
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
 // right operand and output can have MB layout, while left operand cannot
-// TODO: merge with TimesNode
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -357,7 +356,6 @@ template class TransposeTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
-//
 // This allows broadcasting, and can thus also scale with a row, a column, or a scalar.
 // -----------------------------------------------------------------------
 
@@ -664,6 +662,8 @@ public:
 template class SumColumnElementsNode<float>;
 template class SumColumnElementsNode<double>;
 
+#ifdef COMING_SOON  // known bug in backprop; generalize to tensor
+
 // -----------------------------------------------------------------------
 // TransposeNode (input matrix)
 // TODO: extend towards tensor transpose (swap 2 dimensions, incl. time)
@@ -752,87 +752,7 @@ public:
 template class TransposeNode<float>;
 template class TransposeNode<double>;
 
-// -----------------------------------------------------------------------
-// DiagonalNode -- extract diagonal elements of a square matrix into a row vector
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class DiagonalNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
-{
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"Diagonal";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
-    DiagonalNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr;
-
-        if (isFinalValidationPass && Input(0)->HasMBLayout())
-            InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
-
-        size_t dim = Input(0)->GetAsMatrixNumCols();
-        if (isFinalValidationPass && dim != Input(0)->GetAsMatrixNumRows())
-            InvalidArgument("%ls %ls operation requires a square matrix as its input.", NodeName().c_str(), OperationName().c_str());
-
-        if (Input(0)->HasSampleLayout())
-            fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
-
-        SetDims(TensorShape(1, dim), false);
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
-#if NANCHECK
-        Value().HasNan("Diagonal");
 #endif
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
-    {
-        auto& inputGradientValues = Input(0)->GradientAsMatrix();
-        auto& gradientValues = GradientAsMatrix();
-
-        // BUGBUG: This should use the memshare mechanism.
-        // TODO: use tensor lib, then this will be easy, no memsharing needed
-        Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
-        diag = gradientValues;
-        diag.Resize(gradientValues.GetNumCols(), 1);
-
-        inputGradientValues.SetValue(0);
-        // BUGBUG: Must *add* to gradient!
-        inputGradientValues.SetDiagonalValue(diag);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The DiagonalNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
-    {
-        // The DiagonalNode does not require any of it's input's values for computing
-        // the gradients of its input nodes
-        UNREFERENCED_PARAMETER(childIndex);
-        return false;
-    }
-};
-
-template class DiagonalNode<float>;
-template class DiagonalNode<double>;
 
 // -----------------------------------------------------------------------
 // CosDistanceNode (left, right)

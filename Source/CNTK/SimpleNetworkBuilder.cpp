@@ -27,22 +27,22 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescriptio
     switch (m_rnnType)
     {
     case SIMPLENET:
-        net = BuildSimpleDNN();
+        net = BuildSimpleDNNFromDescription();
         break;
     case SIMPLERNN:
-        net = BuildSimpleRNN();
+        net = BuildSimpleRNNFromDescription();
         break;
     case LSTM:
         net = BuildLSTMNetworkFromDescription();
         break;
     case CLASSLSTM:
-        net = BuildCLASSLSTMNetworkFromDescription();
+        net = BuildClassLSTMNetworkFromDescription();
         break;
     case NCELSTM:
         net = BuildNCELSTMNetworkFromDescription();
         break;
     case CLASSLM:
-        net = BuildClassEntropyNetwork();
+        net = BuildClassEntropyNetworkFromDescription();
         break;
     case LBLM:
         net = BuildLogBilinearNetworkFromDescription();
@@ -53,9 +53,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescriptio
     case CLSTM:
         net = BuildConditionalLSTMNetworkFromDescription();
         break;
+#ifdef COMING_SOON
     case RCRF:
         net = BuildSeqTrnLSTMNetworkFromDescription();
         break;
+#endif
     default:
         LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int) m_rnnType);
     }
@@ -67,7 +69,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescriptio
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNNFromDescription()
 {
 
     ComputationNetworkBuilder<ElemType> builder(*m_net);
@@ -166,7 +168,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
 
 // Note: while ComputationNode and CompuationNetwork are (supposed to be) independent of ElemType, it is OK to keep this class dependent.
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNNFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
     if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
@@ -274,7 +276,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSimpleRNN()
 }
 
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
 
@@ -290,7 +292,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork()
         ComputationNodePtr wrd2cls, cls2idx, clslogpostprob, clsweight;
 
         if (m_vocabSize != m_layerSizes[numHiddenLayers + 1])
-            RuntimeError("BuildClassEntropyNetwork : vocabulary size should be the same as the output layer size");
+            RuntimeError("BuildClassEntropyNetworkFromDescription : vocabulary size should be the same as the output layer size");
 
         input = builder.CreateSparseInputNode(L"features", m_layerSizes[0]);
         m_net->FeatureNodes().push_back(input);
@@ -435,7 +437,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         }
         else
         {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
+            LogicError("BuildClassLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
         }
 
         int recur_idx = 0;
@@ -484,7 +486,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
 
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
+        output = builder.TransposeTimes(w, input, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
@@ -947,6 +949,8 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     return output;
 }
 
+#ifdef COMING_SOON
+
 template <class ElemType>
 ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription()
 {
@@ -1046,8 +1050,10 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFrom
     return m_net;
 }
 
+#endif
+
 template <class ElemType>
-ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromDescription()
+ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromDescription()
 {
     ComputationNetworkBuilder<ElemType> builder(*m_net);
     if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
@@ -1088,7 +1094,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
         }
         else
         {
-            LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
+            LogicError("BuildClassLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
         }
 
         int recur_idx = 0;
@@ -1127,7 +1133,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromD
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
                                                clslogpostprob);
 
-        output = builder.Times(builder.Transpose(w), input, L"outputs");
+        output = builder.TransposeTimes(w, input, L"outputs");
 
         m_net->OutputNodes().push_back(output);
 
@@ -1308,196 +1314,6 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
     }
 
     return m_net;
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG& randomSeed, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
-{
-    ComputationNetworkBuilder<ElemType> builder(*m_net);
-
-    size_t numHiddenLayers = m_layerSizes.size() - 2;
-
-    ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
-    ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
-    ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
-    ComputationNodePtr ot, it, ft, ct, ht;
-    ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
-    ComputationNodePtr directWIO, directInput, directOutput;
-    ComputationNodePtr bit, bft, bct;
-    ComputationNodePtr streamsxi, streamsxo, streamsxf, streamsxc;
-
-    for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
-    {
-        input = inputObs[sidx];
-#if 0
-            if (inputWeightSparse)
-            {
-                Wxo = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxi = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxf = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-                Wxc = builder.CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            }
-            else
-#endif
-        {
-            Wxo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-            Wxc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
-        }
-        m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale);
-        m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale);
-
-        streamsxi = (streamsxi == nullptr) ? builder.Times(Wxi, input) : builder.Plus(streamsxi, builder.Times(Wxi, input));
-        streamsxf = (streamsxf == nullptr) ? builder.Times(Wxf, input) : builder.Plus(streamsxf, builder.Times(Wxf, input));
-        streamsxc = (streamsxc == nullptr) ? builder.Times(Wxc, input) : builder.Plus(streamsxc, builder.Times(Wxc, input));
-        streamsxo = (streamsxo == nullptr) ? builder.Times(Wxo, input) : builder.Plus(streamsxo, builder.Times(Wxo, input));
-    }
-
-    bo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bo%d", iLayer), outputDim, 1);
-    bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
-    bi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
-    bf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
-    // if (m_forgetGateInitVal > 0)
-    bf->Value().SetValue(m_forgetGateInitVal);
-    // if (m_inputGateInitVal > 0)
-    bi->Value().SetValue(m_inputGateInitVal);
-    // if (m_outputGateInitVal > 0)
-    bo->Value().SetValue(m_outputGateInitVal);
-
-    Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
-    Wci = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCI%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Whf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHF%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
-    Wcf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCF%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Who = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHO%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
-    Wco = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCO%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
-
-    Whc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHC%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale);
-
-    size_t layer1 = outputDim;
-
-    pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-    pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, 1);
-
-    if (m_constInputGateValue)
-    {
-        // it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim);
-        // it->SetParameterUpdateRequired(false);
-        // it->Value().SetValue(m_constInputGateValue);
-        it = nullptr;
-    }
-    else
-        it = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxi,
-                        bi),
-                    builder.Times(Whi, pastValueHI)),
-                builder.DiagTimes(Wci, pastValueCI)),
-            0);
-
-    if (it == nullptr)
-    {
-        bit = builder.Tanh(
-            builder.Plus(
-                streamsxc,
-                builder.Plus(
-                    builder.Times(Whc, pastValueHC),
-                    bc)));
-    }
-    else
-    {
-        bit = builder.ElementTimes(it,
-                                   builder.Tanh(
-                                       builder.Plus(
-                                           streamsxc,
-                                           builder.Plus(
-                                               builder.Times(Whc, pastValueHC),
-                                               bc))));
-    }
-
-    if (m_constForgetGateValue)
-    {
-        ft = nullptr;
-    }
-    else
-        ft = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxf,
-                        bf),
-                    builder.Times(Whf, pastValueHF)),
-                builder.DiagTimes(Wcf, pastValueCF)),
-            0);
-
-    if (ft == nullptr)
-    {
-        bft = pastValueCC;
-    }
-    else
-    {
-        bft = builder.ElementTimes(ft, pastValueCC);
-    }
-
-    ct = builder.Plus(bft, bit);
-
-    if (m_constOutputGateValue)
-    {
-        ot = nullptr;
-    }
-    else
-        ot = ApplyNonlinearFunction(
-            builder.Plus(
-                builder.Plus(
-                    builder.Plus(
-                        streamsxo,
-                        bo),
-                    builder.Times(Who, pastValueHO)),
-                builder.DiagTimes(Wco, ct)),
-            0);
-
-    if (ot == nullptr)
-    {
-        output = builder.Tanh(ct);
-    }
-    else
-    {
-        output = builder.ElementTimes(ot, builder.Tanh(ct));
-    }
-
-    pastValueHO->AttachInputs(output);
-    pastValueHI->AttachInputs(output);
-    pastValueHF->AttachInputs(output);
-    pastValueHC->AttachInputs(output);
-    pastValueCI->AttachInputs(ct);
-    pastValueCF->AttachInputs(ct);
-    pastValueCC->AttachInputs(ct);
-
-    if (m_addDropoutNodes)
-        input = builder.Dropout(output);
-    else
-        input = output;
-    output = input;
-
-    return output;
 }
 
 template <class ElemType>

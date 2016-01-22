@@ -49,7 +49,7 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
     L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
     L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
-    L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'DeprecatedReshape' ; inputs = input /*plus the function args*/ ]\n"
+    L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]\n"
     L"NewReshape(input, dims, beginDim=0, endDim=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]\n"
     L"ReshapeDimension(x, dim, tensorShape) = NewReshape(x, tensorShape, beginDim=dim, endDim=dim + 1) \n"
     L"FlattenDimensions(x, dim, num) = NewReshape(x, 0, beginDim=dim, endDim=dim + num) \n"
@@ -71,7 +71,9 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
 #define BinaryStandardNode(Op, a, b) L## #Op L"(" L## #a L", " L## #b L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L") /*plus the function args*/ ]\n"
 #define TernaryStandardNode(Op, a, b, c) L## #Op L"(" L## #a L", " L## #b L", " L## #c L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L" : " L## #c L") /*plus the function args*/ ]\n"
 #define QuaternaryStandardNode(Op, a, b, c, d) L## #Op L"(" L## #a L", " L## #b L", " L## #c L", " L## #d L", tag='') = new ComputationNode [ operation = '" L## #Op L"' ; inputs = (" L## #a L" : " L## #b L" : " L## #c L" : " L## #d L") /*plus the function args*/ ]\n"
+#ifdef COMING_SOON
     TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores) // TODO: better names
+#endif
     QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
     // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
     BinaryStandardNode(ColumnElementTimes, aVectorSequence, anotherVectorSequence)
@@ -108,7 +110,9 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(RectifiedLinear, z)
     //BinaryStandardNode(RowElementTimesNode)
     BinaryStandardNode(Scale, scalarScalingFactor, matrix)
+#ifdef COMING_SOON
     //BinaryStandardNode(SequenceDecoderNode)
+#endif
     UnaryStandardNode(Sigmoid, z)
     UnaryStandardNode(Softmax, z)
     UnaryStandardNode(Hardmax, z)
@@ -119,6 +123,8 @@ wstring computationNodes = // TODO: use actual TypeName() here? would first need
     UnaryStandardNode(Tanh, z)
     UnaryStandardNode(TimeReverse, vectorSequence)
     BinaryStandardNode(Times, leftMatrix, rightMatrix)
+#ifdef COMING_SOON
     UnaryStandardNode(Transpose, matrix)
-    //BinaryStandardNode(TransposeTimesNode)
+#endif
+    BinaryStandardNode(TransposeTimes, leftMatrix, rightMatrix)
     ;

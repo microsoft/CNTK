@@ -247,33 +247,24 @@ public:
     }
 
 protected:
-    ComputationNetworkPtr BuildSimpleDNN();
 
-    ComputationNetworkPtr BuildSimpleRNN();
-
-    ComputationNetworkPtr BuildClassEntropyNetwork();
-
-    ComputationNodePtr BuildLSTMComponent(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
-
-    ComputationNodePtr BuildLSTMNodeComponent(ULONG& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
-
-    ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG& randomSeed, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
-
-    ComputationNodePtr BuildDirectConnect(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
-
+    ComputationNetworkPtr BuildSimpleDNNFromDescription();
+    ComputationNetworkPtr BuildSimpleRNNFromDescription();
+    ComputationNetworkPtr BuildClassEntropyNetworkFromDescription();
     ComputationNetworkPtr BuildLogBilinearNetworkFromDescription();
-
     ComputationNetworkPtr BuildNeuralProbNetworkFromDescription();
-
     ComputationNetworkPtr BuildLSTMNetworkFromDescription();
-
+#ifdef COMING_SOON
     ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
-
-    ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription();
-
+#endif
+    ComputationNetworkPtr BuildClassLSTMNetworkFromDescription();
     ComputationNetworkPtr BuildConditionalLSTMNetworkFromDescription();
-
     ComputationNetworkPtr BuildNCELSTMNetworkFromDescription();
+
+    // mulitply used components
+    ComputationNodePtr BuildLSTMComponent(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+    ComputationNodePtr BuildLSTMNodeComponent(ULONG& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+    ComputationNodePtr BuildDirectConnect(unsigned long& randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
     // layer is 0 based
     ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
