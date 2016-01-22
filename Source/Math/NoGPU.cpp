@@ -8,6 +8,7 @@
 
 #ifdef CPUONLY
 
+#include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
 #include "MatrixQuantizerGPU.h"

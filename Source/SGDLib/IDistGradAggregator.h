@@ -41,6 +41,7 @@ protected:
 };
 
 #define UsingIDistGradAggregatorMembers           \
+    \
 protected:                                        \
     using IDistGradAggregator<ElemType>::m_mpi;   \
     using IDistGradAggregator<ElemType>::NumProc; \

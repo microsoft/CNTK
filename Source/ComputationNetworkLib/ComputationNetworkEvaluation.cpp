@@ -432,7 +432,7 @@ void ComputationNetwork::CompileNetwork()
     // :)
 
     // STEP: Some final details.
-    ResetEvalTimeStamps();     // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
+    ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
     fprintf(stderr, "\nPost-processing network complete.\n");
     m_isCompiled = true;
@@ -633,7 +633,7 @@ void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNo
 }
 
 // helper to discover dimension changes
-static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr & node)
+static pair<TensorShape, bool> GetDims(const ComputationNodeBasePtr& node)
 {
     return make_pair(node->GetSampleLayout(), node->HasMBLayout());
 }

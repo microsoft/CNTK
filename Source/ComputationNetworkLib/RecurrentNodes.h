@@ -383,14 +383,14 @@ private:
         if (isTimeIteration)
         {
             ForAllBoundaryIntersectingSequences(fr, outSliceLogical, T, [&](const MBLayout::SequenceInfo& toSeqInfo)
-            {
-                // determine FrameRanges for from and to
-                FrameRange frFrom, frTo;
-                DetermineBoundaryFrameRanges(fr, toSeqInfo, fromNode, frFrom, T, frTo);
+                                                {
+                                                    // determine FrameRanges for from and to
+                                                    FrameRange frFrom, frTo;
+                                                    DetermineBoundaryFrameRanges(fr, toSeqInfo, fromNode, frFrom, T, frTo);
 
-                // copy/backprop
-                Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward, +1);
-            });
+                                                    // copy/backprop
+                                                    Propagate(fromNode, fromShape, frFrom, outShape, frTo, isForward, +1);
+                                                });
         }
         // iterating over fixed sample-shape dimensions
         else if (!isTimeIteration && (inSliceLogical.first[m_shiftDim] < 0 || inSliceLogical.second[m_shiftDim] >= T))
@@ -491,8 +491,8 @@ public:
             if (inSliceMain.second[m_shiftDim] > inSliceMain.first[m_shiftDim])
             {
                 Input(0)->MaskMissingGradientColumnsToZero(fr); // zero out gaps, which will leak (note: we really only need to zero out gaps close enough to boundaries)
-                auto from = DataTensorFor(Input(0)->Gradient(),  inShape,  inSliceMain);
-                auto to =   DataTensorFor(          Gradient(), outShape, outSliceMain);
+                auto from = DataTensorFor(Input(0)->Gradient(), inShape, inSliceMain);
+                auto to = DataTensorFor(Gradient(), outShape, outSliceMain);
                 from.AddCopyOf(to);
 
                 // We have now propagated anything from within the logical bounds.
@@ -513,16 +513,16 @@ public:
                 if (isTimeIteration)
                 {
                     ForAllBoundaryIntersectingSequences(fr, outSliceMain /*already clipped*/, T, [&](const MBLayout::SequenceInfo& toSeqInfo)
-                    {
-                        // determine FrameRanges for from and to
-                        FrameRange frTo;
-                        DetermineBoundaryToFrameRange(fr, toSeqInfo, T, frTo);
-                        FrameRange frFrom = frTo.WithTimeOffset(m_fromOffset);
-                        assert((int) frFrom.timeIdxInSeq + frFrom.m_timeOffset >= 0 && (int) frFrom.timeIdxInSeq + frFrom.m_timeOffset + (int) frFrom.m_timeRange <= (int) T);
+                                                        {
+                                                            // determine FrameRanges for from and to
+                                                            FrameRange frTo;
+                                                            DetermineBoundaryToFrameRange(fr, toSeqInfo, T, frTo);
+                                                            FrameRange frFrom = frTo.WithTimeOffset(m_fromOffset);
+                                                            assert((int) frFrom.timeIdxInSeq + frFrom.m_timeOffset >= 0 && (int) frFrom.timeIdxInSeq + frFrom.m_timeOffset + (int) frFrom.m_timeRange <= (int) T);
 
-                        // copy/backprop
-                        Propagate(shared_from_this(), inShape, frFrom, outShape, frTo, /*isForward=*/false, -1 /*subtract*/);
-                    });
+                                                            // copy/backprop
+                                                            Propagate(shared_from_this(), inShape, frFrom, outShape, frTo, /*isForward=*/false, -1 /*subtract*/);
+                                                        });
                 }
             }
         }
@@ -733,7 +733,7 @@ private:
         m_initialActivationValue = initialActivationValue;
         m_timeStep = 1;
         CreateMatrixIfNull(m_value);
-        SetDims(sampleLayout, HasMBLayout()/*false at this point*/);
+        SetDims(sampleLayout, HasMBLayout() /*false at this point*/);
         m_value->SetValue(m_initialActivationValue); // is this needed?
     }
 
@@ -778,7 +778,7 @@ public:
 
         fstream << m_timeStep;
         size_t colsDummy = 0;
-        fstream << GetSampleMatrixNumRows() << colsDummy;   // #rows saved for legacy file format
+        fstream << GetSampleMatrixNumRows() << colsDummy; // #rows saved for legacy file format
 
         fstream << m_initialActivationValue;
     }
@@ -790,11 +790,11 @@ public:
 
         fstream >> m_timeStep;
 
-            size_t rows, colsDummy;
-            fstream >> rows >> colsDummy;
+        size_t rows, colsDummy;
+        fstream >> rows >> colsDummy;
 
-        SetDims(TensorShape(rows), HasMBLayout()/*may be true on reload (roll-back)*/);  // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
-        m_delayedValue.Resize(rows, 0); // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
+        SetDims(TensorShape(rows), HasMBLayout() /*may be true on reload (roll-back)*/); // tensor shape will be overwritten in Validate()  --TODO: We should serialize it here.
+        m_delayedValue.Resize(rows, 0);                                                  // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
         if (modelVersion >= CNTK_MODEL_VERSION_2)
             fstream >> m_initialActivationValue;

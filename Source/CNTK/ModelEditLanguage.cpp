@@ -138,7 +138,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
         auto cn = make_shared<ComputationNetwork>(CPUDEVICE);
-#if 1   // support for a specific kind of legacy format, for the sole purpose of allowing users to convert (=load & save) them
+#if 1 // support for a specific kind of legacy format, for the sole purpose of allowing users to convert (=load & save) them
         if (modelFormat == L"cntk_legacy_no_tensorlib")
         {
             cn->Read<ElemType>(params[1]);

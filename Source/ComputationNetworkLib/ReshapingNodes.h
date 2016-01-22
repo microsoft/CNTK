@@ -252,7 +252,7 @@ public:
             {
                 if ((m_numTargetRows > rows && m_numTargetRows % rows != 0) || // grouping columns
                     (m_numTargetRows < rows && rows % m_numTargetRows != 0))   // splitting columns
-                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int)m_numTargetRows, (int)rows);
+                    InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", NodeName().c_str(), OperationName().c_str(), (int) m_numTargetRows, (int) rows);
                 if (rows * cols != m_numTargetRows * newCols)
                     LogicError("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
             }
@@ -784,8 +784,7 @@ public:
 
         // RowSlice cannot slice tensors.
         // TODO: Create a TensorSlice operation, or just Slice.
-        if (isFinalValidationPass && Input(0)->HasSampleLayout()
-            && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
+        if (isFinalValidationPass && Input(0)->HasSampleLayout() && !Input(0)->GetSampleLayout().IsVectorStoredAsImage() // legacy
             )
             RuntimeError("%ls %ls operation: Input must be a vector, tensor shape [%s] not allowed.", NodeName().c_str(), OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str());
         SetDims(TensorShape(m_sliceHeight), HasMBLayout());
