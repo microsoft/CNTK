@@ -9,12 +9,7 @@
 #include "CommonMatrix.h"
 
 // define IConfigRecord and ConfigParameters as incomplete types, in order to avoid having to include "ScriptableObjects.h" and "Config.h", as that confuses some .CU code
-namespace Microsoft { namespace MSR { namespace ScriptableObjects {
-
-struct IConfigRecord;
-}
-}
-}
+namespace Microsoft { namespace MSR { namespace ScriptableObjects { struct IConfigRecord; }}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -30,4 +25,5 @@ static inline DEVICEID_TYPE DeviceFromConfig(const ConfigRecordType& /*config*/)
 } // tells runtime system to not try to use GPUs
 // TODO: find a way to use CPUDEVICE without a huge include overhead; OK so far since CPUONLY mode is sorta special...
 #endif
+
 } } }
