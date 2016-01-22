@@ -15,9 +15,6 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "CompositeComputationNodes.h"
-#ifndef ENABLE_TENSORVIEW
-#include "EsotericNodes.h" // non-tensor versions have been moved here
-#endif
 
 #pragma warning(disable : 4189) // (we have lots of unused variables to show how variables can be set up)
 
@@ -771,11 +768,7 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
 
             ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
             scalar->Value().SetValue((ElemType) 0.01);
-#ifndef ENABLE_BROADCASTING_ELEMENTTIMES
-            ComputationNodePtr scaled = builder.Scale(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
-#else
             ComputationNodePtr scaled = builder.ElementTimes(scalar, directOutput, msra::strfun::wstrprintf(L"S%d", i));
-#endif
 
             mergedNode = builder.Plus(toNode, scaled);
         }

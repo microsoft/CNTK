@@ -24,8 +24,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#ifdef ENABLE_TENSORVIEW
-
 // -----------------------------------------------------------------------
 // UnaryElementWiseWithOpCodeNodeBase (input) -- base for elementwise unary op
 // where forward // and backward are single ElementWiseOperator opcodes and
@@ -46,8 +44,6 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr, "#NLop%d#\n", (int)opForward); }
-
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input = Input(0)->ValueTensorFor(rank, fr);
@@ -126,7 +122,6 @@ DeclareUnaryElementWiseWithOpCodeNode(Exp, Exp, ElementwiseProduct, true);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine, Cosine, ElementwiseProductWithCosDerivative, false);
 
 #pragma pop_macro("DeclareUnaryTensorOp")
-#endif
 
 // -----------------------------------------------------------------------
 // SoftmaxNodeBase (input) -- shared base of Softmax and LogSoftmax
@@ -362,6 +357,57 @@ private:
 
 template class LogSoftmaxNode<float>;
 template class LogSoftmaxNode<double>;
+
+// -----------------------------------------------------------------------
+// Hardmax(prediction)
+// -----------------------------------------------------------------------
+// the result is a 1 of n coding in which the (r, c) = 1 if row r has max value in column c
+// this node is not differentiable and so cannot be used in the backpropagation
+// TODO: make function value sparse?
+template <class ElemType>
+class HardmaxNode : public SoftmaxNodeBase /*ComputationNode*/<ElemType>
+{
+    typedef SoftmaxNodeBase<ElemType> Base;
+    UsingSoftmaxNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Hardmax";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(HardmaxNode);
+    HardmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
+    {
+        gradient;
+        inputFunctionValues;
+        inputGradientValues;
+        gradientValues;
+        LogicError("Hardmax is not differentiable and is used for evaluation only.");
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
+    {
+        //TODO: temp solution, we need to write a math function specifically for this
+        functionValues.AssignHardmaxOf(inputFunctionValues, true);
+    }
+};
+
+template class HardmaxNode<float>;
+template class HardmaxNode<double>;
 
 // -----------------------------------------------------------------------
 // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
@@ -873,54 +919,4 @@ private:
 template class DropoutNode<float>;
 template class DropoutNode<double>;
 
-// -----------------------------------------------------------------------
-// Hardmax(prediction)
-// -----------------------------------------------------------------------
-// the result is a 1 of n coding in which the (r, c) = 1 if row r has max value in column c
-// this node is not differentiable and so cannot be used in the backpropagation
-// TODO: make function value sparse?
-template <class ElemType>
-class HardmaxNode : public SoftmaxNodeBase /*ComputationNode*/<ElemType>
-{
-    typedef SoftmaxNodeBase<ElemType> Base;
-    UsingSoftmaxNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Hardmax";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(HardmaxNode);
-    HardmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
-    {
-        gradient;
-        inputFunctionValues;
-        inputGradientValues;
-        gradientValues;
-        LogicError("Hardmax is not differentiable and is used for evaluation only.");
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return false;
-    }
-
-    /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
-    {
-        //TODO: temp solution, we need to write a math function specifically for this
-        functionValues.AssignHardmaxOf(inputFunctionValues, true);
-    }
-};
-
-template class HardmaxNode<float>;
-template class HardmaxNode<double>;
 } } }

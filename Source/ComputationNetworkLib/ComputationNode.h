@@ -25,10 +25,6 @@
 #include <sstream>
 #include <iostream>
 
-// remove these following two #defines once the tensor lib works
-#define ENABLE_TENSORVIEW                // if set then tensor lib is used instead of old Matrix implementations, wherever such an implementation exists
-#define ENABLE_BROADCASTING_ELEMENTTIMES // if set then ScaleNode and Row/ColumnElementTimes are redirected to ElementTimes
-
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
 #pragma warning(disable : 4267) // conversion from size_t to int or other types
