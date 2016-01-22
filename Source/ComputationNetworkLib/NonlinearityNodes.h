@@ -407,7 +407,7 @@ public:
             else
             {
                 Matrix<ElemType> sliceUnnormedPriorGradient = Input(0)->GradientFor(fr);
-                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr);    // TODO: use the right MBLayout, then we won't need the special case
+                Matrix<ElemType> slicePrior = DataFor(*m_prior, fr); // TODO: use the right MBLayout, then we won't need the special case
                 BackpropToUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
             }
         }
@@ -546,7 +546,7 @@ public:
 
         size_t numCols = Input(3)->GetSampleMatrixNumCols();
         size_t numComponents = Input(0)->GetSampleMatrixNumRows();
-        size_t colsPrior = Input(0)->GetSampleMatrixNumCols();  // may be 1
+        size_t colsPrior = Input(0)->GetSampleMatrixNumCols(); // may be 1
         size_t featureSize = Input(3)->GetSampleMatrixNumRows();
 
         m_prior->Resize(numComponents, colsPrior);

@@ -204,24 +204,24 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        if (inputIndex == 0)        // left derivative
+        if (inputIndex == 0) // left derivative
         {
             // this potentially computes inner products over time, so we use the Masked- variants
             auto sliceOutputGrad = MaskedGradientFor(fr);
             auto sliceInput1Value = Input(1)->MaskedValueFor(fr);
-            auto & input0Grad = Input(0)->GradientAsMatrix();
+            auto& input0Grad = Input(0)->GradientAsMatrix();
 
             // currently we only support one combination when the input is sparse.
             if (sliceInput1Value.GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
                 Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
-            bool transpose = m_transpose;   // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
+            bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
             if (!transpose)
                 Matrix<ElemType>::MultiplyAndAdd(sliceOutputGrad, false, sliceInput1Value, true, input0Grad);
             else
                 Matrix<ElemType>::MultiplyAndAdd(sliceInput1Value, false, sliceOutputGrad, true, input0Grad);
         }
-        else                        // right derivative
+        else // right derivative
         {
             auto sliceInput1Grad = Input(1)->GradientFor(fr);
             auto sliceOutputGrad = GradientFor(fr);
@@ -264,7 +264,7 @@ public:
 
         // support automatic dimension inference for learnable parameters
         size_t rows0 = Input(0)->GetAsMatrixNumRows(), cols0 = Input(0)->GetAsMatrixNumCols();
-        bool transpose = m_transpose;   // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
+        bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
         if (transpose)
             std::swap(rows0, cols0);
         size_t rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
@@ -281,7 +281,7 @@ public:
             Input(1)->ValidateInferInputDimsFrom(TensorShape(cols0));
             SetDims(TensorShape(rows0), true);
         }
-        else    // multiplying two straight matrices
+        else // multiplying two straight matrices
         {
             size_t cols1 = Input(1)->GetAsMatrixNumCols();
             // infer rows1 as cols0
@@ -293,7 +293,7 @@ public:
         cols0 = m_transpose ? Input(0)->GetAsMatrixNumRows() : Input(0)->GetAsMatrixNumCols();
         rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
         if (isFinalValidationPass && cols0 != rows1)
-            InvalidArgument("The inner matrix dimension in the %ls Times operation does not match (%d vs. %d).", NodeName().c_str(), (int)rows1, (int)cols0);
+            InvalidArgument("The inner matrix dimension in the %ls Times operation does not match (%d vs. %d).", NodeName().c_str(), (int) rows1, (int) cols0);
     }
 
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
@@ -325,6 +325,7 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     {
         return L"Times";
     }
+
 public:
     DeclareConstructorFromConfigWithNumInputs(TimesNode);
     TimesNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -351,6 +352,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
     {
         return L"TransposeTimes";
     }
+
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -497,7 +499,7 @@ public:
             Input(1)->ValidateInferInputDimsFrom(TensorShape(rows0));
             SetDims(TensorShape(rows0), true);
         }
-        else    // multiplying two straight matrices
+        else // multiplying two straight matrices
         {
             size_t cols1 = Input(1)->GetAsMatrixNumCols();
             // infer rows1 as rows0
@@ -509,7 +511,7 @@ public:
         rows0 = Input(0)->GetAsMatrixNumRows();
         rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
         if (isFinalValidationPass && rows0 != rows1)
-            InvalidArgument("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int)rows1, (int)rows0);
+            InvalidArgument("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int) rows1, (int) rows0);
         size_t cols0 = Input(0)->GetAsMatrixNumCols();
         if (isFinalValidationPass && cols0 != 1)
             InvalidArgument("The first matrix should be a column vector representing the diagonal of a square matrix in the DiagTimes operation.");
@@ -659,7 +661,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         auto sliceInputValue = Input(0)->ValueFor(fr);
-        auto sliceOutputValue = ValueFor(fr);   // row vector
+        auto sliceOutputValue = ValueFor(fr); // row vector
 
         Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
     }
@@ -700,8 +702,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        auto & inputGradientValues = Input(0)->GradientAsMatrix();
-        auto & gradientValues = GradientAsMatrix();
+        auto& inputGradientValues = Input(0)->GradientAsMatrix();
+        auto& gradientValues = GradientAsMatrix();
 #if DUMPOUTPUT
         gradientValues.Print("Gradient-in");
         inputGradientValues.Print("child Gradient-in/out");
@@ -805,7 +807,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix());  // TODO: use tensor lib; this is a stride operation
+        Input(0)->ValueAsMatrix().AssignDiagonalValuesTo(ValueAsMatrix()); // TODO: use tensor lib; this is a stride operation
 #if NANCHECK
         Value().HasNan("Diagonal");
 #endif
@@ -813,8 +815,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        auto & inputGradientValues = Input(0)->GradientAsMatrix();
-        auto & gradientValues = GradientAsMatrix();
+        auto& inputGradientValues = Input(0)->GradientAsMatrix();
+        auto& gradientValues = GradientAsMatrix();
 
         // BUGBUG: This should use the memshare mechanism.
         // TODO: use tensor lib, then this will be easy, no memsharing needed
@@ -873,9 +875,9 @@ public:
     {
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
         // temp, rightTerm, leftTerm - temporary matrices
-        if (inputIndex == 0)    // left derivative
+        if (inputIndex == 0) // left derivative
             m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
-        else                    // right derivative
+        else // right derivative
             m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
 
         m_temp->ElementMultiplyWith(ValueFor(fr));
@@ -1226,8 +1228,7 @@ public:
         ValidateInferBinaryInputDims();
 
         if (isFinalValidationPass &&
-            (Input(0)->GetSampleMatrixNumRows() != Input(1)->GetSampleMatrixNumRows()
-             || Input(0)->GetMBLayout() != Input(1)->GetMBLayout()))
+            (Input(0)->GetSampleMatrixNumRows() != Input(1)->GetSampleMatrixNumRows() || Input(0)->GetMBLayout() != Input(1)->GetMBLayout()))
         {
             LogicError("The tensor dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
         }

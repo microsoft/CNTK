@@ -822,7 +822,6 @@ public:
     }
 
 private:
-
     void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
     {
         Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
@@ -869,7 +868,6 @@ private:
     }
 
 public:
-
     virtual void UpdateFunctionMBSize() override
     {
         // TODO: Resize temp matrices here (not doing so does not really fail since for full matrices, class Matrix will resize by itself)
@@ -882,7 +880,7 @@ public:
             LogicError("ClassBasedCrossEntropyWithSoftmax (ForwardPropNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
         // TODO: Get the label matrix into location=Both state.
 
-        auto & functionValues = Value();
+        auto& functionValues = Value();
 
         const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows(); // hdSize
         assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
@@ -943,7 +941,7 @@ public:
                 Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
 
                 // buffer to hold the class-conditional distribution
-                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd);        // TODO: declare these outside of the loop to avoid the malloc
+                Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd); // TODO: declare these outside of the loop to avoid the malloc
                 Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
                 Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
@@ -1120,7 +1118,7 @@ public:
             for (size_t i = 0; i < nS; i++) // process all sequences one by one
             {
                 FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
-                auto & gradient = Input(2)->GradientAsMatrix();
+                auto& gradient = Input(2)->GradientAsMatrix();
                 TransGrdCompute(Input(0)->ValueFor(sequenceRange),
                                 DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
                                 DataWithMBLayoutFor(mBeta, sequenceRange, Input(0)->GetMBLayout()),
@@ -1702,7 +1700,7 @@ public:
 
             if (isFinalValidationPass &&
                 !(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
-                 (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(0)->HasMBLayout())))
+                  (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(0)->HasMBLayout())))
             {
                 LogicError("The Matrix dimensions of the second argument weights the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
             }

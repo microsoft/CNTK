@@ -40,6 +40,31 @@ MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+class MATH_API TracingGPUMemoryAllocator
+{
+private:
+    static int m_traceLevel;
+
+public:
+    static void SetTraceLevel(int traceLevel);
+    static bool IsTraceEnabled();
+
+    template <typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numRows, size_t numCols);
+
+    template <typename AllocatedElemType>
+    static AllocatedElemType* Allocate(int deviceId, size_t numElements);
+
+    template <typename AllocatedElemType>
+    static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
+
+private:
+    template <typename AllocatedElemType>
+    static AllocatedElemType* AllocateNoTrace(int deviceId, size_t numElements);
+
+    static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
+};
+
 // -----------------------------------------------------------------------
 // ElementWiseOperator -- This enum represents which function to apply.
 // This is shared between all matrix types and tensors.
@@ -135,7 +160,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative);                       \
+    Macro(ElementwiseProductWithCosDerivative); \
 //Macro(Index);
 
 #define ForAllTernaryOps(Macro) \

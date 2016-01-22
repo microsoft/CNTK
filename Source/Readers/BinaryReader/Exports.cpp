@@ -43,6 +43,4 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 {
     GetWriter(pwriter);
 }
-}
-}
-}
+} } }

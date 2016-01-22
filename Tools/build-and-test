@@ -7,7 +7,7 @@ CLEAN_AFTER=0
 CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
 FLAVORS="debug:release"
-TARGETS="cpu:gpu:1bitsgd"
+TARGETS="cpu:gpu"
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
