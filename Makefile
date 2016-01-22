@@ -462,7 +462,7 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
-	$(SOURCEDIR)/ActionsLib/EsotericActions.cpp \
+	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \

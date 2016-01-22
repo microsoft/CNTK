@@ -42,9 +42,7 @@ enum RNNTYPE
     CLASSLSTM = 64,
     NCELSTM = 128,
     CLSTM = 256,
-    RCRF = 512,
-    UNIDIRECTIONALLSTM = 19,
-    BIDIRECTIONALLSTM = 20
+    RCRF = 512
 };
 
 enum class TrainingCriterion : int // TODO: camel-case these
@@ -188,12 +186,6 @@ public:
             m_rnnType = CLSTM;
         else if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
             m_rnnType = RCRF;
-        else if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
-                 std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
-            m_rnnType = UNIDIRECTIONALLSTM;
-        else if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
-                 std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
-            m_rnnType = BIDIRECTIONALLSTM;
         else
             InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
     }
@@ -276,10 +268,6 @@ protected:
     ComputationNetworkPtr BuildLSTMNetworkFromDescription();
 
     ComputationNetworkPtr BuildSeqTrnLSTMNetworkFromDescription();
-
-    ComputationNetworkPtr BuildUnidirectionalLSTMNetworksFromDescription();
-
-    ComputationNetworkPtr BuildBiDirectionalLSTMNetworksFromDescription();
 
     ComputationNetworkPtr BuildCLASSLSTMNetworkFromDescription();
 
