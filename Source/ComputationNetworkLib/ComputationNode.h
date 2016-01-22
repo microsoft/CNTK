@@ -475,7 +475,6 @@ class ComputationNodeBase : public IComputationNode,
         {
             VerifyDims(node->GetSampleLayout(), node->HasMBLayout());
         }
-        virtual void VerifyValueDims() const = 0; // verify that m_value dimensions match ours
 
     TensorShape GetTensorShape(size_t rank) const; // form the actual tensor that describes the full object
 protected:
@@ -1182,15 +1181,6 @@ template <class ElemType>
 
         // update temporary variables of a node to match MBLayout
         virtual void UpdateFunctionMBSize() override { }
-        virtual void VerifyValueDims() const override final
-        {
-            if (!m_value)
-                return;
-            auto f_numRows = m_value->GetNumRows(); // variables for easy inspection in debugger
-            auto f_numCols = m_value->GetNumCols();
-            if (f_numRows != GetSampleMatrixNumRows() || f_numCols != GetSampleMatrixNumCols())
-                LogicError("VerifyValueDims: m_value out of sync with GetSampleMatrixNumRows()/GetSampleMatrixNumCols()");
-        }
 
         void ValidateInferInputDimsFrom(const TensorShape & otherShape);
 
@@ -1450,7 +1440,7 @@ public:
             UpdateFunctionMBSize();
 
             // and make sure dimensions are what we expect
-            VerifyValueDims();
+            VerifyDataSize(Value());
         }
 
 #ifdef _DEBUG
@@ -1777,10 +1767,6 @@ template <class ElemType>
         NOT_IMPLEMENTED;
     }
     virtual void UpdateFunctionMBSize() override
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual void VerifyValueDims() const override
     {
         NOT_IMPLEMENTED;
     }
