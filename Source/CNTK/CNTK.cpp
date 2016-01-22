@@ -23,10 +23,8 @@
 #include "SGD.h"
 #include "MPIWrapper.h"
 #include "Config.h"
-#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
-#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ProgressTracing.h"
 #include "fileutil.h"
@@ -240,10 +238,6 @@ void DoCommands(const ConfigParameters& config)
             {
                 DoEval<ElemType>(commandParams);
             }
-            else if (action[j] == "testunroll")
-            {
-                DoEvalUnroll<ElemType>(commandParams);
-            }
             else if (action[j] == "edit")
             {
                 DoEdit<ElemType>(commandParams);
@@ -283,22 +277,6 @@ void DoCommands(const ConfigParameters& config)
             else if (action[j] == "SVD")
             {
                 DoParameterSVD<ElemType>(commandParams);
-            }
-            else if (action[j] == "trainEncoderDecoder")
-            {
-                DoEncoderDecoder<ElemType>(commandParams);
-            }
-            else if (action[j] == "testEncoderDecoder")
-            {
-                DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
-            }
-            else if (action[j] == "trainBidirectionEncoderDecoder")
-            {
-                DoBidirectionEncoderDecoder<ElemType>(commandParams);
-            }
-            else if (action[j] == "beamSearch")
-            {
-                DoBeamSearchDecoding<ElemType>(commandParams);
             }
             else
             {

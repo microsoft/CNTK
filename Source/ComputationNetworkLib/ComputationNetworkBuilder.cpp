@@ -100,8 +100,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
         return New<NegateNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(NoiseContrastiveEstimationNode))
         return New<NoiseContrastiveEstimationNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(PairNetworkNode))
-        return New<PairNetworkNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ParallelNode))
         return New<ParallelNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PastValueNode))
@@ -294,12 +292,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePairNetworkNode(const std::wstring& inputName, const size_t rows, const size_t cols)
-{
-    return net.AddNodeToNetWithElemType(New<PairNetworkNode<ElemType>>(net.GetDeviceId(), inputName, rows, cols));
-}
-
-template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring& nodeName,
                                                                                                  const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                                                                                  const size_t horizontalSubsample, const size_t verticalSubsample,
@@ -341,17 +333,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 
 // The following functions create nodes and link them to the network and their inputs.
 // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PairNetwork(const ComputationNodePtr& a, const std::wstring nodeName)
-{
-    if (net.GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-    {
-        fprintf(stderr, "PairNetwork: asked to pair a node with name %ls in another network. However, this network has already a node with the same name. Should avoid this case.\n", a->NodeName().c_str());
-        RuntimeError("PairNetwork: asked to pair a node with name in another network. However, this network has already a node with the same name. Should avoid this case.\n");
-    }
-    return net.AddNodeToNetAndAttachInputs(New<PairNetworkNode<ElemType>>(net.GetDeviceId(), nodeName), a);
-}
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convolution(const ComputationNodePtr weight,

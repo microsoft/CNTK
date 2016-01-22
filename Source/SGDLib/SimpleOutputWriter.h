@@ -8,6 +8,7 @@
 #include "DataReader.h"
 #include "ComputationNetwork.h"
 #include "DataReaderHelpers.h"
+#include "Helpers.h"
 #include "fileutil.h"
 #include <vector>
 #include <string>

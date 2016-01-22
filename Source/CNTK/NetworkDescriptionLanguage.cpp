@@ -280,8 +280,6 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LSTMNode), L"LSTM"))
         ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(PairNetworkNode), L"PairNetwork"))
-        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(StrideTimesNode), L"StrideTimes"))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode)))

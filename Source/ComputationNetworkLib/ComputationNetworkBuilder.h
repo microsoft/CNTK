@@ -51,7 +51,6 @@ public:
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const size_t rows);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout);
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout);
-    ComputationNodePtr CreatePairNetworkNode(const std::wstring& inputName, const size_t rows, const size_t cols);
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
@@ -60,7 +59,6 @@ public:
     ComputationNodePtr CreateComputationNode(const std::wstring& nodeType, const std::wstring& nodeName);
     // The following functions create nodes and link them to the network and their inputs.
     // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
-    ComputationNodePtr PairNetwork(const ComputationNodePtr& a, const std::wstring nodeName = L"");
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                    const ComputationNodePtr inputValues,
                                    const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,

@@ -10,7 +10,6 @@
 #include "CompositeComputationNodes.h" // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
-#include "IComputationNetBuilder.h"
 #include "ScriptableObjects.h"
 #include <vector>
 #include <string>
