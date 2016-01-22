@@ -38,13 +38,13 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using B::m_matrixName; // without this, base members would require to use thi-> in GCC
 public:
     CPUMatrix();
-    CPUMatrix(FILE* f, const char* matrixName); //matrixName is used to verify that correct matrix is read.
+    CPUMatrix(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
-    CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      //copy constructor, deep copy
-    CPUMatrix<ElemType>& operator=(const CPUMatrix<ElemType>& deepCopyFrom); //assignment operator, deep copy
-    CPUMatrix(CPUMatrix<ElemType>&& moveFrom);                               //move constructor, shallow copy
-    CPUMatrix<ElemType>& operator=(CPUMatrix<ElemType>&& moveFrom);          //move assignment operator, shallow copy
+    CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
+    CPUMatrix<ElemType>& operator=(const CPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
+    CPUMatrix(CPUMatrix<ElemType>&& moveFrom);                               // move constructor, shallow copy
+    CPUMatrix<ElemType>& operator=(CPUMatrix<ElemType>&& moveFrom);          // move assignment operator, shallow copy
 
     ~CPUMatrix();
 
@@ -85,9 +85,9 @@ public:
                      const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
-    void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); //by default we only reallocate if need to grow
-    ElemType* CopyToArray() const;                                                 //allocated by the callee but need to be deleted by the caller
-    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    //allocated by the callee but need to be deleted by the caller
+    void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    ElemType* CopyToArray() const;                                                 // allocated by the callee but need to be deleted by the caller
+    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
     inline ElemType& operator()(const size_t row, const size_t col)
@@ -150,8 +150,8 @@ public:
     CPUMatrix<ElemType>& operator/=(ElemType alpha);
     CPUMatrix<ElemType> operator/(ElemType alpha) const;
 
-    CPUMatrix<ElemType>& operator^=(ElemType alpha);     //element-wise power
-    CPUMatrix<ElemType> operator^(ElemType alpha) const; //element-wise power
+    CPUMatrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
+    CPUMatrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     CPUMatrix<ElemType>& AssignElementPowerOf(const CPUMatrix<ElemType>& a, const ElemType power);
 
     CPUMatrix<ElemType>& ElementMultiplyWith(const CPUMatrix<ElemType>& a);
@@ -188,7 +188,7 @@ public:
     CPUMatrix<ElemType>& InplaceHardmax(const bool isColWise);
     CPUMatrix<ElemType>& AssignHardmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise);
 
-    //sequence training
+    // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
     CPUMatrix<ElemType>& InplaceSqrt();
@@ -221,8 +221,8 @@ public:
 
     CPUMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
-    ElemType SumOfAbsElements() const; //sum of all abs(elements)
-    ElemType SumOfElements() const;    //sum of all elements
+    ElemType SumOfAbsElements() const; // sum of all abs(elements)
+    ElemType SumOfElements() const;    // sum of all elements
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
@@ -259,14 +259,14 @@ public:
 
     ElemType MatrixNormInf() const;
     ElemType MatrixNorm1() const;
-    ElemType MatrixNorm0() const; //number of non-zero elemets
+    ElemType MatrixNorm0() const; // number of non-zero elemets
     CPUMatrix<ElemType>& AssignSignOf(const CPUMatrix<ElemType>& a);
     CPUMatrix<ElemType>& AddSignOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     CPUMatrix<ElemType>& AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
     CPUMatrix<ElemType>& AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-    //CPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+    // CPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
     CPUMatrix<ElemType>& AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
@@ -282,10 +282,10 @@ public:
     CPUMatrix<ElemType>& AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, bool searchInCol = false);
 
     void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-    void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
+    void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
 
-    void ReadFromFile(FILE* f, const char* matrixName); //matrixName is used to verify that correct matrix is read.
-    void WriteToFile(FILE* f, const char* matrixName);  //matrixName is used to verify that correct matrix is read.
+    void ReadFromFile(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
+    void WriteToFile(FILE* f, const char* matrixName);  // matrixName is used to verify that correct matrix is read.
 
     CPUMatrix<ElemType>& AssignPackedConvolutionInput(const CPUMatrix<ElemType>& inputSubBatch,
                                                       const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
@@ -319,7 +319,7 @@ public:
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 
-    //static BLAS functions
+    // static BLAS functions
     static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
@@ -331,17 +331,17 @@ public:
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
-    static void AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);    //alpha must be 1X1
-    static void AssignScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c); //alpha must be 1X1
+    static void AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);    // alpha must be 1X1
+    static void AssignScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c); // alpha must be 1X1
 
     static void AddElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
-    //static void AddLogElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
+    // static void AddLogElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
     static void AssignElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
 
     static void MinusOneAt(CPUMatrix<ElemType>& c, const size_t position);
 
     static void Scale(ElemType alpha, CPUMatrix<ElemType>& a);
-    static void Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a); //In this case Matrix alpha must be 1x1
+    static void Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a); // In this case Matrix alpha must be 1x1
     static void Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
     static void InnerProduct(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
@@ -454,7 +454,7 @@ protected:
     size_t LocateColumn(const size_t j) const;
 
 private:
-    void ZeroInit(); //should only be used by constructors.
+    void ZeroInit(); // should only be used by constructors.
     void Clear();
 };
 

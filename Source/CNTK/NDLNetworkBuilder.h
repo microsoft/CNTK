@@ -214,7 +214,7 @@ public:
 
     virtual ComputationNetworkPtr BuildNetworkFromDescription(ComputationNetwork* = nullptr)
     {
-        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        if (m_net->GetTotalNumberOfNodes() < 1) // not built yet
             LoadNetworkFromConfig(m_networkConfig);
         else
             m_net->ResetEvalTimeStamps();

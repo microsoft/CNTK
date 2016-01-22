@@ -268,7 +268,7 @@ public:
         : shared_ptr<Object>(p), failfn(failfn), expressionName(expressionName)
     {
     }
-    //ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const std::wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
+    // ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const std::wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
     static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> &f, const function<void(const std::wstring &)> &failfn, const std::wstring &expressionName)
     {
         return ConfigValuePtr(make_shared<Thunk>(f, failfn), failfn, expressionName);
@@ -382,7 +382,7 @@ public:
         // TODO: factor these lines into a separate function
         // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
         EnsureIsResolved();
-        //const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
+        // const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
         const auto p = dynamic_cast<C *>(get());
         if (p == nullptr) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
             Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
@@ -606,7 +606,7 @@ public:
         : firstIndex(firstIndex), values(move(values))
     {
     }
-    //ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
+    // ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
     pair<int, int> GetIndexRange() const
     {
         return make_pair(firstIndex, firstIndex + (int) values.size() - 1);

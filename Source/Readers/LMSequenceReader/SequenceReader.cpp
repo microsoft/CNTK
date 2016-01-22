@@ -126,11 +126,11 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
     }
     LabelInfo& labelInfo = m_labelInfo[nextWord ? labelInfoIn : labelInfoOut];
 
-    //if (m_labelIdData.size() > epochSample)
-    //{
+    // if (m_labelIdData.size() > epochSample)
+    // {
     //    m_labelIdData.resize(epochSample);
     //    m_labelData.resize(epochSample*labelInfo.dim);
-    //}
+    // }
 
     // see how many we already read
     int sequencesRead = 0;
@@ -177,7 +177,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     m_sequence.push_back(epochSample);
                     if ((m_sequence.size() == 1 ? epochSample : epochSample - m_sequence[m_sequence.size() - 2]) > m_mbSize)
                     {
-                        //fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        // fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
 
                         std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", (int) epochSample);
@@ -335,7 +335,7 @@ void SequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                //fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                // fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
                 std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
@@ -414,11 +414,11 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     // NOTE: probably want to re-enable at some point
 
     // initialize the cache
-    //InitCache(readerConfig);
-    //m_readerConfig = readerConfig;
+    // InitCache(readerConfig);
+    // m_readerConfig = readerConfig;
 
-    //// if we have a cache, no need to parse the test files...
-    //if (m_cachingReader)
+    // // if we have a cache, no need to parse the test files...
+    // if (m_cachingReader)
     //    return;
 
     std::vector<std::wstring> features;
@@ -553,7 +553,7 @@ void SequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
     if (m_traceLevel > 0)
     {
         fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
-        //std::wcerr << "reading sequence file" << m_file.c_str() << endl;
+        // std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -599,7 +599,7 @@ void SequenceReader<ElemType>::ReadWord(char* word, FILE* fin)
 
         if (a >= MAX_STRING)
         {
-            //printf("Too long word found!\n");   //truncate too long words
+            // printf("Too long word found!\n");   // truncate too long words
             a--;
         }
     }
@@ -1055,7 +1055,7 @@ void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemTy
     m_id2Prob->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     m_id2Prob->Resize(nwords, 1, false);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = m_id2Prob->GetDeviceId();
     m_id2Prob->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     for (size_t j = 0; j < nwords; j++)
@@ -1084,7 +1084,7 @@ void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<Ele
     m_id2classLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     m_id2classLocal->Resize(nwords, 1, false);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = m_id2classLocal->GetDeviceId();
     m_id2classLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     for (size_t j = 0; j < nwords; j++)
@@ -1112,7 +1112,7 @@ void SequenceReader<ElemType>::GetClassInfo()
     m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     m_classInfoLocal->Resize(2, class_size);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = m_classInfoLocal->GetDeviceId();
     m_classInfoLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
 
@@ -1372,11 +1372,11 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     // NOTE: probably want to re-enable at some point
 
     // initialize the cache
-    //InitCache(readerConfig);
-    //m_readerConfig = readerConfig;
+    // InitCache(readerConfig);
+    // m_readerConfig = readerConfig;
 
-    //// if we have a cache, no need to parse the test files...
-    //if (m_cachingReader)
+    // // if we have a cache, no need to parse the test files...
+    // if (m_cachingReader)
     //    return;
 
     std::vector<std::wstring> features;
@@ -1398,7 +1398,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
         RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
     const ConfigRecordType& featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
-    wstring mode = featureConfig(L"mode", L"class"); //class, softmax, nce
+    wstring mode = featureConfig(L"mode", L"class"); // class, softmax, nce
     std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
 
     if (mode == L"nce")
@@ -1539,12 +1539,12 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
         }
         else
         {
-            ; //readerConfig(L"randomize");
+            ; // readerConfig(L"randomize");
         }
     }
     else
     {
-        ; //randomizeAuto;
+        ; // randomizeAuto;
     }
 
     // The input data is a combination of the label Data and extra feature dims together
@@ -1555,7 +1555,7 @@ void BatchSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& reade
     if (m_traceLevel > 0)
     {
         fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        //std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+        // std::wcerr << "reading sequence file " << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1869,7 +1869,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     if (actualmbsize > 0)
     {
-        //loop through all the samples
+        // loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
 
         // create MBLayout
@@ -1917,8 +1917,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.SetValue(idx, j, (ElemType) 1);
 
             // actual time position
-            //size_t timeIdx = (size_t)j / mToProcess.size();
-            //size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
+            // size_t timeIdx = (size_t)j / mToProcess.size();
+            // size_t uttIdx = (size_t)fmod(j, mToProcess.size()); // parallel-sequence index
         }
 
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
@@ -2001,7 +2001,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
             // BUGBUG: This is currently not functional. Nothing in here marks gaps, nor sets any end flags.
             uttPos;
             LogicError("BatchSequenceReader::SetSentenceBegin(): Disabled because this implementation seems out of date w.r.t. setting end and gap flags.");
-            //m_pMBLayout->SetWithoutOr(uttPos, timePos, MinibatchPackingFlags::SequenceStart);   // TODO: can we use Set() (with OR)?
+            // m_pMBLayout->SetWithoutOr(uttPos, timePos, MinibatchPackingFlags::SequenceStart);   // TODO: can we use Set() (with OR)?
         }
     }
 }
@@ -2073,7 +2073,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else
         labels->Resize(1, actualmbsize, false);
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     ElemType epsilon = (ElemType) 1e-6; // avoid all zero, although this is almost impossible.

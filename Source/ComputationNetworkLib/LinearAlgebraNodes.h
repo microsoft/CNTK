@@ -59,7 +59,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
+        // static int c = 0; if (c++ == 0) { fprintf(stderr, "#PLUS#\n"); }
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
@@ -515,7 +515,7 @@ public:
             *node->m_rightGradient = *m_rightGradient;
         }
     }
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -523,7 +523,7 @@ public:
         RequestMatrixFromPool(m_rightGradient, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -922,7 +922,7 @@ public:
             *node->m_temp = *m_temp;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -930,7 +930,7 @@ public:
         RequestMatrixFromPool(m_invNorm1, matrixPool);
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -939,7 +939,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -989,14 +989,14 @@ public:
     {
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (inputIndex == 0) //left derivative
+        if (inputIndex == 0) // left derivative
         {
             Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
             Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
 
             sliceInput0Grad.AddColumnReshapeProductOf(sliceOutputGrad, sliceInput1Value, false);
         }
-        else //right derivative
+        else // right derivative
         {
             Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
             Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
@@ -1122,7 +1122,7 @@ public:
         }
         else // right part
         {
-            invNormSquare.AssignElementProductOf(invNorm1, invNorm1); //this matrix should be save and unchanged. It should not be changed
+            invNormSquare.AssignElementProductOf(invNorm1, invNorm1); // this matrix should be save and unchanged. It should not be changed
 
             for (long m = 0; m < negNumber + 1; m++)
             {
@@ -1153,7 +1153,7 @@ public:
                     size_t currshift = (m + shift - 1) % numCols;
                     size_t reverseshift = numCols - currshift;
 
-                    leftTerm.AssignElementProductOfWithShift(invNormSquare, temp, reverseshift); //use leftTerm as a temp variable here
+                    leftTerm.AssignElementProductOfWithShift(invNormSquare, temp, reverseshift); // use leftTerm as a temp variable here
 
                     Matrix<ElemType>::ConductRowElementMultiplyWithShift(leftTerm, in1, rightTerm, 0, true);
 
@@ -1240,7 +1240,7 @@ public:
             *node->m_temp = *m_temp;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -1250,7 +1250,7 @@ public:
         RequestMatrixFromPool(m_rightTerm, matrixPool);
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
@@ -1258,7 +1258,7 @@ public:
         RequestMatrixFromPool(m_temp, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);

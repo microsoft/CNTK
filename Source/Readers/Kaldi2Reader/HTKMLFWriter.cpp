@@ -97,7 +97,7 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
             wstringstream ss(line);
             std::wstring first_col;
             ss >> first_col;
-            filelist.push_back(first_col); //LEOTODO
+            filelist.push_back(first_col); // LEOTODO
             n++;
         }
 
@@ -138,7 +138,7 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
 
     if (kaldicmd.size() == 0)
     {
-        //std::map<std::wstring, void*, nocase_compare>::iterator iter;
+        // std::map<std::wstring, void*, nocase_compare>::iterator iter;
         if (outputFileIndex >= outputFiles[0].size())
             RuntimeError("index for output scp file out of range...");
 
@@ -172,8 +172,8 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
             wstring outFile = outputFiles[id][outputFileIndex];
             string wfea = "ark:" + msra::strfun::utf8(outFile);
 
-            //wfea = msra::strfun::utf8(kaldicmd[i]);
-            //feature_writer[i].Open(wfea);
+            // wfea = msra::strfun::utf8(kaldicmd[i]);
+            // feature_writer[i].Open(wfea);
             kaldi::Matrix<kaldi::BaseFloat> nnet_out_host;
 
             assert(outputData.GetNumRows() == dim);

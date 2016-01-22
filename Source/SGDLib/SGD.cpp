@@ -188,11 +188,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
-    //get hmm file for sequence training
+    // get hmm file for sequence training
     bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
     if (isSequenceTrainingCriterion)
     {
-        //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        // SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
         auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
         auto hmm = node->gethmm();
         trainSetDataReader->GetHmmData(hmm);
@@ -262,7 +262,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
     }
-    //precompute mean and invStdDev nodes and save initial model
+    // precompute mean and invStdDev nodes and save initial model
     if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
     {
         // Synchronize all ranks before writing the model to ensure that
@@ -1367,8 +1367,8 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
         fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
     }
 
-    //compute
-    //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
+    // compute
+    // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
     // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
     // [1/12/2015 erw] to support large dataset, we usually partition whole dataset into several epoch's,
     // so we need to use all the data to do precomputing
@@ -1512,7 +1512,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
 
     bestLearnRatePerSample = learnRatePerSample;
 
-    //grid search for the first m_numBestSearchEpoch  epochs
+    // grid search for the first m_numBestSearchEpoch  epochs
     if (epochNumber < m_numBestSearchEpoch)
     {
         double leftLearnRatePerSample = 0.01 / m_mbSize[epochNumber];
@@ -1866,7 +1866,7 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         if (outputNodes.empty())
             LogicError("no output node was found.");
 
-        //net->SetActualMiniBatchSizeFromFeatures();
+        // net->SetActualMiniBatchSizeFromFeatures();
         trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtr());
         net->VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
         net->ForwardProp(outputNodes[0]); // Only evaluate the first output
@@ -1940,13 +1940,13 @@ template <class ElemType>
 bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
                                              float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
 {
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     // the current strategy is that after each minibatch, we will sync between processors
     // to decide whether a sync need to be performed. This is definitely not optimal,
     // which we will fix it later.
 
     // TODO: the way we handle timer is not very good
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     static bool first = true;
     static Timer MAtimer;
     if (first)
@@ -1990,9 +1990,9 @@ size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::l
         return nSamplesSinceLastSync;
     }
 
-    //========================================
+    // ========================================
     // Sec. 1 calculate factor
-    //========================================
+    // ========================================
     float factor = 0;
     int nTotalSamples = nSamplesSinceLastSync;
     g_mpi->AllReduce(&nTotalSamples, 1);
@@ -2006,7 +2006,7 @@ size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::l
         factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples;
     }
 
-    //========================================
+    // ========================================
     // Sec. 2 sync models based on factor
     // Note: this is suboptimal at the moment:
     //       we do the averaging for each node in a sequence manner, i.e.,
@@ -2015,7 +2015,7 @@ size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::l
     //          (node1) GPU ->  CPU  ->  MPI_AllReduce
     //          (node2)         GPU  ->  CPU            -> MPI_AllReduce
     //          (node3)                  GPU            -> CPU              -> MPI_AllReduce
-    //========================================
+    // ========================================
     for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
     {
         ComputationNodeBasePtr pNode = *iter;
@@ -2068,7 +2068,7 @@ template <class ElemType>
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
 
-    //clipping gradients to prevent outliers
+    // clipping gradients to prevent outliers
     sgd->ClipGradient(gradientValues, actualMBSize);
 
     GradientsUpdateType adpType = sgd->GradUpdateType();
@@ -2099,7 +2099,7 @@ template <class ElemType>
              (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
              (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
     {
-        //rmsprop for sparse is not implemented yet, delegate it with adagrad
+        // rmsprop for sparse is not implemented yet, delegate it with adagrad
 
         double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
@@ -2371,8 +2371,8 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
                 break;
             }
 
-            //double mbEvalCri =
-            //criterionNode should be a scalar
+            // double mbEvalCri =
+            // criterionNode should be a scalar
             // TODO: why is this value not used?
             criterionNodes[npos]->Get00Element();
             double eGradErr = node->Gradient()(irow, icol);
@@ -2386,7 +2386,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
 
             node->BumpEvalTimeStamp();
             net->ForwardProp(criterionNodes[npos]);
-            //criterionNode should be a scalar
+            // criterionNode should be a scalar
 
             double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
@@ -2497,7 +2497,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_reduceLearnRateIfImproveLessThan = configAALR(L"reduceLearnRateIfImproveLessThan", 0.0);
     m_continueReduce = configAALR(L"continueReduce", false);
     m_learnRateAdjustInterval = configAALR(L"learnRateAdjustInterval", (size_t) 1);
-    m_learnRateAdjustInterval = max((size_t) 1, m_learnRateAdjustInterval); //minimum interval is 1 epoch
+    m_learnRateAdjustInterval = max((size_t) 1, m_learnRateAdjustInterval); // minimum interval is 1 epoch
     m_learnRateDecreaseFactor = configAALR(L"learnRateDecreaseFactor", 0.618);
     m_increaseLearnRateIfImproveMoreThan = configAALR(L"increaseLearnRateIfImproveMoreThan", numeric_limits<double>::infinity());
     m_learnRateIncreaseFactor = configAALR(L"learnRateIncreaseFactor", 1.382);

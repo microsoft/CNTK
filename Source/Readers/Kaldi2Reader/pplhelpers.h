@@ -55,12 +55,12 @@ void parallel_for(size_t begin, size_t end, size_t step, const FUNCTION& f)
     const size_t cores = ppl_cores;
     if (cores > 1) // parallel computation (regular)
     {
-        //fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on %d cores\n", nblocks, nfwd, determine_num_cores());
+        // fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on %d cores\n", nblocks, nfwd, determine_num_cores());
         Concurrency::parallel_for(begin, end, step, f);
     }
     else // for comparison: single-threaded (this also documents what the above means)
     {
-        //fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on a single thread\n", nblocks, nfwd);
+        // fprintf (stderr, "foreach_index_block: computing %d blocks of %d frames on a single thread\n", nblocks, nfwd);
         for (size_t j0 = begin; j0 < end; j0 += step)
             f(j0);
     }

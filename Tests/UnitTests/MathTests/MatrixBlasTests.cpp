@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
 BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
 {
-    //Part 1: Multiply with identity matrix
+    // Part 1: Multiply with identity matrix
     SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
     SingleMatrix matrixB = SingleMatrix::Eye(23);
     SingleMatrix matrixC = matrixA * matrixB;
@@ -40,7 +40,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
     matrix0(2, 1) = 8;
     matrix0(2, 2) = 9;
 
-    //Part 2: Compare with Octave on toy example
+    // Part 2: Compare with Octave on toy example
     SingleMatrix matrix1(3, 4, AUTOPLACEMATRIX);
     matrix1(0, 0) = 8;
     matrix1(0, 1) = 9;
@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyTest, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
 {
-    //Part 1: Multiply with identity matrix
+    // Part 1: Multiply with identity matrix
     SingleMatrix matrixA = SingleMatrix::RandomGaussian(64, 23, 0, 2, IncrementCounter());
     SingleMatrix matrixB = SingleMatrix::Eye(23);
     SingleMatrix matrixB1 = SingleMatrix::RandomUniform(64, 23, -95.23f, 43.5f, IncrementCounter());
@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
         BOOST_CHECK_EQUAL(matrixA(i, j) + matrixB1(i, j) - matrixB2(i, j), C(i, j));
     }
 
-    //Part 3: compare with CPUMatrix results
+    // Part 3: compare with CPUMatrix results
     // TODO: Split into separate test case WI# 82
     CPUMatrix<float> cpuMatrix1 = CPUMatrix<float>::RandomUniform(429, 1024, -1, 1, IncrementCounter());
     CPUMatrix<float> cpuMatrix2 = CPUMatrix<float>::RandomUniform(429, 1024, -2, 2, IncrementCounter());
@@ -170,7 +170,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
         BOOST_CHECK(fabsf(static_cast<float>(matrixC(i, j) - (alpha * matrixA(i, j) + matrixB(i, j)))) < c_epsilonDoubleE11);
     }
 
-    //Test 2
+    // Test 2
     // TODO: Split into separate test case WI# 82
     DoubleMatrix matrixA1 = DoubleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 2, 0);
     DoubleMatrix matrixB1 = DoubleMatrix::RandomUniform(1024, 512, -12.34f, 55.2312f, seed + 3, 0);
@@ -182,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
         BOOST_CHECK(fabsf(static_cast<float>(matrixC1(i, j) - (alpha * matrixA1(i, j) + beta * matrixB1(i, j)))) < c_epsilonDoubleE11);
     }
 
-    //Test 3 - columnwise
+    // Test 3 - columnwise
     // TODO: Split into separate test case WI# 82
     DoubleMatrix matrixA2 = DoubleMatrix::RandomUniform(1024, 1, -12.34, 55.2312, seed + 4, 0);
     DoubleMatrix matrixB2 = DoubleMatrix::RandomUniform(1024, 512, -12.34, 55.2312, seed + 5, 0); // Column

@@ -248,7 +248,7 @@ public:
             // set up the various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             assert(m_factory);
-            //if (m_factory == nullptr)
+            // if (m_factory == nullptr)
             //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             // TODO: This seems to expose too much internal knowlegde of the engine to the ConvolutionNode().
             //       Why not just pass everything to the engine creator, and get one object that holds everything.
@@ -291,14 +291,14 @@ public:
         m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -460,7 +460,7 @@ public:
             // set up various engines and descriptor objects
             // REVIEW alexeyk: is there a better place to create engines?
             assert(m_factory);
-            //if (m_factory == nullptr)
+            // if (m_factory == nullptr)
             //    m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId, ConvolutionEngineFactory<ElemType>::EngineType::Auto, m_imageLayoutKind);
             if (m_poolEng == nullptr)
                 m_poolEng = m_factory->CreatePoolEngine(m_deviceId);

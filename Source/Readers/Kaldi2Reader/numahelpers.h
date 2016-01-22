@@ -56,7 +56,7 @@ void parallel_for_on_each_numa_node(bool multistep, const FUNCTION &body)
     for (size_t k = 0; k < nodes; k++)
         nextstepcounters[k] = 0;
     overridenode();
-    //unsigned int totalloops = 0;    // for debugging only, can be removed later
+    // unsigned int totalloops = 0;    // for debugging only, can be removed later
     msra::parallel::parallel_for(0, nodes * steps /*execute each step on each NUMA node*/, 1, [&](size_t /*dummy*/)
                                  {
                                      const size_t numanodeid = getcurrentnode();
@@ -70,13 +70,13 @@ void parallel_for_on_each_numa_node(bool multistep, const FUNCTION &body)
                                              continue;                                                                // so try next NUMA node
                                          // found one: execute and terminate loop
                                          body(node, step, steps);
-                                         //InterlockedIncrement (&totalloops);
+                                         // InterlockedIncrement (&totalloops);
                                          return; // done
                                      }
                                      // oops??
                                      throw std::logic_error("parallel_for_on_each_numa_node: no left-over block found--should not get here!!");
                                  });
-    //assert (totalloops == nodes * steps);
+    // assert (totalloops == nodes * steps);
 }
 
 // execute a passed function once for each NUMA node

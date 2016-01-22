@@ -33,7 +33,7 @@ public:
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
 
-        //specify output nodes and files
+        // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
         if (outputNodeNames.size() == 0)
         {
@@ -53,7 +53,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        //specify feature value nodes
+        // specify feature value nodes
         std::vector<ComputationNodeBasePtr>& featureNodes = m_net->FeatureNodes();
         std::vector<ComputationNodeBasePtr>& labelNodes = m_net->LabelNodes();
         std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
@@ -61,8 +61,8 @@ public:
             inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->Value();
         for (size_t i = 0; i < labelNodes.size(); i++)
             inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->Value();
-        //Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
-        //endOfFile(0,0)=0;
+        // Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
+        // endOfFile(0,0)=0;
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -79,9 +79,9 @@ public:
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);
             ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-            //size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
-            //dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
-            //m_net->VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
+            // size_t actualMBSize = m_net->SetActualMiniBatchSizeFromFeatures();
+            // dataReader.CopyMBLayoutTo(m_net->GetMBLayoutPtr());
+            // m_net->VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
 
             for (int i = 0; i < outputNodes.size(); i++)
             {
@@ -109,14 +109,14 @@ public:
         if (m_verbosity > 0)
             fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
 
-        //clean up
+        // clean up
     }
 
     void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize)
     {
         msra::files::make_intermediate_dirs(outputPath);
 
-        //specify output nodes and files
+        // specify output nodes and files
         std::vector<ComputationNodeBasePtr> outputNodes;
         if (outputNodeNames.size() == 0)
         {
@@ -143,7 +143,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        //specify feature value nodes
+        // specify feature value nodes
         auto& featureNodes = m_net->FeatureNodes();
         std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
         for (size_t i = 0; i < featureNodes.size(); i++)
@@ -189,7 +189,7 @@ public:
 
         fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
 
-        //clean up
+        // clean up
         for (int i = 0; i < outputStreams.size(); i++)
         {
             outputStreams[i]->close();

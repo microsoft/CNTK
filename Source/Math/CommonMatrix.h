@@ -33,8 +33,8 @@
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
-#define GPUSPARSE_INDEX_TYPE int //cuSparse only supports int array indexes
-#define CPUSPARSE_INDEX_TYPE int //to be consistent with cuSparse but limited the possible size of the matrix.
+#define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
+#define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
 
 MATH_API DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId);
 
@@ -114,7 +114,7 @@ enum ElementWiseOperator
     opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative,
     // binary ops for indexing
-    //opIndex,
+    // opIndex,
     // ternary
     opCond /*a ? b : c*/,
     opClip /*clip a within interval b..c*/
@@ -193,8 +193,8 @@ enum MatrixFormat
     matrixFormatSparseCSR = matrixFormatSparse + matrixFormatRowMajor + matrixFormatCompressed,
     matrixFormatSparseOther = matrixFormatSparse + matrixFormatRowMajor,                   // currently used for CPU sparse format, will change to CSC/CSR eventually
     matrixFormatMask = matrixFormatRowMajor + matrixFormatSparse + matrixFormatCompressed, // mask that covers all the
-    matrixFormatSparseBlockCol,                                                            //col block based sparse matrix
-    matrixFormatSparseBlockRow,                                                            //row block based sparse matrix
+    matrixFormatSparseBlockCol,                                                            // col block based sparse matrix
+    matrixFormatSparseBlockRow,                                                            // row block based sparse matrix
 };
 
 // common matrix flags for use on all matrices
@@ -328,8 +328,8 @@ protected:
     MatrixFormat m_format;
     bool m_externalBuffer; // is the buffer used by this matrix,
     ElemType* m_pArray;
-    mutable DEVICEID_TYPE m_computeDevice; //current GPU device Id or CPUDEVICE
-    size_t m_nz;                           //Number of non-zero elements for sparse matrices (unused in other formats)
+    mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
+    size_t m_nz;                           // Number of non-zero elements for sparse matrices (unused in other formats)
     wchar_t* m_matrixName;
 };
 } } }

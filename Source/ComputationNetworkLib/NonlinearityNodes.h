@@ -134,7 +134,7 @@ class SoftmaxNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     UsingComputationNodeMembers;
 
 public:
-    //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+    // virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
     DeclareConstructorFromConfigWithNumInputs(SoftmaxNodeBase);
     SoftmaxNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -261,14 +261,14 @@ public:
             *node->m_diff = *m_diff;
         }
     }
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_diff, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -334,14 +334,14 @@ public:
             *node->m_softmax = *m_softmax;
         }
     }
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_softmax, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -398,7 +398,7 @@ public:
 
     /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
     {
-        //TODO: temp solution, we need to write a math function specifically for this
+        // TODO: temp solution, we need to write a math function specifically for this
         functionValues.AssignHardmaxOf(inputFunctionValues, true);
     }
 };

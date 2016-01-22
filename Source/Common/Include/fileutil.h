@@ -447,13 +447,13 @@ const wchar_t* GetFormatString(T /*t*/)
     // a read and/or write routine.
     // If the type is a user defined class, you need to create some global functions that handles file in/out.
     // for example:
-    //File& operator>>(File& stream, MyClass& test);
-    //File& operator<<(File& stream, MyClass& test);
-    //
+    // File& operator>>(File& stream, MyClass& test);
+    // File& operator<<(File& stream, MyClass& test);
+    // 
     // in your class you will probably want to add these functions as friends so you can access any private members
     // friend File& operator>>(File& stream, MyClass& test);
     // friend File& operator<<(File& stream, MyClass& test);
-    //
+    // 
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
     assert(false); // need a specialization

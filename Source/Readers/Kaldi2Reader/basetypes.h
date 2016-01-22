@@ -72,8 +72,8 @@ static inline std::string basename(std::string const &pathname)
 
 static inline std::string removeExtension(std::string const &filename)
 {
-    //std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
-    //return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
+    // std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    // return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
     int lastindex = filename.find_first_of(".");
     return filename.substr(0, lastindex);
 }
@@ -84,8 +84,8 @@ static inline std::wstring basename(std::wstring const &pathname)
 
 static inline std::wstring removeExtension(std::wstring const &filename)
 {
-    //std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
-    //return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
+    // std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    // return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
     int lastindex = filename.find_first_of(L".");
     return filename.substr(0, lastindex);
 }
@@ -161,7 +161,7 @@ class fixed_vector
 #endif
     }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
-    //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
+    // fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
     fixed_vector()
         : n(0), p(NULL)

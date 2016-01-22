@@ -130,7 +130,7 @@ class fixed_vector
 #endif
     }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
-    //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
+    // fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
     fixed_vector()
         : n(0), p(NULL)

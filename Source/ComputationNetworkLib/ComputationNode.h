@@ -257,7 +257,7 @@ public:
 
 private:
     static atomic_ullong s_timeStampCounter;
-    int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    int64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 };
 
 // =======================================================================
@@ -324,7 +324,7 @@ public:
     // dimensions
 
     // The value of a node is a tensor in one of two variants:
-    //
+    // 
     //  - single matrix, vector, tensor
     //     - m_sampleLayout contains the shape. Accessed through GetSampleLayout().
     //     - m_pMBLayout is null
@@ -335,9 +335,9 @@ public:
     //     - m_sampleLayout is the tensor shape of the samples
     //     - m_pMBLayout defines the number of time steps and parallel sequences (="tensor shape" of the minibatch)
     //       Accessed through GetMBLayout(); test for through HasMBLayout().
-    //
+    // 
     // The values can be accessed in three ways:
-    //
+    // 
     //  - as a tensor
     //     - GetTensorShape() forms the joint tensor that incorporates both m_sampleLayout and, if present, m_pMBLayout
     //        - Elementwise tensor operations operate on these.
@@ -353,9 +353,9 @@ public:
     //     - actual object is a 2D tensor without MB Layout
     //     - ValueAsMatrix(), GradientAsMatrix() returns tensor as a 2D Matrix object
     //     - nodes that do this are: TimesNode, DiagTimesNode, ConvolutionNode, NoiseContrastiveEstimationNode, ClassBasedCrossEntropyWithSoftmaxNode, TransposeNode, DiagonalNode
-    //
+    // 
     // How values are stored:
-    //
+    // 
     //  - minibatch: Matrix of columns, where each column is a sample
     //  - tensor: Matrix where column dimension contains all but the first dimension
     //     - This only matters for sparse matrices, which cannot easily be Reshaped().
@@ -720,15 +720,15 @@ protected:
     void InferMBLayoutFromInputsForStandardCase();
 
 public:
-    bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
+    bool IsEqualTo(const ComputationNodeBasePtr& other) const // this will be used to determine whehter two nodes are the same
     {
         if (OperationName() != other->OperationName() || m_inputs.size() != other->m_inputs.size())
             return false;
 
-        if (NodeName() == other->NodeName()) //assume names are unique in the system
+        if (NodeName() == other->NodeName()) // assume names are unique in the system
             return true;
 
-        if (IsLeaf() && other->IsLeaf()) //since names are not equal otherwise will return above
+        if (IsLeaf() && other->IsLeaf()) // since names are not equal otherwise will return above
             return false;
 
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -902,7 +902,7 @@ class ComputationNode : public ComputationNodeBase // abstract class that cannot
     typedef ComputationNodeBase Base;
 
 protected:
-    //std containers such as list and map does not support class reference so we need to use pointer
+    // std containers such as list and map does not support class reference so we need to use pointer
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
 public:
@@ -1022,14 +1022,14 @@ protected:
     }
 
 public:
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         RequestMatrixFromPool(m_value, matrixPool);
     }
 
-    //release temp matrices that are only used by forward computation
-    //don't release matrices that need to be used in the gradient computation
+    // release temp matrices that are only used by forward computation
+    // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
     {
         if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && isValueSharable())
@@ -1045,18 +1045,18 @@ public:
         }
     }
 
-    //request matrices that are needed for gradient computation
+    // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         RequestMatrixFromPool(m_gradient, matrixPool);
     }
 
-    //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         if (!IsLeaf() && !RequiresPreCompute())
         {
-            if (m_gradient != nullptr && m_gradient->GetMatrixType() != SPARSE) //since we don't have a sparse pool yet
+            if (m_gradient != nullptr && m_gradient->GetMatrixType() != SPARSE) // since we don't have a sparse pool yet
                 ReleaseMatrixToPool(m_gradient, matrixPool);
 
             // Release the Value matrix only if the output value is needed during backprop
@@ -1103,30 +1103,30 @@ public:
 public:
     static void MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr& pMBLayout, const FrameRange& fr)
     {
-        //fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
+        // fprintf(stderr, "masking column range %d\n", (int)fr.timeIdxInSeq);
         MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, fr, (ElemType) 0);
     }
 
     void /*ComputationNodeBase::*/ MaskMissingValueColumnsToZero(const FrameRange& fr) override final
     {
-        //fprintf(stderr, "%ls %ls m_value ", NodeName().c_str(), OperationName().c_str());
+        // fprintf(stderr, "%ls %ls m_value ", NodeName().c_str(), OperationName().c_str());
         MaskMissingColumnsToZero(*m_value, m_pMBLayout, fr);
     }
     void /*ComputationNodeBase::*/ MaskMissingGradientColumnsToZero(const FrameRange& fr) override final
     {
-        //fprintf(stderr, "%ls %ls m_gradient ", NodeName().c_str(), OperationName().c_str());
+        // fprintf(stderr, "%ls %ls m_gradient ", NodeName().c_str(), OperationName().c_str());
         MaskMissingColumnsToZero(*m_gradient, m_pMBLayout, fr);
     }
 
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
-        //fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+        // fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
         MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
     void InvalidateMissingGradientColumns(const FrameRange& fr) override final
     {
-        //fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
+        // fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
         MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
 
@@ -1177,7 +1177,7 @@ public:
     {
         const ComputationNodePtr node = UpCast(inode);
 
-        //require first nodes specified before the second to avoid null nodes condition.
+        // require first nodes specified before the second to avoid null nodes condition.
         if (childIndex > m_inputs.size())
             InvalidArgument("SetInput: You must specify the input for children with index less than this one first.");
 
@@ -1416,7 +1416,7 @@ public:
                 (childrenInThisLoop && child->IsPartOfLoop() == IsPartOfLoop() ||
                  childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()))
             {
-                //fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+                // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
                 if (!m_needsGradient)
                     LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
 #ifdef DISPLAY_DEBUG
@@ -1436,7 +1436,7 @@ public:
                                NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
                 }
 
-                //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+                // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
                 BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
             }
 #ifdef DISPLAY_DEBUG
@@ -1476,7 +1476,7 @@ public:
     static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
     {
         if (s_constOnes.find(rows) == s_constOnes.end() ||
-            s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
+            s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
             Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (DEVICEID_TYPE) deviceId);
             matrix->SetValue(1);

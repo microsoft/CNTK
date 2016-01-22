@@ -86,7 +86,7 @@ public:
         size_t numMBsRun = 0;
         size_t actualMBSize = 0;
         size_t numSamplesLastMBs = 0;
-        size_t lastMBsRun = 0; //MBs run before this display
+        size_t lastMBsRun = 0; // MBs run before this display
 
         std::vector<double> evalResultsLastMBs;
         for (int i = 0; i < evalResults.size(); i++)
@@ -141,7 +141,7 @@ public:
             DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, evalNodes, evalResults, evalResultsLastMBs);
         }
 
-        //final statistics
+        // final statistics
         for (int i = 0; i < evalResultsLastMBs.size(); i++)
         {
             evalResultsLastMBs[i] = 0;
@@ -183,7 +183,7 @@ protected:
 
             if (displayConvertedValue)
             {
-                //display Perplexity as well for crossEntropy values
+                // display Perplexity as well for crossEntropy values
                 if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||

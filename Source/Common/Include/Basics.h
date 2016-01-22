@@ -310,7 +310,7 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     size_t len = p.length();
     std::vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     std::fill(buf.begin(), buf.end(), (wchar_t) 0);
-    //OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }

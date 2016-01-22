@@ -104,7 +104,7 @@ public:
     {
     }
 
-    //StartMinibatchLoop - Startup a minibatch loop
+    // StartMinibatchLoop - Startup a minibatch loop
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
@@ -132,7 +132,7 @@ public:
             // figure out the dimension of the data
             std::wstring val = iter->first;
             size_t rows = (*m_dimensions)[val];
-            //size_t count = rows*recordCount;
+            // size_t count = rows*recordCount;
 
             // find the output matrix we want to fill
             auto iterIn = matrices.find(val);
@@ -150,7 +150,7 @@ public:
 
             // copy over the data
             std::vector<ElemType>* data = iter->second;
-            //size_t  = m_currentRecord*rows;
+            // size_t  = m_currentRecord*rows;
             void* mat = &(*matrix)(0, 0);
             size_t matSize = matrix->GetNumElements() * sizeof(ElemType);
             void* dataPtr = (void*) ((ElemType*) data->data() + m_currentRecord * rows);
@@ -202,8 +202,8 @@ public:
             // start the new sequence
             // We use a fake end of 1 frame beyond the actual end of the minibatch.
             pMBLayout->AddSequence(0, 0, m_switchFrame[0], m_mbSize + 1);
-            //pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
-            //if (m_switchFrame[0] > 0)
+            // pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
+            // if (m_switchFrame[0] > 0)
             //    pMBLayout->Set(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
         }
         else // all frames in this MB belong to the same utterance

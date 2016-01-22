@@ -105,7 +105,7 @@ public:
             *node->m_maxValues = *m_maxValues;
         }
     }
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -114,8 +114,8 @@ public:
         RequestMatrixFromPool(m_maxValues, matrixPool);
     }
 
-    //release temp matrices that are only used by forward computation
-    //don't release matrices that need to be used in the gradient computation
+    // release temp matrices that are only used by forward computation
+    // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterForwardProp(matrixPool);
@@ -200,7 +200,7 @@ public:
         stp = lastLbl;
     };
 
-    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override //scaled by 2*number of elements in the Matrix<ElemType>
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override // scaled by 2*number of elements in the Matrix<ElemType>
     {
         LogicError("SequenceDecoder is used for evaluation only.");
     }

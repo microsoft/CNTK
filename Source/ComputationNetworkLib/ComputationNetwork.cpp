@@ -104,14 +104,14 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
-    //model version
+    // model version
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion");
     fstream << (size_t) CURRENT_CNTK_MODEL_VERSION;
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
     fstream << (size_t) m_nameToNodeMap.size();
 
-    //put all node info first
+    // put all node info first
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
@@ -121,7 +121,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-    //put relationship
+    // put relationship
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
     {
@@ -311,7 +311,7 @@ void ComputationNetwork::Read(const wstring& fileName, const FileOptions fileFor
 
             if (!fstream.TryGetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes" /*legacy*/))
             {
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes"); //check legacy first so err msg will use new name
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes"); // check legacy first so err msg will use new name
             }
         }
 
@@ -601,7 +601,7 @@ bool ComputationNetwork::UnitTest(bool allowFragment)
         {
             if (!allowFragment)
                 FormRecurrentLoops(node);
-            //this->SetActualMiniBatchSizeFromFeatures();
+            // this->SetActualMiniBatchSizeFromFeatures();
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -725,9 +725,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << "strict digraph {\n";
     fstream << "rankdir = BT ;  \n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    special nodes
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     fstream << L"// special nodes \n";
 
     // learnable parameters:
@@ -747,9 +747,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     // normal nodes
     fstream << dotcfg.m_normalNodeStyle << L"\n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    add labels for each node
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     fstream << L"\n// add labels and operation name\n";
     wstring line;
     for (const auto& x : allnodes)
@@ -761,9 +761,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
         fstream << line;
     }
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    sub-graph
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     // subgraph source
     fstream << L"subgraph {\n";
     fstream << L"\t\t rank=source ; ";
@@ -787,9 +787,9 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 
     fstream << line << L"\n}\n";
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    specify arc connections
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     for (auto x = arcs.begin(); x != arcs.end(); x++)
     {
         ComputationNodeBasePtr src = (*x).first;
@@ -835,11 +835,11 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
 {
     VerifyIsCompiled("PlotNetworkTopology");
-    //ValidateNetwork(false, true);
+    // ValidateNetwork(false, true);
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    step 1.        get all the arcs in the network
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     unordered_set<ComputationNodeBasePtr> visited;
     list<ComputationArc> arcs;
 
@@ -852,9 +852,9 @@ void ComputationNetwork::PlotNetworkTopology(const wstring outputFile) //  [1/13
             group[i]->EnumerateArcs(visited, arcs);
     }
 
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     //    step 2.        output dot description
-    //////////////////////////////////////////////////////////////////////////
+    // ////////////////////////////////////////////////////////////////////////
     DescribeNetworkUsingDot(arcs, outputFile);
 }
 

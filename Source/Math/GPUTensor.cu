@@ -192,7 +192,7 @@ struct TensorOps
     }
     static __device__ ElemType Compute(const FixedArray<ElemType*, 3>& pointers, ElementWiseOperator op)
     {
-        //const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
+        // const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
         ElemType a = *(pointers[0]);
         ElemType b = *(pointers[1]);
 #define CaseBinaryTensorOp(oper)        \

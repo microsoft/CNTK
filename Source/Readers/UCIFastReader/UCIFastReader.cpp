@@ -19,8 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 size_t UCIFastReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
-    //size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
-    //return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
+    // size_t randomRangePerEpoch = (m_epochSize+m_randomizeRange-1)/m_randomizeRange;
+    // return m_epoch*randomRangePerEpoch + epochSample/m_randomizeRange;
     return mbStartSample / m_randomizeRange;
 }
 
@@ -307,7 +307,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
         RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
     size_t vdim = configFeatures(L"dim");
-    //string name = configFeatures.Name();            // TODO: Aaargh!!!
+    // string name = configFeatures.Name();            // TODO: Aaargh!!!
     size_t udim = configLabels(L"labelDim", (size_t) 0);
 
     // initialize all the variables
@@ -363,7 +363,7 @@ void UCIFastReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfi
     else
         labelType = (wstring) configLabels(L"labelType", L"category");
 
-    //convert to lower case for case insensitive comparison
+    // convert to lower case for case insensitive comparison
     if (!_wcsicmp(labelType.c_str(), L"category"))
     {
         m_labelType = labelCategory;
@@ -835,8 +835,8 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
 
     // figure which sweep of the randomization we are on
     size_t epochSample = m_mbStartSample % m_epochSize; // where the minibatch starts in this epoch
-    //size_t samplesExtra = m_totalSamples % m_epochSize; // extra samples at the end of an epoch
-    //size_t epochsDS = (m_totalSamples+m_epochSize-1)/m_epochSize; // how many epochs per dataset
+    // size_t samplesExtra = m_totalSamples % m_epochSize; // extra samples at the end of an epoch
+    // size_t epochsDS = (m_totalSamples+m_epochSize-1)/m_epochSize; // how many epochs per dataset
     size_t randomizeSet = randomize ? RandomizeSweep(m_mbStartSample) : 0;
     const auto& tmap = m_randomordering(randomizeSet);
     size_t epochEnd = m_epochSize;
@@ -900,7 +900,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(std::map<std::wstring, Matrix<Ele
         if (randomize)
             randBase = epochSample - epochSample % m_randomizeRange;
 
-        //loop through all the samples
+        // loop through all the samples
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired

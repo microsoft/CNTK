@@ -166,9 +166,9 @@ public:
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
 
-    //void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
+    // void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false);
     // prepares the network for computation
-    //void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+    // void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t& todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
@@ -182,7 +182,7 @@ private:
         return m_isCompiled;
     }
     void VerifyIsCompiled(const char* where) const;
-    //bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
+    // bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
@@ -377,7 +377,7 @@ public:
         auto iter = m_nameToNodeMap.find(name);
         if (iter != m_nameToNodeMap.end())
         {
-            //found
+            // found
             return iter->second;
         }
 
@@ -533,7 +533,7 @@ public:
     {
         std::list<ComputationNodeBasePtr> nodesWithType;
 
-        //find nodes from all available nodes
+        // find nodes from all available nodes
         if (rootNode == nullptr)
         {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
@@ -545,7 +545,7 @@ public:
         }
         else
         {
-            //for calculating a specific node
+            // for calculating a specific node
             const std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
@@ -591,7 +591,7 @@ public:
     template <class ElemType>
     void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
-        //put all node info first
+        // put all node info first
         Matrix<ElemType> hist;
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
@@ -604,7 +604,7 @@ public:
     template <class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {
-        //put all node info first
+        // put all node info first
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
@@ -666,7 +666,7 @@ public:
     {
         nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
         return AddNodeToNetWithElemType(nodePtr);
-        //return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
+        // return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
     }
 
 public:
@@ -707,7 +707,7 @@ public:
                 const ComputationNodeBasePtr& nodePtr = GetNodeFromName(nodeName);
                 nodePtr->DumpNodeInfo(printValues, fstream);
             }
-            else //node name is not found, dump all nodes
+            else // node name is not found, dump all nodes
             {
                 fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
                         nodeName.c_str());
@@ -805,7 +805,7 @@ protected:
 
     // -----------------------------------------------------------------------
     // SEQTraversalFlowControlNode -- FlowControlNode to traverse a (sub-)network time step by time step
-    //
+    // 
     // This is to implement recurrent loops. All nodes inside a loop are listed
     // inside this node. This node's ForwardProp() function will execute
     // them inside a loop over all time steps of the recurrence.
@@ -842,7 +842,7 @@ protected:
         virtual bool IsOutputOlderThanInputs() const override;
 
     public:
-        //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
+        // std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode; // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                        // unique loop id, index in m_allSEQNodes array
         int m_steppingDirection;             // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
@@ -857,12 +857,12 @@ protected:
 
     // -----------------------------------------------------------------------
     // PARTraversalFlowControlNode -- FlowControlNode that traverses a (sub-)network
-    //
+    // 
     // This node contains a list of nodes in a (sub-)network. This node's
     // ForwardProp() method will execute all those nodes once in PAR mode,
     // that is, by passing a FrameRange object that represents to operate
     // on all frames in the node simultaneously.
-    //
+    // 
     // The outermost network level is also represented by this node for execution.
     // -----------------------------------------------------------------------
 

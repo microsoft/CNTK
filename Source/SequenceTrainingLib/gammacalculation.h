@@ -49,9 +49,9 @@ public:
     {
     }
 
-    //========================================
+    // ========================================
     // Sec. 1 init functions
-    //========================================
+    // ========================================
     void init(msra::asr::simplesenonehmm hset, int DeviceId)
     {
         m_deviceid = DeviceId;
@@ -69,9 +69,9 @@ public:
         }
     }
 
-    //========================================
+    // ========================================
     // Sec. 2 set functions
-    //========================================
+    // ========================================
     void SetGammarCalculationParams(const SeqGammarCalParam& gammarParam)
     {
         lmf = (float) gammarParam.lmf;
@@ -81,9 +81,9 @@ public:
         boostmmifactor = (float) gammarParam.bMMIfactor;
     }
 
-    //========================================
+    // ========================================
     // Sec. 3 calculation functions
-    //========================================
+    // ========================================
     void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues,
                        std::vector<shared_ptr<const msra::dbn::latticepair>>& lattices,
                        const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
@@ -95,18 +95,18 @@ public:
                        std::vector<size_t>& extrauttmap,
                        bool doreferencealign)
     {
-        //check total frame number to be added ?
-        //int deviceid = loglikelihood.GetDeviceId();
+        // check total frame number to be added ?
+        // int deviceid = loglikelihood.GetDeviceId();
         size_t boundaryframenum;
         std::vector<size_t> validframes; // [s] cursor pointing to next utterance begin within a single parallel sequence [s]
         validframes.assign(samplesInRecurrentStep, 0);
         ElemType objectValue = 0.0;
-        //convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
+        // convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
         size_t numrows = loglikelihood.GetNumRows();
         size_t numcols = loglikelihood.GetNumCols();
         Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(m_deviceid);
 
-        //copy loglikelihood to pred
+        // copy loglikelihood to pred
         if (numcols > pred.cols())
         {
             pred.resize(numrows, numcols);
@@ -136,7 +136,7 @@ public:
             if (samplesInRecurrentStep == 1) // no sequence parallelism
             {
                 tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
-                //if (m_deviceid == CPUDEVICE)
+                // if (m_deviceid == CPUDEVICE)
                 {
                     CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                 }
@@ -172,7 +172,7 @@ public:
                 Microsoft::MSR::CNTK::Matrix<ElemType> loglikelihoodForCurrentParallelUtterance = loglikelihood.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
                 tempmatrix.CopyColumnsStrided(loglikelihoodForCurrentParallelUtterance, numframes, samplesInRecurrentStep, 1);
 
-                //if (doreferencealign || m_deviceid == CPUDEVICE)
+                // if (doreferencealign || m_deviceid == CPUDEVICE)
                 {
                     CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                 }
@@ -201,7 +201,7 @@ public:
             }
             numavlogp /= numframes;
 
-            //auto_timer dengammatimer;
+            // auto_timer dengammatimer;
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
@@ -213,7 +213,7 @@ public:
                 tempmatrix = gammafromlattice.ColumnSlice(ts, numframes);
             }
 
-            //copy gamma to tempmatrix
+            // copy gamma to tempmatrix
             if (m_deviceid == CPUDEVICE)
             {
                 CopyFromSSEMatrixToCNTKMatrix(dengammas, numrows, numframes, tempmatrix, gammafromlattice.GetDeviceId());
@@ -364,7 +364,7 @@ protected:
     bool initialmark;
     msra::dbn::matrix dengammas;
     msra::dbn::matrix pred;
-    int m_deviceid; //-1: cpu
+    int m_deviceid; // -1: cpu
     size_t m_maxframenum;
     float lmf; // Note that 9 was best for Fisher  --these should best be configurable
     float wp;

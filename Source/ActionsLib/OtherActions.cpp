@@ -258,7 +258,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     Matrix<ElemType> wrd2cls(deviceId);
     Matrix<ElemType> cls2idx(deviceId);
 
-    //FILE *fp = fopen(inputFile.c_str(), "rt");
+    // FILE *fp = fopen(inputFile.c_str(), "rt");
     ifstream fp(inputFile.c_str());
     if (!fp)
     {
@@ -278,8 +278,8 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string token;
     while (getline(fp, str))
     {
-        str.erase(0, str.find_first_not_of(' ')); //prefixing spaces
-        str.erase(str.find_last_not_of(' ') + 1); //surfixing spaces
+        str.erase(0, str.find_first_not_of(' ')); // prefixing spaces
+        str.erase(str.find_last_not_of(' ') + 1); // surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos)
@@ -474,9 +474,9 @@ void DoTopologyPlot(const ConfigParameters& config)
     // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
     //              where <IN> and <OUT> are two special placeholders
 
-    //========================================
+    // ========================================
     // Sec. 1 option check
-    //========================================
+    // ========================================
     if (outdot.empty())
     {
         outdot = modelPath + L".dot";

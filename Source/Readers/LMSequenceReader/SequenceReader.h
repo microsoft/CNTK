@@ -288,7 +288,7 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    //void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    // void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     // TODO: ^^ should this be   void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);

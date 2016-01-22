@@ -230,7 +230,7 @@ void AddMultiplyAndInplaceSigmoidTest(int n, int k, int m)
     CPUMatrix<ElemType> C(n, m);
     auto t_start = clock();
     C = A * B + D;
-    //C.InplaceSigmoid();
+    // C.InplaceSigmoid();
     auto t_end = clock();
     std::cout << "CPU Matrix in: " << 1.0 * (t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
     std::cout << n << " " << k << " " << m << endl;
@@ -245,7 +245,7 @@ void AddMultiplyAndInplaceSigmoidTest(int n, int k, int m)
     Matrix<ElemType> CG((size_t) n, (size_t) m);
     auto t_startG = clock();
     CG = AG * BG + DG;
-    //CG.InplaceSigmoid();
+    // CG.InplaceSigmoid();
     auto t_endG = clock();
     std::cout << "Matrix in: " << 1.0 * (t_endG - t_startG) / CLOCKS_PER_SEC << " seconds" << endl;
 }
@@ -406,7 +406,7 @@ void MandSTest(int count, int devId)
     auto t_startG = clock();
     for (int i = 0; i < count; ++i)
     {
-        //Matrix<ElemType>::MultiplyAndWeightedAdd(arr[i],A,false,B,false,3.2*arr[i],C);
+        // Matrix<ElemType>::MultiplyAndWeightedAdd(arr[i],A,false,B,false,3.2*arr[i],C);
         C += (A * arr[i]) * (B * (arr[i] * 2.3));
     }
     auto t_endG = clock();
@@ -423,7 +423,7 @@ void MandSTest(int count, int devId)
     for (int i = 0; i < count; ++i)
     {
         CPUMatrix<ElemType>::MultiplyAndWeightedAdd(arr[i], AC, false, BC, false, 3.2 * arr[i], CC);
-        //CC+=(arr[i]*AC)*((arr[i]*2.3)*BC);
+        // CC+=(arr[i]*AC)*((arr[i]*2.3)*BC);
     }
     auto t_endC = clock();
     double valMC = 1.0 * (t_endC - t_startC) / (CLOCKS_PER_SEC * count);
@@ -443,7 +443,7 @@ int wmain()
 
     TestOldRnnForwardPropSRP<float>();
 
-    //MandSTest<float>(100, 2);
+    // MandSTest<float>(100, 2);
 
     /*cout<<endl<<"********************Matrix SquareMultiplyAndWeightedAdd10TimesAvg TEST********************"<<endl;
     SquareMultiplyAndAdd10TimesAvgTest<float>(4096,10);

@@ -282,7 +282,7 @@ public:
         // TODO: do we want to allow accept non-empty strings and non-0 numerical values as 'true'?
     }
 
-    //ReplaceAppend - replace an existing value with another value, or append if it appears to be a "set" type
+    // ReplaceAppend - replace an existing value with another value, or append if it appears to be a "set" type
     ConfigValue& ReplaceAppend(const std::string& configValue)
     {
         static const std::string openBraces = "[";
@@ -391,7 +391,7 @@ public:
         {
             // look for closing brace and also for another opening brace
             // Inside strings we only accept the closing quote, and ignore any braces inside.
-            current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1); //
+            current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1); // 
             if (current == string::npos)                                                                // none found: done or error
                 break;
             char brace = str[current];
@@ -508,7 +508,7 @@ public:
                     // (12:45:23:46)
                     // However if you are using strings, and one of those strings contains a ‘:’, you might want to change the separator to something else:
                     // (;this;is;a;path:;c:\mydir\stuff)
-                    //
+                    // 
                     // This will fail for
                     // (..\dirname,something else)
                     // Hence there is an ugly fix for it below. This will go away when we replace all configuration parsing by BrainScript.
@@ -714,7 +714,7 @@ public:
         Parse(configString);
     }
 
-    //private:
+    // private:
     // copy and move constructors
     ConfigParameters(const ConfigParameters& configValue)
         : ConfigParser(configValue)

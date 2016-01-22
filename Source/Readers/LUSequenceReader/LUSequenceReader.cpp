@@ -120,7 +120,7 @@ void BatchLUSequenceReader<ElemType>::GetClassInfo(LabelInfo& lblInfo)
     lblInfo.m_classInfoLocal->Resize(2, lblInfo.mNbrClasses);
     lblInfo.m_classInfoLocal->SetValue(0); // TODO: needed? (left-over of refactoring)
 
-    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    // move to CPU since element-wise operation is expensive and can go wrong in GPU
     // TODO: Can it ever be not on the CPU? We allocate it ourselves abovew
     int curDevId = lblInfo.m_classInfoLocal->GetDeviceId();
     lblInfo.m_classInfoLocal->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
@@ -348,7 +348,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
         else
             RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-        //const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
+        // const ConfigRecordType & featureConfig = readerConfig(m_featuresName.c_str(), ConfigRecordType::Record());
 
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
@@ -375,7 +375,7 @@ void BatchLUSequenceReader<ElemType>::InitFromConfig(const ConfigRecordType& rea
             // if we have labels, we need a label Mapping file, it will be a file with one label per line
             if (m_labelInfo[index].type != labelNone)
             {
-                wstring mode = labelConfig(L"mode", L"plain"); //plain, class
+                wstring mode = labelConfig(L"mode", L"plain"); // plain, class
 
                 m_labelInfo[index].m_classInfoLocal = nullptr;
                 m_labelInfo[index].m_id2classLocal = nullptr;
@@ -468,7 +468,7 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     {
         const LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
         m_featuresBuffer = new ElemType[mbSize * labelInfo.dim]();
-        //memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*labelInfo.dim);
+        // memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*labelInfo.dim);
     }
 
     if (m_labelsBuffer == NULL)
@@ -477,14 +477,14 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
         if (labelInfo.type == labelCategory)
         {
             m_labelsBuffer = new ElemType[labelInfo.dim * mbSize]();
-            //memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
+            // memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
             m_labelsIdBuffer = new long[mbSize]();
-            //memset(m_labelsIdBuffer,0,sizeof(long)*mbSize);
+            // memset(m_labelsIdBuffer,0,sizeof(long)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
             m_labelsBuffer = new ElemType[mbSize]();
-            //memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
+            // memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
             m_labelsIdBuffer = NULL;
         }
     }
@@ -779,7 +779,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType) NULLLABEL);
 
-                    //m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
+                    // m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
                 }
             }
         }
@@ -875,12 +875,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     if (t > mSentenceEndAt[s] || idx >= featInfo.dim)
                     {
                         assert(idx == (LabelIdType) NULLLABEL); // TODO: what other conditions?
-                        //if (!m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
+                        // if (!m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
                         //    LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here.");
                         continue;
                     }
 
-                    //if (m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
+                    // if (m_pMBLayout->IsGap(s, t))    // verify that these are marked as NoInput
                     //    LogicError("BatchLUSequenceReader::GetMinibatch: Inconsistent NoInput flag");
 
                     locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType) 1);
@@ -1062,7 +1062,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
     {
         const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
-        //loop through all the samples
+        // loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
         Matrix<ElemType> locObs(CPUDEVICE);
         locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);

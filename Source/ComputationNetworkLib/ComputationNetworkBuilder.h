@@ -45,8 +45,8 @@ public:
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const size_t rows, const size_t cols);
     ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape);
-    //sparse matrix size is optionally specified
-    //ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
+    // sparse matrix size is optionally specified
+    // ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const size_t rows);
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const size_t rows);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout);

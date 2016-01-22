@@ -406,7 +406,7 @@ private:
 public:
     virtual void ForwardProp(const FrameRange& fr) override
     {
-        //for (size_t xx = 0; xx < 3; xx++)   // for testing the strange slow-down
+        // for (size_t xx = 0; xx < 3; xx++)   // for testing the strange slow-down
         {
             if (fr.GetIterationDimension() != m_shiftDimParam)
                 LogicError("ShiftNode::ForwardProp(): FrameRange not iterating over user-specified dimension.");
@@ -824,20 +824,20 @@ public:
         {
             // Boundary frames must not propagate. Gaps must also not propagate.
             // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
-            //assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+            // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
             //       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
             if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
             {
                 size_t mNbr = m_pMBLayout->GetNumParallelSequences();
                 for (size_t id = 0; id < mNbr; id++)
                 {
-                    //assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                    // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
                     //       m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
                     if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))) // don't propagate boundary frames or gaps
                     {
                         Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
                         // TODO: use delayed FrameRange here as well
-                        //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                        // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
                         Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
                         to += frm;
                     }
@@ -847,7 +847,7 @@ public:
             {
                 Matrix<ElemType> frm = GradientFor(fr);
                 // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                //Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
                 Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
                 to += frm;
             }
@@ -921,7 +921,7 @@ public:
 
         // if any sequence at this time step has a boundary flag, then process one by one
         // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?
-        //assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+        // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
         if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed))
         {
             for (size_t id = 0; id < GetNumParallelSequences(); id++)
@@ -931,7 +931,7 @@ public:
 
                 Matrix<ElemType> out = ValueFor(fr.Sequence(id));
 
-                //assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
                 if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))
                     out.SetValue(m_initialActivationValue); // crossed a boundary
                 else                                        // not a boundary: just copy the delayed value
@@ -943,7 +943,7 @@ public:
                         inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                     else
                         inp = Input(0)->ValueFor(frDelayed.Sequence(id));
-                    //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                    // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                     out.SetValue(inp);
                 }
@@ -959,7 +959,7 @@ public:
                 inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
             else
                 inp = Input(0)->ValueFor(frDelayed);
-            //inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+            // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
             out.SetValue(inp);
         }

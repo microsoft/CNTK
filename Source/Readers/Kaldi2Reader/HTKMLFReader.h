@@ -19,7 +19,7 @@ private:
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
     vector<msra::asr::FeatureSection*> m_trainingOrTestingFeatureSections;
-    //msra::dbn::minibatchreadaheadsource* m_readAheadSource;
+    // msra::dbn::minibatchreadaheadsource* m_readAheadSource;
     msra::dbn::FileEvalSource* m_fileEvalSource;
     vector<msra::asr::FeatureSection*> m_writingFeatureSections;
     msra::dbn::latticesource* m_lattices;

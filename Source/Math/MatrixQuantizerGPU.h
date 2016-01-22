@@ -45,7 +45,7 @@ private:
     // wait for the assign stream operations, scheduled so far, to finish
     void SyncAssignCompleteEvent(cudaStream_t computestream) const;
 
-    //for concurrent computation and memcpy
+    // for concurrent computation and memcpy
     //  - assign to GPU : CPU-to-GPU,started by CPU when data read; flags assigncomplete
     //  - GPU-side operation        --waits for assigncomplete; flags quantizecomplete
     //  - fetch from GPU            --waits for quantizecomplete; flags fetchcomplete
@@ -57,7 +57,7 @@ public:
     static cudaStream_t GetAssignStream();
 
 private:
-    //helper functions for gpus
+    // helper functions for gpus
     static void Sync();
     static void SyncStream(cudaStream_t stream);
     static void SyncEvent(cudaEvent_t ev);

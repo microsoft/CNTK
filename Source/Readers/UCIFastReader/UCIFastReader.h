@@ -42,8 +42,8 @@ public:
     using LabelType = typename IDataReader<ElemType>::LabelType;
     using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
     using IDataReader<ElemType>::mRequestedNumParallelSequences;
-    //typedef std::string LabelType;
-    //typedef unsigned LabelIdType;
+    // typedef std::string LabelType;
+    // typedef unsigned LabelIdType;
 private:
     UCIParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;                 // size of minibatch requested
